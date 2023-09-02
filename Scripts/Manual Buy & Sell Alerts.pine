@@ -1,0 +1,103 @@
+Script Name: Manual Buy & Sell Alerts
+Author: MGTG
+Description: This strategy is not an automation strategy.
+It is a tool that generates an 'alerts' so that you can buy and sell it at a predetermined price.
+
+The user can set the contents below.
+
+1. Period
+
+2. Entry price and entry type.
+1) buy STOP
+  
+
+2) buy LIMIT
+  
+
+3. Target price.
+
+4. stop loss price.
+
+You can easily test by changing the period value and the set value.
+I...
+PineScript code:
+
+Pine Script™ strategy
+Manual Buy & Sell Alerts
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © MGTG
+title_name = 'Manual Buy & Sell Alerts'
+//@version=5
+strategy(
+ title=title_name, overlay=true, initial_capital=10000, default_qty_type=strategy.percent_of_equity, default_qty_value=100, 
+ pyramiding=1, commission_type=strategy.commission.percent, commission_value=0.1)
+// Period
+sTime         = input.time(timestamp("2020-01-01"), "Start", group="Period", inline='1')
+eTime         = input.time(timestamp("2030-01-01"), "End", group="Period", inline='2')
+inDateRange   = time >= sTime and time <= eTime
+// Bot Set-up
+buy_type = input.string('stop', 'Buy Type', group='Buy&Sell', inline='1', options=['stop', 'limit'])
+buy_price = input.float(49000, 'Buy Price', group='Buy&Sell', inline='1')
+target_price = input.float(51000, 'Target Price', group='Buy&Sell', inline='2')
+stop_price = input.float(47000, 'Stop Price', group='Buy&Sell', inline='2')
+avg_price = strategy.position_avg_price
+division = 1
+// Alert message
+AlertLong=input.string("Buy message", "Buy Alert Message",  group='Alert set-up', inline='1')
+AlertExit=input.string("Sell message", "Sell Alert Message",  group='Alert set-up', inline='1')
+plot(buy_price, 'Buy Price', color=color.new(#009688, 0), style=plot.style_linebr, offset=1)
+plot(target_price, 'Take Profit', color=color.new(color.orange, 0), style=plot.style_linebr, offset=1)
+plot(stop_price, 'Safety', color=color.new(color.aqua, 0), style=plot.style_linebr, offset=1)
+posSize = 
+ strategy.equity / close
+strategy.exit("sell", "buy", limit=target_price, stop=stop_price, alert_message=AlertExit)
+longCondition = inDateRange and strategy.position_size == 0
+if longCondition and buy_type == 'stop'
+    strategy.entry("buy", strategy.long, qty=posSize, stop=buy_price, when=close < buy_price, comment="buy_STOP", alert_message=AlertLong)
+if longCondition and buy_type == 'limit'
+    strategy.entry("buy", strategy.long, qty=posSize, limit=buy_price, when=close > buy_price, comment="buy_LIMIT", alert_message=AlertLong)
+Expand (43 lines)

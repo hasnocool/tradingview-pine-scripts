@@ -1,0 +1,158 @@
+Script Name: VWAP and RSI strategy
+Author: mohanee
+Description: This strategy combines VWAP and RSI indicators
+
+BUY RULE
+1. EMA50 > EMA 200
+2. if current close > vwap session  value and  close>open   
+3. check if RSI3 is dipped below 10  for any of last 10 candles  (as defined rsi_buy_level)
+
+EXIT RULE
+1. RSI3   crossing down 90 level  (as defined in rsi_sell_level)
+
+STOP LOSS EXIT
+1. default is set to 5%
+
+
+you need to add EMA...
+PineScript code:
+
+Pine Script™ strategy
+VWAP and RSI strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mohanee
+//@version=4
+strategy(title="VWAP and RSI strategy [EEMANI] v2", overlay=false,pyramiding=2, default_qty_type=strategy.fixed,    initial_capital=10000, currency=currency.USD)
+//This strategy combines VWAP and RSI indicators
+//BUY RULE
+//1. EMA50 > EMA 200
+//2. if current close > vwap session  value and  close>open   
+//3. check if RSI3 is dipped below 10  for any of last 10 candles
+//EXIT RULE
+//1. RSI3   crossing down 90 level
+//STOP LOSS EXIT
+//1. As configured --- default is set to 5%
+int barCount = 0
+// variables  BEGIN
+longEMA = input(200, title="Long EMA", minval=1)
+shortEMA = input(50, title="short EMA", minval=1)
+rsi1 = input(3,title="RSI Period", minval=1)
+rsi_buy_line = input(15,title="RSI Buy Line", minval=5)
+rsi_sell_line = input(90,title="RSI Sell Line", minval=50)
+add_on_divergence=input(true,title="Add on RSI divergence")
+stopLoss = input(title="Stop Loss%", defval=5, minval=1)
+//variables  END
+longEMAval= ema(close, longEMA)
+shortEMAval= ema(close, shortEMA)
+rsiVal=rsi(close,rsi1)
+vwapVal=vwap(hlc3)
+// Drawings
+plot_rsi = plot(rsiVal, title="RSI", color=color.purple, linewidth=1)
+//plot_fill = plot(0, color=color.green, editable=false)
+//fill(plot_rsi, plot_fill, title="Oscillator Fill", color=color.blue, transp=75) 
+hline(rsi_buy_line, color=color.green, title="Buy Line", linewidth=2, linestyle=hline.style_dashed)
+hline(rsi_sell_line, color=color.purple, title="Sell Line", linewidth=2, linestyle=hline.style_dashed)
+//plot(value_ma, title="MA", color=color_ma, linewidth=2)
+rsiDipped=false
+for i = 1 to 10
+    rsiDipped := rsiDipped or rsiVal[i]<rsi_buy_line
+//rsiDipped =  rsiVal[1]<rsi_buy_line or rsiVal[2]<rsi_buy_line or rsiVal[3]<rsi_buy_line  or rsiVal[4]<rsi_buy_line  or rsiVal[5]<rsi_buy_line  or rsiVal[6]<rsi_buy_line or rsiVal[7]<rsi_buy_line  or rsiVal[8]<rsi_buy_line  or rsiVal[9]<rsi_buy_line  or rsiVal[10]<rsi_buy_line  
+longCondition=  shortEMAval > longEMAval and  close>open and  close>vwapVal  and open>vwapVal  and rsiDipped
+//Entry
+strategy.entry(id="VWAP_RSI LE", comment="VR LE" , long=true,  when= longCondition  and strategy.position_size<1 )  //and rsiDipped
+//Add
+//barCount:=nz(barssince(longCondition),1)
+barCount :=  strategy.position_size>0 ? (barCount[1]+1) : 0
+addCondition = add_on_divergence and barCount[1] > 1 and strategy.position_size>=1 and close<=close[barCount[1]] and rsiVal>rsiVal[barCount+1] and   close>open and  close>vwapVal  //and open>vwapVal
+strategy.entry(id="VWAP_RSI LE", comment="Add "  , long=true,  when= addCondition )  //and rsiDipped   comment="Add "  +tostring(barCount[1],"####")
+bgcolor(add_on_divergence and addCondition ? color.green : na,transp=0)
+     
+//Take profit Exit
+strategy.close(id="VWAP_RSI LE", comment="TP Exit",   when=crossunder(rsiVal,90) )
+//stoploss
+stopLossVal =   strategy.position_avg_price -  (strategy.position_avg_price*stopLoss*0.01) 
+strategy.close(id="VWAP_RSI LE", comment="SL Exit",   when= close < stopLossVal)
+Expand (82 lines)

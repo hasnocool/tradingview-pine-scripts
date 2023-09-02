@@ -1,0 +1,68 @@
+Script Name: Bollinger bubble - Forex edition
+Author: florent6001
+Description: Bollinger bubble is an edition for forex market. Work better en JPY pairs.
+
+We buy when a candle open & close outside the lower bollingers band and we target the last highest point on the last 10 candles.
+And we sell when a candle open & close outside the higher bollingers band we the target the last lowest point on the last 10 candles.
+PineScript code:
+
+Pine Script™ strategy
+Bollinger bubble | Forex edition
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+//@version=4
+// Initial settings
+strategy("Bulle de bollinger", overlay = true, currency = currency.EUR, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, commission_value = 0)
+// Parameter Settings
+mdl = sma(close, 20)
+dev = stdev(close, 20)
+upr = mdl + 2*dev
+lwr = mdl - 2*dev
+// Plot
+plot(mdl, color = color.green) // Plot moving average
+p1 = plot(upr, color = color.red) // Plot Upper_band
+p2 = plot(lwr, color = color.green) // Plot lower band
+fill(p1, p2, color = color.blue) // Fill transparant color between the 2 plots
+// Strategy entry & close
+if open[1] < lwr[1] and close[1] < lwr[1] // Previous price lower than lower band and current close is higher than lower band
+    stop_level = lowest(10)
+    profit_level = highest(10)
+    strategy.entry(id = 'bb_buy', long = true)
+    strategy.exit("TP/SL", "bb_buy", stop=stop_level, limit=profit_level)
+    
+if open[1] > upr[1] and close[1] > upr // Previous price is higher than higher band & current close is lower the higher band
+    stop_level = highest(10)
+    profit_level = lowest(10)
+    strategy.entry(id = 'bb_sell', long = false)
+    strategy.exit("TP/SL", "bb_sell", stop=stop_level, limit=profit_level)
+Expand (31 lines)

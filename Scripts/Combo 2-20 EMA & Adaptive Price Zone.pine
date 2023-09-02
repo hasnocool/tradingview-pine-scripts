@@ -1,0 +1,162 @@
+Script Name: Combo 2-20 EMA & Adaptive Price Zone
+Author: HPotter
+Description: This is combo strategies for get a cumulative signal. 
+
+ First strategy
+ This indicator plots 2/20 exponential moving average. For the Mov 
+ Avg X 2/20 Indicator, the EMA bar will be painted when the Alert criteria is met.
+
+ Second strategy
+ The adaptive price zone (APZ) is a volatility-based technical indicator that helps investors 
+ identify possible market...
+PineScript code:
+
+Pine Script™ strategy
+Combo 2/20 EMA & Adaptive Price Zone
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+//@version=5
+////////////////////////////////////////////////////////////
+//  Copyright by HPotter v1.0 02/03/2022
+// This is combo strategies for get a cumulative signal. 
+//
+// First strategy
+// This indicator plots 2/20 exponential moving average. For the Mov 
+// Avg X 2/20 Indicator, the EMA bar will be painted when the Alert criteria is met.
+//
+// Second strategy
+// The adaptive price zone (APZ) is a volatility-based technical indicator that helps investors 
+// identify possible market turning points, which can be especially useful in a sideways-moving 
+// market. It was created by technical analyst Lee Leibfarth in the article “Identify the 
+// Turning Point: Trading With An Adaptive Price Zone,” which appeared in the September 2006 issue 
+// of the journal Technical Analysis of Stocks and Commodities.
+// This indicator attempts to signal significant price movements by using a set of bands based on 
+// short-term, double-smoothed exponential moving averages that lag only slightly behind price changes. 
+// It can help short-term investors and day traders profit in volatile markets by signaling price 
+// reversal points, which can indicate potentially lucrative times to buy or sell. The APZ can be 
+// implemented as part of an automated trading system and can be applied to the charts of all tradeable assets.
+//
+// WARNING:
+// - For purpose educate only
+// - This script to change bars colors.
+////////////////////////////////////////////////////////////
+EMA20(Length) =>
+    pos = 0.0
+    xPrice = close
+    xXA = ta.ema(xPrice, Length)
+    nHH = math.max(high, high[1])
+    nLL = math.min(low, low[1])
+    nXS = nLL > xXA or nHH < xXA ? nLL : nHH
+    iff_1 = nXS < close[1] ? 1 : nz(pos[1], 0)
+    pos := nXS > close[1] ? -1 : iff_1
+    pos
+APZ(nPeriods,nBandPct) =>
+    pos = 0.0
+    xHL = high - low
+    nP = math.ceil(math.sqrt(nPeriods))
+    xVal1 = ta.ema(ta.ema(close,nP), nP)
+    xVal2 = ta.ema(ta.ema(xHL,nP), nP)
+    UpBand = nBandPct * xVal2 + xVal1
+    DnBand = xVal1 - nBandPct * xVal2
+    pos := low < DnBand ? 1 : high > UpBand ? -1 : pos[1] 
+    pos
+strategy(title='Combo 2/20 EMA & Adaptive Price Zone', shorttitle='Combo', overlay=true)
+var I1 = '●═════ 2/20 EMA ═════●'
+Length = input.int(14, minval=1, group=I1)
+var I2 = '●═════ Adaptive Price Zone  ═════●'
+nPeriods = input(20)
+nBandPct = input(2)
+var misc = '●═════ MISC ═════●'
+reverse = input.bool(false, title='Trade reverse', group=misc)
+var timePeriodHeader = '●═════ Time Start ═════●'
+d = input.int(1, title='From Day', minval=1, maxval=31, group=timePeriodHeader)
+m = input.int(1, title='From Month', minval=1, maxval=12, group=timePeriodHeader)
+y = input.int(2005, title='From Year', minval=0, group=timePeriodHeader)
+StartTrade = time > timestamp(y, m, d, 00, 00) ? true : false
+posEMA20 = EMA20(Length)
+prePosAPZ = APZ(nPeriods,nBandPct)
+iff_1 = posEMA20 == -1 and prePosAPZ == -1 and StartTrade ? -1 : 0
+pos = posEMA20 == 1 and prePosAPZ == 1 and StartTrade ? 1 : iff_1
+iff_2 = reverse and pos == -1 ? 1 : pos
+possig = reverse and pos == 1 ? -1 : iff_2
+if possig == 1
+    strategy.entry('Long', strategy.long)
+if possig == -1
+    strategy.entry('Short', strategy.short)
+if possig == 0
+    strategy.close_all()
+barcolor(possig == -1 ? #b50404 : possig == 1 ? #079605 : #0536b3)
+Expand (74 lines)

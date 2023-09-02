@@ -1,0 +1,77 @@
+Script Name: Tema
+Author: TradingAmmo
+Description: I have found that such simple crossover can show good results. Basically it has only 2 TEMA and nothing more. I don't know what else to write here. The code is simplest and has only one filter, which take into consideration the direction of chart.
+PineScript code:
+
+Pine Script™ strategy
+Tema
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+//@version=4
+strategy("Tema",overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent, commission_value=0.075)
+startP = timestamp(input(2017, "Start Year"), input(12, "Start Month"), input(17, "Start Day"), 0, 0)
+end   = timestamp(input(9999, "End Year"),   input(1, "End Month"),   input(1, "End Day"),   0, 0)
+_testPeriod() =>
+    iff(time >= startP and time <= end, true, false)
+tema_length_1 = input(5, "Fast TEMA")
+tema_length_2 = input(8, "Slow TEMA")
+usedir       = input(true, "Use bar's direction ?" )
+dirtime      = input(2,"direction bars")
+tema(sec, length)=>
+    tema1= ema(sec, length)
+    tema2= ema(tema1, length)
+    tema3= ema(tema2, length)
+    tema = 3*tema1-3*tema2+tema3
+tema1 = tema(hlc3, tema_length_1)
+tema2 = tema(hlc3, tema_length_2)
+dir=if close/close[dirtime] > 1
+    1
+else
+    -1
+plot(tema1, color=color.green, transp=50)
+plot(tema2, color=color.red, transp=50)
+up =  crossover(tema1, tema2) 
+down = crossunder(tema1, tema2)
+long_condition =  up and (usedir ? dir==1 : true) and _testPeriod()
+strategy.entry('BUY', strategy.long, when=long_condition)  
+ 
+short_condition =  down
+strategy.close('BUY', when=short_condition)
+Expand (38 lines)

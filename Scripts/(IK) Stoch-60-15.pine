@@ -1,0 +1,123 @@
+Script Name: (IK) Stoch-60-15
+Author: tapRoot_coding
+Description: This strategy uses 60 minute and 15 minute stochastic data to determine entry and exit; it only executes long trades. I've only used this on BTC/USD, but I imagine the concepts employed should hold for any ticker
+
+The script builds a simple Stochastic indicator for the current timeframe, and it also plots a single stochastic line for a higher resolution time...
+PineScript code:
+
+Pine Script™ strategy
+(IK) Stoch-60-15
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © userIan
+//@version=4
+strategy(title="(IK) 60-15", precision=2, default_qty_type=strategy.cash, default_qty_value=100.0, initial_capital=100.0, currency="USD", commission_type=strategy.commission.percent, commission_value=0.1)
+// get input 
+i_length        = input(group="Stochastic", title="Stochastic Length", minval=1, defval=18)                                     
+i_k             = input(group="Stochastic", title="Stochastic %K", minval=1, defval=2)
+i_d             = input(group="Stochastic", title="Stochastic %D", minval=1, defval=10)
+i_trailingStop  = input(group="Trade Settings", title="Trailing Stop?", type=input.bool, defval=true)                           // should stop loss be dynamic, based on most recent high, or static, based on entry price?
+i_stopPercent   = input(group="Trade Settings", title="Stop Percent", type=input.float, defval=0.05, maxval=1.0, minval=0.001)  // how much (percentage) can price fall before exiting the trade
+i_takeProfit    = input(group="Trade Settings", title="Take Profit", type=input.float, defval=0.05, maxval=1.0, minval=0.001)   // how much (percentage) can price rise before exiting the trade
+i_sellThreshold = input(group="Trade Settings", title="Sell Threshold", type=input.float, defval=75.0, maxval=100, minval=0.0)  // when stochastic %D crosses under this value, exit the trade
+i_buyThreshold  = input(group="Trade Settings", title="Buy Threshold", type=input.float, defval=40.0, maxval=100, minval=0.0)   // stochastic %D must be below this value to enter a trade
+// declare order variables
+var recentHigh  = 0.0   // the highest high while in a trade
+var stop        = 0.0   // the price that will trigger as stop loss
+var entryPrice  = 0.0   // the price when the trade was entered
+// build stochastic
+sto = stoch(close, high, low, i_length)
+K   = sma(sto, i_k)
+D   = sma(K, i_d)
+// get stochastic trend
+stoch_upTrend = D > D[1]
+// get stochastic trend for 60 minute
+stoch_60         = security(syminfo.tickerid, "60", D)
+stoch_60_upTrend = (stoch_60[4] >= stoch_60[8])
+// entry
+if (D < i_buyThreshold) and stoch_upTrend and stoch_60_upTrend and barstate.isconfirmed
+    recentHigh := close
+    entryPrice := close
+    stop       := (close * (1-i_stopPercent)) 
+    strategy.entry(id="60-15-Long", long=strategy.long, comment='buy')
+// update recent high, trailing stop
+if close > recentHigh  
+    recentHigh := close
+    stop       := i_trailingStop ? (recentHigh * (1-i_stopPercent)) : stop
+// exit
+strategy.exit(id="60-15-Long", stop=stop, comment='sell-stop')
+if close > (entryPrice * (1+i_takeProfit)) and barstate.isconfirmed
+    strategy.close(id="60-15-Long", comment='sell-profit')
+if crossunder(D, i_sellThreshold) and barstate.isconfirmed
+    strategy.close(id="60-15-Long", comment='sell-trend')
+    
+// plot
+plot(K, title="%K", color=color.blue, linewidth=1)
+plot(D, title="%D", color=color.orange, linewidth=1)
+plot(stoch_60, title="Hourly Stochastic (D)", color= stoch_60_upTrend ? color.green : color.red, style=plot.style_stepline)
+upperBand  = hline(i_sellThreshold, title="Upper Limit", linestyle=hline.style_dashed)
+middleBand = hline(50, title="Midline", linestyle=hline.style_dotted)
+lowerBand  = hline(i_buyThreshold, title="Lower Limit", linestyle=hline.style_dashed)
+fill(lowerBand, upperBand, color=color.purple, transp=75)
+Expand (61 lines)

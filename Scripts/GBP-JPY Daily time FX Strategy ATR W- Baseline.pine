@@ -1,0 +1,205 @@
+Script Name: GBP-JPY Daily time FX Strategy ATR W- Baseline
+Author: SoftKill21
+Description: This is a preety good strategy suited for long term trading.
+
+It has been adapted and optimized in this case for GBP/JPY 1D time frame.
+
+Its made of Kiojun baseline, together with ATR for stop loss and size calculation and Williams % R
+
+
+For the purpose of this example we simulate that we have a leverage of 100x in order to be able to buy the ammount of lots...
+PineScript code:
+
+Pine Script™ strategy
+GBP/JPY Daily time FX Strategy ATR W% Baseline
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+//@version=4
+strategy("GBPJPY DAILY FX",initial_capital = 1000,currency="USD", overlay=true)
+UseHAcandles    = input(false, title="Use Heikin Ashi Candles in Algo Calculations")
+//
+// === /INPUTS ===
+// === BASE FUNCTIONS ===
+haClose = UseHAcandles ? security(heikinashi(syminfo.tickerid), timeframe.period, close) : close
+haOpen  = UseHAcandles ? security(heikinashi(syminfo.tickerid), timeframe.period, open) : open
+haHigh  = UseHAcandles ? security(heikinashi(syminfo.tickerid), timeframe.period, high) : high
+haLow   = UseHAcandles ? security(heikinashi(syminfo.tickerid), timeframe.period, low) : low
+//INDICATOR---------------------------------------------------------------------    
+    //Average True Range (1. RISK)
+atr_period = 2
+atr = atr(atr_period)
+    //Ichimoku Cloud - Kijun Sen (2. BASELINE)
+ks_period = 20
+kijun_sen = (highest(haHigh,ks_period) + lowest(haLow,ks_period))/2
+base_long = haOpen < kijun_sen and haClose > kijun_sen
+base_short = haOpen > kijun_sen and haClose < kijun_sen
+    //Williams Percent Range (3. Confirmation#1)
+use_wpr = true
+wpr_len = 4
+wpr = -100*(highest(haHigh,wpr_len) - haClose)/(highest(haHigh,wpr_len) - lowest(haLow,wpr_len))
+wpr_up = -35
+wpr_low = -70
+conf1_long = wpr >= wpr_up
+conf1_short = wpr <= wpr_low
+if(use_wpr == false)
+    conf1_long := true
+    conf1_short := true
+//TRADE LOGIC-------------------------------------------------------------------
+    //Long Entry
+    //if -> WPR crosses below -39 AND MACD line is less than signal line
+l_en = base_long and conf1_long
+    //Long Exit
+    //if -> WPR crosses above -14
+l_ex = haClose < kijun_sen
+    //Short Entry
+    //if -> WPR crosses above -39 AND MACD line is greater than signal line
+s_en = base_short and conf1_short
+    //Short Exit
+    //if -> WPR crosses under -14
+s_ex = haClose > kijun_sen
+    
+//MONEY MANAGEMENT--------------------------------------------------------------
+balance = strategy.netprofit + strategy.initial_capital //current balance
+floating = strategy.openprofit          //floating profit/loss
+isTwoDigit = input(true,"Is this a 2 digit pair? (JPY, XAU, XPD...")
+risk = input(50,"Risk %")/100           //risk % per trade
+equity_protector = input(30,"Equity Protection %")/100  //equity protection %
+stop = atr*100000*input(1,"Average True Range multiplier")    //Stop level
+if(isTwoDigit)
+    stop := stop/100
+target = input(100, "Target TP in Points")  //TP level
+    //Calculate current DD and determine if stopout is necessary
+equity_stopout = false
+if(floating<0 and abs(floating/balance)>equity_protector)
+    equity_stopout := true
+    
+    //Calculate the size of the next trade
+temp01 = balance * risk     //Risk in USD
+temp02 = temp01/stop        //Risk in lots
+temp03 = temp02*100000      //Convert to contracts
+size = temp03 - temp03%1000 //Normalize to 1000s (Trade size)
+if(size < 1000)
+    size := 1000            //Set min. lot size
+//TRADE EXECUTION---------------------------------------------------------------
+strategy.close_all(equity_stopout)      //Close all trades w/equity protector
+is_open = strategy.opentrades > 0
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2000, title = "From Year", minval = 1970)
+ //monday and session 
+// To Date Inputs
+toDay = input(defval = 31, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 12, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2021, title = "To Year", minval = 1970)
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate
+if(time_cond)
+    strategy.entry("l_en",true,size,oca_name="a",oca_type=strategy.oca.cancel,when=l_en and not is_open)  //Long entry
+    strategy.entry("s_en",false,size,oca_name="a",oca_type=strategy.oca.cancel,when=s_en and not is_open) //Short entry
+    
+    strategy.exit("S/L","l_en",loss=stop, profit=target)      //Long exit (stop loss)
+    strategy.close("l_en",when=l_ex)            //Long exit (exit condition)
+    strategy.exit("S/L","s_en",loss=stop, profit=target)      //Short exit (stop loss)
+    strategy.close("s_en",when=s_ex)            //Short exit (exit condition)
+Expand (101 lines)

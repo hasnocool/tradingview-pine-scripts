@@ -1,0 +1,74 @@
+Script Name: Balance of Power Heikin Ashi Investing Strategy
+Author: exlux99
+Description: Balance of Power Heikin Ashi Investing Strategy
+
+This is a swing strategy designed for investment help.
+
+Its made around the Balace of Power indicator, but has been adapted on using the Monthly Heikin Ashi candle from the SPY asset in order to be used with correlation for US Stock/ETF/Index Markets.
+
+The BOP acts as an oscilallator showing the power of a bull...
+PineScript code:
+
+Pine Script™ strategy
+Balance of Power Heikin Ashi Investing Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © exlux99
+//@version=5
+strategy(title="Balance of Power Heikin Ashi Swing Strategy")
+x_close = request.security(ticker.heikinashi("SPY"), "M", close)
+x_open = request.security(ticker.heikinashi("SPY"), "M", open)
+x_high =request.security(ticker.heikinashi("SPY"), "M", high)
+x_low = request.security(ticker.heikinashi("SPY"), "M", low)
+gog = (x_close - x_open) / (x_high - x_low)
+out = ta.ema(gog,input.int(252))
+plot(out, color = color.white)
+hline(0)
+length = input(75)
+p = input.int(99, 'Percentage', minval=0, maxval=100)
+p2 = input.int(1, 'Percentage', minval=0, maxval=100)
+pnr = ta.percentile_nearest_rank(out, length, p)
+pnr2 = ta.percentile_nearest_rank(out, length, p2)
+long =  pnr > pnr[1] and ( out > 0 or (out >-0.35 and out[1] <-0.35))  
+short = (out < 0 and ( pnr < pnr[1] and pnr2 < pnr2[1]))  or ( out < 0.6 and out[1] > 0.6)
+strategy.entry("long",strategy.long,when=long)
+strategy.entry("short",strategy.short,when=short) 
+Expand (38 lines)

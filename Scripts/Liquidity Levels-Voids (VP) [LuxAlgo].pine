@@ -1,0 +1,540 @@
+Script Name: Liquidity Levels-Voids (VP) [LuxAlgo]
+Author: LuxAlgo
+Description: The  Liquidity Levels/Voids (VP)  is a script designed to detect liquidity voids & levels by measuring traded volume at all price levels on the market between two swing points and highlighting the distribution of the liquidity voids & levels at specific price levels. 
+
+ 🔶 USAGE 
+
+  
+
+Liquidity is a fundamental market force that shapes the trajectory of...
+PineScript code:
+
+Pine Script™ indicator
+Liquidity Levels/Voids (VP) [LuxAlgo]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+// This work is licensed under a Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) https://creativecommons.org/licenses/by-nc-sa/4.0/
+// © LuxAlgo
+ 
+//@version=5
+indicator("Liquidity Levels/Voids (VP) [LuxAlgo]", "LuxAlgo - Liquidity Levels/Voids (VP)", true, max_bars_back = 5000, max_boxes_count = 500) // , max_labels_count = 500, max_lines_count = 500
+//------------------------------------------------------------------------------
+// Settings
+//-----------------------------------------------------------------------------{
+mdTT = 'The mode option controls the number of visual objects presented, where\n\n- Historical, takes into account all data available to the user\n- Present, takes into account only the last X bars specified in the \'# Bars\' option\n\nPossible \'# Bars\' values [100-5000]'
+mode = input.string('Present', title = 'Mode', options =['Present', 'Historical'], inline = 'MOD')
+back = input.int   (360, ' # Bars', minval = 100, maxval = 5000, step = 10, inline = 'MOD', tooltip = mdTT)
+grpLQ = 'Liquidity Levels / Voids'
+liqUC = input.color(color.new(#1848cc, 79), 'Liquidity Levels/Voids', inline = 'UFL', group = grpLQ, tooltip = 'Color customization option for Unfilled Liquidity Levels/Voids')
+ppLen = input.int(47, "Detection Length", minval = 1, group = grpLQ, tooltip = 'Lookback period used for the calculation of Swing Levels\n\nMinimum value [1]')
+liqT  = input.int(21, 'Threshold %', minval = 1, maxval = 51, group = grpLQ, tooltip = 'Threshold used for the calculation of the Liquidity Levels & Voids\n\nPossible values [1-51]') / 100
+vpLev = input.int(27, 'Sensitivity' , minval = 10, maxval = 100, step = 1, group = grpLQ, tooltip = 'Adjusts the number of levels between two swing points, as a result, the height of a level is determined and then based on the above-given threshold the level is checked if it matches the liquidity level/void conditions\n\nPossible values [10-100]')
+liqFD = input.bool(false, 'Filled Liquidity Levels/Voids', inline = 'FL', group = grpLQ, tooltip = 'Toggles the visibility of the Filled Liquidity Levels/Voids and color customization option for Filled Liquidity Levels/Voids')
+liqFC = input.color(color.new(#787b86, 79), '', inline = 'FL', group = grpLQ)
+othGR = 'Other Features'
+ppLev = input.bool(false, 'Swing Highs/Lows', inline = 'ppLS', group = othGR, tooltip = 'Toggles the visibility of the Swing Levels, where tooltips present statistical information, such as price, price change, and cumulative volume between the two swing levels detected based on the detection length specified above\n\nColoring options to customize swing low and swing high label colors and Size option to adjust the size of the labels')
+ppLCB = input.color(color.new(#f23645, 0), '', inline = 'ppLS', group = othGR)
+ppLCS = input.color(color.new(#089981, 0), '', inline = 'ppLS', group = othGR)
+ppLS  = input.string('Small', "", options=['Tiny', 'Small', 'Normal'], inline = 'ppLS', group = othGR)
+//-----------------------------------------------------------------------------}
+// User Defined Types
+//-----------------------------------------------------------------------------{
+// @type        bar properties with their values 
+//
+// @field h     (float) high price of the bar
+// @field l     (float) low price of the bar
+// @field v     (float) volume of the bar
+// @field i     (int)   index of the bar
+type bar
+    float h = high
+    float l = low
+    float v = volume
+    int   i = bar_index
+// @type        store pivot high/low and index data 
+//
+// @field x     (int)    last pivot bar index
+// @field x1    (int)    previous pivot bar index
+// @field h     (float)  last pivot high
+// @field h1    (float)  previous pivot high
+// @field l     (float)  last pivot low
+// @field l1    (float)  previous pivot low
+type pivotPoint
+    int    x
+    int    x1
+    float  h
+    float  h1
+    float  l
+    float  l1
+// @type        maintain liquidity data 
+//
+// @field b     (array<bool>) array maintains price levels where liquidity exists
+// @field bx    (array<box>)  array maintains visual object of price levels where liquidity exists
+type liquidity
+    bool [] b
+    box  [] bx
+// @type        maintain volume profile data 
+//
+// @field vs    (array<float>) array maintains tolal traded volume
+// @field vp    (array<box>)   array maintains visual object of each price level
+type volumeProfile
+    float [] vs
+    box   [] vp
+//-----------------------------------------------------------------------------}
+// Variables
+//-----------------------------------------------------------------------------{
+bar b = bar.new()
+var pivotPoint pp = pivotPoint.new()
+var liquidity[] aLIQ = array.new<liquidity> (1, liquidity.new(array.new <bool> (vpLev, false), array.new <box> (na)))
+var liquidity[] dLIQ = array.new<liquidity> (1, liquidity.new(array.new <bool> (na)          , array.new <box> (na)))
+volumeProfile aVP  = volumeProfile.new(array.new <float> (vpLev + 1, 0.), array.new <box> (na))
+qBXs = 0
+//-----------------------------------------------------------------------------}
+// Functions/methods
+//-----------------------------------------------------------------------------{
+// @function        calcuates highest price, lowest price and cumulative volume of the given range
+//                     
+// @param _l        (int)  length of the range
+// @param _c        (bool) check
+// @param _o        (int)  offset 
+//
+// @returns         (float, float, float) highest, lowest and cumulative volume
+f_calcHLV(_l, _c, _o) =>
+    if _c
+        l = low [_o]
+        h = high[_o]
+        v  = 0.
+        
+        for x = 0 to _l - 1
+            l := math.min(low [_o + x], l)
+            h := math.max(high[_o + x], h)
+            v += volume[_o + x]
+        l := math.min(low [_o + _l], l)
+        h := math.max(high[_o + _l], h)
+        
+        [h, l, v]
+//-----------------------------------------------------------------------------}
+// Calculations
+//-----------------------------------------------------------------------------{
+per  = mode == 'Present' ? last_bar_index - b.i <= back : true
+nzV  = nz(b.v)
+ppS = switch ppLS
+    'Tiny'   => size.tiny
+    'Small'  => size.small
+    'Normal' => size.normal
+pp_h = ta.pivothigh(ppLen, ppLen)
+pp_l = ta.pivotlow (ppLen, ppLen)
+if not na(pp_h)
+    pp.h1 := pp.h
+    pp.h  := pp_h
+if not na(pp_l)
+    pp.l1 := pp.l
+    pp.l  := pp_l
+go = not na(pp_h) or not na(pp_l) 
+if go 
+    pp.x1 := pp.x
+    pp.x  := b.i
+vpLen = pp.x - pp.x1
+[pHst, pLst, tV] = f_calcHLV(vpLen, go, ppLen)
+pStp = (pHst - pLst) / vpLev
+if go and nzV and pStp > 0 and b.i > vpLen and vpLen > 0 and per
+    for bIt = vpLen to 1
+        l = 0
+        bI = bIt + ppLen
+        
+        for pLev = pLst to pHst by pStp
+            if b.h[bI] >= pLev and b.l[bI] < pLev + pStp
+                aVP.vs.set(l, aVP.vs.get(l) + nzV[bI] * ((b.h[bI] - b.l[bI]) == 0 ? 1 : pStp / (b.h[bI] - b.l[bI])))
+            l += 1
+    aLIQ.unshift(liquidity.new(array.new <bool> (vpLev, false), array.new <box> (na)))
+    cLIQ = aLIQ.get(0)
+    for l = vpLev - 1 to 0
+        if aVP.vs.get(l) / aVP.vs.max() < liqT
+            cLIQ.b.set(l, true)
+            cLIQ.bx.unshift(box.new(b.i[ppLen], pLst + (l + 0.00) * pStp, b.i[ppLen], pLst + (l + 1.00) * pStp, border_color = color(na), bgcolor = liqUC ))
+        else
+            cLIQ.bx.unshift(box.new(na, na, na, na))
+            cLIQ.b.set(l, false)
+    for bIt = 0 to vpLen
+        bI = bIt + ppLen
+        int qBX = cLIQ.bx.size()
+        for bx = 0 to (qBX > 0 ? qBX - 1 : na)
+            if bx < cLIQ.bx.size()
+                if cLIQ.b.get(bx) 
+                    cBX = cLIQ.bx.get(bx)
+                    mBX = math.avg(cBX.get_bottom(), cBX.get_top())
+                    
+                    if math.sign(close[bI + 1] - mBX) != math.sign(low[bI] - mBX) or math.sign(close[bI + 1] - mBX) != math.sign(high[bI] - mBX) or math.sign(close[bI + 1] - mBX) != math.sign(close[bI]  - mBX)
+                        cBX.set_left(b.i[bI])
+                        cLIQ.b.set(bx, false)
+    for bI = ppLen to 0
+        int qBX = cLIQ.bx.size()
+        for bx = (qBX > 0 ? qBX - 1 : na) to 0
+            if bx < cLIQ.bx.size()
+                cBX = cLIQ.bx.get(bx)
+                mBX = math.avg(box.get_bottom(cBX), box.get_top(cBX))
+                
+                if math.sign(close[bI + 1] - mBX) != math.sign(low[bI] - mBX) or math.sign(close[bI + 1] - mBX) != math.sign(high[bI] - mBX) 
+                    if liqFD
+                        cBX.set_bgcolor(liqFC)
+                    else
+                        cBX.delete()
+                    cLIQ.bx.remove(bx)
+                else
+                    cBX.set_right(b.i[bI])
+for i = aLIQ.size() - 1 to 0
+    x = aLIQ.get(i)
+    int qBX = x.bx.size()
+    qBXs := qBXs + qBX
+    if qBXs > 500
+        aLIQ.pop()
+        
+    for bx = (qBX > 0 ? qBX - 1 : na) to 0
+        if bx < x.bx.size()
+            cBX = x.bx.get(bx)
+            mBX = math.avg(box.get_bottom(cBX), box.get_top(cBX))
+            if math.sign(close[1] - mBX) != math.sign(low - mBX) or math.sign(close[1] - mBX) != math.sign(high - mBX) 
+                //cBX.delete()
+                if liqFD
+                    cBX.set_bgcolor(liqFC)
+                else
+                    cBX.delete()
+                x.bx.remove(bx)
+            else
+                cBX.set_right(b.i)
+if ppLev and (mode == 'Present' ? last_bar_index - b.i <= back * 1.318 : true)
+    statTip = '\n -Traded Volume : ' + str.tostring(tV, format.volume) + ' (' + str.tostring(vpLen - 1) + ' bars)\n  *Average Volume/Bar : ' + str.tostring(tV / (vpLen - 1), format.volume)
+    if not na(pp_h)
+        swH = pp.h > pp.h1 ? "HH" : pp.h < pp.h1 ? "LH" : na
+        label.new(b.i[ppLen], pp.h, swH, xloc.bar_index, yloc.price, color(na), label.style_label_down, ppLCS, ppS, text.align_center, 'Swing High : ' + str.tostring(pp.h, format.mintick) + '\n -Price Change : %' + str.tostring((pp.h - pp.l) * 100 / pp.l, '#.##') + statTip)
+    if not na(pp_l)
+        swL = pp.l < pp.l1 ? "LL" : pp.l > pp.l1 ? "HL" : na
+        label.new(b.i[ppLen], pp.l ,swL, xloc.bar_index, yloc.price, color(na), label.style_label_up  , ppLCB, ppS, text.align_center, 'Swing Low : '  + str.tostring(pp.l, format.mintick) + '\n -Price Change : %' + str.tostring((pp.h - pp.l) * 100 / pp.h, '#.##') + statTip)
+vpLen := barstate.islast ? last_bar_index - pp.x + ppLen  : 1
+pHst  := ta.highest(b.h, vpLen > 0 ? vpLen + 1 : 1)
+pLst  := ta.lowest (b.l, vpLen > 0 ? vpLen + 1 : 1)
+pStp  := (pHst - pLst) / vpLev
+if barstate.islast and nzV and vpLen > 0 and pStp > 0
+    tLIQ = dLIQ.shift()
+    if tLIQ.bx.size() > 0
+        for i = 0 to tLIQ.bx.size() - 1
+            tLIQ.bx.shift().delete()
+        tLIQ.b.shift()
+    for bI = vpLen to 1 //1 to vpLen
+        l = 0
+        for pLev = pLst to pHst by pStp
+            if b.h[bI] >= pLev and b.l[bI] < pLev + pStp
+                aVP.vs.set(l, aVP.vs.get(l) + nzV[bI] * ((b.h[bI] - b.l[bI]) == 0 ? 1 : pStp / (b.h[bI] - b.l[bI])))
+            l += 1
+    
+    dLIQ.unshift(liquidity.new(array.new <bool> (na), array.new <box> (na)))
+    cLIQ = dLIQ.get(0)
+    for l = 0 to vpLev - 1
+        if aVP.vs.get(l) / aVP.vs.max() < liqT
+            cLIQ.b.unshift(true)
+            cLIQ.bx.unshift(box.new(b.i, pLst + (l + 0.00) * pStp, b.i, pLst + (l + 1.00) * pStp, border_color = color(na), bgcolor = liqUC))
+        else
+            cLIQ.bx.unshift(box.new(na, na, na, na))
+            cLIQ.b.unshift(false)
+    for bI = 0 to vpLen
+        int qBX = cLIQ.bx.size()
+        for bx = 0 to (qBX > 0 ? qBX - 1 : na)
+            if bx < cLIQ.bx.size()
+                if cLIQ.b.get(bx) 
+                    cBX = cLIQ.bx.get(bx)
+                    mBX = math.avg(cBX.get_bottom(), cBX.get_top())
+                
+                    if math.sign(close[bI + 1] - mBX) != math.sign(low[bI] - mBX) or math.sign(close[bI + 1] - mBX) != math.sign(high[bI] - mBX) or math.sign(close[bI + 1] - mBX) != math.sign(close[bI]  - mBX)
+                        cBX.set_left(b.i[bI])
+                        cLIQ.b.set(bx, false)
+ //-----------------------------------------------------------------------------}
+Expand (291 lines)

@@ -1,0 +1,190 @@
+Script Name: Parabolic SAR Swing strategy GBP JPY Daily timeframe
+Author: SoftKill21
+Description: Today I bring you a new strategy thats made of parabolic sar. It has optmized values for GBPJPY Daily timeframe chart.
+
+It also has a time period selection, in order to see how it behave between selected years.
+
+
+The strategy behind it is simple :
+
+We have an uptrend , (the psar is below our candles) we go long. We exit when our candle crosses the psar value.
+The...
+PineScript code:
+
+Pine Script™ strategy
+Parabolic SAR Swing strategy GBP JPY Daily timeframe
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+//@version=4
+strategy("Parabolic SAR Strategy", overlay=true)
+start = input(0.05)
+increment = input(0.075)
+maximum = input(1)
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2000, title = "From Year", minval = 1970)
+ //monday and session 
+// To Date Inputs
+toDay = input(defval = 31, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 12, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2020, title = "To Year", minval = 1970)
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate 
+var bool uptrend = na
+var float EP = na
+var float SAR = na
+var float AF = start
+var float nextBarSAR = na
+if bar_index > 0
+    firstTrendBar = false
+    SAR := nextBarSAR
+    if bar_index == 1
+        float prevSAR = na
+        float prevEP = na
+        lowPrev = low[1]
+        highPrev = high[1]
+        closeCur = close
+        closePrev = close[1]
+        if closeCur > closePrev
+            uptrend := true
+            EP := high
+            prevSAR := lowPrev
+            prevEP := high
+        else
+            uptrend := false
+            EP := low
+            prevSAR := highPrev
+            prevEP := low
+        firstTrendBar := true
+        SAR := prevSAR + start * (prevEP - prevSAR)
+    if uptrend
+        if SAR > low
+            firstTrendBar := true
+            uptrend := false
+            SAR := max(EP, high)
+            EP := low
+            AF := start
+    else
+        if SAR < high
+            firstTrendBar := true
+            uptrend := true
+            SAR := min(EP, low)
+            EP := high
+            AF := start
+    if not firstTrendBar
+        if uptrend
+            if high > EP
+                EP := high
+                AF := min(AF + increment, maximum)
+        else
+            if low < EP
+                EP := low
+                AF := min(AF + increment, maximum)
+    if uptrend
+        SAR := min(SAR, low[1])
+        if bar_index > 1
+            SAR := min(SAR, low[2])
+    else
+        SAR := max(SAR, high[1])
+        if bar_index > 1
+            SAR := max(SAR, high[2])
+    nextBarSAR := SAR + AF * (EP - SAR)
+    if barstate.isconfirmed and time_cond
+        if uptrend
+            strategy.entry("ParSE", strategy.short, stop=nextBarSAR, comment="ParSE")
+            strategy.cancel("ParLE")
+        else
+            strategy.entry("ParLE", strategy.long, stop=nextBarSAR, comment="ParLE")
+            strategy.cancel("ParSE")
+plot(SAR, style=plot.style_cross, linewidth=3, color=color.orange)
+plot(nextBarSAR, style=plot.style_cross, linewidth=3, color=color.aqua)
+//plot(strategy.equity, title="equity", color=color.red, linewidth=2, style=plot.style_areabr)
+Expand (88 lines)

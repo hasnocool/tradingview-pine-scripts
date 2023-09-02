@@ -1,0 +1,149 @@
+Script Name: EHMA Range Strategy
+Author: OxLetoII
+Description: This script is a modified version of @borserman's script for the  Exponential Hull Moving Average 
+All credit for the EHMA goes to him :)
+
+In addition to the EHMA, this script works with a range around the EHMA (which can be modified), in an attempt to be robust against fake signals. Many times a bar will close below a moving average, only to reverse again the...
+PineScript code:
+
+Pine Script™ strategy
+EHMA Range Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+// Credit is due where credit is due:
+// Hull Moving Average: developed by Alan Hull
+// EHMA: coded by Twitter @borserman
+// I've built on their work in an attempt to create a strategy more robust to fake moves
+// @0xLetoII
+//@version=4
+strategy(
+  title="EHMA Range Strategy",
+  process_orders_on_close=true,
+  explicit_plot_zorder=true,
+  overlay=true, 
+  initial_capital=1500, 
+  default_qty_type=strategy.percent_of_equity, 
+  commission_type=strategy.commission.percent, 
+  commission_value=0.085,
+  default_qty_value=100
+  )
+  
+// Position Type
+pos_type = input(defval = "Long", title="Position Type", options=["Both", "Long", "Short"])
+// Inputs
+Period = input(defval=180, title="Length")
+RangeWidth = input(defval=0.02, step=0.01, title="Range Width")
+sqrtPeriod = sqrt(Period)
+// Function for the Borserman EMA
+borserman_ema(x, y) =>
+    alpha = 2 / (y + 1)
+    sum = 0.0
+    sum := alpha * x + (1 - alpha) * nz(sum[1])
+// Calculate the Exponential Hull Moving Average
+EHMA = borserman_ema(2 * borserman_ema(close, Period / 2) - borserman_ema(close, Period), sqrtPeriod)
+// Create upper & lower bounds around the EHMA for broader entries & exits
+upper = EHMA + (EHMA * RangeWidth)
+lower = EHMA - (EHMA * RangeWidth)
+// Plots
+EHMAcolor = (close > EHMA ? color.green : color.red)
+plot(EHMA, color=EHMAcolor, linewidth=2)
+plot(lower, color=color.orange, linewidth=2)
+plot(upper, color=color.blue, linewidth=2)
+// Strategy
+long = close > upper
+exit_long = close < lower
+short = close < lower
+exit_short = close > upper
+// Calculate start/end date and time condition
+startDate  = input(timestamp("2017-01-01T00:00:00"), type = input.time)
+finishDate = input(timestamp("2029-01-01T00:00:00"), type = input.time)
+ 
+time_cond  = time >= startDate and time <= finishDate
+// Entries & Exits
+if pos_type == "Both"
+    strategy.entry("Long", strategy.long, comment="Long", when=long and time_cond)
+    strategy.close("Long", comment="Exit Long", when=exit_long and time_cond)
+    strategy.entry("Short", strategy.short, comment="Short", when=short and time_cond)
+    strategy.close("Short", comment="Exit Short", when=exit_short and time_cond)
+if pos_type == "Long"
+    strategy.entry("Long", strategy.long, comment="Long", when=long and time_cond)
+    strategy.close("Long", comment="Exit Long", when=exit_long and time_cond)
+if pos_type == "Short"
+    strategy.entry("Short", strategy.short, comment="Short", when=short and time_cond)
+    strategy.close("Short", comment="Exit Short", when=exit_short and time_cond)
+    
+Expand (75 lines)

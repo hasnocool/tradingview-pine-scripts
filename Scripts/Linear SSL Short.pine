@@ -1,0 +1,80 @@
+Script Name: Linear SSL Short
+Author: TradingAmmo
+Description: This script consist of two parts: linear SSL and DEMA. The difference between original SSL and current is that it calculated by linear regression. The logic is simple: when SSL "crossunder" and DEMA is above the price - we get short signal. When price became above DEMA and SSL "crossover" - close short.
+PineScript code:
+
+Pine Script™ strategy
+Linear SSL Short
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+//@version=4
+strategy('LR&SSL_Short', overlay=true,  default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent, commission_value=0.075, currency='USD')
+startP = timestamp(input(2017, "Start Year"), input(12, "Month"), input(17, "Day"), 0, 0)
+end   = timestamp(9999,1,1,0,0)
+_testPeriod() =>
+    iff(time >= startP and time <= end, true, false)
+len = input(title="Period", defval=89)
+smaHigh = linreg(high, len, 0)
+smaLow = linreg(low, len, -1)
+Hlv = 0.0
+Hlv := close > smaHigh ? 1 : close < smaLow ? -1 : Hlv[1]
+sslDown = Hlv < 0 ? smaHigh : smaLow
+sslUp = Hlv < 0 ? smaLow : smaHigh
+plot(sslDown, linewidth=2, color=color.red)
+plot(sslUp, linewidth=2, color=color.lime)
+length = input(200, title="DEMA") 
+d1 = ema(close, length)                                               
+d2 = 2 * d1 - ema(d1, length)                                         
+trendColour = d2 > d1 ? #AAFFAA : #FFAAAA 
+dema=sma(d2,length) 
+turnGreen = d2 > d1 and d2[1] <= d1[1]  
+turnRed   = d2 <= d1 and d2[1] > d1[1]  
+up =turnGreen 
+down=turnRed 
+  
+plotshape(down, title="down", style=shape.triangledown,location=location.abovebar, color=color.red, transp=0, size=size.small) 
+plotshape(up,  title="up", style=shape.triangleup,location=location.belowbar, color=color.green, transp=0, size=size.small) 
+plot(dema, color = trendColour,linewidth=3 ,transp = 0)
+bgcolor(close > dema ? color.green : color.red)
+strategy.entry("short", strategy.short, when= crossunder(sslUp, sslDown) and dema > close and _testPeriod())
+strategy.close("short", when = crossover(sslUp, sslDown) or crossover(close, dema))
+Expand (40 lines)

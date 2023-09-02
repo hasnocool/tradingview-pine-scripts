@@ -1,0 +1,95 @@
+Script Name: D-BoT Alpha 'Short' SMA and RSI Strategy
+Author: D-BotAlpha_G_T
+Description: Dostlar selamlar,
+İşte son derece basit ama etkili ve hızlı, HTF de çok iyi sonuçlar veren bir strateji daha, hepinize bol kazançlar dilerim ...
+
+
+
+ Nedir, Nasıl Çalışır: 
+
+Strateji, iki ana girdiye dayanır: SMA ve RSI. SMA hesaplama aralığı 200 olarak, RSI ise 14 olarak ayarlanmıştır. Bu değerler, kullanıcı tercihlerine veya geriye dönük test sonuçlarına göre...
+PineScript code:
+
+Pine Script™ strategy
+D-BoT Alpha 'Short' SMA and RSI Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © abdllhatn
+//@version=5
+strategy("Alpha Short SMA and RSI Strategy", overlay=true, initial_capital=10000, default_qty_value=100)
+// Inputs
+sma_length = input(200, title="SMA Length")
+rsi_length = input(14, title="RSI Length")
+rsi_entry = input(51, title="RSI Entry Level")
+rsi_stop = input(54, title="RSI Stop Level")
+rsi_take_profit = input(32, title="RSI Take Profit Level")
+// Indicators
+sma_value = ta.sma(close, sma_length)
+rsi_value = ta.rsi(close, rsi_length)
+var float trailingStop = na
+var float lastLow = na
+// Conditions
+shortCondition = ta.crossover(rsi_value, rsi_entry) and close < sma_value
+if (shortCondition)
+    strategy.entry("Sell", strategy.short)
+    trailingStop := na
+    lastLow := na
+if (strategy.position_size < 0)
+    if (na(lastLow) or close < lastLow)
+        lastLow := close
+        trailingStop := close
+if not na(trailingStop) and close > trailingStop
+    strategy.close("Sell")
+if (rsi_value >= rsi_stop)
+    strategy.close("Sell")
+if (rsi_value <= rsi_take_profit)
+    strategy.close("Sell")
+// Plot
+plot(sma_value, color=color.red, linewidth=2)
+Expand (46 lines)

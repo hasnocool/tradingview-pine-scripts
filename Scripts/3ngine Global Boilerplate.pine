@@ -1,0 +1,1356 @@
+Script Name: 3ngine Global Boilerplate
+Author: jordanfray
+Description: ABOUT THE BOILERPLATE 
+This strategy is designed to bring consistency to your strategies. It includes a  macro EMA filter  for filtering out countertrend trades, 
+an  ADX filter  to help filter out chop, a  session filter  to filter out trades outside of desired timeframe,  alert messages  setup for automation, 
+ laddering in/out  of trades (up to 6 rungs), ...
+PineScript code:
+
+Pine Script™ strategy
+3ngine Global Boilerplate
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+540
+541
+542
+543
+544
+545
+546
+547
+548
+549
+550
+551
+552
+553
+554
+555
+556
+557
+558
+559
+560
+561
+562
+563
+564
+565
+566
+567
+568
+569
+570
+571
+572
+573
+574
+575
+576
+577
+578
+579
+580
+581
+582
+583
+584
+585
+586
+587
+588
+589
+590
+591
+592
+593
+594
+595
+596
+597
+598
+599
+600
+601
+602
+603
+604
+605
+606
+607
+608
+609
+610
+611
+612
+613
+614
+615
+616
+617
+618
+619
+620
+621
+622
+623
+624
+625
+626
+627
+628
+629
+630
+631
+632
+633
+634
+635
+636
+637
+638
+639
+640
+641
+642
+643
+644
+645
+646
+647
+648
+649
+650
+651
+652
+653
+654
+655
+656
+657
+658
+659
+660
+661
+662
+663
+664
+665
+666
+667
+668
+669
+670
+671
+672
+673
+674
+675
+676
+677
+678
+679
+680
+681
+682
+683
+684
+685
+686
+687
+688
+689
+690
+691
+692
+693
+694
+695
+696
+697
+698
+699
+700
+701
+702
+703
+704
+705
+706
+707
+708
+709
+710
+711
+712
+713
+714
+715
+716
+717
+718
+719
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © jordanfray
+//@version=5
+strategy(title="Boilerplate", overlay=true, max_bars_back=5000, commission_type=strategy.commission.percent, close_entries_rule="ANY", commission_value=0.035, backtest_fill_limits_assumption=0, calc_on_order_fills=true, process_orders_on_close=true)
+import jordanfray/threengine_global_automation_library/10 as bot // This is a required library
+//  A B O U T   T H E   B O I L E R P L A T E
+//  This strategy is desisnged to bring consistency to your strategies. It includes a macro EMA filter for filtering out countertrend trades, 
+//  an ADX filter to help filter out chop, a session filter to filter out trades outside of desired timeframe, alert messages setup for automation, 
+//  laddering in/out of trades (up to 6 rungs), trailing take profit, and beautiful visuals for each entry. There are comments throughout the 
+//  strategy that provide further instructions on how to use the boilerplate strategy. This strategy uses more_margin_trade_automation_library 
+//  throughout and must be included at the top of the strategy using import [path to latest version] as bot. This allows you to use dot notation 
+//  to access functions in the library - EX: bot.orderCurrentlyExists().
+//  H O W   T O   U S E   T H I S   S T R A T E G Y
+//  1   Add your inputs
+//  2   Add your calculations
+//  3   Add your entry criteria
+//      3.1     Add your criteria to strategySpecificLongConditions (this gets combined with boilerplate conditions in longConditionsMet)
+//      3.2     Add your criteria to strategySpecificShortConditions (this gets combined with boilerplate conditions in shortConditionsMet)
+//      3.4     Set your desired entry price (calculated on every bar unless stored as a static variable) to longEntryPrice and shortEntryPrice. 
+//              Default is the bar "close". This will be the FIRST ladder if using laddering capabilities. If you pick 1 for "Ladder In Rungs" 
+//              this will be the only entry. 
+//  4   Plot anything you want to overlay on the chart in addition to the boilerplate plots and labels. Included in boilerplate: 
+//      Average entry price (blue), stop loss (red), trailing stop (red/green), profit target (green).
+// Indenting Classs - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+indent = "    "
+// Colors - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+oceanBlue           = color.new(#0C6090,0)
+skyBlue             = color.new(#00A5FF,0)
+green               = color.new(#2DBD85,0)
+nevisShallows       = color.new(#00FFD4,0)
+red                 = color.new(#E02A4A,0)
+lightBlue           = color.new(#00A5FF,80)
+lightGreen          = color.new(#2DBD85,80)
+lightRed            = color.new(#E02A4A,80)
+lightYellow         = color.new(#FFF900,80)
+white               = color.new(#ffffff,0)
+black               = color.new(#191B20,0)
+gray                = color.new(#AAAAAA,0)
+lightGray           = color.new(#AAAAAA,90)
+transparent         = color.new(#000000,100)
+// Input Groups - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+groupOneTitle       = "Strategy Settings "
+groupTwoTitle       = "Filters"
+groupThreeTitle     = "Entry Settings"
+groupFourTitle      = "Exit Settings"
+// Tooltips - This is where all of the tooltips are defined to keep the code clean below - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+startTip       = "Select where you want to start laddering in from."
+stopLossTip   = "Select where you want your stop loss to be."
+ladderInToolTip     = "Enable this to use the laddering settings below."
+cancelEntryToolTip  = "When the position reaches a certain percent profit, you can cancel any unfiller orders."
+ladderInStepsTip                = "When the criteria for entering a strategy is met, the order can placed using a single order or split across multiple ladder orders. Select 1 to place a single order."
+ladderInStepSpacingTip          = "The percent distance between the orders. Ex: If the strategy produces an entry signal to buy at $20,000 and the strategy is configured to ladder into the position across 4 steps, setting the Ladder In Step Spacing to 1% would split the entry into 4 orders at $20,000, $19,800, $19,600, and $19,400."
+ladderOutStepsTip               = "When the criteria for exiting a strategy is met, the order can placed using a single order or split across multiple ladder orders. Select 1 to place a single order."
+ladderOutStepSpacingTip         = "The percent distance between the orders. Ex: If the strategy produces an exit signal to sell at $21,000 and the strategy is configured to ladder out of the position across 2 steps, setting the Ladder Out Step Spacing to 1% would split the entry into 2 orders at $21,000, $21,210."
+// Strategy Specific Inputs - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+start                           = input.price(defval=0, title="Starting ladering in at ", confirm=true, group=groupOneTitle, tooltip=startTip)
+stop                            = input.price(defval=0, title="set stop loss at", confirm=true, group=groupOneTitle, tooltip=stopLossTip) // This strategy uses a price based stop loss. You can use a percent based stop loss as part of the boilerplate settings below.
+cancelUnfilledOrdersAfter       = input.float(defval=10, title="Cancel Unfiller Orders After", confirm=false, group=groupOneTitle, tooltip=cancelEntryToolTip)/100 // This strategy uses a price based stop loss. You can use a percent based stop loss as part of the boilerplate settings below.
+// Boilerplate Inputs - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+showStrategyStatusBox           = input.bool(defval=true, title="Show Strategy Status Box", group=groupOneTitle)
+enableMacroEmaFilter            = input.bool(defval=false, title="Use EMA Filter", group=groupTwoTitle)
+macroEmaTimeframe               = input.timeframe(defval="240", title=indent+"Timeframe", group=groupTwoTitle)
+macroEmaLength                  = input.int(defval=100, minval=1, step=10, title=indent+"Length", group=groupTwoTitle)
+macroEmaType                    = input.string(defval="EMA", options = ["EMA", "SMA", "RMA", "WMA"], title=indent+"Type", group=groupTwoTitle)
+macroEmaSource                  = input.source(defval=close, title=indent+"Source", group=groupTwoTitle)
+enableAdxFilter                 = input.bool(defval=false, title="Use ADX Filter", group=groupTwoTitle)
+diLength                        = input.int(defval=14, title=indent+"DI Length", group=groupTwoTitle)
+adxSmoothing                    = input.int(defval=14, title=indent+"ADX Smoothing", group=groupTwoTitle)
+adxMinumum                      = input.int(defval=30, title=indent+"ADX Must Be Between"+"      ", inline="adxGroup", group=groupTwoTitle)
+adxMaximum                      = input.int(defval=100, title="", inline="adxGroup", group=groupTwoTitle)
+useTimeFilter                   = input.bool(defval=false, title="Use Time Session Filter", group=groupTwoTitle)
+timeSession                     = input.session(defval="0800-1700", title=indent+"Only Take Trades Between", group=groupTwoTitle)
+startTime                       = input.time(defval=timestamp("01 Jan 2022 00:00"), confirm=true, title=indent+"Strategy Start", group=groupTwoTitle) // Remove "confirm=true" from this line if you don't want to pick a time when adding the strategy to the chart
+ladderInSteps                   = input.int(defval=2, minval=1, maxval=6, step=1, title="Ladder In Rungs", group=groupThreeTitle, tooltip=ladderInStepsTip)
+ladderInStepSpacingPercent      = input.float(defval=2, title="Ladder In Step Spacing (%)", step=.25, group=groupThreeTitle, tooltip=ladderInStepSpacingTip)
+ladderOutSteps                  = input.int(defval=2, minval=1, maxval=6, step=1, title="Ladder Out Rungs", group=groupFourTitle, tooltip=ladderOutStepsTip)
+ladderOutStepSpacingPercent     = input.float(defval=2, title="Ladder Out Step Spacing (%)", step=.25, group=groupFourTitle, tooltip=ladderOutStepSpacingTip)/100
+takeProfitVal                   = input.float(defval=20, title="Take Profit (%)", step=0.25, group=groupFourTitle)/100
+stopLossVal                     = input.float(defval=10, title="Stop Loss (%)", step=0.25, group=groupFourTitle)/100 // This sample strategy does not use a percent based stop loss. Instead it uses a price based stop loss above. 
+startTrailingAfter              = input.float(defval=10, title="Start Trailing After (%)", step=0.25, group=groupFourTitle)/100
+trailBehind                     = input.float(defval=10, title="Trail Behind (%)", step=0.25, group=groupFourTitle)/100
+// Boilerplate Calculations - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+macroEma = request.security(syminfo.tickerid, macroEmaTimeframe, bot.taGetEma(macroEmaType, macroEmaSource, macroEmaLength)[barstate.isrealtime ? 1 : 0])
+closeAboveEmaMacroFilter = enableMacroEmaFilter ? close > macroEma : true
+closeBelowEmaMacroFilter = enableMacroEmaFilter ? close < macroEma : true
+adx = bot.taGetAdx(diLength, adxSmoothing)
+adxInRange = enableAdxFilter ? adx >= adxMinumum and adx <= adxMaximum : true
+withTime = useTimeFilter ? bot.isBetweenTwoTimes(timeSession,"GMT-6") : true
+bool beyondStartTime = time > startTime
+currentlyInLongPosition = strategy.position_size > 0
+currentlyInShortPosition = strategy.position_size < 0
+currentlyInAPosition = strategy.position_size != 0
+StrategyEntryPrice = start // Set this to the price the strategy should start laddering in at
+[ladderStartPrice,ladderStartedOnBar] = bot.getLockedLadderStart(StrategyEntryPrice)
+barsSinceEntry = currentlyInAPosition ? bar_index - ladderStartedOnBar + 1 : 1
+avgPrice = bot.getAveragePriceOfFilledLadders()
+// Boilerplate Entry Criteria
+boilerplateLongConditionsMet = beyondStartTime and closeAboveEmaMacroFilter and adxInRange and withTime and not currentlyInShortPosition
+boilerplateShortConditionsMet = beyondStartTime and closeAboveEmaMacroFilter and adxInRange and withTime and not currentlyInLongPosition
+// Strategy Specific Calculations - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+var string side = start > stop ? "buy" : "sell"
+// Strategy Specific Entry Criteria
+alreadyClosedTrades = strategy.closedtrades > 0
+strategySpecificLongConditions  = side == "buy" and not alreadyClosedTrades
+strategySpecificShortConditions = side == "sell" and not alreadyClosedTrades
+// Combined Entry Conditions Array Construction
+longConditionsMet = strategySpecificLongConditions and boilerplateLongConditionsMet
+shortConditionsMet = strategySpecificShortConditions and boilerplateShortConditionsMet
+longLadder1Criteria = not bot.orderCurrentlyExists("Long - 1") and strategy.opentrades == 0 and longConditionsMet
+longLadder2Criteria = not bot.orderCurrentlyExists("Long - 2") and strategy.opentrades == 1 and longConditionsMet
+longLadder3Criteria = not bot.orderCurrentlyExists("Long - 3") and strategy.opentrades == 2 and longConditionsMet
+longLadder4Criteria = not bot.orderCurrentlyExists("Long - 4") and strategy.opentrades == 3 and longConditionsMet
+longLadder5Criteria = not bot.orderCurrentlyExists("Long - 5") and strategy.opentrades == 4 and longConditionsMet
+longLadder6Criteria = not bot.orderCurrentlyExists("Long - 6") and strategy.opentrades == 5 and longConditionsMet
+bool[] longLadderInCriterias = array.from(longLadder1Criteria,longLadder2Criteria,longLadder3Criteria, longLadder4Criteria, longLadder5Criteria, longLadder6Criteria)
+shortLadder1Criteria = not bot.orderCurrentlyExists("Short - 1") and strategy.opentrades == 0 and shortConditionsMet
+shortLadder2Criteria = not bot.orderCurrentlyExists("Short - 2") and strategy.opentrades == 1 and shortConditionsMet
+shortLadder3Criteria = not bot.orderCurrentlyExists("Short - 3") and strategy.opentrades == 2 and shortConditionsMet
+shortLadder4Criteria = not bot.orderCurrentlyExists("Short - 4") and strategy.opentrades == 3 and shortConditionsMet
+shortLadder5Criteria = not bot.orderCurrentlyExists("Short - 5") and strategy.opentrades == 4 and shortConditionsMet
+shortLadder6Criteria = not bot.orderCurrentlyExists("Short - 6") and strategy.opentrades == 5 and shortConditionsMet
+bool[] shortLadderInCriterias = array.from(shortLadder1Criteria,shortLadder2Criteria,shortLadder3Criteria, shortLadder4Criteria, shortLadder5Criteria, shortLadder6Criteria)
+// Stop Criteria - "When" orders will exit due to hitting stop loss or trailing stop - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+longRunUp = ta.highest(high, bar_index == 0 ? 5000 : barsSinceEntry)
+longTrailingTrigger = avgPrice + (avgPrice * startTrailingAfter)
+// longStopLoss = currentlyInLongPosition and longRunUp > longTrailingTrigger ? longRunUp - (longRunUp * trailBehind) : strategy.position_avg_price * (1.0 - stopLossVal) // Use this for a percent based stop loss
+longStopLoss = currentlyInLongPosition and longRunUp > longTrailingTrigger ? longRunUp - (longRunUp * trailBehind) : stop
+shortRunDown = ta.lowest(low, bar_index == 0 ? 5000 : barsSinceEntry)
+shortTrailingTrigger = avgPrice - (avgPrice * startTrailingAfter)
+// shortStopLoss = currentlyInShortPosition and shortRunDown < shortTrailingTrigger ? shortRunDown + (shortRunDown * trailBehind) : strategy.position_avg_price * (1 + stopLossVal) // Use this for a percent based stop loss
+shortStopLoss = currentlyInShortPosition and shortRunDown < shortTrailingTrigger ? shortRunDown + (shortRunDown * trailBehind) : stop // Use this for a price based stop loss
+// Take Profit - The point in which the first ladder entry will take profit based on average entry price - - - - - - - - - - - - - - - - - - - - - - - - - -
+float longProfitTarget = avgPrice * (1 + takeProfitVal)
+float shortProfitTarget = avgPrice * (1 - takeProfitVal)
+takeProfitConditions = strategy.openprofit > 0
+// Criteria for Canceling unfilled orders
+cancelUnfilledLongEntries = false // close > strategy.position_avg_price + (strategy.position_avg_price * cancelUnfilledOrdersAfter)
+cancelUnfilledShortEntries = false // close < strategy.position_avg_price - (strategy.position_avg_price * cancelUnfilledOrdersAfter)
+// Orders - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[longEntryPrices, longEntryContractCounts, longEntryOrderNames] = bot.getLadderInSteps(side="buy", amount="10000", ladderRungs=ladderInSteps, ladderStart=ladderStartPrice, ladderStop=na, stepSpacingPercent=ladderInStepSpacingPercent)
+[shortEntryPrices, shortEntryContractCounts, shortEntryOrderNames] = bot.getLadderInSteps(side="sell", amount="10000", ladderRungs=ladderInSteps, ladderStart=ladderStartPrice, ladderStop=na, stepSpacingPercent=ladderInStepSpacingPercent)
+[longExitPrices, longExitQuantities, longExitOrderNames] = bot.getLadderOutSteps("sell", longProfitTarget, ladderOutSteps, ladderOutStepSpacingPercent)
+[shortExitPrices, shortExitQuantities, shortExitOrderNames] = bot.getLadderOutSteps("buy", shortProfitTarget, ladderOutSteps, ladderOutStepSpacingPercent)
+// Long Ladders
+for i = 0 to ladderInSteps - 1 by 1
+    ladderPrice         = array.get(longEntryPrices,i)
+    ladderQty           = array.get(longEntryContractCounts,i)
+    ladderID            = array.get(longEntryOrderNames,i)
+    ladderInCriteria    = array.get(longLadderInCriterias,i)
+    ladderAlertMessage  = bot.getStrategyAlertMessage("MM1", bot.getChartSymbol(), bot.getBaseCurrency(), "buy", ladderPrice, ladderPrice, str.tostring(ladderQty), longProfitTarget, longProfitTarget, longStopLoss, longStopLoss, false)
+   
+    if ladderInCriteria
+        strategy.order(id=ladderID, direction=strategy.long, limit=ladderPrice, qty=ladderQty, alert_message=ladderAlertMessage)
+    
+    if cancelUnfilledLongEntries
+        strategy.cancel(id=ladderID)
+    
+    if currentlyInLongPosition
+        for x = 0 to ladderOutSteps - 1 by 1
+            ladderOutID     = ladderID + " | Exit " + str.tostring(x + 1)
+            ladderOutPrice  = array.get(longExitPrices,x)
+            ladderOutQty    = ladderQty / ladderOutSteps
+        
+            if x == ladderOutSteps - 1
+                strategy.exit(id=ladderOutID, from_entry=ladderID, qty_percent=100, limit=ladderOutPrice, stop=longStopLoss)
+            else
+                strategy.exit(id=ladderOutID, from_entry=ladderID, qty=ladderOutQty, limit=ladderOutPrice, stop=longStopLoss)
+// Short Ladders
+for i = 0 to ladderInSteps - 1 by 1
+    ladderPrice         = array.get(shortEntryPrices,i)
+    ladderQty           = array.get(shortEntryContractCounts,i)
+    ladderID            = array.get(shortEntryOrderNames,i)
+    ladderInCriteria    = array.get(shortLadderInCriterias,i)
+    ladderAlertMessage  = bot.getStrategyAlertMessage("MM1", bot.getChartSymbol(), bot.getBaseCurrency(), "sell", ladderPrice, ladderPrice, str.tostring(ladderQty), longProfitTarget, longProfitTarget, longStopLoss, longStopLoss, false)
+   
+    if ladderInCriteria
+        strategy.order(id=ladderID, direction=strategy.short, limit=ladderPrice, qty=ladderQty, alert_message=ladderAlertMessage)
+    
+    if cancelUnfilledShortEntries
+        strategy.cancel(id=ladderID)
+    
+    if currentlyInShortPosition
+        for x = 0 to ladderOutSteps - 1 by 1
+            ladderOutID     = ladderID + " | Exit " + str.tostring(x + 1)
+            ladderOutPrice  = array.get(shortExitPrices,x)
+            ladderOutQty    = ladderQty / ladderOutSteps
+        
+            if x == ladderOutSteps - 1
+                strategy.exit(id=ladderOutID, from_entry=ladderID, qty_percent=100, limit=ladderOutPrice, stop=shortStopLoss)
+            else
+                strategy.exit(id=ladderOutID, from_entry=ladderID, qty=ladderOutQty, limit=ladderOutPrice, stop=shortStopLoss)
+// Strategy Plots, Lines, and Labels
+startLine = plot(series=start, title="Ladder Start Line", color=currentlyInLongPosition ? transparent : green, linewidth=1, editable=false)
+stopLinep = plot(series=stop, title="Stop Loss Line", color=currentlyInLongPosition ? transparent : red, linewidth=1, editable=false)
+var line startTimeLine = na
+var line stopTimeLine = na
+line.delete(startTimeLine)
+line.delete(stopTimeLine)
+stopTime = strategy.closedtrades.exit_time(0)
+stopBarIndex = strategy.closedtrades.exit_bar_index(0)
+startTimeLine := line.new(x1=startTime, y1=0, x2=startTime, y2=10000000, color=gray, width=1, xloc=xloc.bar_time)
+// Boilerplate Plots, Lines, and Labels
+adxPlot                 = plot(adx, title="ADX", editable=false, color=nevisShallows)
+macroEmaPlot            = plot(enableMacroEmaFilter ? macroEma: na, title="EMA Macro Filter", linewidth=2, color=white, editable=false)
+float ladderIn1Price    = currentlyInLongPosition   ?   array.get(longEntryPrices,0)    :   array.get(shortEntryPrices,0)
+float ladderIn2Price    = currentlyInLongPosition   ?   array.get(longEntryPrices,1)    :   array.get(shortEntryPrices,1)
+float ladderIn3Price    = currentlyInLongPosition   ?   array.get(longEntryPrices,2)    :   array.get(shortEntryPrices,2)
+float ladderIn4Price    = currentlyInLongPosition   ?   array.get(longEntryPrices,3)    :   array.get(shortEntryPrices,3)
+float ladderIn5Price    = currentlyInLongPosition   ?   array.get(longEntryPrices,4)    :   array.get(shortEntryPrices,4)
+float ladderIn6Price    = currentlyInLongPosition   ?   array.get(longEntryPrices,5)    :   array.get(shortEntryPrices,5)
+ladderInLineColor       = currentlyInAPosition      ?   oceanBlue   :   transparent
+ladderIn1PriceLine      = plot(series=ladderIn1Price, style=plot.style_stepline, color=ladderInLineColor, linewidth=1, editable=false)
+ladderIn2PriceLine      = plot(series=ladderIn2Price, style=plot.style_stepline, color=ladderInLineColor, linewidth=1, editable=false)
+ladderIn3PriceLine      = plot(series=ladderIn3Price, style=plot.style_stepline, color=ladderInLineColor, linewidth=1, editable=false)
+ladderIn4PriceLine      = plot(series=ladderIn4Price, style=plot.style_stepline, color=ladderInLineColor, linewidth=1, editable=false)
+ladderIn5PriceLine      = plot(series=ladderIn5Price, style=plot.style_stepline, color=ladderInLineColor, linewidth=1, editable=false)
+ladderIn6PriceLine      = plot(series=ladderIn6Price, style=plot.style_stepline, color=ladderInLineColor, linewidth=1, editable=false)
+float ladderOut1Price   = currentlyInLongPosition   ?   array.get(longExitPrices,0)    :   array.get(shortExitPrices,0)
+float ladderOut2Price   = currentlyInLongPosition   ?   array.get(longExitPrices,1)    :   array.get(shortExitPrices,1)
+float ladderOut3Price   = currentlyInLongPosition   ?   array.get(longExitPrices,2)    :   array.get(shortExitPrices,2)
+float ladderOut4Price   = currentlyInLongPosition   ?   array.get(longExitPrices,3)    :   array.get(shortExitPrices,3)
+float ladderOut5Price   = currentlyInLongPosition   ?   array.get(longExitPrices,4)    :   array.get(shortExitPrices,4)
+float ladderOut6Price   = currentlyInLongPosition   ?   array.get(longExitPrices,5)    :   array.get(shortExitPrices,5)
+ladderOutLineColor      = currentlyInAPosition      ?   green   :   transparent
+ladderOut1PriceLine     = plot(series=ladderOut1Price, style=plot.style_stepline_diamond, color=ladderOutLineColor, linewidth=1, editable=false)
+ladderOut2PriceLine     = plot(series=ladderOut2Price, style=plot.style_stepline_diamond, color=ladderOutLineColor, linewidth=1, editable=false)
+ladderOut3PriceLine     = plot(series=ladderOut3Price, style=plot.style_stepline_diamond, color=ladderOutLineColor, linewidth=1, editable=false)
+ladderOut4PriceLine     = plot(series=ladderOut4Price, style=plot.style_stepline_diamond, color=ladderOutLineColor, linewidth=1, editable=false)
+ladderOut5PriceLine     = plot(series=ladderOut5Price, style=plot.style_stepline_diamond, color=ladderOutLineColor, linewidth=1, editable=false)
+ladderOut6PriceLine     = plot(series=ladderOut6Price, style=plot.style_stepline_diamond, color=ladderOutLineColor, linewidth=1, editable=false)
+averageEntryLine      = plot(series=avgPrice, title="Average Entry Price", style=plot.style_stepline_diamond, linewidth=1, color=currentlyInAPosition ? skyBlue : transparent, editable=false)
+longTrailingStopLine    = plot(longStopLoss, title="Long Trailing Stop", style=plot.style_stepline_diamond, editable=false, linewidth=1, color=currentlyInLongPosition ? longStopLoss > strategy.position_avg_price ? green : red : transparent)
+shortTrailingStopLine   = plot(shortStopLoss, title="Short Trailing Stop", style=plot.style_stepline_diamond, editable=false, linewidth=1, color=currentlyInShortPosition ? shortStopLoss < strategy.position_avg_price ? green : red : transparent)
+//shortRunDownLine        = plot(shortRunDown, style=plot.style_stepline, editable=false, linewidth=2, color=currentlyInShortPosition ? green : transparent)
+//longRunUpLine           = plot(longRunUp, style=plot.style_stepline, editable=false, linewidth=2, color=currentlyInLongPosition ? green : transparent)
+// Strategy Dashboard Panel - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+long1LadderFilled = bot.orderCurrentlyExists("Long - 1")
+long2LadderFilled = bot.orderCurrentlyExists("Long - 2")
+long3LadderFilled = bot.orderCurrentlyExists("Long - 3")
+long4LadderFilled = bot.orderCurrentlyExists("Long - 4")
+long5LadderFilled = bot.orderCurrentlyExists("Long - 5")
+long6LadderFilled = bot.orderCurrentlyExists("Long - 6")
+short1LadderFilled = bot.orderCurrentlyExists("Short - 1")
+short2LadderFilled = bot.orderCurrentlyExists("Short - 2")
+short3LadderFilled = bot.orderCurrentlyExists("Short - 3")
+short4LadderFilled = bot.orderCurrentlyExists("Short - 4")
+short5LadderFilled = bot.orderCurrentlyExists("Short - 5")
+short6LadderFilled = bot.orderCurrentlyExists("Short - 6")
+longTP1Hit = bot.orderAlreadyClosedSince("Long - 1 | Exit 1", barsSinceEntry)
+longTP2Hit = bot.orderAlreadyClosedSince("Long - 1 | Exit 2", barsSinceEntry)
+longTP3Hit = bot.orderAlreadyClosedSince("Long - 1 | Exit 3", barsSinceEntry)
+longTP4Hit = bot.orderAlreadyClosedSince("Long - 1 | Exit 4", barsSinceEntry)
+longTP5Hit = bot.orderAlreadyClosedSince("Long - 1 | Exit 5", barsSinceEntry)
+longTP6Hit = bot.orderAlreadyClosedSince("Long - 1 | Exit 6", barsSinceEntry)
+shortTP1Hit = bot.orderAlreadyClosedSince("Short - 1 | Exit 1", barsSinceEntry)
+shortTP2Hit = bot.orderAlreadyClosedSince("Short - 1 | Exit 2", barsSinceEntry)
+shortTP3Hit = bot.orderAlreadyClosedSince("Short - 1 | Exit 3", barsSinceEntry)
+shortTP4Hit = bot.orderAlreadyClosedSince("Short - 1 | Exit 4", barsSinceEntry)
+shortTP5Hit = bot.orderAlreadyClosedSince("Short - 1 | Exit 5", barsSinceEntry)
+shortTP6Hit = bot.orderAlreadyClosedSince("Short - 1 | Exit 6", barsSinceEntry)
+if showStrategyStatusBox and longConditionsMet or shortConditionsMet
+    // Global Dashboard Settings
+    var string checkMark = " ✓"
+    var string fontSize = size.normal
+    cellBgColor = lightGray
+    var float quantityOfAllFilledOrders = 0
+    var table panel = table.new(position=position.bottom_right, columns=3, rows=100, bgcolor=cellBgColor, border_color=lightGray, border_width=1)
+    rowCount = 0
+    
+    table.cell(panel, 0, rowCount, text=" " + "Ladder In",     text_color=black, text_halign=text.align_left,  bgcolor=cellBgColor, text_size=fontSize)
+    table.cell(panel, 1, rowCount, text="Price",        text_color=black, text_halign=text.align_left,  bgcolor=cellBgColor, text_size=fontSize)
+    table.cell(panel, 2, rowCount, text="Contracts" + " ",    text_color=black, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+    rowCount += 1 
+    
+    // Long Ladder 1
+    if currentlyInLongPosition and ladderInSteps >= 1
+        int ladderArrayPosition = 0
+        string entryID = long1LadderFilled ? str.tostring(array.get(longEntryOrderNames,ladderArrayPosition)) + checkMark : str.tostring(array.get(longEntryOrderNames,ladderArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(longEntryPrices,ladderArrayPosition))
+        string quantity = str.format("{0,number,#.#####}", array.get(longEntryContractCounts,ladderArrayPosition))
+        color = long1LadderFilled ? green : black
+        
+        table.cell(panel, 0, rowCount, text=" " + entryID,  text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,          text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ", text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        
+        quantityOfAllFilledOrders += array.get(longEntryContractCounts,ladderArrayPosition)
+        rowCount += 1 
+    
+    // Long Ladder 2
+    if currentlyInLongPosition and ladderInSteps >= 2
+        int ladderArrayPosition = 1
+        string entryID = long2LadderFilled ? str.tostring(array.get(longEntryOrderNames,ladderArrayPosition)) + checkMark : str.tostring(array.get(longEntryOrderNames,ladderArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(longEntryPrices,ladderArrayPosition))
+        string quantity = str.format("{0,number,#.#####}", array.get(longEntryContractCounts,ladderArrayPosition))
+        color = long2LadderFilled ? green : black
+        table.cell(panel, 0, rowCount, text=" " + entryID,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,      text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ",   text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        
+        quantityOfAllFilledOrders += array.get(longEntryContractCounts,ladderArrayPosition)
+        rowCount += 1 
+    
+    // Long Ladder 3
+    if currentlyInLongPosition and ladderInSteps >= 3
+        int ladderArrayPosition = 2
+        string entryID = long3LadderFilled ? str.tostring(array.get(longEntryOrderNames,ladderArrayPosition)) + checkMark : str.tostring(array.get(longEntryOrderNames,ladderArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(longEntryPrices,ladderArrayPosition))
+        string quantity = str.format("{0,number,#.#####}", array.get(longEntryContractCounts,ladderArrayPosition))
+        color = long3LadderFilled ? green : black
+        table.cell(panel, 0, rowCount, text=" " + entryID,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,      text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ",   text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        
+        quantityOfAllFilledOrders += array.get(longEntryContractCounts,ladderArrayPosition)
+        rowCount += 1 
+    // Long Ladder 4
+    if currentlyInLongPosition and ladderInSteps >= 4
+        int ladderArrayPosition = 3
+        string entryID = long4LadderFilled ? str.tostring(array.get(longEntryOrderNames,ladderArrayPosition)) + checkMark : str.tostring(array.get(longEntryOrderNames,ladderArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(longEntryPrices,ladderArrayPosition))
+        string quantity = str.format("{0,number,#.#####}", array.get(longEntryContractCounts,ladderArrayPosition))
+        color = long4LadderFilled ? green : black
+        table.cell(panel, 0, rowCount, text=" " + entryID,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,      text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ",   text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        
+        quantityOfAllFilledOrders += array.get(longEntryContractCounts,ladderArrayPosition)
+        rowCount += 1 
+    // Long Ladder 5
+    if currentlyInLongPosition and ladderInSteps >= 5
+        int ladderArrayPosition = 4
+        string entryID = long5LadderFilled ? str.tostring(array.get(longEntryOrderNames,ladderArrayPosition)) + checkMark : str.tostring(array.get(longEntryOrderNames,ladderArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(longEntryPrices,ladderArrayPosition))
+        string quantity = str.format("{0,number,#.#####}", array.get(longEntryContractCounts,ladderArrayPosition))
+        color = long5LadderFilled ? green : black
+        table.cell(panel, 0, rowCount, text=" " + entryID,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,      text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ",   text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        
+        quantityOfAllFilledOrders += array.get(longEntryContractCounts,ladderArrayPosition)
+        rowCount += 1 
+    // Long Ladder 6
+    if currentlyInLongPosition and ladderInSteps >= 6
+        int ladderArrayPosition = 5
+        string entryID = long6LadderFilled ? str.tostring(array.get(longEntryOrderNames,ladderArrayPosition)) + checkMark : str.tostring(array.get(longEntryOrderNames,ladderArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(longEntryPrices,ladderArrayPosition))
+        string quantity = str.format("{0,number,#.#####}", array.get(longEntryContractCounts,ladderArrayPosition))
+        color = long6LadderFilled ? green : black
+        table.cell(panel, 0, rowCount, text=" " + entryID,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,      text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ",   text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        
+        quantityOfAllFilledOrders += array.get(longEntryContractCounts,ladderArrayPosition)
+        rowCount += 1
+    
+    // Short Ladder 1
+    if currentlyInShortPosition and ladderInSteps >= 1
+        int ladderArrayPosition = 0
+        string entryID = short1LadderFilled ? str.tostring(array.get(shortEntryOrderNames,ladderArrayPosition)) + checkMark : str.tostring(array.get(shortEntryOrderNames,ladderArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(shortEntryPrices,ladderArrayPosition))
+        string quantity = str.format("{0,number,#.#####}", array.get(shortEntryContractCounts,ladderArrayPosition))
+        
+        table.cell(panel, 0, rowCount, text=" " + entryID,    text_color=short1LadderFilled ? green : black, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,      text_color=short1LadderFilled ? green : black, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ",   text_color=short1LadderFilled ? green : black, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        
+        quantityOfAllFilledOrders += array.get(longEntryContractCounts,ladderArrayPosition)
+        rowCount += 1 
+    
+    // Short Ladder 2
+    if currentlyInShortPosition and ladderInSteps >= 2
+        int ladderArrayPosition = 1
+        string entryID = short2LadderFilled ? str.tostring(array.get(shortEntryOrderNames,ladderArrayPosition)) + checkMark : str.tostring(array.get(shortEntryOrderNames,ladderArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(shortEntryPrices,ladderArrayPosition))
+        string quantity = str.format("{0,number,#.#####}", array.get(shortEntryContractCounts,ladderArrayPosition))
+        color = short2LadderFilled ? green : black
+        table.cell(panel, 0, rowCount, text=" " + entryID,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,      text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ",   text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        
+        quantityOfAllFilledOrders += array.get(longEntryContractCounts,ladderArrayPosition)
+        rowCount += 1 
+    
+    // Short Ladder 3
+    if currentlyInShortPosition and ladderInSteps >= 3
+        int ladderArrayPosition = 2
+        string entryID = short3LadderFilled ? str.tostring(array.get(shortEntryOrderNames,ladderArrayPosition)) + checkMark : str.tostring(array.get(shortEntryOrderNames,ladderArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(shortEntryPrices,ladderArrayPosition))
+        string quantity = str.format("{0,number,#.#####}", array.get(shortEntryContractCounts,ladderArrayPosition))
+        color = short3LadderFilled ? green : black
+        table.cell(panel, 0, rowCount, text=" " + entryID,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,      text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ",   text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        
+        quantityOfAllFilledOrders += array.get(longEntryContractCounts,ladderArrayPosition)
+        rowCount += 1 
+    // Short Ladder 4
+    if currentlyInShortPosition and ladderInSteps >= 4
+        int ladderArrayPosition = 3
+        string entryID = short4LadderFilled ? str.tostring(array.get(shortEntryOrderNames,ladderArrayPosition)) + checkMark : str.tostring(array.get(shortEntryOrderNames,ladderArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(shortEntryPrices,ladderArrayPosition))
+        string quantity = str.format("{0,number,#.#####}", array.get(shortEntryContractCounts,ladderArrayPosition))
+        color = short4LadderFilled ? green : black
+        table.cell(panel, 0, rowCount, text=" " + entryID,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,      text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ",   text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        
+        quantityOfAllFilledOrders += array.get(longEntryContractCounts,ladderArrayPosition)
+        rowCount += 1 
+    // Short Ladder 5
+    if currentlyInShortPosition and ladderInSteps >= 5
+        int ladderArrayPosition = 4
+        string entryID = short5LadderFilled ? str.tostring(array.get(shortEntryOrderNames,ladderArrayPosition)) + checkMark : str.tostring(array.get(shortEntryOrderNames,ladderArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(shortEntryPrices,ladderArrayPosition))
+        string quantity = str.format("{0,number,#.#####}", array.get(shortEntryContractCounts,ladderArrayPosition))
+        color = short5LadderFilled ? green : black
+        table.cell(panel, 0, rowCount, text=" " + entryID,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,      text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ",   text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        
+        quantityOfAllFilledOrders += array.get(longEntryContractCounts,ladderArrayPosition)
+        rowCount += 1 
+    // Short Ladder 6
+    if currentlyInShortPosition and ladderInSteps >= 6
+        int ladderArrayPosition = 5
+        string entryID = short6LadderFilled ? str.tostring(array.get(shortEntryOrderNames,ladderArrayPosition)) + checkMark : str.tostring(array.get(shortEntryOrderNames,ladderArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(shortEntryPrices,ladderArrayPosition))
+        string quantity = str.format("{0,number,#.#####}", array.get(shortEntryContractCounts,ladderArrayPosition))
+        color = short6LadderFilled ? green : black
+        table.cell(panel, 0, rowCount, text=" " + entryID,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,      text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ",   text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        
+        quantityOfAllFilledOrders += array.get(longEntryContractCounts,ladderArrayPosition)
+        rowCount += 1 
+    
+    // Average Entry Price
+    if currentlyInAPosition 
+        
+        table.cell(panel, 0, rowCount, text=" " + "",   text_color=black, text_halign=text.align_left, bgcolor=cellBgColor, text_size=size.tiny)
+        table.cell(panel, 1, rowCount, text="",                text_color=black, text_halign=text.align_left, bgcolor=cellBgColor, text_size=size.tiny)
+        table.cell(panel, 2, rowCount, text=" ",        text_color=black, text_halign=text.align_right, bgcolor=cellBgColor, text_size=size.tiny)
+        
+        rowCount += 1 
+        
+        string avgPriceString = str.format("{0,number,currency}", strategy.position_avg_price)
+        table.cell(panel, 0, rowCount, text=" " + "Avg Price",  text_color=black, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text="",                        text_color=black, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=avgPriceString + " ",     text_color=black, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        
+        rowCount += 1 
+        
+    // Total Contracts 
+    // if currentlyInAPosition 
+    //     string totalContracts = str.format("{0,number,#.#####}", quantityOfAllFilledOrders)
+        
+    //     table.cell(panel, 0, rowCount, text=" " + "Total Contracts",  text_color=black, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+    //     table.cell(panel, 1, rowCount, text="",                 text_color=black, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+    //     table.cell(panel, 2, rowCount, text=strategy.open + " ",     text_color=black, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        
+    //     rowCount += 1 
+    
+    if currentlyInAPosition 
+        table.cell(panel, 0, rowCount, text=" " + "", text_color=black, text_halign=text.align_left, bgcolor=cellBgColor, text_size=size.tiny)
+        table.cell(panel, 1, rowCount, text="", text_color=black, text_halign=text.align_left, bgcolor=cellBgColor, text_size=size.tiny)
+        table.cell(panel, 2, rowCount, text=" ", text_color=black, text_halign=text.align_right, bgcolor=cellBgColor, text_size=size.tiny)
+       
+        rowCount += 1
+        
+        table.cell(panel, 0, rowCount, text=" " + "Ladder Out", text_color=black, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text="Price", text_color=black, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text="% of Order" + " ", text_color=black, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+       
+        rowCount += 1
+    
+    // Long Ladder Out 1
+    if currentlyInLongPosition and ladderOutSteps >= 1
+        int ladderOutArrayPosition = 0
+        string exitID = str.tostring(array.get(longExitOrderNames,ladderOutArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(longExitPrices,ladderOutArrayPosition))
+        string quantity = str.format("{0,number,percent}", array.get(longExitQuantities,ladderOutArrayPosition)/100)
+        color = longTP1Hit ? green : black
+        
+        table.cell(panel, 0, rowCount, text=longTP1Hit ? " " + exitID + checkMark : " " + exitID,   text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ", text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        rowCount += 1
+        
+    // Long Ladder Out 2
+    if currentlyInLongPosition and ladderOutSteps >= 2
+        int ladderOutArrayPosition = 1
+        string exitID = str.tostring(array.get(longExitOrderNames,ladderOutArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(longExitPrices,ladderOutArrayPosition))
+        string quantity = str.format("{0,number,percent}", array.get(longExitQuantities,ladderOutArrayPosition)/100)
+        color = longTP2Hit ? green : black
+        
+        table.cell(panel, 0, rowCount, text=longTP2Hit ? " " + exitID + checkMark : " " + exitID,   text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ", text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        rowCount += 1
+        
+    // Long Ladder Out 3
+    if currentlyInLongPosition and ladderOutSteps >= 3
+        int ladderOutArrayPosition = 2
+        string exitID = str.tostring(array.get(longExitOrderNames,ladderOutArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(longExitPrices,ladderOutArrayPosition))
+        string quantity = str.format("{0,number,percent}", array.get(longExitQuantities,ladderOutArrayPosition)/100)
+        color = longTP3Hit ? green : black
+        
+        table.cell(panel, 0, rowCount, text=longTP3Hit ? " " + exitID + checkMark : " " + exitID,   text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ", text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        rowCount += 1
+    // Long Ladder Out 4
+    if currentlyInLongPosition and ladderOutSteps >= 4
+        int ladderOutArrayPosition = 3
+        string exitID = str.tostring(array.get(longExitOrderNames,ladderOutArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(longExitPrices,ladderOutArrayPosition))
+        string quantity = str.format("{0,number,percent}", array.get(longExitQuantities,ladderOutArrayPosition)/100)
+        color = longTP4Hit ? green : black
+        
+        table.cell(panel, 0, rowCount, text=longTP4Hit ? " " + exitID + checkMark : " " + exitID,   text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ", text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        rowCount += 1
+    // Long Ladder Out 5
+    if currentlyInLongPosition and ladderOutSteps >= 5
+        int ladderOutArrayPosition = 4
+        string exitID = str.tostring(array.get(longExitOrderNames,ladderOutArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(longExitPrices,ladderOutArrayPosition))
+        string quantity = str.format("{0,number,percent}", array.get(longExitQuantities,ladderOutArrayPosition)/100)
+        color = longTP5Hit ? green : black
+        
+        table.cell(panel, 0, rowCount, text=longTP5Hit ? " " + exitID + checkMark : " " + exitID,   text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ", text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        rowCount += 1
+    // Long Ladder Out 6
+    if currentlyInLongPosition and ladderOutSteps >= 6
+        int ladderOutArrayPosition = 5
+        string exitID = str.tostring(array.get(longExitOrderNames,ladderOutArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(longExitPrices,ladderOutArrayPosition))
+        string quantity = str.format("{0,number,percent}", array.get(longExitQuantities,ladderOutArrayPosition)/100)
+        color = longTP6Hit ? green : black
+        
+        table.cell(panel, 0, rowCount, text=longTP6Hit ? " " + exitID + checkMark : " " + exitID,   text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ", text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        rowCount += 1
+        
+    // Short Ladder Out 1
+    if currentlyInShortPosition and ladderOutSteps >= 1
+        int ladderOutArrayPosition = 0
+        string exitID = str.tostring(array.get(shortExitOrderNames,ladderOutArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(shortExitPrices,ladderOutArrayPosition))
+        string quantity = str.format("{0,number,percent}", array.get(shortExitQuantities,ladderOutArrayPosition)/100)
+        color = shortTP1Hit ? green : black
+        
+        table.cell(panel, 0, rowCount, text=longTP1Hit ? " " + exitID + checkMark : " " + exitID,   text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ", text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        rowCount += 1
+        
+    // Short Ladder Out 2
+    if currentlyInShortPosition and ladderOutSteps >= 2
+        int ladderOutArrayPosition = 1
+        string exitID = str.tostring(array.get(shortExitOrderNames,ladderOutArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(shortExitPrices,ladderOutArrayPosition))
+        string quantity = str.format("{0,number,percent}", array.get(shortExitQuantities,ladderOutArrayPosition)/100)
+        color = shortTP2Hit ? green : black
+        
+        table.cell(panel, 0, rowCount, text=longTP2Hit ? " " + exitID + checkMark : " " + exitID,   text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ", text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        rowCount += 1
+        
+    // Short Ladder Out 3
+    if currentlyInShortPosition and ladderOutSteps >= 3
+        int ladderOutArrayPosition = 2
+        string exitID = str.tostring(array.get(shortExitOrderNames,ladderOutArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(shortExitPrices,ladderOutArrayPosition))
+        string quantity = str.format("{0,number,percent}", array.get(shortExitQuantities,ladderOutArrayPosition)/100)
+        color = shortTP3Hit ? green : black
+        
+        table.cell(panel, 0, rowCount, text=longTP3Hit ? " " + exitID + checkMark : " " + exitID,   text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ", text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        rowCount += 1
+    // Short Ladder Out 4
+    if currentlyInShortPosition and ladderOutSteps >= 4
+        int ladderOutArrayPosition = 3
+        string exitID = str.tostring(array.get(shortExitOrderNames,ladderOutArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(shortExitPrices,ladderOutArrayPosition))
+        string quantity = str.format("{0,number,percent}", array.get(shortExitQuantities,ladderOutArrayPosition)/100)
+        color = shortTP4Hit ? green : black
+        
+        table.cell(panel, 0, rowCount, text=longTP4Hit ? " " + exitID + checkMark : " " + exitID,   text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ", text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        rowCount += 1
+    // Short Ladder Out 5
+    if currentlyInShortPosition and ladderOutSteps >= 5
+        int ladderOutArrayPosition = 4
+        string exitID = str.tostring(array.get(shortExitOrderNames,ladderOutArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(shortExitPrices,ladderOutArrayPosition))
+        string quantity = str.format("{0,number,percent}", array.get(shortExitQuantities,ladderOutArrayPosition)/100)
+        color = shortTP5Hit ? green : black
+        
+        table.cell(panel, 0, rowCount, text=longTP5Hit ? " " + exitID + checkMark : " " + exitID,   text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ", text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        rowCount += 1
+    // Short Ladder Out 6
+    if currentlyInShortPosition and ladderOutSteps >= 6
+        int ladderOutArrayPosition = 5
+        string exitID = str.tostring(array.get(shortExitOrderNames,ladderOutArrayPosition))
+        string price = str.format("{0,number,currency}", array.get(shortExitPrices,ladderOutArrayPosition))
+        string quantity = str.format("{0,number,percent}", array.get(shortExitQuantities,ladderOutArrayPosition)/100)
+        color = shortTP6Hit ? green : black
+        
+        table.cell(panel, 0, rowCount, text=longTP6Hit ? " " + exitID + checkMark : " " + exitID,   text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 1, rowCount, text=price,    text_color=color, text_halign=text.align_left, bgcolor=cellBgColor, text_size=fontSize)
+        table.cell(panel, 2, rowCount, text=quantity + " ", text_color=color, text_halign=text.align_right, bgcolor=cellBgColor, text_size=fontSize)
+        rowCount += 1
+Expand (719 lines)

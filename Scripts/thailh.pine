@@ -1,0 +1,399 @@
+Script Name: thailh
+Author: lomis1
+Description: first script all in one contain EMA, RSi ádkals;fjalskcm,z.xmc.,zxmcaksdjalksdjalskdjalskdja,xcmz.,xmvz.,xmv.z,xv
+PineScript code:
+
+Pine Script™ strategy
+thailh
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+//@version=5
+strategy(title='EMA 34, 89, 200 by thailh', overlay=true)
+// Get user input
+atrMovement = input(title='ATR Movement Required', defval=1.0)
+lookback = input.int(title='High/Low Lookback', defval=25, step=5)
+maxZoneSize = input.float(title='Max Zone Size (Compared to ATR)', defval=2.5, step=0.5)
+newStructureReset = input.int(title='Zone Update Count Before Reset', defval=25, step=5)
+drawPreviousStructure = input(title='Draw Previous Structure', defval=true)
+// Get current ATR value
+atr = ta.atr(14)
+// Get highest body and lowest body for the current candle
+highestBody = open > close ? open : close
+lowestBody = open > close ? close : open
+// Set up our persistent S&R variables (1 = the wick and 2 = the body)
+var res1 = 0.0
+var res2 = 0.0
+var sup1 = 0.0
+var sup2 = 0.0
+var lookForNewResistance = true
+var lookForNewSupport = true
+// Set up our *previous* support & resistance variables (for drawing support-turned-resistance etc)
+var previousRes1 = 0.0
+var previousRes2 = 0.0
+var previousSup1 = 0.0
+var previousSup2 = 0.0
+// Set up our ATR variables (for identifying significant declines/rallies to validate S&R zones)
+var atrSaved = 0.0
+var potentialR1 = 0.0
+var potentialR2 = 0.0
+var potentialS1 = 0.0
+var potentialS2 = 0.0
+// Detect fractal swing highs for resistance
+// We're looking for this pattern: .|.
+if high[1] == ta.highest(high, lookback) and high < high[1] and lookForNewResistance
+    r1 = high[1]
+    r2 = highestBody[2] > highestBody[1] ? highestBody[2] : highestBody > highestBody[1] ? highestBody : highestBody[1]
+    if (r1 - r2) / atr <= maxZoneSize
+        lookForNewResistance := false
+        potentialR1 := r1
+        potentialR2 := r2
+        atrSaved := atr
+        atrSaved
+// Detect fractal swing lows for support
+// We're looking for this pattern: *|*
+if low[1] == ta.lowest(low, lookback) and low > low[1] and lookForNewSupport
+    s1 = low[1]
+    s2 = lowestBody[2] < lowestBody[1] ? lowestBody[2] : lowestBody < lowestBody[1] ? lowestBody : lowestBody[1]
+    if (s2 - s1) / atr <= maxZoneSize
+        lookForNewSupport := false
+        potentialS1 := s1
+        potentialS2 := s2
+        atrSaved := atr
+        atrSaved
+// Check if potential resistance zone has already been violated. If it has, reset our potential R1 & R2
+if close > potentialR1 and barstate.isconfirmed
+    potentialR1 := na
+    potentialR2 := na
+    potentialR2
+// Check if potential support zone has already been violated. If it has, reset our potential S1 & S2
+if close < potentialS1 and barstate.isconfirmed
+    potentialS1 := na
+    potentialS2 := na
+    potentialS2
+// Check if we've had a significant decline since detecting swing high
+if potentialR1 - low >= atrSaved * atrMovement
+    previousRes1 := na(previousRes1) ? potentialR1 : previousRes1  // Store previous resistance if we're not already drawing it
+    previousRes2 := na(previousRes2) ? potentialR2 : previousRes2
+    res1 := potentialR1
+    res2 := potentialR2
+    potentialR1 := na
+    potentialR2 := na
+    potentialR2
+// Check if we've had a significant rally since detecting swing low
+if high - potentialS1 >= atrSaved * atrMovement
+    previousSup1 := na(previousSup1) ? potentialS1 : previousSup1  // Store previous support if we're not already drawing it
+    previousSup2 := na(previousSup2) ? potentialS2 : previousSup2
+    sup1 := potentialS1
+    sup2 := potentialS2
+    potentialS1 := na
+    potentialS2 := na
+    potentialS2
+// Declare support & resistance update counters 
+// This is used for forcing a zone reset if a zone is not violated within a reasonable period of time
+var supCount = 0
+var resCount = 0
+// If the previous resistance high has been violated then begin searching for a new resistance zone
+if close >= res1 and barstate.isconfirmed
+    lookForNewResistance := true
+    lookForNewSupport := true
+    resCount := resCount + 1
+    resCount
+// If the previous support low has been violated then begin searching for a new support zone
+if close <= sup1 and barstate.isconfirmed
+    lookForNewSupport := true
+    lookForNewResistance := true
+    supCount := supCount + 1
+    supCount
+// If our current resistance zone has been violated, store its values to draw new *potential* support zone
+// The idea being that once a major resistance zone is violated it often becomes future support
+// But we only save previous S&R if we don't already have one saved (or our zone update count exceeds newStructureReset)
+if close > res1 and na(previousRes1) and barstate.isconfirmed or previousRes1 == 0.0 or supCount >= newStructureReset
+    previousRes1 := res1
+    previousRes2 := res2
+    supCount := 0
+    supCount
+// If our current support zone has been violated, store its values to draw new *potential* resistance zone
+// The idea being that once a major support zone is violated it often becomes future resistance
+// But we only save previous S&R if we don't already have one saved (or our zone update count exceeds newStructureReset)
+if close < sup1 and na(previousSup1) and barstate.isconfirmed or previousSup1 == 0.0 or resCount >= newStructureReset
+    previousSup1 := sup1
+    previousSup2 := sup2
+    resCount := 0
+    resCount
+// If our resistance-turned-support zone has been violated, reset our saved resistance variables
+if close < previousRes2 and barstate.isconfirmed
+    previousRes1 := na
+    previousRes2 := na
+    previousRes2
+// If our support-turned-resistance zone has been violated, reset our saved support variables
+if close > previousSup2 and barstate.isconfirmed
+    previousSup1 := na
+    previousSup2 := na
+    previousSup2
+// Draw our current resistance zone
+r1 = plot(res1 == res1[1] ? res1 : na, color=close >= res1 ? color.green : color.red, style=plot.style_linebr, title='R1')
+r2 = plot(res1 == res1[1] ? res2 : na, color=close >= res1 ? color.green : color.red, style=plot.style_linebr, title='R2')
+fill(r1, r2, color=close > res1 ? color.green : color.red, title='Resistance Zone', transp=50)
+// Draw our current support zone
+s1 = plot(sup1 == sup1[1] ? sup1 : na, color=close < sup1 ? color.red : color.green, style=plot.style_linebr, title='S1')
+s2 = plot(sup1 == sup1[1] ? sup2 : na, color=close < sup1 ? color.red : color.green, style=plot.style_linebr, title='S2')
+fill(s1, s2, color=close < sup1 ? color.red : color.green, title='Support Zone', transp=50)
+// Draw our previous support zone (turned potential resistance)
+ps1 = plot(previousSup1 == previousSup1[1] and previousSup1 != sup1 and drawPreviousStructure ? previousSup1 : na, color=color.new(color.red, 0), style=plot.style_linebr, title='PS1')
+ps2 = plot(previousSup1 == previousSup1[1] and previousSup1 != sup1 and drawPreviousStructure ? previousSup2 : na, color=color.new(color.red, 0), style=plot.style_linebr, title='PS2')
+fill(ps1, ps2, color=color.new(color.red, 10), title='Previous Support Zone')
+// Draw our previous resistance zone (turned potential support)
+pr1 = plot(previousRes1 == previousRes1[1] and previousRes1 != res1 and drawPreviousStructure ? previousRes1 : na, color=color.new(color.green, 0), style=plot.style_linebr, title='PR1')
+pr2 = plot(previousRes1 == previousRes1[1] and previousRes1 != res1 and drawPreviousStructure ? previousRes2 : na, color=color.new(color.green, 0), style=plot.style_linebr, title='PR2')
+fill(pr1, pr2, color=color.new(color.green, 10), title='Previous Resistance Zone')
+// Check alert conditions
+alertResistance = high >= res2
+alertSupport = low <= sup2
+alertResistanceBO = close >= res1
+alertSupportBO = close <= sup1
+// Trigger alerts
+alertcondition(alertResistance or alertSupport or alertResistanceBO or alertSupportBO, title='[DSI] Alert!', message='DSI alert for {{ticker}}')
+alertcondition(alertResistance, title='[DSI] Resistance Alert', message='Price has entered current potential resistance zone for {{ticker}}')
+alertcondition(alertSupport, title='[DSI] Support Alert', message='Price has entered current potential support zone for {{ticker}}')
+alertcondition(alertResistanceBO, title='[DSI] Resistance Breakout', message='Price has broken past potential resistance zone for {{ticker}}')
+alertcondition(alertSupportBO, title='[DSI] Support Breakout', message='Price has broken past potential support zone for {{ticker}}')
+// Input options
+fastMALen = input(title='Fast MA', defval=34)
+midMALen = input(title='Medium MA', defval=89)
+slowMALen = input(title='Slow MA', defval=200)
+// Calculate values
+fastMA = ta.ema(close, fastMALen)
+midMA = ta.ema(close, midMALen)
+slowMA = ta.ema(close, slowMALen)
+// Plot values
+plot(series=fastMA, color=color.new(color.yellow, 0), title='Fast MA', linewidth=3, trackprice=false)
+plot(series=midMA, color=color.new(color.red, 0), title='Mid MA', linewidth=4, trackprice=false)
+plot(series=slowMA, color=color.new(color.white, 0), title='Slow MA', linewidth=5)
+// Highlight crossovers
+// longCondition = ta.crossover(ta.ema(close, 34), ta.ema(close, 200))
+// if longCondition
+//     strategy.entry('Long buy', strategy.long)
+// longCondition1 = ta.crossover(ta.ema(close, 34), ta.ema(close, 89))
+// if longCondition1
+//     strategy.entry('Short buy', strategy.long)
+// shortCondition = ta.crossunder(ta.ema(close, 34), ta.ema(close, 200))
+// if shortCondition
+//     strategy.entry('Long sell', strategy.short)
+// shortCondition1 = ta.crossunder(ta.ema(close, 34), ta.ema(close, 89))
+// if shortCondition1
+//     strategy.entry('Short sell', strategy.short)
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ZenAndTheArtOfTrading / Pine Script Mastery Course
+// Dynamic Structure Indicator v2.0
+// Last Updated: 8th January, 2021
+Expand (211 lines)

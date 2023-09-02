@@ -1,0 +1,273 @@
+Script Name: TemaVWAPRSI Strategy
+Author: sonnyparlin
+Description: Exchange: Kraken
+Timeframe: 5m
+Pair: ETH/USD
+
+If you use this for any other exchange or pair, you'll have to tweak the settings, most importantly are the trailing stop ticks. This strategy is currently in what I would call beta mode. It uses the volume weighted average price indicator, rate of change, two triple exponential moving averages and the relative...
+PineScript code:
+
+Pine Script™ strategy
+TemaVWAPRSI Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+//@version=5
+// Author: Sonny Parlin
+// Starting capitol $1000
+strategy(shorttitle='TemaVWAPRSI+Strategy', title='TemaVWAPRSI Strategy', 
+     overlay=true, 
+     commission_type=strategy.commission.percent, 
+     currency=currency.USD, 
+     commission_value=0.20, 
+     slippage=2, initial_capital=10000)
+// Inputs and variables
+ff = input.int(17, minval=1, step=1, maxval=29, title='Tema Fast (days)')
+ss = input.int(115, minval=30, maxval=200, title='Tema Slow (days)')
+// exitWithProfit = input.float(1.1, minval=0.01, step=0.1, title='sell with at least (x%) profit') / 100
+orderStake = input.int(90, 'Order Stake (%)', minval=0, step=1) / 100
+var float entryPrice = na
+xEMA1 = ta.ema(close, ff)
+xEMA2 = ta.ema(xEMA1, ff)
+xEMA3 = ta.ema(xEMA2, ff)
+temaFast = 3 * xEMA1 - 3 * xEMA2 + xEMA3
+xxEMA1 = ta.ema(close, ss)
+xxEMA2 = ta.ema(xxEMA1, ss)
+xxEMA3 = ta.ema(xxEMA2, ss)
+temaSlow = 3 * xxEMA1 - 3 * xxEMA2 + xxEMA3
+pine_efi(len) =>
+    src = ((close - close[1]) * volume)
+    efi = ta.ema(src, len)
+    
+// The buy stratey:
+u_conf1 = input(false, title='Use Confirmation 1')
+conf1 = input.int(3, minval=1, title="Confirmation 1: rising OBV for x candles")
+u_conf2 = input(false, title='Use Confirmation 2')
+conf2 = input.int(1, minval=1, title="Confirmation 2: rising EFI for x candles")
+u_conf3 = input(true, title='Use Confirmation 3')
+conf3 = input.int(3, minval=1, title="Confirmation 3: rising RSI for x candles")
+u_conf4 = input(true, title='Use Confirmation 4')
+conf4 = input.int(3, minval=1, title="Confirmation 4: rising VWAP for x candles")
+body = math.abs(close - open)
+upperwick = high - math.max(open, close)
+lowerwick = math.min(open, close) - low
+isUp = close > open
+tws = (not isUp[3] and isUp[2] and isUp[1] and isUp) and (body[1]>body[2]) and (upperwick<0.1*body and lowerwick<0.1*body)
+confirmation() =>
+    risingOBV = u_conf1 ? ta.rising(ta.obv, conf1) : true
+    risingForce = u_conf2 ? ta.rising(pine_efi(30), conf2) : true
+    risingRSI = u_conf3 ? ta.rising(ta.rsi(close,14),conf3) and ta.rsi(close,14) < 60 : true
+    risingVWAP = u_conf4 ? ta.rising(ta.vwap,conf4) : true
+        
+    if (risingOBV and risingForce and risingRSI and risingVWAP)
+        true
+    else
+        false
+cond1 = ta.crossover(close, ta.vwap) and confirmation()
+cond2 = ta.crossover(temaFast, temaSlow) and confirmation()
+cond3 = ta.crossover(ta.rsi(close,14),30) and confirmation()
+cond4 = tws and confirmation()
+cond5 = close < ta.vwap and ta.crossover(ta.rsi(close,14),30) and confirmation()
+cond6 = (ta.vwap[1] - ta.vwap) / ta.vwap[1] > 0.01
+enterLong = cond1 or cond2 or cond3 or cond4 or cond5 or cond6
+orderSize = strategy.equity * orderStake / close
+// Trailing Stoploss
+i_activationPct = input.float(3.6, title='Trailing Stop is activated after price moves x% from Entry', step=0.1) / 100
+i_trailOffset = input.int(53600, title='Trailing Stop in ticks (pair specific)', minval=1, step=100)  // You'll have to tweak per pair
+var float activationLevel = na  // The price needs to pass this price in order to activate the trailing Stop Loss
+// Take profit
+tp = input.float(-100, minval=-100, step=0.1, title='Take Profit (%) -100 to disable') / 100
+takeProfit = strategy.position_avg_price * (1 + tp)
+i_sl = input.float(7.2, title='Stop Loss (%)', step=0.1) / 100
+var float stopLossPrice = na
+useMicroStop = input(true, title='Use Micro Stop')
+showPlots = input(defval=true, title='Show Plots')
+var buyBar = 0
+// Enter long
+if enterLong and strategy.opentrades == 0
+    entryPrice := close
+    stopLossPrice := entryPrice * (1 - i_sl)
+    buyBar := bar_index
+    strategy.entry('Open Long Position', strategy.long, orderSize, when=strategy.position_size <= 0, comment='Long')
+    activationLevel := entryPrice + entryPrice * i_activationPct
+    strategy.exit('Open Long Position', stop=stopLossPrice, trail_price=activationLevel, trail_offset=i_trailOffset, comment='Long Stop')
+f_stdBands(_vwap, _factor) =>
+    vwapSD = ta.stdev(_vwap, 100)
+    up = _vwap + vwapSD * _factor
+    lo = _vwap - vwapSD * _factor
+    [up, lo]
+[upper, lower] = f_stdBands(ta.vwap, 1)  // 2 Standard Deviation
+// Plots
+var tstop = float(na)
+if high >= activationLevel and strategy.opentrades > 0
+    tstop := math.max(high - i_trailOffset * syminfo.mintick, nz(tstop[1]))
+    tstop
+else
+    tstop := na
+    tstop
+profitExit = ta.crossover(high, takeProfit) and high < activationLevel
+if (takeProfit != -100 and profitExit)
+    strategy.close('Open Long Position', comment='Take Profit')
+if useMicroStop
+    if ta.crossunder(low, activationLevel) or open > activationLevel and close < activationLevel
+        strategy.close('Open Long Position', comment='Micro Stop')
+// useSellSignal = input(true, title='Use Sell Signal')
+// exitCond1 = ta.crossunder(ta.rsi(close,14),70)
+// exitCond2 = close < activationLevel and (close - entryPrice) / close > exitWithProfit
+// if useSellSignal
+//     if exitCond1 and exitCond2
+//         strategy.close('Open Long Position', comment='Sell Signal')
+upperBand = plot(showPlots ? upper : na, title='Upper Band', color=color.new(color.green, 40))
+lowerBand = plot(showPlots ? lower : na, title='Lower Band', color=color.new(color.red, 40))
+fill(upperBand, lowerBand, color=showPlots ? color.new(color.black, 80) : na)
+plot(showPlots ? ta.vwap : na, color=color.new(color.blue, 40), title='vwap')
+plot(showPlots ? temaFast : na, 'temaFast', color=color.new(#00ffcc, 0))
+plot(showPlots ? temaSlow : na, 'temaSlow', color=color.new(color.orange, 0))
+plot(showPlots ? activationLevel : na, 'activationLevel', style=plot.style_linebr, color=color.new(color.blue, 0))
+plot(showPlots ? stopLossPrice : na, 'stoploss', style=plot.style_linebr, color=color.new(color.red, 0))
+//plot(showPlots ? takeProfit : na, 'Take Profit', style=plot.style_linebr, color=color.new(color.green, 0))
+plot(showPlots ? tstop : na, 'Trailing Stoploss', style=plot.style_linebr, color=color.new(color.white, 0))
+Expand (145 lines)

@@ -1,0 +1,194 @@
+Script Name: Forex SWING Trader
+Author: SoftKill21
+Description: This strategy is mainly designed for swing trading applied to FOREX.
+
+In this case we make use of 2 moving averages but with different time frame, lets say 1h and 1 day.
+
+When they cross above we would initially have a long trade, but in this strategy we trade it in reverse, so we would actually enter a short position.
+The same for short trade.
+
+At the same time...
+PineScript code:
+
+Pine Script™ strategy
+Forex SWING Trader
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © SoftKill21
+//@version=4
+strategy("gbpnzd 1h", overlay=true)
+src = close
+useCurrentRes = input(true, title="Use Current Chart Resolution?")
+resCustom = input(title="Use Different Timeframe? Uncheck Box Above", type=input.resolution, defval="60")
+len = input(28, title="Moving Average Length - LookBack Period")
+//periodT3 = input(defval=7, title="Tilson T3 Period", minval=1) 
+factorT3 = input(defval=7, title="Tilson T3 Factor - *.10 - so 7 = .7 etc.", minval=0) 
+atype = input(2,minval=1,maxval=8,title="1=SMA, 2=EMA, 3=WMA, 4=HullMA, 5=VWMA, 6=RMA, 7=TEMA, 8=Tilson T3")
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2000, title = "From Year", minval = 1970)
+ //monday and session 
+// To Date Inputs
+toDay = input(defval = 31, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 12, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2020, title = "To Year", minval = 1970)
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate 
+res = useCurrentRes ? timeframe.period : resCustom
+resCustom2 = input(title="plm", type=input.resolution, defval="D")
+res2 = resCustom2
+//hull ma definition
+hullma = wma(2*wma(src, len/2)-wma(src, len), round(sqrt(len)))
+//TEMA definition
+ema1 = ema(src, len)
+ema2 = ema(ema1, len)
+ema3 = ema(ema2, len)
+tema = 3 * (ema1 - ema2) + ema3
+//Tilson T3
+factor = factorT3 *.10
+gd(src, len, factor) => ema(src, len) * (1 + factor) - ema(ema(src, len), len) * factor 
+t3(src, len, factor) => gd(gd(gd(src, len, factor), len, factor), len, factor) 
+tilT3 = t3(src, len, factor) 
+ 
+avg = atype == 1 ? sma(src,len) : atype == 2 ? ema(src,len) : atype == 3 ? wma(src,len) : atype == 4 ? hullma : atype == 5 ? vwma(src, len) : atype == 6 ? rma(src,len) : atype == 7 ? 3 * (ema1 - ema2) + ema3 : tilT3
+out = avg 
+ema20 = security(syminfo.tickerid, res, out)
+plot3 = security(syminfo.tickerid, res2, ema20)
+plot33 = security(syminfo.tickerid, res, ema20)
+plot(plot3,linewidth=2,color=color.red) 
+plot(plot33,linewidth=2,color=color.white) 
+// longC = crossover(close[2], plot3) and close[1] > close[2] and close > close[1]
+// shortc = crossunder(close[2],plot3)  and close[1] < close[2] and close < close[1]
+volumeMA=input(24)
+ema_1 = ema(volume, volumeMA)
+timeinrange(res, sess) => time(res, sess) != 0
+//entrytime = timeinrange(timeframe.period, "0900-0915")
+myspecifictradingtimes = input('0900-2300', type=input.session, title="My Defined Hours")
+entrytime = time(timeframe.period, myspecifictradingtimes) != 0
+longC = crossover(plot33,plot3)  and time_cond and entrytime
+shortc = crossunder(plot33,plot3) and time_cond and entrytime
+// exitlong = crossunder(plot33,plot3)
+// exitshort = crossover(plot33,plot3)
+distanta=input(1.0025)
+exitshort = plot33/plot3 > distanta
+exitlong  = plot3/plot33 > distanta
+inverse = input(true)
+exit = input(false)
+if(inverse==false)
+    strategy.entry("long",1,when=longC)
+    strategy.entry("short",0,when=shortc)
+if(inverse)
+    strategy.entry("long",1,when=shortc)
+    strategy.entry("short",0,when=longC)
+if(exit)
+    strategy.close("long",when=exitlong)
+    strategy.close("short",when=exitshort)
+// if(dayofweek==dayofweek.friday)
+//     strategy.close_all()
+risk = input(25)
+strategy.risk.max_intraday_loss(risk, strategy.percent_of_equity)
+Expand (103 lines)

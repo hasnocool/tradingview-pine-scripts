@@ -1,0 +1,309 @@
+Script Name: TASC 2022.08 Trading The Fear Index
+Author: PineCodersTASC
+Description: █ OVERVIEW
+
+ TASC's August 2022 edition of Traders' Tips  includes an article by Markos Katsanos titled "Trading The Fear Index". This script implements a trading strategy called the “daily long/short trading system for ​volatility ETFs” presented in this article.
+
+█ CONCEPTS
+
+This long-term strategy aims to capitalize on stock market  volatility  by using ...
+PineScript code:
+
+Pine Script™ strategy
+TASC 2022.08 Trading The Fear Index
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+//  TASC Issue: August 2022 - Vol. 40, Issue 9
+//     Article: Trading The Fear Index
+//              There Is Nothing To Fear But Fear Itself
+//  Article By: Markos Katsanos
+//    Language: TradingView's Pine Script v5
+// Provided By: PineCoders, for tradingview.com
+// @version=5
+strategy('TASC 2022.08 Trading The Fear Index', 'TTFI', false,
+                 default_qty_type= strategy.percent_of_equity,
+                 commission_type= strategy.commission.percent,
+                 currency=currency.USD, initial_capital=10000,
+                 default_qty_value=100, commission_value=0.01)
+chl() =>
+    [close, high, low]
+isntVixETF() =>
+    VIX_ETFs = array.from('VXX', 'VIXY', 'UVXY', 'VIXM', 
+                      'VXZ', 'SVOL', 'SVXY')
+    notVETF = not array.includes(VIX_ETFs, syminfo.ticker)
+    notVETF
+if isntVixETF()
+    runtime.error('ERR: This is only intended for VIX ETFs '+
+     '(tickers: VXX, VIXY, UVXY, VIXM, VXZ, SVOL, and SVXY)')
+string SC= 'Strategy Configurations'
+directiv = input.string( 'Long/Short', 'Direction(s) Allowed',
+  options=['Long Only', 'Long/Short', 'Short Only'], group=SC)
+strtTime = input.time(timestamp('2020-01-01'),  'Start Time:',
+                                     inline='sTime', group=SC)
+startON  = input(true, '', 'Start time of observation window.'
+ +' The checkbox enables/disables the Start Time','sTime', SC)
+endTime  = input.time(timestamp('2022-01-01'), '   End Time:',
+                                     inline='eTime', group=SC)
+lapseON  = input(true, '', 'Lapse Time of observation window.'
+  +' The checkbox enables/disables the End Time', 'eTime', SC)
+showAlgo = input.string('STVIXS/STVIXL', 'Display Indicators',
+  options= ['STVIXS/STVIXL', 'STSPYS/STSPYL', 'STVIXL/STSPYL',
+                 'STVIXS/STSPYS', 'VIXUP/VIXDN', 'RC', 'VIX'])
+string SI= 'Stochastic Indicator Adjustments'
+STBARSS  = input.int(10, 'Fast Period', 10, 15, 5, group=SI)
+STBARSL  = input.int(25, 'Slow Period', 25, 30, 5, group=SI)
+string VI= 'Adjustments for VIX Indicators'
+vixIndex = input.string('CBOE:VIX', 'Select Volatility Index',
+                   options=['CBOE:VIX', 'TVC:VIX'], group=VI)
+VBARS    = input.int( 6, 'VIX Period',    5, 10, 1, group=VI)
+VIXUPMAX = input.int(50, 'VIX Threshold',40, 60, 1, group=VI)
+string TP   = 'Table Preferences'
+showTable   = input.bool(true, 'Display Data Table', group=TP)
+tableRegion = input.string(  position.middle_center, group=TP,
+      tooltip='Optimize Your View', title='Table Positioning',
+       options=[ position.bottom_left, position.bottom_center,
+                 position.middle_left, position.middle_center,
+                 position.top_left,    position.top_center  ])
+ 
+string TFP        = timeframe.period
+[VIX, VIXH, VIXL] = request.security(vixIndex, TFP, chl())
+[SPY, SPYH, SPYL] = request.security(   'SPY', TFP, chl())
+STVIXS = ta.sma(ta.stoch(VIX, VIXH, VIXL, STBARSS), 3)
+STSPYS = ta.sma(ta.stoch(SPY, SPYH, SPYL, STBARSS), 3)
+STVIXL = ta.sma(ta.stoch(VIX, VIXH, VIXL, STBARSL), 3)
+STSPYL = ta.sma(ta.stoch(SPY, SPYH, SPYL, STBARSL), 3)
+VIXUP  = (VIXH /  ta.lowest(VIXL, VBARS)[1] - 1.0) * 100.0
+VIXDN  = ( VIX / ta.highest( VIX, VBARS)[1] - 1.0) * 100.0
+RC     = ta.correlation(VIX, bar_index, VBARS-1)
+plot(showAlgo=='STVIXS/STVIXL' ? STVIXS : na, '', #FF0000)
+plot(showAlgo=='STVIXS/STVIXL' ? STVIXL : na, '', #0080FF)
+plot(showAlgo=='STSPYS/STSPYL' ? STSPYS : na, '', #550000, 2)
+plot(showAlgo=='STSPYS/STSPYL' ? STSPYL : na, '', #003060, 2)
+plot(showAlgo=='STVIXS/STSPYS' ? STVIXS : na, '', #FF0000)
+plot(showAlgo=='STVIXS/STSPYS' ? STSPYS : na, '', #550000, 2)
+plot(showAlgo=='STVIXL/STSPYL' ? STVIXL : na, '', #0080FF)
+plot(showAlgo=='STVIXL/STSPYL' ? STSPYL : na, '', #003060, 2)
+plot( showAlgo=='VIXUP/VIXDN' ?    VIXUP : na, '', #FF8000)
+plot( showAlgo=='VIXUP/VIXDN' ?    VIXDN : na, '', #550055, 2)
+hline(showAlgo=='VIXUP/VIXDN' ? VIXUPMAX : na, '', #804000)
+hline(showAlgo=='VIXUP/VIXDN' ?      -20 : na, '', #550055)
+plot( showAlgo=='RC'  ?  RC : na, '', #FF40FF)
+hline(showAlgo=='RC'  ? 0.8 : na)
+plot( showAlgo=='VIX' ? VIX : na, '', #FFCC00, 2)
+hline(showAlgo=='VIX' ?  15 : na)
+BUY = VIXUP > VIXUPMAX    and STVIXL > STSPYL and
+     STVIXS > STVIXS[1]   and STVIXS > STSPYS and
+  bar_index > STBARSL + 3 and     RC > RC[1]  and RC > 0.8
+SELL  = STVIXS < STVIXS[1] or STSPYS > STVIXS
+COVER = STVIXS > STVIXS[1] and VIXUP > VIXUPMAX and RC > 0.8
+SHORT = STSPYS > STSPYS[1]   and  VIXUP < VIXUPMAX and
+     bar_index > STBARSS + 3 and STSPYS > STVIXS   and
+   VIX > 15  and VIXDN < -20 and    VIX <= ta.lowest(VIX, 3)
+if syminfo.ticker == 'SVXY'
+    temp  = SHORT, SHORT :=  BUY, BUY  := temp
+    temp := COVER, COVER := SELL, SELL := temp
+strategyMode = switch directiv
+    'Long/Short' => strategy.direction.all
+    'Short Only' => strategy.direction.short
+    =>              strategy.direction.long
+strategy.risk.allow_entry_in(strategyMode)
+withinStrategyObservationWindow = if startON
+    time>=strtTime and (lapseON ? time<=endTime : true)
+else
+    lapseON ? time<=endTime : true
+if withinStrategyObservationWindow and strategy.equity > 0.0
+    if strategy.opentrades == 0
+        if BUY or COVER
+            strategy.entry('LONG\nENTRY', strategy.long)
+        else if SHORT
+            strategy.entry('SHORT\nENTRY', strategy.short)
+    else
+        if not (directiv == 'Long Only')
+            if strategy.position_size > 0.0 and SHORT
+                strategy.entry('SHORT', strategy.short)
+            else if strategy.position_size < 0.0 and COVER
+                strategy.entry('COVER', strategy.long)
+        else if SELL
+            strategy.close('ENTRY', comment='EXIT')
+else if strategy.opentrades > 0
+    strategy.close_all(comment='Strategy\nWindow\nElapsed')
+string[] aLabels     = array.from( 'Ticker ID:', 'Bar Index:',
+ '  High:', 'Close:',   'Open:',    'Low:', 'VIX:',   'VIXH:',
+ 'STVIXS:','STSPYS:', 'STVIXL:', 'STSPYL:',  'RC:', 'VIXUP%:',
+           'VIXDN%:',    'BUY:',  'SELL:','SHORT:',  'COVER:')
+tDT = table.new(tableRegion, 2, 19, #000000DD, #4499FF, 1)
+if showTable and bar_index >= last_bar_index - 1
+    string TICKER_ID = syminfo.prefix + ':' + syminfo.ticker
+    color  odd       = #FFFFFF0b
+    string[] aValues = array.from(TICKER_ID,
+     str.tostring(bar_index),     str.tostring(high ),
+     str.tostring(close),         str.tostring( open),
+     str.tostring( low ),         str.tostring( VIX ),
+     str.tostring( VIXH),         str.tostring(STVIXS, '.00'),
+     str.tostring(STSPYS, '.00'), str.tostring(STVIXL, '.00'),
+     str.tostring(STSPYL, '.00'), str.tostring(    RC, '.00'),
+     str.tostring( VIXUP, '.00'), str.tostring( VIXDN, '.00'),
+     str.tostring( BUY ),         str.tostring( SELL),
+     str.tostring(SHORT),         str.tostring(COVER))
+    for _i=0 to array.size(aLabels)-1
+        table.cell( tDT, 0, _i, array.get( aLabels, _i), 0, 0,
+         #4499FF, text.align_right, bgcolor=_i % 2 ? na : odd)
+        table.cell( tDT, 1, _i, array.get( aValues, _i), 0, 0,
+         #FFFFFF, text.align_center,bgcolor=_i % 2 ? na : odd)
+Expand (157 lines)

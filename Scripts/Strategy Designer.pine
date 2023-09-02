@@ -1,0 +1,559 @@
+Script Name: Strategy Designer
+Author: only_fibonacci
+Description: Hello traders. 
+Thanks to the tool I have published, everyone who knows or does not know coding will be able to create strategies and see the results instantly on the screen.  Yes it looks very nice :) 
+
+ What does this script do? 
+
+Thanks to this tool, even if you don't know any coding, you will be able to create your own strategies. You can add and remove...
+PineScript code:
+
+Pine Script™ strategy
+Strategy Designer
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © only_fibonacci
+//@version=5
+strategy("Strategy Designer", overlay=true)
+// FUNCTIONS
+operatorReturn(i1,selected,i2)=>
+    switch selected
+        ">" => i1 > i2
+        "<" => i1 < i2
+        ">=" => i1 >= i2
+        "<=" => i1 <= i2
+        "=" => i1 == i2
+        "!=" => i1 != i2
+        "CROSS ABOVE" => ta.crossover(i1, i2)
+        "CROSS BELOW" => ta.crossunder(i1,i2)
+maTypeToMa(maType,maPeriod,src)=>
+    switch maType
+        "EMA" => ta.ema(src, maPeriod)
+        "SMA" => ta.sma(src, maPeriod)
+        "RMA" => ta.rma(src, maPeriod)
+        => ta.wma(src, maPeriod)
+// Indicators
+// ATR
+atrLen      = input.int(defval = 14,minval = 1, title = "ATR Length", group = "ATR")
+atr         = ta.atr(atrLen) // ATR
+// BB
+bbMiddle    = input.source(defval = close, title = "BB Middle", group = "BB")
+bbLen       = input.int(defval = 5, title = "BB Length",minval = 1, group = "BB")
+bbMult      = input.int(defval = 4, title = "BB Mult",minval = 1, group = "BB" )
+[middle, upper, lower] = ta.bb(bbMiddle, bbLen, bbMult) // BB
+bbw         = ta.bbw(middle, bbLen, bbMult) // BB Genişlik
+// CCI
+cciSrc      = input.source(defval = close, title = "CCI Source", group = "CCI")
+cciLen      = input.int(defval = 10, title = "CCI Len", minval = 1, group = "CCI")
+cci         = ta.cci(cciSrc,cciLen) // CCI
+// MA1
+ma1Type = input.string("EMA", "", options = ["EMA", "SMA", "RMA", "WMA"], group = "MA 1", inline = "2ma1")
+ma1Period = input.int(defval = 20, title = "Period", minval = 1, group = "MA 1", inline = "2ma1")
+ma1Src = input.source(defval = close, title = "Source", group = "MA 1", inline = "2ma1")
+ma1 = maTypeToMa(ma1Type,ma1Period,ma1Src)
+// MA2
+ma2Type = input.string("EMA", "", options = ["EMA", "SMA", "RMA", "WMA"], group = "MA 2", inline = "2ma2")
+ma2Period = input.int(defval = 50, title = "Period", minval = 1, group = "MA 2", inline = "2ma2")
+ma2Src = input.source(defval = close, title = "Source", group = "MA 2", inline = "2ma2")
+ma2 = maTypeToMa(ma2Type,ma2Period,ma1Src)
+// RSI
+rsiSrc = input.source(defval = close, title = "RSI Source", group = "RSI")
+rsiLen = input.int(defval = 14, title = "RSI Length", minval = 1, group = "RSI")
+rsi = ta.rsi(rsiSrc,rsiLen)
+// ADX
+lenAdx = input.int(17, minval=1, title="DI Length", group = "ADX")
+lensigAdx = input.int(14, title="ADX Smoothing", minval=1, maxval=50, group = "ADX")
+[diplus, diminus, adx] = ta.dmi(lenAdx, lensigAdx)
+// MFI
+mfiSrc = input.source(defval = close, title = "MFI Source", group = "MFI")
+mfiLen = input.int(defval = 14, title = "MFI Length", minval = 1, group = "MFI")
+mfi = ta.mfi(mfiSrc,mfiLen)
+// MOM
+momSrc = input.source(defval = close, title = "MOM Source", group = "MOM")
+momLen = input.int(defval = 14, title = "MOM Length", minval = 1, group = "MOM")
+mom = ta.mom(momSrc,momLen)
+indicators(selected)=>
+    switch selected
+        "MA 1" => ma1
+        "MA 2" => ma2
+        "ATR" => atr
+        "CCI" => cci
+        "RSI" => rsi
+        "BBW" => bbw
+        "ADX" => adx
+        "MFI" => mfi
+        "MOM" => mom
+        
+        
+    
+position(data)=>
+    switch data
+        "ABOVE" => location.abovebar
+        => location.belowbar
+location(data)=>
+    switch data
+        "ABOVE" => true
+        => false
+style(data)=>
+    switch data
+        "ABOVE" => shape.labeldown
+        => shape.labelup
+// SETTINGS 
+/////////// USE BACKTEST START DATE
+useFilter = input.bool(true, title="USE Backtest at Start Date", group="SETTINGS")
+backtestStartDate = input.time(timestamp("1 Jan 2011"),    title="Start Date", group="SETTINGS")
+backtestStopDate =  input.time(timestamp("2025"), title="Stop Date", group="SETTINGS")
+inTrade = not useFilter or (time >= backtestStartDate and time <= backtestStopDate )
+tableShow = input.bool(defval = true, title = "Show Table", group = "SETTINGS")
+andORLong = input.string(defval = "AND", title = "BUY/LONG CONNECT", options = ["AND","OR"], group = "SETTINGS") 
+andORShort = input.string(defval = "AND", title = "SELL/SHORT CONNECT", options = ["AND","OR"], group = "SETTINGS") 
+futureOrSpot =  input.string(defval = "SPOT", title = "FUTURE OR SPOT ?", options = ["SPOT","FUTURE"], group = "SETTINGS") 
+willStop = input.bool(defval = false, title = "STOP", group = "SETTINGS", inline = "stop")
+willStopValue = input.float(defval = 5., title = "", group = "SETTINGS", inline = "stop")
+percentageStop = input.bool(defval = true, title = "%", group = "SETTINGS", inline = "stop")
+willTp = input.bool(defval = false, title = "TP", group = "SETTINGS", inline = "TP")
+willTpValue = input.float(defval = 5., title = "", group = "SETTINGS", inline = "TP")
+percentageTP = input.bool(defval = true, title = "%", group = "SETTINGS", inline = "TP")
+willTSL = input.bool(defval = false, title = "Trailing SL", group = "SETTINGS", inline = "TSL")
+willTSLValue = input.float(defval = 2., title = "", group = "SETTINGS", inline = "TSL")
+percentageTSL = input.bool(defval = true, title = "%", group = "SETTINGS", inline = "TSL")
+buyList = array.new_bool()
+sellList = array.new_bool()
+detect(status,series,di)=>
+    if status
+        if di == "BUY/LONG"
+            array.push(buyList,series)
+        else
+            array.push(sellList,series)
+// CONDITION 1
+s1Group     = "❗️❗️❗️❗️ CONDITION #1 ❗️❗️❗️❗️"
+s1Inline    = "s1i"
+s1Status    = input.bool(defval = false, title = "CONDITION Active", group = s1Group )
+s1Direction = input.string(defval = "BUY/LONG", title = "Direction",options = ["BUY/LONG","SELL/SHORT"], group = s1Group)
+s1Left      = input.string(defval = "CCI", title = "1️⃣", options = ["ATR","MA 1","MA 2","RSI","CCI","BBW", "ADX","MFI","MOM"], group = s1Group, inline = s1Inline)
+s1Mid       = input.string(defval = ">=", title = "", options = [">","<",">=","<=","=","!=","CROSS ABOVE","CROSS BELOW"], group = s1Group, inline = s1Inline)
+s1Right     = input.string(defval = "CCI", title = "2️⃣", options = ["ATR","MA 1","MA 2","RSI","CCI","BBW", "ADX","MFI","MOM"], group = s1Group, inline = s1Inline)
+s1ValueBool = input.bool(defval = false, title = "VALUE ", group = s1Group, inline = "v1")
+s1EndRight  = input.float(defval = 0. , title = "2️⃣", group = s1Group, inline = "v1")
+s1Series    = operatorReturn(indicators(s1Left),s1Mid,s1ValueBool ? s1EndRight : indicators(s1Right))
+detect(s1Status,s1Series,s1Direction)
+// CONDITION 2
+s2Group     = "❗️❗️❗️❗️ CONDITION #2 ❗️❗️❗️❗️"
+s2Inline    = "s2i"
+s2Status    = input.bool(defval = false, title = "CONDITION Active", group = s2Group )
+s2Direction = input.string(defval = "BUY/LONG", title = "Direction",options = ["BUY/LONG","SELL/SHORT"], group = s2Group)
+s2Left      = input.string(defval = "CCI", title = "1️⃣", options = ["ATR","MA 1","MA 2","RSI","CCI","BBW", "ADX","MFI","MOM"], group = s2Group, inline = s2Inline)
+s2Mid       = input.string(defval = ">=", title = "", options = [">","<",">=","<=","=","!=","CROSS ABOVE","CROSS BELOW"], group = s2Group, inline = s2Inline)
+s2Right     = input.string(defval = "CCI", title = "2️⃣", options = ["ATR","MA 1","MA 2","RSI","CCI","BBW", "ADX","MFI","MOM"], group = s2Group, inline = s2Inline)
+s2ValueBool = input.bool(defval = false, title = "VALUE ", group = s2Group, inline = "v2")
+s2EndRight  = input.float(defval = 0. , title = "2️⃣", group = s2Group, inline = "v2")
+s2Series    = operatorReturn(indicators(s2Left),s2Mid,s2ValueBool ? s2EndRight : indicators(s2Right))
+detect(s2Status,s2Series,s2Direction)
+s3Group     = "❗️❗️❗️❗️ CONDITION #3 ❗️❗️❗️❗️"
+s3Inline    = "s3i"
+s3Status    = input.bool(defval = false, title = "CONDITION Active", group = s3Group )
+s3Direction = input.string(defval = "BUY/LONG", title = "Direction",options = ["BUY/LONG","SELL/SHORT"], group = s3Group)
+s3Left      = input.string(defval = "CCI", title = "1️⃣", options = ["ATR","MA 1","MA 2","RSI","CCI","BBW", "ADX","MFI","MOM"], group = s3Group, inline = s3Inline)
+s3Mid       = input.string(defval = ">=", title = "", options = [">","<",">=","<=","=","!=","CROSS ABOVE","CROSS BELOW"], group = s3Group, inline = s3Inline)
+s3Right     = input.string(defval = "CCI", title = "2️⃣", options = ["ATR","MA 1","MA 2","RSI","CCI","BBW", "ADX","MFI","MOM"], group = s3Group, inline = s3Inline)
+s3ValueBool = input.bool(defval = false, title = "VALUE ", group = s3Group, inline = "v3")
+s3EndRight  = input.float(defval = 0. , title = "2️⃣", group = s3Group, inline = "v3")
+s3Series    = operatorReturn(indicators(s3Left),s3Mid,s3ValueBool ? s3EndRight : indicators(s3Right))
+detect(s3Status,s3Series,s3Direction)
+s4Group     = "❗️❗️❗️❗️ CONDITION #4 ❗️❗️❗️❗️"
+s4Inline    = "s4i"
+s4Status    = input.bool(defval = false, title = "CONDITION Active", group = s4Group )
+s4Direction = input.string(defval = "BUY/LONG", title = "Direction",options = ["BUY/LONG","SELL/SHORT"], group = s4Group)
+s4Left      = input.string(defval = "CCI", title = "1️⃣", options = ["ATR","MA 1","MA 2","RSI","CCI","BBW", "ADX","MFI","MOM"], group = s4Group, inline = s4Inline)
+s4Mid       = input.string(defval = ">=", title = "", options = [">","<",">=","<=","=","!=","CROSS ABOVE","CROSS BELOW"], group = s4Group, inline = s4Inline)
+s4Right     = input.string(defval = "CCI", title = "2️⃣", options = ["ATR","MA 1","MA 2","RSI","CCI","BBW", "ADX","MFI","MOM"], group = s4Group, inline = s4Inline)
+s4ValueBool = input.bool(defval = false, title = "VALUE ", group = s4Group, inline = "v3")
+s4EndRight  = input.float(defval = 0. , title = "2️⃣", group = s4Group, inline = "v3")
+s4Series    = operatorReturn(indicators(s4Left),s4Mid,s4ValueBool ? s4EndRight : indicators(s4Right))
+detect(s4Status,s4Series,s4Direction)
+s5Group     = "❗️❗️❗️❗️ CONDITION #5 ❗️❗️❗️❗️"
+s5Inline    = "s5i"
+s5Status    = input.bool(defval = false, title = "CONDITION Active", group = s5Group )
+s5Direction = input.string(defval = "BUY/LONG", title = "Direction",options = ["BUY/LONG","SELL/SHORT"], group = s5Group)
+s5Left      = input.string(defval = "CCI", title = "1️⃣", options = ["ATR","MA 1","MA 2","RSI","CCI","BBW", "ADX","MFI","MOM"], group = s5Group, inline = s5Inline)
+s5Mid       = input.string(defval = ">=", title = "", options = [">","<",">=","<=","=","!=","CROSS ABOVE","CROSS BELOW"], group = s5Group, inline = s5Inline)
+s5Right     = input.string(defval = "CCI", title = "2️⃣", options = ["ATR","MA 1","MA 2","RSI","CCI","BBW", "ADX","MFI","MOM"], group = s5Group, inline = s5Inline)
+s5ValueBool = input.bool(defval = false, title = "VALUE ", group = s5Group, inline = "v3")
+s5EndRight  = input.float(defval = 0. , title = "2️⃣", group = s5Group, inline = "v3")
+s5Series    = operatorReturn(indicators(s5Left),s5Mid,s5ValueBool ? s5EndRight : indicators(s5Right))
+detect(s5Status,s5Series,s5Direction)
+s6Group     = "❗️❗️❗️❗️ CONDITION #6 ❗️❗️❗️❗️"
+s6Inline    = "s6i"
+s6Status    = input.bool(defval = false, title = "CONDITION Active", group = s6Group )
+s6Direction = input.string(defval = "BUY/LONG", title = "Direction",options = ["BUY/LONG","SELL/SHORT"], group = s6Group)
+s6Left      = input.string(defval = "CCI", title = "1️⃣", options = ["ATR","MA 1","MA 2","RSI","CCI","BBW", "ADX","MFI","MOM"], group = s6Group, inline = s6Inline)
+s6Mid       = input.string(defval = ">=", title = "", options = [">","<",">=","<=","=","!=","CROSS ABOVE","CROSS BELOW"], group = s6Group, inline = s6Inline)
+s6Right     = input.string(defval = "CCI", title = "2️⃣", options = ["ATR","MA 1","MA 2","RSI","CCI","BBW", "ADX","MFI","MOM"], group = s6Group, inline = s6Inline)
+s6ValueBool = input.bool(defval = false, title = "VALUE ", group = s6Group, inline = "v3")
+s6EndRight  = input.float(defval = 0. , title = "2️⃣", group = s6Group, inline = "v3")
+s6Series    = operatorReturn(indicators(s6Left),s6Mid,s6ValueBool ? s6EndRight : indicators(s6Right))
+detect(s6Status,s6Series,s6Direction)
+if andORLong == "AND" ? array.every(buyList) : array.includes(buyList,true) and inTrade
+    strategy.entry(id = "BUY", direction = strategy.long)
+if andORShort == "AND" ? array.every(sellList) : array.includes(sellList,true) and inTrade
+    if futureOrSpot == "SPOT"
+        strategy.close(id = "BUY")
+    else
+        strategy.entry(id = "SELL", direction = strategy.short)
+buyStop = 0.
+sellStop = 0.
+entry = strategy.position_avg_price
+buyStop := percentageStop ? entry *(100 - willStopValue) / 100 : entry - willStopValue
+sellStop := percentageStop ? entry *(100 + willStopValue) / 100 : entry + willStopValue
+buyTp = percentageTP ? entry *(100 + willTpValue) / 100 : entry + willTpValue
+sellTp = percentageTP ? entry *(100 - willTpValue) / 100 : entry - willTpValue
+//////// TSL
+trailingLongPrice = 0.0
+trailingShortPrice = 0.0
+tslShortPercent = percentageTSL
+tslLongPercent = percentageTSL
+if strategy.position_size > 0
+    stopValue = percentageTSL ? low * (100 - willTSLValue) / 100 : low - willTSLValue
+    trailingLongPrice := math.max(stopValue, trailingLongPrice[1])
+    
+else
+    trailingLongPrice:=0
+if strategy.position_size <0
+    stopValue = percentageTSL ? high * (100 + willTSLValue) / 100 : high + willTSLValue
+    trailingShortPrice := math.min(stopValue, trailingShortPrice[1])
+    
+else
+    trailingShortPrice :=99999
+plot(strategy.position_size > 0 and willTSL ? trailingLongPrice : na , color=color.green, linewidth=3,style = plot.style_linebr)
+plot(strategy.position_size < 0  and willTSL ? trailingShortPrice : na , color = color.red, linewidth=3, style = plot.style_linebr)
+strategy.exit("EXIT", from_entry = "BUY", stop = willStop and willTSL ? trailingLongPrice : willTSL ? trailingLongPrice : willStop and willTSL == false ? buyStop :na, limit = willTp ? buyTp : na )
+strategy.exit("EXIT", from_entry = "SELL", stop = willStop and willTSL ? trailingShortPrice : willTSL ? trailingShortPrice : willStop and willTSL == false ? sellStop :na, limit = willTp ? sellTp : na)
+if tableShow
+    // COLUMNS
+    var table tablo = table.new(position.top_right,2,7,border_width=4,border_color=color.gray, frame_color=color.gray, frame_width=4)
+    table.cell(tablo,0,0,bgcolor=color.black,text_color=color.white, text="NET PROFIT")
+    table.cell(tablo,0,1,bgcolor=color.black,text_color=color.white, text="TOTAL PROFIT")
+    table.cell(tablo,0,2,bgcolor=color.black,text_color=color.white, text="TOTAL LOSS")
+    table.cell(tablo,0,3,bgcolor=color.black,text_color=color.white, text="PROFIT FACTOR")
+    table.cell(tablo,0,4,bgcolor=color.black,text_color=color.white, text="WIN TRADES")
+    table.cell(tablo,0,5,bgcolor=color.black,text_color=color.white, text="LOSS TRADES")
+    table.cell(tablo,0,6,bgcolor=color.black,text_color=color.white, text="TOTAL NET PROFIT")
+    // ROWS
+    table.cell(tablo,1,0,bgcolor=strategy.netprofit>0 ? color.green : color.red,text_color=color.white, text=str.tostring(strategy.netprofit))
+    table.cell(tablo,1,1,bgcolor=color.black,text_color=color.white, text=str.tostring(strategy.grossprofit))
+    table.cell(tablo,1,2,bgcolor=color.black,text_color=color.white, text=str.tostring(strategy.grossloss))
+    table.cell(tablo,1,3,bgcolor=strategy.grossprofit / strategy.grossloss >1 ? color.green : color.red,text_color=color.white, text=str.tostring(math.round(strategy.grossprofit / strategy.grossloss,3)))
+    table.cell(tablo,1,4,bgcolor=color.black,text_color=color.white, text=str.tostring(strategy.wintrades))
+    table.cell(tablo,1,5,bgcolor=color.black,text_color=color.white, text=str.tostring(strategy.losstrades))
+    table.cell(tablo,1,6,bgcolor=color.black,text_color=color.white, text=str.tostring(math.round(strategy.netprofit/strategy.initial_capital*100,2))+" %")
+Expand (310 lines)

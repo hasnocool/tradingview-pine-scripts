@@ -1,0 +1,105 @@
+Script Name: Vortex Cross w-MA Confirmation
+Author: DraftVenture
+Description: This script is a trading strategy that combines the Vortex Indicator and a Moving Average (MA) to generate potential entry signals for long and short positions.
+
+1. Vortex Indicator:
+The Vortex Indicator consists of two lines: Vortex Positive (VIP) and Vortex Negative (VIM). It is designed to identify trend direction and measure the strength of a trend.
+
+2. Moving...
+PineScript code:
+
+Pine Script™ strategy
+Vortex Cross w/MA Confirmation
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © DraftVenture
+//@version=5
+strategy("Vortex + Moving Average Strategy", overlay=true)
+//Vortex settings
+period_ = input.int(14, title="Vortex Length", minval=2)
+VMP = math.sum( math.abs( high - low[1]), period_ )
+VMM = math.sum( math.abs( low - high[1]), period_ )
+STR = math.sum( ta.atr(1), period_ )
+VIP = VMP / STR
+VIM = VMM / STR
+plot(VIP, title="VI +", color=color.white)
+plot(VIM, title="VI -", color=color.white)
+len = input.int(9, minval=1, title="MA Length")
+src = input(close, title="Source")
+offset = input.int(title="Offset", defval=0, minval=-500, maxval=500)
+out = ta.sma(src, len)
+plot(out, color=color.blue, title="MA", offset=offset)
+ma(source, length, type) =>
+    switch type
+        "SMA" => ta.sma(source, length)
+        "EMA" => ta.ema(source, length)
+        "SMMA (RMA)" => ta.rma(source, length)
+        "WMA" => ta.wma(source, length)
+        "VWMA" => ta.vwma(source, length)
+typeMA = input.string(title = "Method", defval = "SMA", options=["SMA", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group="Smoothing")
+smoothingLength = input.int(title = "Length", defval = 5, minval = 1, maxval = 100, group="Smoothing")
+smoothingLine = ma(out, smoothingLength, typeMA)
+plot(smoothingLine, title="Smoothing Line", color=#f37f20, offset=offset, display=display.none)
+// Determine long and short conditions
+longCondition = ta.crossover(VIP, VIM) and close > smoothingLine
+shortCondition = ta.crossunder(VIP, VIM) and close < smoothingLine
+crossCondition = ta.crossunder(VIP, VIM) or ta.crossunder(VIM, VIP)
+// Strategy entry and exit logic
+if longCondition
+    strategy.entry("Long", strategy.long)
+if shortCondition
+    strategy.entry("Short", strategy.short)
+bgcolor(crossCondition ? color.new(color.white, 80) : na)
+// Strategy by KP
+Expand (51 lines)

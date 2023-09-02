@@ -1,0 +1,1484 @@
+Script Name: supertrend with multiple filter strategy
+Author: mathlabel
+Description: this indicator filters buy and sell signal from the supertrend base on various condition that the user can manually select.
+as of now the following filter are included
+buy and sell filter;
+-Macd 
+-CCI 
+-EMA200 
+-LUX TRAMA
+-Stochastic rsi
+-MFI
+
+EXIT SIGNAL CAN BE CHOSE BETWEEN ATR BAND OR BOLLINGER BAND
+
+i am planning on keeping to add filters so if you have...
+PineScript code:
+
+Pine Script™ strategy
+supertrend with multiple filter strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+540
+541
+542
+543
+544
+545
+546
+547
+548
+549
+550
+551
+552
+553
+554
+555
+556
+557
+558
+559
+560
+561
+562
+563
+564
+565
+566
+567
+568
+569
+570
+571
+572
+573
+574
+575
+576
+577
+578
+579
+580
+581
+582
+583
+584
+585
+586
+587
+588
+589
+590
+591
+592
+593
+594
+595
+596
+597
+598
+599
+600
+601
+602
+603
+604
+605
+606
+607
+608
+609
+610
+611
+612
+613
+614
+615
+616
+617
+618
+619
+620
+621
+622
+623
+624
+625
+626
+627
+628
+629
+630
+631
+632
+633
+634
+635
+636
+637
+638
+639
+640
+641
+642
+643
+644
+645
+646
+647
+648
+649
+650
+651
+652
+653
+654
+655
+656
+657
+658
+659
+660
+661
+662
+663
+664
+665
+666
+667
+668
+669
+670
+671
+672
+673
+674
+675
+676
+677
+678
+679
+680
+681
+682
+683
+684
+685
+686
+687
+688
+689
+690
+691
+692
+693
+694
+695
+696
+697
+698
+699
+700
+701
+702
+703
+704
+705
+706
+707
+708
+709
+710
+711
+712
+713
+714
+715
+716
+717
+718
+719
+720
+721
+722
+723
+724
+725
+726
+727
+728
+729
+730
+731
+732
+733
+734
+735
+736
+737
+738
+739
+740
+741
+742
+743
+744
+745
+746
+747
+748
+749
+750
+751
+752
+753
+754
+755
+756
+757
+758
+759
+760
+761
+762
+763
+764
+765
+766
+767
+768
+769
+770
+771
+772
+773
+774
+775
+776
+777
+778
+779
+780
+781
+782
+783
+784
+785
+786
+787
+788
+789
+790
+791
+792
+793
+794
+795
+796
+797
+798
+799
+800
+801
+802
+803
+804
+805
+806
+807
+808
+809
+810
+811
+812
+813
+814
+815
+816
+817
+818
+819
+820
+821
+822
+823
+824
+825
+826
+827
+828
+829
+830
+831
+832
+833
+834
+835
+836
+837
+838
+839
+840
+841
+842
+843
+844
+845
+846
+847
+848
+849
+850
+851
+852
+853
+854
+855
+856
+857
+858
+859
+860
+861
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mathlabel
+//@version=5
+strategy("My strategy", overlay=true,  default_qty_type = strategy.percent_of_equity, default_qty_value=100,margin_long= 50, margin_short=50)
+//
+////////////////////////////////////////////////////////////////////////////////
+// BACKTESTING RANGE
+// From Date Inputs
+fromDay = input.int(defval=1, title='From Day', minval=1, maxval=31)
+fromMonth = input.int(defval=1, title='From Month', minval=1, maxval=12)
+fromYear = input.int(defval=2019, title='From Year', minval=1970)
+fromHour =input.int(defval = 1, title = 'from hour',minval = 0 ,maxval =24 )
+fromMinute=input.int(defval = 1, title = 'from minute',minval = 0 ,maxval =60 )
+fromSecond=input.int(defval = 1, title = 'from second',minval = 0 ,maxval =60 )
+// To Date Inputs
+toDay = input.int(defval=1, title='To Day', minval=1, maxval=31)
+toMonth = input.int(defval=1, title='To Month', minval=1, maxval=12)
+toYear = input.int(defval=2100, title='To Year', minval=1970)
+// Calculate start/end date and time condition
+startDate = timestamp(fromYear, fromMonth, fromDay,fromHour, fromMinute,fromSecond)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate
+//////////////////////////////////////////////////
+long_only=input.bool(false)
+short_only=input.bool(false)
+longLossPerc = input.float(title='Long Stop Loss (%)', minval=0.0, step=0.01, defval=1) * 0.01
+shortLossPerc = input.float(title='Short Stop Loss (%)', minval=0.0, step=0.01, defval=1) * 0.01
+use_supertrend_filter=input.bool(true)
+atrPeriod = input(10, "supertrend ATR Length")
+factor = input.float(3.0, "supertrend Factor", step = 0.01)
+use_stochastic_filter = input.bool(false)
+stochlenght= input(14,'stochlenght')
+oversold_level = input(title = ' stoch Oversold', defval = 20)
+overbought_level = input(title = 'stoch Overbought', defval = 80)
+use_supertrend2_filter=input.bool(false)
+atrPeriod2 = input(7, "supertrend2 ATR Length")
+factor2 = input.float(3, "supertrend2 Factor", step = 0.01)
+use_supertrend3_filter=input.bool(false)
+atrPeriod3 = input(11, "supertrend3 ATR Length")
+factor3 = input.float(2, "supertrend3 Factor", step = 0.01)
+use_cci_filter=input.bool(false)
+cci_l = input(50, title='CCI Period Length')
+atr_l = input(5, title=' CCI ATR Length')
+use_vwap_filter=input.bool(false)
+var anchor = input.string(defval = "Session", title="Anchor Period",
+ options=["Session", "Week", "Month", "Quarter", "Year", "Decade", "Century", "Earnings", "Dividends", "Splits"], group="VWAP Settings")
+use_chaikin_money_flow_filter=input.bool(false)
+length = input(20, title='chaikin lenght')
+use_ema_cross_filter=input.bool(false)
+shortlen = input.int(9, "Short MA Length for cross filter", minval=1)
+longlen = input.int(21, "Long MA Length for cross filter", minval=1)
+use_ichimoku_filter=input.bool(false)
+conversionPeriods = input.int(9, minval=1, title='ichimoku convertion periods')
+basePeriods = input.int(26, minval=1, title = 'ichimoku base periods')
+use_luxcandlepatternchannel_filter=input.bool(false)
+lengthw = input.int(14, 'lux candlestick pattern Trend Length'
+  , minval = 0)
+alpha = input.float(50, 'lux candlestick pattern Convergence'
+  , minval = 0
+  , maxval = 100)
+smooth = input.int(7, 'lux candlestick pattern Smooth'
+  , minval = 1)
+use_support_an_dresistance_break_filter=input.bool(false)
+leftBars = input(15, title='support and resistance Left Bars ')
+rightBars = input(15, title='support and resistance Right Bars')
+use_mavilimw_filter=input.bool(false)
+fmal = input(3,title = 'mavilimw fast ma') 
+smal = input(5,title = 'mavilimw slow ma')
+use_mfi_filter=input.bool(false)
+length1 = input.int(title="mfi Length", defval=14, minval=1, maxval=2000)
+signalLength = input(title='mfi Signal Length', defval=9)
+use_ift_cci_filter=input.bool(false)
+ccilength = input(5, title = 'cci lenght')
+wmalength =input(9, title = 'cci WMA lenght')
+plottrama=input.bool(false, title="Show Lux TRAMA")
+use_LUX_trama_filter=input.bool(false)
+lengths = input(99,title='Trama lenght')
+use_macd_filter=input.bool(false)
+ma_fast=ta.sma(close,input(14,title='ma fast for macd filter'))
+ma_slow=ta.sma(close,input(28, title='ma slowfor macd filter'))
+use_ema200_filter= input.bool(false)
+plotAverage = input.bool(true, title="Plot EMA200")
+//exits
+use_trailing_stop_loss=input.bool( false,title = 'use indicator exits (atr band, trailing atr or bollinger)?')
+use_atr_bands_exits=input.bool(false)
+stopLossFactor = input(2.0, "ATR Stop Loss Factor")
+takeProfitFactor = input(1.5, "ATR Take Profit Factor")
+atr = ta.atr(input(10, 'atr band period'))
+use_trailing_atr_exits=input.bool(false)
+Atr1 = input.int(defval=5, title='trailing Atr exit Period', minval=1, maxval=500)
+Hhv1 = input.int(defval=10, title='trailing ATR exit HHV Period', minval=1, maxval=500)
+Mult1 = input.float(defval=2.5, title='trailing exit ATR Multiplier', minval=0.1)
+use_bollinger_exits=input.bool(false)
+lengthss = input(20, title='bollinger lenght')
+mult = input.float(2.0, minval=0.001, maxval=50, title="bollinger StdDev")
+offset = input.int(0, "bollinger Offset", minval = -500, maxval = 500)
+use_percent_base_trailing_stop_exits=input.bool(false,group = '% trailing stop loss')
+trailStop = input.float(title=' traling Stop Loss (%)', minval=0.0, step=0.01, defval=1,group = '% trailing stop loss') * 0.01
+enableTrailing = input.bool(false, 'Enable % take profit Trailing',group = '% trailing Take Profit')
+longTakeProfitPerc2 = input.float(0.5, 'Long trailing Take Profit %', minval=0.01, step=0.01,group = '% trailing Take Profit') * 0.01
+shortTakeProfitPerc2 = input.float(0.5, 'Short trailing Take Profit %', minval=0.01, step=0.01,group = '% trailing Take Profit') * 0.01
+LtrailingTakeProfitDeviationPerc = input.float(defval = 1.0, title = 'long Trailing Take Profit Deviation %', minval = 0.01, maxval = 100, step = 0.01, tooltip = 'The step to follow the price when the take profit limit is reached.', group = '% trailing Take Profit') / 100
+StrailingTakeProfitDeviationPerc = input.float(defval = 1.0, title = 'Short Trailing Take Profit Deviation %', minval = 0.01, maxval = 100, step = 0.01, tooltip = 'The step to follow the price when the take profit limit is reached.', group ='% trailing Take Profit') / 100
+use_fix_perc_take_profit=input.bool(false, 'use a fix % take profit ',group = ' fixed % Take Profit')
+longprofitPerc = input.float(title='fixed Long profit (%) if not using indicator exits', minval=0.0, step=0.01, defval=1,group = ' fixed % Take Profit') * 0.01
+shortprofitPerc = input.float(title='fixed Short profit (%) if not using indicator exits', minval=0.0, step=0.01, defval=1,group = ' fixed % Take Profit') * 0.01
+close_position_when_oposite_signal=input.bool(false)
+// Calculate supertrend
+[supertrend, direction] = ta.supertrend(factor, atrPeriod)
+upTrend = plot(use_supertrend_filter? (direction < 0 ? supertrend : na) : na, "Up Trend", color = color.green, style=plot.style_linebr)
+downTrend = plot(use_supertrend_filter ? (direction < 0? na : supertrend):na, "Down Trend", color = color.red, style=plot.style_linebr)
+long_supertrend_filter= (direction < 0 ? supertrend : na)
+short_supertrend_filter= (direction < 0? na : supertrend)
+// Calculate supertrend 2
+[supertrend2, direction2] = ta.supertrend(factor2, atrPeriod2)
+upTrend2 = plot(use_supertrend2_filter? (direction2 < 0 ? supertrend2 : na) : na, "Up Trend", color = color.green, style=plot.style_linebr)
+downTrend2 = plot(use_supertrend2_filter ? (direction2 < 0? na : supertrend2):na, "Down Trend", color = color.red, style=plot.style_linebr)
+long_supertrend2_filter= (direction2 < 0 ? supertrend2 : na)
+short_supertrend2_filter= (direction2 < 0? na : supertrend2)
+// Calculate supertrend 3
+[supertrend3, direction3] = ta.supertrend(factor3, atrPeriod3)
+upTrend3 = plot(use_supertrend2_filter? (direction3 < 0 ? supertrend3 : na) : na, "Up Trend", color = color.green, style=plot.style_linebr)
+downTrend3 = plot(use_supertrend2_filter ? (direction3 < 0? na : supertrend3):na, "Down Trend", color = color.red, style=plot.style_linebr)
+long_supertrend3_filter= (direction3 < 0 ? supertrend3 : na)
+short_supertrend3_filter= (direction3 < 0? na : supertrend3)
+//--trama--
+src =(close)
+ama = 0.
+hh = math.max(math.sign(ta.change(ta.highest(lengths))), 0)
+ll = math.max(math.sign(ta.change(ta.lowest(lengths)) * -1), 0)
+tc = math.pow(ta.sma(hh or ll ? 1 : 0, lengths), 2)
+ama := nz(ama[1] + tc * (src - ama[1]), src)
+plot(plottrama?ama : na, 'Plot', color.new(#ff1100, 0), 2)
+long_LUX_trama_filter= (close > ama)
+short_LUX_trama_filter= (close < ama)
+// highest high
+highest = ta.highest(high, stochlenght)
+// lowest low
+lowest = ta.lowest(low, stochlenght)
+// stochastic oscillator
+stochastic_K = ((close - lowest) / (highest - lowest)) * 100
+stochastic_D = ta.sma(stochastic_K, 3)
+long_stoch_filter =ta.crossover( stochastic_K , oversold_level) and stochastic_K[1] < oversold_level
+short_stoch_filter = ta.crossunder(stochastic_K , overbought_level) and stochastic_K[1] > overbought_level
+//ATR band upline and bottome line.
+upline = open + (atr* takeProfitFactor)
+bottomline = open -(atr*stopLossFactor)
+plot(use_atr_bands_exits ? upline : na, color=color.white)
+plot(use_atr_bands_exits ? bottomline:na, color=color.white)
+// Calculate stop loss and take profit levels
+stopLoss = stopLossFactor * atr
+takeProfit = takeProfitFactor * atr
+//input macd
+[macdLine, signalLine, histLine]= ta.macd(close,12,26,9)
+long_macd_filter= (macdLine > signalLine) and ta.crossover(ma_fast,ma_slow)
+short_macd_filter= (macdLine < signalLine) and ta.crossunder(ma_fast,ma_slow)
+// ema 200
+ema1= ta.ema(close,1)
+ema2= ta.ema(close,200)
+barsincecrossup =ta.barssince(close >ema2)
+barsincecrossdw=ta.barssince(close <ema2)
+long_ema_filter = (close > ema2 and close[1] > ema2 )
+short_ema_filter= (close<ema2 and  close[1]<ema2)
+plot(plotAverage ? ta.ema(close, 200) : na, title="Exponential Average")
+// mfi
+src1 = hlc3
+mf = ta.mfi(src1, length1)
+signal = ta.ema(mf, signalLength)
+long_mfi_filter= ta.crossover(mf, signal) ? mf : na
+short_mfi_filter=  ta.crossunder(mf, signal) ? mf : na
+//cci
+level = 0
+sd_length = 20
+cci = ta.cci(src, cci_l)
+atr2 = ta.atr(atr_l)
+var st = 0.
+if cci >= level
+    st := low - atr
+    st
+if cci <= level
+    st := high + atr
+    st
+var tu = 0.
+var td = 0.
+var optimal_line = 0.
+if cci >= level and cci[1] < level
+    tu := td[1]
+    tu
+if cci <= level and cci[1] > level
+    td := tu[1]
+    td
+if cci > level
+    tu := low - atr2
+    if tu < tu[1] and cci[1] >= level
+        tu := tu[1]
+        tu
+if cci < level
+    td := high + atr2
+    if td > td[1] and cci[1] <= level
+        td := td[1]
+        td
+optimal_line := math.max(tu, td)
+// Creating a Price Channel, 
+avg_st8 = ta.ema(st, 8)
+avg_st13 = ta.ema(st, 13)
+avg_st21 = ta.ema(st, 21)
+avg_st34 = ta.ema(st, 21)
+avg_st55 = ta.ema(st, 55)
+avg_st89 = ta.ema(st, 89)
+avg_st144 = ta.ema(st, 144)
+avg_st233 = ta.ema(st, 233)
+average_weighting = (optimal_line + avg_st8 + avg_st13 + avg_st21 + avg_st34 + avg_st55 + avg_st89 + avg_st144 + avg_st233) / 9
+basis = ta.sma(average_weighting, sd_length)
+devs = ta.stdev(average_weighting, sd_length)
+upperS = basis + devs
+lowerS = basis - devs
+plot(use_cci_filter ? basis: na, 'Basis', color=color.new(#872323, 0))
+p3 = plot(use_cci_filter ? upperS : na, 'UpperS', color=color.new(color.teal, 0))
+p4 = plot(use_cci_filter ? lowerS: na ,'LowerS', color=color.new(color.teal, 0))
+long_cci_filter= ta.crossover(close,upperS) 
+short_cci_filter= ta.crossunder(close,lowerS) 
+//wvap
+srcv =  hlc3
+stdevMult_1 = (0)
+if barstate.islast and ta.cum(volume) == 0
+    runtime.error("No volume is provided by the data vendor.")
+new_earnings = request.earnings(syminfo.tickerid, earnings.actual, barmerge.gaps_on, barmerge.lookahead_on, ignore_invalid_symbol=true)
+new_dividends = request.dividends(syminfo.tickerid, dividends.gross, barmerge.gaps_on, barmerge.lookahead_on, ignore_invalid_symbol=true)
+new_split = request.splits(syminfo.tickerid, splits.denominator, barmerge.gaps_on, barmerge.lookahead_on, ignore_invalid_symbol=true)
+isNewPeriod = switch anchor
+    "Earnings"  => not na(new_earnings)
+    "Dividends" => not na(new_dividends)
+    "Splits"    => not na(new_split)
+    "Session"   => timeframe.change("D")
+    "Week"      => timeframe.change("W")
+    "Month"     => timeframe.change("M")
+    "Quarter"   => timeframe.change("3M")
+    "Year"      => timeframe.change("12M")
+    "Decade"    => timeframe.change("12M") and year % 10 == 0
+    "Century"   => timeframe.change("12M") and year % 100 == 0
+    => false
+isEsdAnchor = anchor == "Earnings" or anchor == "Dividends" or anchor == "Splits"
+if na(src[1]) and not isEsdAnchor
+    isNewPeriod := true
+float vwapValue = na
+float upperBandValue1 = na
+float lowerBandValue1 = na
+float upperBandValue2 = na
+float lowerBandValue2 = na
+float upperBandValue3 = na
+float lowerBandValue3 = na
+if not (timeframe.isdwm)
+    [_vwap, _stdevUpper, _] = ta.vwap(src, isNewPeriod, 1)
+    vwapValue := _vwap
+    stdevAbs = _stdevUpper - _vwap
+    upperBandValue1 := _vwap + stdevAbs * stdevMult_1
+    lowerBandValue1 := _vwap - stdevAbs * stdevMult_1
+plot(use_vwap_filter  ?vwapValue : na, title="VWAP", color=#2962FF)
+long_vwap_filter= close > vwapValue
+short_vwap_filter = close < vwapValue
+//chaikin money flow 
+var cumVol = 0.
+cumVol += nz(volume)
+if barstate.islast and cumVol == 0
+    runtime.error("No volume is provided by the data vendor.")
+ad = close==high and close==low or high==low ? 0 : ((2*close-low-high)/(high-low))*volume
+mf2 = math.sum(ad, length) / math.sum(volume, length)
+long_chaikin_money_flow_filter= mf2> 0
+short_chaikin_money_flow_filter =  mf2<0
+// ema cross
+ema4=ta.ema(close,shortlen)
+ema5=ta.ema(close,longlen)
+long_ema_cross_filter= ta.crossover(ema4,ema5)
+short_ema_cross_filter=ta.crossunder(ema4,ema5)
+plot(use_ema_cross_filter? ema4 : na)
+plot(use_ema_cross_filter ? ema5 : na)
+//ichimku cloud
+middleDonchian(Length) =>
+    lower = ta.lowest(Length)
+    upper = ta.highest(Length)
+    math.avg(upper, lower)
+laggingSpan2Periods = 52
+displacement = 26
+Tenkan = middleDonchian(conversionPeriods)
+Kijun = middleDonchian(basePeriods)
+xChikou = close
+SenkouA = middleDonchian(laggingSpan2Periods)
+SenkouB = (Tenkan[basePeriods] + Kijun[basePeriods]) / 2
+plot(use_ichimoku_filter ? Tenkan : na, color=color.new(color.red, 0), title='Tenkan')
+plot(use_ichimoku_filter ? Kijun : na, color=color.new(color.blue, 0), title='Kijun')
+plot(use_ichimoku_filter ? xChikou : na, color=color.new(color.teal, 0), title='Chikou', offset=-displacement)
+A = plot(use_ichimoku_filter ? SenkouA[displacement]: na, color=color.new(color.purple, 0), title='SenkouA')
+B = plot(use_ichimoku_filter ? SenkouB : na, color=color.new(color.green, 0), title='SenkouB')
+long_ichimoku_filter= close > SenkouA[displacement] and close> SenkouB 
+short_ichimoku_filter= close < SenkouA[displacement] and close< SenkouB 
+// lux candlestick pattern
+//Settings
+//-----------------------------------------------------------------------------{
+//Patterns
+enable_hammer = true
+enable_ihammer = true
+enable_shooting =true
+enable_hanging = true
+enable_bulleng = false
+enable_beareng = false
+enable_wm = true
+enable_bm = true
+  
+//Style
+bull_css = #0cb51a
+avg_css =#ff5d00
+bear_css = #ff1100
+fade = 200
+//-----------------------------------------------------------------------------}
+//Variables/Functions
+//-----------------------------------------------------------------------------{
+n = bar_index
+o = open,h = high,l = low,c = close
+atrw = ta.atr(20) / 2 
+stw = ta.stoch(c, c, c, lengthw)
+downtrendw = stw < 50
+uptrendw = stw > 50
+d = math.abs(c - o)
+lbl(y, txt, direction, tlt)=> 
+    label.new(  n, y, txt
+          , size = size.tiny
+          , style = direction == 1 ? label.style_cross : label.style_cross
+          , color = direction == 1 ? bull_css : bear_css
+          , textcolor = color.white
+          , tooltip = tlt )
+//-----------------------------------------------------------------------------}
+//Tooltips
+//-----------------------------------------------------------------------------{
+var hammer_tlt = "The hammer candlestick pattern is formed of a short body with a long lower wick, and is found at the bottom of a downward trend."
+  + "\n" + "\nA hammer shows that although there were selling pressures during the day, ultimately a strong buying pressure drove the price back up." 
+var ihammer_tlt = "The inverted hammer is a similar pattern than the hammer pattern. The only difference being that the upper wick is long, while the lower wick is short."
+  + "\n" + "\nIt indicates a buying pressure, followed by a selling pressure that was not strong enough to drive the market price down. The inverse hammer suggests that buyers will soon have control of the market."
+var bulleng_tlt = "The bullish engulfing pattern is formed of two candlesticks. The first candle is a short red body that is completely engulfed by a larger green candle"
+  + "\n" + "\nThough the second day opens lower than the first, the bullish market pushes the price up, culminating in an obvious win for buyers"
+var wm_tlt = "The white marubozu is a single candles formation formed after a downtrend and indicating a bullish reversal."
+  + "\n" + "\nThis candlestick has a long bullish body with no upper or lower shadows, reflecting a strong buying pressure."
+  
+var shooting_tlt = "The shooting star is the same shape as the inverted hammer, but is formed in an uptrend: it has a small lower body, and a long upper wick."
+  + "\n" + "\nUsually, the market will gap slightly higher on opening and rally to an intra-day high before closing at a price just above the open – like a star falling to the ground."
+var hanging_tlt = "The hanging man is the bearish equivalent of a hammer; it has the same shape but forms at the end of an uptrend."
+  + "\n" + "\nIt indicates that there was a significant sell-off during the day, but that buyers were able to push the price up again. The large sell-off is often seen as an indication that the bulls are losing control of the market."
+var beareng_tlt = "A bearish engulfing pattern occurs at the end of an uptrend. The first candle has a small green body that is engulfed by a subsequent long red candle."
+  + "\n" + "\nIt signifies a peak or slowdown of price movement, and is a sign of an impending market downturn. The lower the second candle goes, the more significant the trend is likely to be."
+var bm_tlt = "The black marubozu is a single candles formation formed after an uptrend and indicating a bearish reversal."
+  + "\n" + "\nThis candlestick has a long bearish body with no upper or lower shadows, reflecting a strong selling pressure."
+//-----------------------------------------------------------------------------}
+//Pattern Rules
+//-----------------------------------------------------------------------------{
+hammer = downtrendw and math.min(o, c) - l > 2 * d and h - math.max(c, o) < d / 4
+ihammer = downtrendw and h - math.max(o, c) > 2 * d and math.min(c, o) - l < d / 4
+shooting = uptrendw and h - math.max(o, c) > 2 * d and math.min(c, o) - l < d / 4
+hanging = uptrendw and math.min(o, c) - l > 2 * d and h - math.max(c, o) < d / 4
+bulleng = downtrendw and c > o and c[1] < o[1] and c > o[1] and d > atr
+beareng = uptrendw and c < o and c[1] > o[1] and c < o[1] and d > atr
+wm = c > o and h - math.max(o, c) + math.min(o, c) - l < d / 10 and d > atr and downtrendw[1]
+bm = c < o and h - math.max(o, c) + math.min(o, c) - l < d / 10 and d > atr and uptrendw[1]
+//-----------------------------------------------------------------------------}
+//Channel
+//-----------------------------------------------------------------------------{
+var max = h
+var min = l
+//Bullish Patterns
+if hammer and use_luxcandlepatternchannel_filter
+    max += alpha / 100 * (c - max)
+    lbl(low, 'H', 1, hammer_tlt)
+    
+if ihammer and use_luxcandlepatternchannel_filter
+    max += alpha / 100 * (c - max)
+    lbl(low, 'IH', 1, ihammer_tlt)
+if bulleng and enable_bulleng
+    max += alpha / 100 * (c - max)
+    lbl(low, 'BE', 1, bulleng_tlt)
+if wm and use_luxcandlepatternchannel_filter
+    max += alpha / 100 * (c - max)
+    lbl(low, 'WM', 1, wm_tlt)
+//Bearish Patterns
+if shooting and use_luxcandlepatternchannel_filter
+    min += alpha / 100 * (c - min)
+    lbl(high, 'SS', 0, shooting_tlt)
+if hanging and use_luxcandlepatternchannel_filter
+    min += alpha / 100 * (c - min)
+    lbl(high, 'HM', 0, hanging_tlt)
+if beareng and enable_beareng
+    min += alpha / 100 * (c - min)
+    lbl(high, 'BE', 0, beareng_tlt)
+if bm and use_luxcandlepatternchannel_filter
+    min += alpha / 100 * (c - min)
+    lbl(high, 'BM', 0, bm_tlt)
+max := math.max(c, max)
+min := math.min(c, min)
+smooth_max = ta.ema(max, smooth)
+smooth_min = ta.ema(min, smooth)
+avg = math.avg(smooth_max, smooth_min)
+//-----------------------------------------------------------------------------}
+//Plots
+//-----------------------------------------------------------------------------{
+var os = 0
+os := c > smooth_max ? 1 : c < smooth_min ? 0 : os
+var fade_max = 0
+fade_max := os == 0 ? fade_max + 1 : 0
+var fade_min = 0
+fade_min := os == 1 ? fade_min + 1 : 0
+plot_0 = plot(use_luxcandlepatternchannel_filter? smooth_max : na, 'Upper', bull_css)
+plot_1 = plot(use_luxcandlepatternchannel_filter? avg : na, 'Average', avg_css)
+plot_2 = plot(use_luxcandlepatternchannel_filter? smooth_min : na, 'Lower', bear_css)
+css1 = color.from_gradient(use_luxcandlepatternchannel_filter? fade_max : na, 0, fade, color.new(bull_css, 80), color.new(bull_css, 100))
+css2 = color.from_gradient(use_luxcandlepatternchannel_filter? fade_min : na, 0, fade, color.new(bear_css, 80), color.new(bear_css, 100))
+long_luxcandlepatternchannel_filter=hammer or ihammer or wm 
+short_luxcandlepatternchannel_filter= shooting or hanging or bm
+//support and resistance lux
+volumeThresh = 20
+highUsePivot = fixnan(ta.pivothigh(leftBars, rightBars)[1])
+lowUsePivot = fixnan(ta.pivotlow(leftBars, rightBars)[1])
+r1 = plot(use_support_an_dresistance_break_filter? highUsePivot : na, color=ta.change(highUsePivot) ? na : #FF0000, linewidth=3, offset=-(rightBars + 1), title='Resistance')
+s1 = plot(use_support_an_dresistance_break_filter? lowUsePivot : na, color=ta.change(lowUsePivot) ? na : #233dee, linewidth=3, offset=-(rightBars + 1), title='Support')
+//Volume %
+shorts = ta.ema(volume, 5)
+longs = ta.ema(volume, 10)
+osc = 100 * (shorts - longs) / longs
+short_support_an_dresistance_break_filter=close[1] < lowUsePivot and close < lowUsePivot 
+long_support_an_dresistance_break_filter=close[1]> highUsePivot and close > highUsePivot
+//mavilimw
+tmal = fmal + smal
+Fmal = smal + tmal
+Ftmal = tmal + Fmal
+Smal = Fmal + Ftmal
+M1 = ta.wma(close, fmal)
+M2 = ta.wma(M1, smal)
+M3 = ta.wma(M2, tmal)
+M4 = ta.wma(M3, Fmal)
+M5 = ta.wma(M4, Ftmal)
+MAVW = ta.wma(M5, Smal)
+col1 = MAVW > MAVW[1]
+col3 = MAVW < MAVW[1]
+colorM = col1 ? color.blue : col3 ? color.red : color.yellow
+plot(use_mavilimw_filter? MAVW : na, color=colorM, linewidth=2, title='MAVW')
+M12 = ta.wma(close, 3)
+M22 = ta.wma(M12, 5)
+M32 = ta.wma(M22, 8)
+M42 = ta.wma(M32, 13)
+M52 = ta.wma(M42, 21)
+MAVW2 = ta.wma(M52, 34)
+long_mavilimw_filter= ta.crossover(MAVW, MAVW[1])
+short_mavilimw_filter=ta.crossunder(MAVW, MAVW[1])
+//ift-cc1
+CCI = true
+v11 = 0.1 * (ta.cci(close, ccilength) / 4)
+v21 = ta.wma(v11, wmalength)
+INV1 = (math.exp(2 * v21) - 1) / (math.exp(2 * v21) + 1)
+rsilength = 5
+v12 = 0.1 * (ta.rsi(close, rsilength) - 50)
+v22 = ta.wma(v12, wmalength)
+INV2 = (math.exp(2 * v22) - 1) / (math.exp(2 * v22) + 1)
+stochlength = 5
+v1 = 0.1 * (ta.stoch(close, high, low, stochlength) - 50)
+v2 = ta.wma(v1, wmalength)
+INVLine = (math.exp(2 * v2) - 1) / (math.exp(2 * v2) + 1)
+long_ift_cci_filter=CCI and INV1 > 0.5
+short_ift_cci_filter=CCI and INV1 <  -0.5
+//MFI
+mfilength = 5
+sourcse = hlc3
+up = math.sum(volume * (ta.change(sourcse) <= 0 ? 0 : sourcse), mfilength)
+lo = math.sum(volume * (ta.change(sourcse) >= 0 ? 0 : sourcse), mfilength)
+mfii = 100.0 - 100.0 / (1.0 + up / lo)
+v13 = 0.1 * (mfii - 50)
+v23 = ta.wma(v13, wmalength)
+INV3 = (math.exp(2 * v23) - 1) / (math.exp(2 * v23) + 1)
+AVINV = (INV1 + INV2 + INVLine + INV3) / 4
+var isLong = false
+var isShort= false
+long = ((not use_ema_cross_filter or long_ema_cross_filter) and  (not use_LUX_trama_filter or long_LUX_trama_filter) and ( not use_supertrend_filter or long_supertrend_filter) and (not use_ema200_filter or long_ema_filter) and (not isLong) and  (not use_stochastic_filter or long_stoch_filter) and (not use_macd_filter or long_macd_filter) and (not use_mfi_filter or long_mfi_filter) and (not use_cci_filter or long_cci_filter) and ( not use_vwap_filter or long_vwap_filter) and (not use_chaikin_money_flow_filter or long_chaikin_money_flow_filter)and (not use_ichimoku_filter or long_ichimoku_filter)and (not use_luxcandlepatternchannel_filter or long_luxcandlepatternchannel_filter) and ( not use_support_an_dresistance_break_filter or long_support_an_dresistance_break_filter) and (not use_mavilimw_filter or long_mavilimw_filter) and (not use_ift_cci_filter or long_ift_cci_filter) and (not use_supertrend2_filter or long_supertrend2_filter) and (not use_supertrend3_filter or long_supertrend3_filter) ) 
+short= ((not use_ema_cross_filter or short_ema_cross_filter) and (not use_LUX_trama_filter or short_LUX_trama_filter) and (not use_supertrend_filter or short_supertrend_filter) and (not use_ema200_filter or short_ema_filter) and (not isShort)  and ( not use_stochastic_filter or short_stoch_filter) and (not use_macd_filter or long_macd_filter) and (not use_mfi_filter or short_mfi_filter) and (not use_cci_filter or short_cci_filter) and (not use_vwap_filter or short_vwap_filter)and (not use_chaikin_money_flow_filter or short_chaikin_money_flow_filter) and (not use_ichimoku_filter or short_ichimoku_filter) and ( not use_luxcandlepatternchannel_filter or short_luxcandlepatternchannel_filter)and (not use_support_an_dresistance_break_filter or short_support_an_dresistance_break_filter)and ( not use_mavilimw_filter or short_mavilimw_filter)and (not use_ift_cci_filter or short_ift_cci_filter)and (not use_supertrend2_filter or short_supertrend2_filter) and ( not use_supertrend3_filter or short_supertrend3_filter))
+if long
+    isLong := true
+    isShort := false
+if short
+    isLong := false
+    isShort := true
+plotshape(long, title='Buy', text='Buy', style=shape.labelup, location=location.belowbar, color=color.new(color.green, 0), textcolor=color.new(color.white, 0), size=size.tiny)
+plotshape(short, title='Sell', text='Sell', style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 0), textcolor=color.new(color.white, 0), size=size.tiny)
+// trailing atr exits
+Prev = ta.highest(high - Mult1 * ta.atr(Atr1), Hhv1)
+ta.barssince(close > ta.highest(high - Mult1 * ta.atr(Atr1), Hhv1) and close > close[1])
+cum_1 = ta.cum(1)
+highest_1 = ta.highest(high - Mult1 * ta.atr(Atr1), Hhv1)
+highest_2 = ta.highest(high - Mult1 * ta.atr(Atr1), Hhv1)
+iff_1 = close > highest_1 and close > close[1] ? highest_2 : Prev
+TS = cum_1 < 16 ? close : iff_1
+iff_2 = close < TS ? color.red : color.black
+Color = close > TS ? color.green : iff_2
+plot(use_trailing_atr_exits? TS : na, color=Color, linewidth=3, title='ATR Trailing Stoploss')
+short_trailing_atr_exits = ta.crossover(close, TS)
+long_trailing_atr_exits = ta.crossunder(close, TS)
+//trail
+longStopPricess = 0.0
+shortStopPricess = 0.0
+longStopPricess := if strategy.position_size > 0
+    stopValue = close * (1 - trailStop)
+    math.max(stopValue, longStopPricess[1])
+else
+    0
+shortStopPricess := if strategy.position_size < 0
+    stopValue = close * (1 + trailStop)
+    math.min(stopValue, shortStopPricess[1])
+else
+    999999
+//PLOT TSL LINES
+plot(series=strategy.position_size > 0 and use_percent_base_trailing_stop_exits ? longStopPricess : na, color=color.red, style=plot.style_linebr, linewidth=1, title="Long Trail Stop", offset=1, title="Long Trail Stop")
+plot(series=strategy.position_size < 0 and use_percent_base_trailing_stop_exits? shortStopPricess : na, color=color.red, style=plot.style_linebr, linewidth=1, title="Short Trail Stop", offset=1, title="Short Trail Stop")
+//bollinger
+basiss = ta.sma(src, lengthss)
+dev = mult * ta.stdev(src, lengthss)
+upper = basiss + dev
+lower = basiss - dev
+plot(use_bollinger_exits ? basiss : na, "Basis", color=#FF6D00, offset = offset)
+p1 = plot(use_bollinger_exits ? upper : na, "Upper", color=#2962FF, offset = offset)
+p2 = plot(use_bollinger_exits ? lower: na, "Lower", color=#2962FF, offset = offset)
+long_atr_bands_exits = close > upline 
+short_atr_bands_exits = close < bottomline
+long_bollinger_exits= close > upper
+short_bollinger_exits=close < lower
+long_atr_exits = close > upline 
+short_atr_exits = close < bottomline
+takelong = (not use_atr_bands_exits or long_atr_bands_exits) and (not use_bollinger_exits or long_bollinger_exits) and ( not use_trailing_atr_exits or long_trailing_atr_exits )
+takeshort = (not use_atr_bands_exits or short_atr_bands_exits) and (not use_bollinger_exits or short_bollinger_exits) and (not use_trailing_atr_exits or short_trailing_atr_exits)
+plotshape(use_atr_bands_exits? takelong : na,title = 'take profit',text='high SL/TP',style=shape.cross,location = location.abovebar, color=color.new(color.green,0) , size=size.tiny)
+plotshape(use_atr_bands_exits ? takeshort : na,title = 'take profit',text='low SL/TP',style=shape.cross,location = location.belowbar, color=color.new(color.green,0), size=size.tiny)
+plotshape(use_bollinger_exits ? takelong: na,title = 'take profit',text='high SL/TP',style=shape.cross,location = location.abovebar, color=color.new(color.green,0) , size=size.tiny)
+plotshape(use_bollinger_exits ? takeshort: na,title = 'take profit',text='low SL/TP',style=shape.cross,location = location.belowbar, color=color.new(color.green,0), size=size.tiny)
+// Determine stop loss price
+longStopPrice = strategy.position_avg_price * (1 - longLossPerc)
+shortStopPrice = strategy.position_avg_price * (1 + shortLossPerc)
+// Determine take profit price
+longprofitPrice = strategy.position_avg_price * (1 + longprofitPerc)
+shortprofitPrice = strategy.position_avg_price * (1 - shortprofitPerc)
+// Plot stop loss values for confirmation
+plot(series=strategy.position_size > 0 ? longStopPrice : na, color=color.new(color.red, 0), style=plot.style_cross, linewidth=1, title='Long Stop Loss')
+plot(series=strategy.position_size < 0 ? shortStopPrice : na, color=color.new(color.red, 0), style=plot.style_cross, linewidth=1, title='Short Stop Loss')
+plot(use_fix_perc_take_profit and strategy.position_size > 0 ? longprofitPrice : na, color=color.new(color.green, 0), style=plot.style_cross, linewidth=1, title='Long profit')
+plot(use_fix_perc_take_profit and strategy.position_size < 0 ? shortprofitPrice : na, color=color.new(color.green, 0), style=plot.style_cross, linewidth=1, title='Short profit')
+// trailing tp
+bool openLongPosition = long
+bool openShortPosition = short
+bool longIsActive = openLongPosition or strategy.position_size > 0
+bool shortIsActive = openShortPosition or strategy.position_size < 0
+float longTakeProfitPrice2 = na
+longTakeProfitPrice2 := if longIsActive
+    if openLongPosition and not (strategy.position_size > 0)
+        close * (1 + longTakeProfitPerc2)
+    else
+        nz(longTakeProfitPrice2[1], close * (1 + longTakeProfitPerc2))
+else
+    na
+float shortTakeProfitPrice2 = na
+shortTakeProfitPrice2 := if shortIsActive
+    if openShortPosition and not (strategy.position_size < 0)
+        close * (1 - shortTakeProfitPerc2)
+    else
+        nz(shortTakeProfitPrice2[1], close * (1 - shortTakeProfitPrice2))
+else
+    na
+float longTrailingTakeProfitStepTicks = longTakeProfitPrice2 * LtrailingTakeProfitDeviationPerc / syminfo.mintick
+float shortTrailingTakeProfitStepTicks = shortTakeProfitPrice2 * StrailingTakeProfitDeviationPerc / syminfo.mintick
+plot(enableTrailing? longTakeProfitPrice2:na, title='Long Take Profit', color = color.green, linewidth = 1, style = plot.style_cross, offset = 1)
+plot(enableTrailing? shortTakeProfitPrice2 :na, title='Short Take Profit', color = color.red, linewidth = 1, style = plot.style_cross, offset = 1)
+longstoploss= close <longStopPrice 
+shortstoploss=close >shortStopPrice 
+if longstoploss 
+    strategy.close("Long Entry")
+if shortstoploss
+    strategy.close("Short Entry")
+longCondition = long and not short_only
+if (longCondition and time_cond)
+    strategy.entry("Long Entry", strategy.long)
+shortCondition = short and not long_only
+if (shortCondition and time_cond)
+    strategy.entry("Short Entry", strategy.short)
+if use_trailing_stop_loss 
+    if takelong and strategy.position_size > 0 and time_cond or time_cond and close < longStopPrice
+        strategy.close("Long Entry")
+    if takeshort and strategy.position_size < 0 and time_cond or time_cond and close >shortStopPrice 
+        strategy.close("Short Entry")
+else
+    if  time_cond and close < longStopPrice or  time_cond and close > longprofitPrice and use_fix_perc_take_profit 
+        strategy.close("Long Entry")
+    if time_cond  and close < shortprofitPrice or time_cond and close > shortStopPrice and use_fix_perc_take_profit 
+        strategy.close("Short Entry")
+if isLong and use_percent_base_trailing_stop_exits 
+    strategy.exit(id="Close Long", stop=longStopPricess)
+if isShort and use_percent_base_trailing_stop_exits
+    strategy.exit(id="Close Short", stop=shortStopPricess)
+if isLong and enableTrailing 
+    strategy.exit(id = 'Long Take Profit', from_entry = 'Long Entry', limit = close < longStopPrice or enableTrailing ? na : longTakeProfitPrice2, trail_price = enableTrailing ? longTakeProfitPrice2 : na, trail_offset = enableTrailing ? longTrailingTakeProfitStepTicks : na, when = longIsActive, alert_message = 'Long(' + syminfo.ticker + '): Take Profit activated')
+if isShort and enableTrailing 
+    strategy.exit(id = 'Short Take Profit', from_entry = 'Short Entry', limit = close > shortStopPrice or enableTrailing ? na : shortTakeProfitPrice2, trail_price = enableTrailing ? shortTakeProfitPrice2 : na, trail_offset = enableTrailing ? shortTrailingTakeProfitStepTicks : na, when = shortIsActive, alert_message = 'Short(' + syminfo.ticker + '): Take Profit activated')
+ 
+Expand (861 lines)

@@ -1,0 +1,187 @@
+Script Name: Trendelicious Strategy
+Author: levieux
+Description: A simple strategy based on  Trendelicious indicator 
+
+We go long when an uptrend started 2 candles ago.
+We close the position when an uptrend ended 2 candles ago.
+
+Parameters are just the required parameters for the indicator + backtest timeframe
+
+To avoid the noise and catch big uptrends, run on higher timeframes (4h, 1D ...)
+
+The script also contains a code to...
+PineScript code:
+
+Pine Script™ strategy
+Trendelicious Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © levieux
+//@version=5
+strategy(title='Trendelicious Strategy', shorttitle='Trendelicious Strategy', initial_capital=1000, overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent, commission_value=0.1)
+length=input(defval=30)
+price=input(defval=hl2, title="Price Source")
+aggressiveMode=input(defval=false,title="Aggressive Mode")
+start = input.time(defval = timestamp("01 Jan 1900 00:00 +0000"), title = "Start Time")
+end = input.time(defval = timestamp("31 Dec 2050 23:59 +0000"), title = "End Time")
+window() =>
+    time >= start and time < end
+if not window()
+    strategy.cancel_all()
+isUptrend(price,length,aggressiveMode) =>
+    uptrend= false
+    PP= (ta.highest(price,length)+ta.lowest(price,length))/2
+    ppChange= ta.change(PP,1)
+    ppFlat= ppChange==0
+    priceOverPP=ta.crossover(price,PP)
+    priceUnderPP=ta.crossunder(price,PP)
+    risingPrice= ta.rising(price,5)
+    risingPP= ta.rising(PP,5)
+    fallingPrice= ta.falling(price,5)
+    fallingPP= ta.falling(PP,5)
+    uptrendCondition1= price>PP and (ppChange>0 or (ppChange==0 and aggressiveMode)) and (ppChange[1]>0 or (ppChange[1]==0 and aggressiveMode)) and ppChange[2]>=0 and ppChange[3]>=0
+    uptrendCondition2= (priceOverPP or risingPrice) and ppFlat and aggressiveMode
+    uptrendCondition3= risingPrice and fallingPP and aggressiveMode
+    downtrendCondition1= price < PP and (ppChange<0 or (ppChange==0 and aggressiveMode)) and (ppChange[1]<0 or (ppChange[1]==0 and aggressiveMode)) and ppChange[2]<=0 and ppChange[3]<=0
+    downtrendCondition2= (priceUnderPP or fallingPrice) and ppFlat and aggressiveMode
+    downtrendCondition3= fallingPrice and risingPP and aggressiveMode
+    if uptrendCondition1 or uptrendCondition2 or uptrendCondition3
+        uptrend:= true
+    else if downtrendCondition1 or downtrendCondition2 or downtrendCondition3
+        uptrend:= false
+    else
+        uptrend:= uptrend[1]
+    [PP,uptrend]
+[trendline,uptrend]= isUptrend(price,length,aggressiveMode)
+baseLinePlot = plot((open + close) / 2, display=display.none)
+upTrendPlot = plot(uptrend ? trendline : na, "Up Trend", color = color.green, style=plot.style_linebr)
+downTrendPlot = plot(not uptrend ? trendline : na, "Down Trend", color = color.red, style=plot.style_linebr)
+fill(baseLinePlot, upTrendPlot, color.new(color.green, 90), fillgaps=false)
+fill(baseLinePlot, downTrendPlot, color.new(color.red, 90), fillgaps=false)
+buyCondition= window() and uptrend and uptrend[1] and strategy.position_size<=0
+sellCondition= window() and not uptrend and not uptrend[1] and strategy.position_size>=0
+firstTradePrice= close-close
+firstTradePrice:= nz(firstTradePrice[1],0)
+if buyCondition
+    strategy.entry("Long", strategy.long)
+    if firstTradePrice==0
+        firstTradePrice:= close
+else if sellCondition
+    strategy.close("Long")
+end_time= time_close>timenow
+end_time:= time_close + (time_close - time_close[1]) > timenow or barstate.islastconfirmedhistory
+precision= 0
+if end_time
+    netprofit=math.round(strategy.netprofit,precision)
+    netprofitPercent=math.round(100*netprofit/strategy.initial_capital,precision)
+    bhprofit= math.round((strategy.initial_capital/firstTradePrice)*close-strategy.initial_capital,precision)
+    bhprofitPercent= math.round(100*bhprofit/strategy.initial_capital,precision)
+    openprofit=math.round(strategy.openprofit,precision)
+    trades= strategy.closedtrades
+    wins= strategy.wintrades
+    losses= strategy.losstrades
+    winColor= color.new(color.green, transp = 20)
+    loseColor= color.new(color.red, transp = 20)
+    neutralColor= color.new(color.silver, transp = 70)
+    testTable = table.new(position = position.bottom_right, columns = 2, rows = 4, border_width = 1)
+    table.cell(table_id = testTable, column = 0, row = 0, text = "Net Profit",  bgcolor = #cccccc)
+    table.cell(table_id = testTable, column = 1, row = 0, text = str.tostring(netprofit)+"\n"+str.tostring(netprofitPercent)+" %", bgcolor= netprofit>0?winColor:loseColor)
+    table.cell(table_id = testTable, column = 0, row = 1, text = "Buy & Hold",  bgcolor = #cccccc)
+    table.cell(table_id = testTable, column = 1, row = 1, text = str.tostring(bhprofit)+"\n"+str.tostring(bhprofitPercent)+" %", bgcolor= bhprofitPercent>0?winColor:loseColor)
+    table.cell(table_id = testTable, column = 0, row = 2, text = "Win / Loss",  bgcolor = #cccccc)
+    table.cell(table_id = testTable, column = 1, row = 2, text = str.tostring(wins)+" / "+str.tostring(losses), bgcolor=neutralColor)
+    table.cell(table_id = testTable, column = 0, row = 3, text = "Open PnL",  bgcolor = #cccccc)
+    table.cell(table_id = testTable, column = 1, row = 3, text = str.tostring(openprofit), bgcolor= openprofit==0?neutralColor:openprofit>0?winColor:loseColor)
+Expand (92 lines)

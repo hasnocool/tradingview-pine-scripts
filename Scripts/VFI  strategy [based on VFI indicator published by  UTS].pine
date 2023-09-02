@@ -1,0 +1,245 @@
+Script Name: VFI  strategy [based on VFI indicator published by  UTS]
+Author: mohanee
+Description: This strategy is based on VFI indicator published by  UTS.  
+
+for the strategy purpose , I have added buy line and sell line to the indicator  and tested  SPY stock/index on one hour chart
+
+BUY RULE
+==========
+1. EMA 50 is above EMA 200
+2. vfi line is pulled down and crossing above -4 
+
+
+EXIT RULE
+==========
+1. when vfi line crossing down 5
+
+
+STOP...
+PineScript code:
+
+Pine Script™ strategy
+VFI strategy [based on VFI indicator published by UTS]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mohanee
+//This strategy is based on VFI indicator published by  UTS.  
+//more details of VFI indicator can be found at  [url=http://mkatsanos.com/VFI.html]http://mkatsanos.com/VFI.html[/url] 
+// I have added buy line and sell line to the indicator  and tested  SPY stock/index on one hour chart
+//@version=4
+strategy(title="VFI  strategy [based on VFI indicator published by  UTS]", overlay=false,pyramiding=2, default_qty_type=strategy.fixed,    initial_capital=10000, currency=currency.USD)
+// Const
+kMaColor = color.aqua
+kNeutralColor = color.gray
+kBearColor = color.red
+kBullColor = color.green
+kAlma = "ALMA"
+kEma = "EMA"
+kSma = "SMA"
+kWma = "WMA"
+// Input
+vfi_length = input(8, title="Length", minval=1)  //default 130
+vfi_coef = input(0.2, title="Coef", minval=0.1)
+vfi_volCutoff = input(2.5, title="Volume Cutoff", minval=0.1)
+vfi_smoothLen = input(3, title="Smoothing Period", minval=1)
+vfi_smoothType = input(kEma, title="Smoothing Type", options=[kAlma, kEma, kSma, kWma])
+//These are adde by me for the strategy purpose  BEGIN
+vfi_buyLine = input(-4, title="Buy Line", minval=-10)
+vfi_sellLine = input(5, title="Sell Line", minval=-10)
+stopLoss = input(title="Stop Loss%", defval=5, minval=1)
+//These are adde by me for the strategy purpose  END
+vfi_longEMA = input(200, title="Long EMA", minval=1)
+vfi_shortEMA1 = input(50, title="short EMA1", minval=1)
+vfi_shortEMA2 = input(9, title="short EM2A", minval=1)
+vfi_showTrend = input(false, title="Visualize Trend")
+vfi_showFill = input(true, title="Apply Filling")
+vfi_showMa = input(true, title="Show Moving Average")
+vfi_maType = input(kSma, title="Moving Average Type", options=[kAlma, kEma, kSma, kWma])
+vfi_maLength = input(30, title="Moving Average Length", minval=1)
+vfi_almaOffset = input(0.85, title="• ALMA - Offset (global setting)", minval=0.0, maxval=1.0, step=0.05) // more smoothness (closer to 1) vs. more responsiveness (closer to 0)
+vfi_almaSigma = input(6.0, title="• ALMA - Sigma (global setting)", minval=0.0, step=0.05) // the larger sigma the smoother ALMA
+// Functionality
+isRising(sig) =>
+    sig > sig[1]
+    
+isFlat(sig) =>
+    sig == sig[1]
+vfi_trendColor(sig) =>
+    isFlat(sig) ? kNeutralColor : isRising(sig) ? kBullColor : kBearColor
+    
+vfi_color(sig) =>
+    isFlat(sig) ? kNeutralColor : sig > 0 ? kBullColor : kBearColor
+    
+osc_color(sig) =>
+    sig == 0 ? kNeutralColor : sig > 0 ? kBullColor : kBearColor
+smooth(t, sig, len) =>
+    ma = float(sig)         // None
+    if t == kSma            // Simple
+        ma := sma(sig, len)
+    if t == kEma            // Exponential
+        ma := ema(sig, len)
+    if t == kWma            // Weighted
+        ma := wma(sig, len)
+    if t == kAlma           // Arnaud Legoux
+        ma := alma(sig, len, vfi_almaOffset, vfi_almaSigma)
+    ma
+calc_vfi(fviPeriod, smoothType, smoothLen, coef, vCoef) =>
+    avg = nz(hlc3)
+    inter = log(avg) - log(avg[1])
+    vInter = stdev(inter, 30)
+    cutOff = coef * vInter * close
+    vAve = smooth(kSma, volume[1], fviPeriod)
+    vMax = vAve * vCoef
+    vC = min(volume, vMax)
+    mf = avg - avg[1]
+    vCp = iff(mf > cutOff, vC, iff(mf < -cutOff, -vC, 0))
+    sVfi = sum(vCp, fviPeriod) / vAve
+    vfi = smooth(smoothType, sVfi, smoothLen)
+    
+value_vfi = calc_vfi(vfi_length, vfi_smoothType, vfi_smoothLen, vfi_coef, vfi_volCutoff)
+value_ma = smooth(vfi_maType, value_vfi, vfi_maLength)
+longEMAval= ema(close, vfi_longEMA)
+shortEMAval1= ema(close, vfi_shortEMA1)
+shortEMAval2= ema(close, vfi_shortEMA2)
+color_vfi = vfi_showTrend ? vfi_trendColor(value_vfi) : vfi_color(value_vfi)
+color_osc = vfi_showFill ? osc_color(value_vfi) : na
+color_ma = vfi_showMa ? kMaColor : na
+// Drawings
+plot_vfi = plot(value_vfi, title="VFI", color=color_vfi, linewidth=1)
+plot_fill = plot(0, color=color_vfi, editable=false)
+fill(plot_vfi, plot_fill, title="Oscillator Fill", color=color_osc, transp=75) 
+hline(vfi_buyLine, color=color.green, title="Buy Line", linewidth=2, linestyle=hline.style_dashed)
+hline(vfi_sellLine, color=color.purple, title="Sell Line", linewidth=2, linestyle=hline.style_dashed)
+plot(value_ma, title="MA", color=color_ma, linewidth=2)
+strategy.entry(id="VFI LE", long=true,  when=crossover(value_vfi,vfi_buyLine)  and ( shortEMAval1 >= longEMAval  ))
+//strategy.close(id="VFI LE", comment="Exit",   when=crossunder(value_vfi,vfi_sellLine))
+strategy.close(id="VFI LE", comment="TP Exit",   when=crossunder(value_vfi,vfi_sellLine) and close>strategy.position_avg_price)
+//strategy.close(id="VFI LE", comment="Exit",   when=  (shortEMAval1 > shortEMAval2 )  and crossunder(close, shortEMAval2))
+//stoploss
+stopLossVal =   strategy.position_avg_price -  (strategy.position_avg_price*stopLoss*0.01) 
+strategy.close(id="VFI LE", comment="SL Exit",   when=crossunder(value_vfi,vfi_sellLine) and close < stopLossVal)
+Expand (124 lines)

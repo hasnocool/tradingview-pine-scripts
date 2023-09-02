@@ -1,0 +1,436 @@
+Script Name: [001] Entry_Test [TradeStand]
+Author: Strategy_Distributor
+Description: Entry_Exit_Test .
+
+------------------------------------
+Function description
+------------------------------------
+
+You can automatically receive an entry alert when the conditions you specify are met.
+Settlement alerts can be sent automatically when the conditions you specify are met.
+Three types of moving averages can be...
+PineScript code:
+
+Pine Script™ strategy
+[001] Entry_Test [TradeStand]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Dr_KV
+//@version=4
+strategy("[001] Entry_Test [TradeStand]", overlay=true)
+strategy_code = "tradestand"
+//////////////////////////////////
+//
+//　インプット
+//
+//////////////////////////////////
+Section1 = input(title = "▒▒▒▒▒▒▒▒▒▒▒▒▒ トレードモード ▒▒▒▒▒▒▒▒▒▒▒▒▒", defval = true, type = input.bool)
+int_TradeMode = input("OFF", options = ["OFF","新規買い","新規売り","返済買い","返済売り"], title = "トレードモード")
+Section71 = input(title = "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ 表　示 ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒", defval = true, type = input.bool)
+int_MA_monitor = input("OFF", options = ["OFF","ON"], title = "日足MA表示")
+Section3 = input(title = "▒▒▒▒▒▒▒▒▒▒▒▒▒▒ トレード条件 ▒▒▒▒▒▒▒▒▒▒▒▒▒", defval = true, type = input.bool)
+i_startTime = input(defval = timestamp("18 oct 2021 13:30 +0900"), title = "実行日時", type = input.time)
+i_byou = input(0, minval = 0, maxval = 59, title = "　　　　　秒数")
+int_EntryLimit_cMA_switch = "OFF"
+int_EntryLimit_cMA_MA = "OFF"
+int_EntryLimit_cMA_jg_switch = "超えたら"
+//////////////////////////////////
+//
+//　素材
+//
+//////////////////////////////////
+//移動平均線　//////////////////////////////////////////////////////////////////////////////////////////////////////
+//当日～3日前　４本値
+var float open_today = open
+var float high_today = open
+var float low_today = open
+var float open_yesterday = open
+var float high_yesterday = high
+var float low_yesterday = low
+var float open_2days_ago = open
+var float high_2days_ago = high
+var float low_2days_ago = low
+var float open_3days_ago = open
+var float high_3days_ago = high
+var float low_3days_ago = low
+var float close_yesterday = close
+var float close_2days_ago = close
+var float close_3days_ago = close
+var float close_4days_ago = close
+var float close_5days_ago = close
+var float close_6days_ago = close
+var float close_7days_ago = close
+var float close_8days_ago = close
+var float close_9days_ago = close
+var float close_10days_ago = close
+var float close_11days_ago = close
+var float close_12days_ago = close
+var float close_13days_ago = close
+var float close_14days_ago = close
+var float close_15days_ago = close
+var float close_16days_ago = close
+var float close_17days_ago = close
+var float close_18days_ago = close
+var float close_19days_ago = close
+var float close_20days_ago = close
+var float close_21days_ago = close
+var float close_22days_ago = close
+var float close_23days_ago = close
+var float close_24days_ago = close
+if(dayofweek[1] != dayofweek)
+    open_today := open
+    high_today := high
+    low_today := low
+    open_yesterday := open_today[1]
+    high_yesterday := high_today[1]
+    low_yesterday := low_today[1]
+    
+    open_2days_ago := open_yesterday[1]
+    high_2days_ago := high_yesterday[1]
+    low_2days_ago := low_yesterday[1]
+    
+    open_3days_ago := open_2days_ago[1]
+    high_3days_ago := high_2days_ago[1]
+    low_3days_ago := low_2days_ago[1]
+    
+    close_yesterday := close[1]
+    close_2days_ago := close_yesterday[1]
+    close_3days_ago := close_2days_ago[1]
+    close_4days_ago := close_3days_ago[1]
+    close_5days_ago := close_4days_ago[1]
+    close_6days_ago := close_5days_ago[1]
+    close_7days_ago := close_6days_ago[1]
+    close_8days_ago := close_7days_ago[1]
+    close_9days_ago := close_8days_ago[1]
+    close_10days_ago:=close_9days_ago[1]
+    close_11days_ago:=close_10days_ago[1]
+    close_12days_ago:=close_11days_ago[1]
+    close_13days_ago:=close_12days_ago[1]
+    close_14days_ago:=close_13days_ago[1]
+    close_15days_ago:=close_14days_ago[1]
+    close_16days_ago:=close_15days_ago[1]
+    close_17days_ago:=close_16days_ago[1]
+    close_18days_ago:=close_17days_ago[1]
+    close_19days_ago:=close_18days_ago[1]
+    close_20days_ago:=close_19days_ago[1]
+    close_21days_ago:=close_20days_ago[1]
+    close_22days_ago:=close_21days_ago[1]
+    close_23days_ago:=close_22days_ago[1]
+    close_24days_ago:=close_23days_ago[1]
+//日々カウント
+var int var_everyday_cnt = 1
+if(dayofweek[1] != dayofweek )
+    var_everyday_cnt := var_everyday_cnt +1
+//短期 中期 長期 基準 MA
+[ma_short_D,ma_short_prev_D,ma_short_prev2_D,ma_middle_D,ma_middle_prev_D,ma_middle_prev2_D,ma_long,ma_long_prev,ma_long_prev2] = security(syminfo.tickerid, "D", [sma(close, 5)[0],sma(close, 5)[1],sma(close, 5)[2],sma(close, 25)[0],sma(close, 25)[1],sma(close, 25)[2],sma(close, 75)[0],sma(close, 75)[1],sma(close, 75)[2]], barmerge.gaps_off, barmerge.lookahead_off)
+ma_short = var_everyday_cnt < 5 ? ma_short_D : (close + close_yesterday + close_2days_ago + close_3days_ago + close_4days_ago )/5
+ma_middle = var_everyday_cnt < 25 ? ma_middle_D : (close + close_yesterday + close_2days_ago + close_3days_ago + close_4days_ago + close_5days_ago + close_6days_ago + close_7days_ago + close_8days_ago + close_9days_ago + close_10days_ago + close_11days_ago + close_12days_ago + close_13days_ago + close_14days_ago + close_15days_ago + close_16days_ago + close_17days_ago + close_18days_ago + close_19days_ago + close_20days_ago + close_21days_ago + close_22days_ago + close_23days_ago + close_24days_ago)/25
+ma_short_monitor = int_MA_monitor == "ON" ? ma_short : close
+ma_middle_monitor = int_MA_monitor == "ON" ? ma_short : close
+ma_long_monitor = int_MA_monitor == "ON" ? ma_long : close
+plot(ma_short_monitor, color = int_MA_monitor == "ON" ? color.aqua : na, linewidth=2, title="日足5MA")
+plot(ma_middle_monitor, color = int_MA_monitor == "ON" ? color.yellow : na , linewidth=2, title="日足25MA")
+plot(ma_long_monitor, color = int_MA_monitor == "ON" ? color.lime : na , linewidth=2, title="日足75MA")
+//////////////////////////////////
+//
+//　ロジック
+//
+//////////////////////////////////
+// 実行時間　//////////////////////////////////////////////////////////////////////////////////////////////////////
+inDateRange = time >= i_startTime
+var int var_byou = 0
+if(dayofweek[1] != dayofweek)
+    var_byou := 0
+if(inDateRange[1] == false and inDateRange == true )
+    var_byou := time + i_byou*1000
+//inDateRange_2　＝　実行時間満たし
+inDateRange_2 = time >= var_byou and inDateRange
+// 日足MA基準トレード  ////////////////////////////////////////////////////////////////////////////
+ver_EntryLimit_cMA_line = int_EntryLimit_cMA_MA == "5MA" ? ma_short : int_EntryLimit_cMA_MA == "25MA" ? ma_middle : int_EntryLimit_cMA_MA == "75MA" ? ma_long : close
+Condition_EntryLimit_cMA_buysell = (int_EntryLimit_cMA_switch == "OFF") ? true :
+                                     (int_EntryLimit_cMA_jg_switch == "超えたら" and close > ver_EntryLimit_cMA_line)
+                                     or
+                                     (int_EntryLimit_cMA_jg_switch == "割ったら" and close < ver_EntryLimit_cMA_line)
+//////////////////////////////////
+//
+//　ロジック まとめ
+//
+//////////////////////////////////
+logic_pass = inDateRange_2
+             and Condition_EntryLimit_cMA_buysell
+//////////////////////////////////
+//
+//　処理まとめ
+//
+//////////////////////////////////
+var int var_position_count = 0
+var int var_position_count_entry_only = 0
+//ポジション取ったよ
+if(var_position_count == 0 and strategy.position_size[1] == 0 and strategy.position_size != 0)
+    var_position_count := var_position_count + 1
+//先に買っとく
+if (int_TradeMode == "返済売り" and var_position_count == 0 and time[1] != time)
+    strategy.entry(":新規買い", strategy.long, alert_message=strategy_code)
+    var_position_count := var_position_count + 1
+if (int_TradeMode == "返済買い" and var_position_count == 0 and time[1] != time)
+    strategy.entry(":新規売り", strategy.short, alert_message=strategy_code)
+    var_position_count := var_position_count + 1
+//エントリー　///////////////////////////////////
+if ((int_TradeMode == "新規買い")and inDateRange_2 and var_position_count == 0)
+    strategy.entry(":新規買い", strategy.long, qty = 10000000, alert_message=strategy_code)
+    var_position_count := var_position_count + 1
+    var_position_count_entry_only := var_position_count_entry_only + 1
+if ((int_TradeMode == "新規売り")and inDateRange_2 and var_position_count == 0)
+    strategy.entry(":新規売り", strategy.short, qty = 10000000, alert_message=strategy_code)
+    var_position_count := var_position_count + 1
+    var_position_count_entry_only := var_position_count_entry_only + 1
+//決済 //////////////////////////////////////////
+strategy.close(":新規買い",
+     comment = ':返済売り',
+     alert_message=strategy_code ,
+     when = inDateRange_2 and var_position_count_entry_only == 0
+     )
+strategy.close(":新規売り",
+     comment = ':返済買い',
+     alert_message=strategy_code ,
+     when = inDateRange_2 and var_position_count_entry_only == 0
+     )
+Expand (238 lines)

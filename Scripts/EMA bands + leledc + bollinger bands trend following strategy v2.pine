@@ -1,0 +1,1653 @@
+Script Name: EMA bands + leledc + bollinger bands trend following strategy v2
+Author: readysetliqd
+Description: The basics:
+In its simplest form, this strategy is a positional trend following strategy which enters long when price breaks out above "middle" EMA bands and closes or flips short when price breaks down below "middle" EMA bands. The top and bottom of the middle EMA bands are calculated from the EMA of candle highs and lows, respectively. 
+
+The idea is that...
+PineScript code:
+
+Pine Script™ strategy
+EMA bands + leledc + bollinger bands trend following strategy v2
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+540
+541
+542
+543
+544
+545
+546
+547
+548
+549
+550
+551
+552
+553
+554
+555
+556
+557
+558
+559
+560
+561
+562
+563
+564
+565
+566
+567
+568
+569
+570
+571
+572
+573
+574
+575
+576
+577
+578
+579
+580
+581
+582
+583
+584
+585
+586
+587
+588
+589
+590
+591
+592
+593
+594
+595
+596
+597
+598
+599
+600
+601
+602
+603
+604
+605
+606
+607
+608
+609
+610
+611
+612
+613
+614
+615
+616
+617
+618
+619
+620
+621
+622
+623
+624
+625
+626
+627
+628
+629
+630
+631
+632
+633
+634
+635
+636
+637
+638
+639
+640
+641
+642
+643
+644
+645
+646
+647
+648
+649
+650
+651
+652
+653
+654
+655
+656
+657
+658
+659
+660
+661
+662
+663
+664
+665
+666
+667
+668
+669
+670
+671
+672
+673
+674
+675
+676
+677
+678
+679
+680
+681
+682
+683
+684
+685
+686
+687
+688
+689
+690
+691
+692
+693
+694
+695
+696
+697
+698
+699
+700
+701
+702
+703
+704
+705
+706
+707
+708
+709
+710
+711
+712
+713
+714
+715
+716
+717
+718
+719
+720
+721
+722
+723
+724
+725
+726
+727
+728
+729
+730
+731
+732
+733
+734
+735
+736
+737
+738
+739
+740
+741
+742
+743
+744
+745
+746
+747
+748
+749
+750
+751
+752
+753
+754
+755
+756
+757
+758
+759
+760
+761
+762
+763
+764
+765
+766
+767
+768
+769
+770
+771
+772
+773
+774
+775
+776
+777
+778
+779
+780
+781
+782
+783
+784
+785
+786
+787
+788
+789
+790
+791
+792
+793
+794
+795
+796
+797
+798
+799
+800
+801
+802
+803
+804
+805
+806
+807
+808
+809
+810
+811
+812
+813
+814
+815
+816
+817
+818
+819
+820
+821
+822
+823
+824
+825
+826
+827
+828
+829
+830
+831
+832
+833
+834
+835
+836
+837
+838
+839
+840
+841
+842
+843
+844
+845
+846
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © danielx888
+// Credits to Joy_Bangla for the Leledc exhaustion bar code
+// Credits to VishvaP for the 34 EMA bands code
+// Credits to SlumdogTrader for the BB exhaustion code (edited for functionality)
+// Credits to Juanc2316 for his code for BB Keltner Squeeze
+//
+// Update Notes : added strategy close conditions before every entry for more accurate
+// backtesting results when considering for slippage and fees,  readability adjustments
+//@version=5
+strategy(title='EMA bands + leledc + bollinger bands trend catching strategy w/ countertrend scalp', 
+     shorttitle='Trend Pooristics', overlay=true, initial_capital = 1000, commission_value= 0.036, 
+     pyramiding= 0, default_qty_type= strategy.percent_of_equity, default_qty_value= 100, 
+     margin_long=0, margin_short=0, max_bars_back=200)
+//USER INPUTS {
+//INPUT: OPEN
+i_EMAlength         = input.int   (34, 'EMA Length', minval=1, step=1)
+s_needLong          = input.bool  (true, title = "Enable middle EMA band breakout: Long", group="Open Conditions")
+s_needShort         = input.bool  (true, title = "Enable middle EMA band breakdown: Short", group="Open Conditions")
+s_longBounce        = input.bool  (false, 'Enable middle EMA band bounce re-entry: Long', tooltip='Works best when early close conditions are used', group= 'Open Conditions')
+s_shortBounce       = input.bool  (false, 'Enable middle EMA band bounce re-entry: Short', tooltip='Works best when early close conditions are used', group= 'Open Conditions')
+s_alwaysLong        = input.bool  (false, title = "Enable default positioning: Long", tooltip='Does not work with "Enable default positioning: Short" also selected. Works best when early close conditions are used', group = 'Open Conditions')
+s_alwaysShort       = input.bool  (false, title = "Enable default positioning: Short", tooltip='Does not work with "Enable default positioning: Long" also selected. Works best when early close conditions are used', group = 'Open Conditions')
+i_topMBmult         = input.float (1, 'Top middle band multiplier', 0.1,3,step=0.1,group='Open Conditions')
+i_botMBmult         = input.float (1, 'Bottom middle band multiplier',0.1,3,step=0.1,group='Open Conditions')
+s_useSlowEMA        = input.bool  (false, title='Use slow EMA filter',tooltip='Condition does not apply to counter-trend trades', group='Open Conditions')
+i_slowEMAlen        = input.int   (200, title='Slow EMA Length', step=1, minval=1, group='Open Conditions')
+//INPUT: CLOSE
+i_midClose          = input.string('Opposite band', 'Close on crosses through middle EMA bands', tooltip='Selecting "Delayed bars inside" will closing positions after specified amount of candles close in between the middle EMA bands without breaking out', options=['Nearest band', 'Opposite band', 'Delayed bars inside'], group='Close Conditions')
+i_numBars           = input.int   (4, 'Delayed close no. of bars', minval=1, maxval=10, step=1, group='Close Conditions')
+s_useLele           = input.bool  (false, 'Close on Leledc bars', group='Close Conditions')
+i_whichLele         = input.string('First', 'Which Leledc bar?', options=['First', 'Second', 'Third', 'Fourth', 'Fifth'], group='Close Conditions')
+s_useBBExtend       = input.bool  (false, 'Close on Bollinger Band exhaustion bars', tooltip='Bollinger Band Exhaustion bars are candles that close back inside the Bollinger Bands when RSI is overbought or oversold. Settings for both can be changed under the -Bollinger Bands Exhaustion Bar Settings- header.', group='Close Conditions')
+i_whichBBext        = input.string('First', 'Which BB exhaustion bar?', options=['First', 'Second', 'Third'], group='Close Conditions')
+s_buySellClose      = input.bool  (false, 'Close on loss of Buy/Sell zone', group='Close Conditions')
+s_whichBuySellBars  = input.string('Inner', 'Which Buy/Sell zone?', options=['Inner', 'Outer'], group='Close Conditions')
+//INPUT: COUNTER-TREND TRADES
+s_needCTlong        = input.bool  (false, "Enable counter-trend trades: Long", tooltip='Does not work with "Enable default positioning: Short" selected',  group="Counter Trade Settings")
+i_CTlongType        = input.string('Leledc', title = 'Trigger', options=['Leledc', 'BB Exhaustion'], group='Counter Trade Settings')
+s_needCTshort       = input.bool  (false, "Enable counter-trend trades: Short", tooltip='Does not work with "Enable default positioning: Long" selected"', group="Counter Trade Settings")
+i_CTshortType       = input.string('Leledc', 'Trigger', options=['Leledc', 'BB Exhaustion'], group='Counter Trade Settings')
+i_ctLeleBuySell     = input.string('Inner', 'Leledc/BB must be outside which Buy/Sell zone to open', options=['Inner', 'Outer'], group="Counter Trade Settings")
+i_CTlongCloseCond   = input.string('Cross Top Middle Band','Closing conditions for counter-trend longs', tooltip='-Cross- type close conditions market close position on candle closes above selected region \n\n-Touch- type enable trailing limit orders that follow the selected region', options=['Cross Outer Buy Zone', 'Cross Inner Buy Zone', 'Touch Inner Buy Zone', 'Cross Bottom Middle Band', 'Touch Bottom Middle Band', 'Cross Top Middle Band', 'Touch Top Middle Band', 'Cross Inner Sell Zone', 'Touch Inner Sell Zone', 'Cross Outer Sell Zone', 'Touch Outer Sell Zone', 'First Leledc', 'First BB Exhaustion'], group='Counter Trade Settings')
+i_CTshortCloseCond  = input.string('First Leledc','Closing conditions for counter-trend shorts', tooltip='-Cross- type close conditions market close position on candle closes below selected region \n\n-Touch- type enable trailing limit orders that follow the selected region',options=['Cross Outer Sell Zone', 'Cross Inner Sell Zone', 'Touch Inner Sell Zone', 'Cross Top Middle Band', 'Touch Top Middle Band', 'Cross Bottom Middle Band', 'Touch Bottom Middle Band', 'Cross Inner Buy Zone', 'Touch Inner Buy Zone', 'Cross Outer Buy Zone', 'Touch Outer Buy Zone', 'First Leledc', 'First BB Exhaustion'], group='Counter Trade Settings')
+i_CTlongSL          = input.float (10, 'Flat stop-loss % for counter-trend longs', 0, 100, 0.1, 'Input 0 to disable stop-loss for counter-trend trades. Enabling stop-loss will not apply to middle band breakout, bounce, or default positional trades',group='Counter Trade Settings')
+i_CTshortSL         = input.float (10, 'Flat stop-loss % for counter-trend shorts', 0, 100, 0.1, 'Input 0 to disable stop-loss for counter-trend trades. Enabling stop-loss will not apply to middle band breakout, bounce, or default positional trades',group='Counter Trade Settings')
+//INPUT: KELTNER BUY/SELL ZONES
+s_keltnerBuySell    = input.bool  (false, 'Use Keltner channel multiples for "Buy/Sell Zones"',tooltip='Enables inputting custom multiples and a different/smoother calculation of "Buy/Sell Zones". Default calculation is a multiple of EMA band highs and lows', group='Keltner Buy/Sell Zones')
+i_mult              = input.float (5.0, "Outer Multiplier", tooltip='Only for "Buy/Sell Zones" calculated by Keltner channels', group='Keltner Buy/Sell Zones')
+i_innerMult         = input.float (3.0, "Inner Multiplier", tooltip='Only for "Buy/Sell Zones" calculated by Keltner channels', group='Keltner Buy/Sell Zones')
+//INPUT: VOLATILITY SQUEEZE FILTER
+s_squeezeFilter     = input.bool  (false, 'Filter out trades during BB-Keltner squeezes', group= 'BB-Keltner squeze')
+i_bbCondition       = input.string('At Least One', title='Bollinger Band Crossover Condition', options=['Both', 'At Least One'], group= 'BB-Keltner squeze')
+i_bbSqueezeLength   = input.int   (30, minval=1, title='BB Length', group= 'BB-Keltner squeze')
+i_ktSqueezeLength   = input.int   (18, minval=1, title='Keltner Length', group= 'BB-Keltner squeze')
+s_useRes            = input.bool  (false, 'Use current timeframe', group= 'BB-Keltner squeze')
+res = (s_useRes ? '' :input.timeframe('360', 'Resolution for BB-Keltner squeeze', group= 'BB-Keltner squeze'))
+i_B2mult            = input.float (2, minval=0.001, maxval=50, title='BB Standard Deviation', group= 'BB-Keltner squeze')
+i_Kmult             = input.float (1.5, title='Keltner Range', group= 'BB-Keltner squeze')
+//INPUT: BOLLINGER BANDS EXHAUSTION BARS
+i_BBlength          = input.int   (20, minval=1, title='Bollinger Bands SMA Period Length', group='Bollinger Bands Exhaustion Bar Settings')
+i_BBmult            = input.float (1.8, minval=0.001, maxval=50, title='Bollinger Bands Standard Deviation', group='Bollinger Bands Exhaustion Bar Settings')
+i_RSIlength         = input.int   (8, minval=1, step=1, title='RSI Period Length', group='Bollinger Bands Exhaustion Bar Settings')
+i_RSIos             = input.int   (30, minval=0, maxval=50, step=1,title='RSI Oversold Value', group='Bollinger Bands Exhaustion Bar Settings')
+i_RSIob             = input.int   (70, minval=50, maxval=100, step=1, title='RSI Overbought value', group='Bollinger Bands Exhaustion Bar Settings')
+i_srcBB             = input.source(close, title='Source', group='Bollinger Bands Exhaustion Bar Settings')
+//INPUT: LELEDC
+i_leleVol           = input.bool  (false, 'Require Volume breakout for Leledc bars', group='Leledc Exhaustion Bar Settings')
+i_volMult           = input.float (1.5,'Volume Multiplier', 0.1,20,0.1, group='Leledc Exhaustion Bar Settings')
+i_majLen            = input.int   (30, 'Highest / Lowest', group='Leledc Exhaustion Bar Settings')
+i_majQual           = input.int   (6, 'Bar count no', group='Leledc Exhaustion Bar Settings')
+i_closeVal          = input.int   (4, 'Close', group='Leledc Exhaustion Bar Settings')
+i_bindexSindex      = input.int   (1, 'bindexSindex', group='Leledc Exhaustion Bar Settings')
+//INPUT: VISUAL ELEMENTS
+s_trendColor        = input.bool  (false, 'Enable Trend Bar Color', tooltip='Color bars green when above mid bands, red when below, and gray when inside. Dark green and dark red bars signal a position is kept open from the delayed close settings.', group='Visual Elements')
+s_showBuySell       = input.bool  (true, 'Show "Buy/Sell Zones"', group='Visual Elements')
+s_showEMA           = input.bool  (false, 'Show EMA', group='Visual Elements')
+s_showMiddleBands   = input.bool  (true, 'Show middle EMA bands', group='Visual Elements')
+s_showSlowEMA       = input.bool  (false, 'Show Slow EMA', group='Visual Elements')
+s_showMaj           = input.bool  (true, 'Show Leledc Exhausion Bars', group='Visual Elements')
+s_switch1           = input.bool  (true, 'Enable Bollinger Bands exhaustion bar coloring', group='Visual Elements')
+s_switch2           = input.bool  (false, 'Enable Bollinger bands exhaustion bar background coloring', tooltip='Enabling this can help visualize when dialing in Bollinger Bands and RSI settings', group='Visual Elements')
+s_colorBuySellBars  = input.bool  (false, 'Enable Buy/Sell zone failure bar coloring', group='Visual Elements')
+s_squeezeBG         = input.bool  (true, 'Enable volatility squeeze (BB-Keltner) background coloring', group='Visual Elements')
+//}
+//VARIABLES: EMA and slowEMA CALC {
+EMA = ta.ema(close, i_EMAlength)
+slowEMA = ta.ema(close, i_slowEMAlen)
+plot(s_showSlowEMA ? slowEMA : na)
+//}
+//*****************************
+// SlumdogTrader's Bollinger Bands + RSI Double Strategy - Profit Trailer
+//====================================================================================================//{
+//BB VARIABLES
+BBbasis = ta.sma(i_srcBB, i_BBlength)
+BBdev   = i_BBmult * ta.stdev(i_srcBB, i_BBlength)
+BBupper = BBbasis + BBdev
+BBlower = BBbasis - BBdev
+//RSI VARIABLES
+vrsi            = ta.rsi(i_srcBB, i_RSIlength)
+RSIoverSold     = vrsi < i_RSIos
+RSIoverBought   = vrsi > i_RSIob
+//BB EXHAUSTION BAR COLOR VARIABLE
+OSOBcolor = 
+     RSIoverBought and i_srcBB[1] > BBupper and i_srcBB < BBupper ? color.yellow : 
+     RSIoverSold and i_srcBB[1] < BBlower and i_srcBB > BBlower ? color.blue : 
+     na
+//====================================================================================================//
+//}
+//KELTNER SELL ZONE {
+rangema = s_keltnerBuySell ? ta.rma(high - low, i_EMAlength) : 0.0
+kt_outersell(_ma) =>
+    upper = EMA + _ma * i_mult
+    upper
+kt_innersell(_ma) =>
+    inner_upper = EMA + _ma * i_innerMult
+    inner_upper
+kt_outerbuy(_ma) =>
+    lower = EMA - _ma * i_mult
+    lower
+kt_innerbuy(_ma) =>
+    inner_lower = EMA - _ma * i_innerMult
+    inner_lower
+//}
+//*****************************
+// BB-Keltner Squeeze-FVBO-2.0
+// Modified by Juan C for FVBO Strategy, some source code from Trader-Elisa
+//====================================================================================================//{
+//VARIABLES FOR HTF SOURCES
+rp_security(_sym, _res, _src) => 
+    request.security(_sym, _res, _src[barstate.ishistory ? 0 : 1], gaps=barmerge.gaps_on)
+    
+srcClose    = rp_security(syminfo.tickerid, res, close)
+srcHigh     = rp_security(syminfo.tickerid, res, high)
+srcLow      = rp_security(syminfo.tickerid, res, low)
+//SQUEEZE BOLLINGER BANDS
+B2basis     = ta.sma(srcClose, i_bbSqueezeLength)
+B2dev       = i_B2mult * ta.stdev(srcClose, i_bbSqueezeLength)
+B2upper     = B2basis + B2dev
+B2lower     = B2basis - B2dev
+//SQUEEZE KELTNER CHANNELS
+Kma         = ta.ema(srcClose, i_ktSqueezeLength)
+Krange      = srcHigh - srcLow
+Krangema    = ta.ema(Krange, i_ktSqueezeLength)
+Kupper      = Kma + Krangema * i_Kmult
+Klower      = Kma - Krangema * i_Kmult
+//DEFINE SQUEEZE
+var bool squeezing = false
+if s_squeezeFilter
+    if i_bbCondition == 'Both' and s_useRes
+        squeezing := B2upper <= Kupper and B2lower >= Klower ? true : false
+        squeezing
+    else if i_bbCondition == 'At Least One' and s_useRes
+        squeezing := B2upper <= Kupper or B2lower >= Klower ? true : false
+        squeezing
+    else if i_bbCondition == 'Both'
+        squeezing := 
+         B2upper[ta.barssince(not srcClose == barstate.isrealtime)] <= Kupper[ta.barssince(not srcClose == barstate.isrealtime)] and 
+         B2lower[ta.barssince(not srcClose == barstate.isrealtime)] >= Klower[ta.barssince(not srcClose == barstate.isrealtime)] ? true : false
+        squeezing
+    else 
+        squeezing := 
+         B2upper[ta.barssince(not srcClose == barstate.isrealtime)] <= Kupper[ta.barssince(not srcClose == barstate.isrealtime)] or 
+         B2lower[ta.barssince(not srcClose == barstate.isrealtime)] >= Klower[ta.barssince(not srcClose == barstate.isrealtime)] ? true : false
+        squeezing
+//VISUAL
+cross_over_color = (squeezing ? color.new(color.aqua, 90) : na)
+bgcolor(s_squeezeBG ? cross_over_color : na)
+bgcolor(s_switch2 ? color.new(OSOBcolor,70) : na)
+//}
+//*****************************
+// © Joy_Bangla Leledc Exhaustion V4
+//====================================================================================================//{
+//min = input(false, 'Minor Leledc Exhaustion Bar ::  Show')
+//min_qual = input(5, 'Minor Leledc Exhausion Bar ::  Bar count no')
+//min_len = input(5, 'Minor Leledc Exhausion Bar ::  Bar count no')
+leleVol = volume > ta.sma(volume,100)*i_volMult
+lele(qual, len) =>
+    bindex = 0
+    sindex = 0
+    bindex := nz(bindex[i_bindexSindex], 0)
+    sindex := nz(sindex[i_bindexSindex], 0)
+    ret = 0
+    if close > close[i_closeVal]
+        bindex += 1
+        bindex
+    if close < close[i_closeVal]
+        sindex += 1
+        sindex
+    
+    if i_leleVol and not leleVol
+        ret := 0
+        ret
+    else
+        if bindex > qual and close < open and high >= ta.highest(high, len)
+            bindex := 0
+            ret := -1
+            ret
+        if sindex > qual and close > open and low <= ta.lowest(low, len)
+            sindex := 0
+            ret := 1
+            ret
+    return_1 = ret
+    return_1
+major = lele(i_majQual, i_majLen)
+//minor = lele(min_qual, min_len)
+plotchar(s_showMaj ? major == -1 ? high : na : na, char='•', location=location.absolute, color=color.new(color.red, 0), size=size.small)
+plotchar(s_showMaj ? major == 1 ? low : na : na, char='•', location=location.absolute, color=color.new(color.lime, 0), size=size.small)
+//plotchar(min ? minor == 1 ? high : na : na, char='x', location=location.absolute, color=color.new(color.red, 0), size=size.small)
+//plotchar(min ? minor == -1 ? low : na : na, char='x', location=location.absolute, color=color.new(color.lime, 0), size=size.small)
+//leledcMajorBullish = major == 1 ? low : na
+//leledcMajorBearish = major == -1 ? high : na
+//leledcMinorBullish = minor == 1 ? low : na
+//leledcMinorBearish = minor == -1 ? high : na
+//==============================================//
+//alertcondition(leledcMajorBullish, title='Major Bullish Leledc', message='Major Bullish Leledc')
+//alertcondition(leledcMajorBearish, title='Major Bearish Leledc', message='Major Bearish Leledc')
+//alertcondition(leledcMinorBullish, title='Minor Bullish Leledc', message='Minor Bullish Leledc')
+//alertcondition(leledcMinorBearish, title='Minor Bearish Leledc', message='Minor Bearish Leledc')
+//====================================================================================================//
+//}
+//*****************************
+// © VishvaP 34 EMA Bands v2
+//====================================================================================================//{
+//BUILD EMA MIDDLE BANDS
+highShortEMA = ta.ema(high, i_EMAlength)
+lowShortEMA = ta.ema(low, i_EMAlength)
+middleBandTop = (highShortEMA - EMA) * i_topMBmult + EMA
+middleBandBot = (lowShortEMA - EMA) * i_botMBmult + EMA
+//==============================================//
+//1D Bands [Not Used]
+//bandsHigh = highShortEMA * math.phi
+//bandsLow = lowShortEMA * math.rphi
+//==============================================//
+//INNER BUY/SELL ZONES
+shortbandsHigh = s_keltnerBuySell ? kt_innersell(rangema) : ((highShortEMA - EMA) * math.phi * i_topMBmult) * math.pi + EMA
+shortbandsLow = s_keltnerBuySell ? kt_innerbuy(rangema) : (-(EMA - lowShortEMA) * math.phi * i_botMBmult) * math.pi + EMA
+//SMOOTH INNER
+shortbandsHighEMA = ta.wma(shortbandsHigh, 8)
+shortbandsLowEMA = ta.wma(shortbandsLow, 8)
+//==============================================//
+//OUTER BUY/SELL ZONES
+phiExtensionHigh = s_keltnerBuySell ? kt_outersell(rangema) : ((highShortEMA - EMA) * math.phi * i_topMBmult) * (math.phi + 4) + EMA
+phiExtensionLow  = s_keltnerBuySell ? kt_outerbuy(rangema) : (-(EMA - lowShortEMA) * math.phi * i_botMBmult) * (math.phi + 4) + EMA
+//SMOOTH OUTER
+phiExtensionHighEMA = ta.wma(phiExtensionHigh, 8)
+phiExtensionLowEMA = ta.wma(phiExtensionLow, 8)
+//==============================================//
+//PLOT MIDDLE BANDS AND EMA
+highP1 = plot(s_showMiddleBands ? middleBandTop : na, color = color.new(color.blue, 100), title = "Top median zone")
+lowP1 = plot(s_showMiddleBands ? middleBandBot : na, color = color.new(color.blue, 100), title = "Bottom median zone")
+plot(s_showEMA ? EMA : na, color = color.new(color.gray, 0), title = "EMA")
+//1D bands [not used]
+//highP2 = plot(bandsHigh)
+//lowP2 = plot(bandsLow)
+//PLOT BUY/SELL ZONES
+highP3 = plot(s_showBuySell ? shortbandsHighEMA : na, color = color.new(color.yellow, 100), title = "Lower sell zone")
+lowP3 = plot(s_showBuySell ? shortbandsLowEMA : na, color = color.new(color.teal, 100), title = "Higher buy zone")
+phiPlotHigh = plot(s_showBuySell ? phiExtensionHighEMA : na, color = color.new(color.red, 100), title = "Top sell zone")
+phiPlotLow = plot(s_showBuySell ? phiExtensionLowEMA : na, color = color.new(color.green, 100), title = "Bottom buy zone")
+//==============================================//
+//BUY/SELL ZONE AND MIDDLE BAND COLOR FILLS
+fill(phiPlotHigh, highP3, color.new(color.red, 85), title = "Sell zone")
+fill(lowP3, phiPlotLow, color.new(color.green, 85), title = "Buy zone")
+fill(highP1, lowP1, color.new(color.gray, 70), title = "Median zone")
+//====================================================================================================//
+//}
+//ASSIGN BANDS FOR COUNTERTREND ENTRIES {
+float CTbandTop = na
+float CTbandBottom = na 
+if i_ctLeleBuySell == 'Inner'
+    CTbandTop := shortbandsHighEMA
+    CTbandBottom := shortbandsLowEMA
+else 
+    CTbandTop := phiExtensionHighEMA
+    CTbandBottom := phiExtensionLowEMA
+//}
+//BUILD VARIABLES FOR CROSSES {
+crossUpTopMB = open < middleBandTop and close > middleBandTop
+wiggleUpTopMB = open > middleBandTop and close > middleBandTop and close[1] <= middleBandTop[1]
+crossDownTopMB = open > middleBandTop and close < middleBandTop
+wiggleDownTopMB = open < middleBandTop and close < middleBandTop and close[1] >= middleBandTop[1]
+crossUpBotMB = open < middleBandBot and close > middleBandBot
+wiggleUpBotMB = open > middleBandBot and close > middleBandBot and close[1] <= middleBandBot[1]
+crossDownBotMB = open > middleBandBot and close < middleBandBot
+wiggleDownBotMB = open < middleBandBot and close < middleBandBot and close[1] >= middleBandBot[1]
+crossUpBotInnerRB = open < shortbandsLowEMA and close > shortbandsLowEMA
+wiggleUpBotInnerRB = open > shortbandsLowEMA and close > shortbandsLowEMA and close[1] <= shortbandsLowEMA[1]
+crossUpBotOuterRB = open < phiExtensionLowEMA and close > phiExtensionLowEMA
+wiggleUpBotOuterRB = open > phiExtensionLowEMA and close > phiExtensionLowEMA and close[1] <= phiExtensionLowEMA[1]
+crossUpTopInnerRB = open < shortbandsHighEMA and close > shortbandsHighEMA
+wiggleUpTopInnerRB = open > shortbandsHighEMA and close > shortbandsHighEMA and close[1] <= shortbandsHighEMA[1]
+crossUpTopOuterRB = open < phiExtensionHighEMA and close > phiExtensionHighEMA
+wiggleUpTopOuterRB = open > phiExtensionHighEMA and close > phiExtensionHighEMA and close[1] <= phiExtensionHighEMA[1]
+crossDownBotInnerRB = open > shortbandsLowEMA and close < shortbandsLowEMA
+wiggleDownBotInnerRB = open < shortbandsLowEMA and close < shortbandsLowEMA and close[1] >= shortbandsLowEMA[1]
+crossDownBotOuterRB = open > phiExtensionLowEMA and close < phiExtensionLowEMA
+wiggleDownBotOuterRB = open < phiExtensionLowEMA and close < phiExtensionLowEMA and close[1] >= phiExtensionLowEMA[1]
+crossDownTopInnerRB = open > shortbandsHighEMA and close < shortbandsHighEMA
+wiggleDownTopInnerRB = open < shortbandsHighEMA and close < shortbandsHighEMA and close[1] >= shortbandsHighEMA[1]
+crossDownTopOuterRB = open > phiExtensionHighEMA and close < phiExtensionHighEMA
+wiggleDownTopOuterRB = open < phiExtensionHighEMA and close < phiExtensionHighEMA and close[1] >= phiExtensionHighEMA[1]
+//}
+//VARIABLES FOR BOUNCES {
+longBounce  = 
+     not s_longBounce ? false : 
+     s_squeezeFilter ? open > middleBandTop and close > middleBandTop and low < middleBandTop and squeezing == false : 
+     open > middleBandTop and close > middleBandTop and low < middleBandTop
+shortBounce = 
+     not s_shortBounce ? false : 
+     s_squeezeFilter ? open < middleBandBot and close < middleBandBot and high > middleBandBot and squeezing == false : 
+     open < middleBandBot and close < middleBandBot and high > middleBandBot
+//}
+//BUILD VARIABLES FOR CLOSING CONDITIONS {
+CTlongCloseCond =
+     i_CTlongCloseCond == 'Cross Inner Sell Zone' ? (crossUpTopInnerRB or wiggleUpTopInnerRB) : 
+     i_CTlongCloseCond == 'Cross Outer Sell Zone' ? (crossUpTopOuterRB or wiggleUpTopOuterRB) : 
+     i_CTlongCloseCond == 'Cross Top Middle Band' ? (crossUpTopMB or wiggleUpTopMB)           : 
+     i_CTlongCloseCond == 'Cross Bottom Middle Band' ? (crossUpBotMB or wiggleUpBotMB)        : 
+     i_CTlongCloseCond == 'Cross Inner Buy Zone' ? (crossUpBotInnerRB or wiggleUpBotInnerRB)  : 
+     i_CTlongCloseCond == 'Cross Outer Buy Zone' ? (crossUpBotOuterRB or crossUpBotOuterRB)   : 
+     i_CTlongCloseCond == 'First Leledc' ? major == -1                                        : 
+     i_CTlongCloseCond == 'First BB Exhaustion' ? OSOBcolor == color.yellow                   : 
+     na
+CTlongTP = 
+     i_CTlongCloseCond == 'Touch Inner Buy Zone' ? shortbandsLowEMA     : 
+     i_CTlongCloseCond == 'Touch Top Middle Band' ? middleBandTop       : 
+     i_CTlongCloseCond == 'Touch Bottom Middle Band' ? middleBandBot    : 
+     i_CTlongCloseCond == 'Touch Inner Sell Zone' ? shortbandsHighEMA   : 
+     i_CTlongCloseCond == 'Touch Outer Sell Zone' ? phiExtensionHighEMA : 
+     na
+CTshortCloseCond = 
+     i_CTshortCloseCond == 'Cross Inner Buy Zone' ? (crossDownBotInnerRB or wiggleDownBotInnerRB)  : 
+     i_CTshortCloseCond == 'Cross Outer Buy Zone' ? (crossDownBotOuterRB or wiggleDownBotOuterRB)  : 
+     i_CTshortCloseCond == 'Cross Bottom Middle Band' ? (crossDownBotMB or wiggleDownBotMB)        : 
+     i_CTshortCloseCond == 'Cross Top Middle Band' ? (crossDownTopMB or wiggleDownTopMB)           : 
+     i_CTshortCloseCond == 'Cross Inner Sell Zone' ? (crossDownTopInnerRB or wiggleDownTopInnerRB) : 
+     i_CTshortCloseCond == 'Cross Outer Sell Zone' ? (crossDownTopOuterRB or crossDownTopOuterRB)  : 
+     i_CTshortCloseCond == 'First Leledc' ? major == 1                                             : 
+     i_CTshortCloseCond == 'First BB Exhaustion' ? OSOBcolor == color.blue                         : 
+     na
+CTshortTP = 
+     i_CTshortCloseCond == 'Touch Inner Sell Zone' ? shortbandsHighEMA : 
+     i_CTshortCloseCond == 'Touch Bottom Middle Band' ? middleBandBot  : 
+     i_CTshortCloseCond == 'Touch Top Middle Band' ? middleBandTop     : 
+     i_CTshortCloseCond == 'Touch Inner Buy Zone' ? shortbandsLowEMA   : 
+     i_CTshortCloseCond == 'Touch Outer Buy Zone' ? phiExtensionLowEMA :
+     na
+shortMidBreak = 
+     s_squeezeFilter ? (crossDownBotMB or wiggleDownBotMB) and squeezing == false : 
+     crossDownBotMB or wiggleDownBotMB
+longMidBreak = 
+     s_squeezeFilter ? (crossUpTopMB or wiggleUpTopMB) and squeezing == false : 
+     crossUpTopMB or wiggleUpTopMB
+//}
+//BASIC STRATEGY POSITIONS OPEN
+//LONGS OPEN {
+if s_needLong
+    if s_useSlowEMA
+        if longMidBreak and close > slowEMA and open < middleBandTop
+            strategy.close('Short', comment='Close Short')
+            strategy.close('Counter Trend Short', comment='Close CT Short')
+            strategy.close('Default Short', comment='Close Default Short')
+            strategy.entry('Long', strategy.long)
+    else if longMidBreak
+        strategy.close('Short', comment='Close Short')
+        strategy.close('Counter Trend Short', comment='Close CT Short')
+        strategy.close('Default Short', comment='Close Default Short')
+        strategy.entry('Long', strategy.long)
+if strategy.position_size == 0 and longBounce
+    if s_useSlowEMA
+        if close > slowEMA
+            strategy.close('Short', comment='Close Short')
+            strategy.close('Counter Trend Short', comment='Close CT Short')
+            strategy.close('Default Short', comment='Close Default Short')
+            strategy.entry('Long', strategy.long)
+    else 
+        strategy.close('Short', comment='Close Short')
+        strategy.close('Counter Trend Short', comment='Close CT Short')
+        strategy.close('Default Short', comment='Close Default Short')
+        strategy.entry('Long', strategy.long)
+//}
+//SHORTS OPEN {
+if s_needShort
+    if s_useSlowEMA
+        if shortMidBreak and close < slowEMA and open > middleBandBot
+            strategy.close('Long', comment='Close Long')
+            strategy.close('Counter Trend Long', comment='Close CT Long')
+            strategy.close('Default Long', comment='Close Default Long')
+            strategy.entry('Short', strategy.short)
+    else if shortMidBreak
+        strategy.close('Long', comment='Close Long')
+        strategy.close('Counter Trend Long', comment='Close CT Long')
+        strategy.close('Default Long', comment='Close Default Long')        
+        strategy.entry('Short', strategy.short)
+if strategy.position_size == 0 and shortBounce
+    if s_useSlowEMA
+        if close < slowEMA
+            strategy.close('Long', comment='Close Long')
+            strategy.close('Counter Trend Long', comment='Close CT Long')
+            strategy.close('Default Long', comment='Close Default Long')            
+            strategy.entry('Short', strategy.short)
+    else 
+        strategy.close('Long', comment='Close Long')
+        strategy.close('Counter Trend Long', comment='Close CT Long')
+        strategy.close('Default Long', comment='Close Default Long')        
+        strategy.entry('Short', strategy.short)
+//}
+//COUNT LELEDC BARS BETWEEN CURRENT BAR AND POSITION OPEN {
+//VARIABLES
+int countLongLele = 0
+int countShortLele = 0
+int numLele = switch i_whichLele
+    'First' => 1
+    'Second' => 2
+    'Third' => 3
+    'Fourth' => 4
+    'Fifth' => 5
+int i = 0
+//COUNT LELES FOR LONGS
+if strategy.position_size > 0
+    if s_useLele and numLele > 1
+        while i <= 200
+            if strategy.position_size[i] <= 0
+                break
+            if bar_index[i] == 0
+                break
+            if major[i] == -1
+                countLongLele += 1 
+            if countLongLele == numLele
+                break
+            i += 1
+//COUNT LELES FOR SHORTS
+if strategy.position_size < 0 
+    if s_useLele and numLele > 1
+        while i <= 200
+            if strategy.position_size[i] >= 0
+                break
+            if bar_index[i] == 0
+                break
+            if major[i] == 1
+                countShortLele += 1
+            if countShortLele == numLele
+                break
+            i += 1
+//}
+//COUNT BB EXHAUSTION BARS BETWEEN CURRENT BAR AND POSITION OPEN {
+//VARIABLES
+int countLongBBs = 0
+int countShortBBs = 0
+int numBBs = switch i_whichBBext
+    'First' => 1
+    'Second' => 2
+    'Third' => 3
+int n = 0
+//COUNT BB BARS FOR LONGS
+if strategy.position_size > 0
+    if s_useBBExtend and numBBs > 1
+        while n <= 200
+            if strategy.position_size[n] <= 0
+                break
+            if bar_index[n] == 0
+                break
+            if OSOBcolor[n] == color.yellow
+                countLongBBs += 1 
+            if countLongBBs == numBBs
+                break
+            n+= 1
+//COUNT BB BARS FOR SHORTS
+if strategy.position_size < 0
+    if s_useBBExtend and numBBs > 1
+        while n <= 200
+            if strategy.position_size[n] >= 0
+                break
+            if bar_index[n] == 0
+                break
+            if OSOBcolor[n] == color.blue
+                countShortBBs += 1 
+            if countShortBBs == numBBs
+                break
+            n+= 1
+//}
+//VARIABLES: CONDITIONS OF LOSS OF BUY/SELL ZONES {
+var bool crossUpRB = false
+var bool wiggleUpRB = false
+var bool crossDownRB = false
+var bool wiggleDownRB = false
+if s_whichBuySellBars == 'Inner'
+    crossUpRB    := crossUpBotInnerRB
+    wiggleUpRB   := wiggleUpBotInnerRB
+    crossDownRB  := crossDownTopInnerRB
+    wiggleDownRB := wiggleDownTopInnerRB
+else 
+    crossUpRB    := crossUpBotOuterRB
+    wiggleUpRB   := wiggleUpBotOuterRB
+    crossDownRB  := crossDownTopOuterRB
+    wiggleDownRB := wiggleDownTopOuterRB
+//}
+//VARIABLES: reverBarColor {
+reverBarColor = crossDownRB or (wiggleDownRB and not crossDownRB[1]) ? color.orange : 
+     crossUpRB or (wiggleUpRB and not crossUpRB[1]) ? color.purple : 
+     na
+//}
+//FUNCTION: isAllMid() {
+//return true after specified number of bars (i_numBars) closes inside the mid bands but no breakout
+inMid = close > middleBandBot and close < middleBandTop and open > middleBandBot and open < middleBandTop
+isAllMid() =>
+    AllMid = true
+    for t = 0 to i_numBars by 1
+        if longMidBreak[t] or shortMidBreak[t]
+            AllMid := false
+    AllMid
+//}
+//BASIC STRATEGY POSITIONS CLOSE
+//LONGS CLOSE {
+if strategy.position_size > 0
+    if s_buySellClose
+        if reverBarColor == color.orange
+            strategy.close('Long', comment = 'Close Long')
+    if s_useBBExtend and numBBs == 1
+        if OSOBcolor == color.yellow
+            strategy.close('Long', comment = 'Close Long')
+            if s_needCTshort and i_CTshortType == 'BB Exhaustion'
+                if open > CTbandTop
+                    strategy.close('Long', comment='Close Long')
+                    strategy.close('Counter Trend Long', comment='Close CT Long')
+                    strategy.close('Default Long', comment='Close Default Long')                    
+                    strategy.entry('Counter Trend Short', comment = 'CT Short', direction=strategy.short)
+    if s_useBBExtend and numBBs > 1
+        if countLongBBs == numBBs  
+            strategy.close('Long', comment = 'Close Long')
+            if s_needCTshort and i_CTshortType == 'BB Exhaustion'
+                if open > CTbandTop
+                    strategy.close('Long', comment='Close Long')
+                    strategy.close('Counter Trend Long', comment='Close CT Long')
+                    strategy.close('Default Long', comment='Close Default Long')                    
+                    strategy.entry('Counter Trend Short', comment = 'CT Short', direction=strategy.short)
+    if s_useLele and numLele == 1
+        if major == -1
+            strategy.close('Long', comment = 'Close Long')
+            if s_needCTshort and i_CTshortType == 'Leledc'
+                if high > CTbandTop
+                    strategy.close('Long', comment='Close Long')
+                    strategy.close('Counter Trend Long', comment='Close CT Long')
+                    strategy.close('Default Long', comment='Close Default Long')                
+                    strategy.entry('Counter Trend Short', comment = 'CT Short', direction=strategy.short)
+    if s_useLele and numLele > 1
+        if countLongLele == numLele
+            strategy.close('Long', comment = 'Close Long')
+            if s_needCTshort and i_CTshortType == 'Leledc'
+                if high > CTbandTop
+                    strategy.close('Long', comment='Close Long')
+                    strategy.close('Counter Trend Long', comment='Close CT Long')
+                    strategy.close('Default Long', comment='Close Default Long')                    
+                    strategy.entry('Counter Trend Short', comment = 'CT Short', direction=strategy.short)
+    if i_midClose == 'Nearest band'
+        if crossDownTopMB or wiggleDownTopMB
+            strategy.close('Long', comment = 'Close Long')
+    if i_midClose == 'Opposite band'
+        if crossDownBotMB or wiggleDownBotMB
+            strategy.close('Long', comment = 'Close Long')
+    if i_midClose == 'Delayed bars inside'
+        if crossDownBotMB or wiggleDownBotMB
+            strategy.close('Long', comment = 'Close Long')
+        if isAllMid()
+            if open[i_numBars] > middleBandTop and close[i_numBars] < middleBandTop and inMid
+                strategy.close('Long', comment = 'Close Long')
+//}
+//SHORTS CLOSE {
+if strategy.position_size < 0
+    if s_buySellClose
+        if reverBarColor == color.purple
+            strategy.close('Short', comment = 'Close Short')
+    if s_useBBExtend and numBBs == 1
+        if OSOBcolor == color.blue
+            strategy.close('Short', comment = 'Close Short')
+            if s_needCTlong and i_CTlongType == 'BB Exhaustion'
+                if open < CTbandBottom
+                    strategy.close('Short', comment='Close Short')
+                    strategy.close('Counter Trend Short', comment='Close CT Short')
+                    strategy.close('Default Short', comment='Close Default Short')                    
+                    strategy.entry('Counter Trend Long', comment = 'CT Long', direction=strategy.long)
+    if s_useBBExtend and numBBs > 1
+        if countShortBBs == numBBs
+            strategy.close('Short', comment = 'Close Short')
+            if s_needCTlong and i_CTlongType == 'BB Exhaustion'
+                if open < CTbandBottom
+                    strategy.close('Short', comment='Close Short')
+                    strategy.close('Counter Trend Short', comment='Close CT Short')
+                    strategy.close('Default Short', comment='Close Default Short')                    
+                    strategy.entry(id='Counter Trend Long', comment = 'CT Long', direction=strategy.long)
+    if s_useLele and numLele == 1
+        if major == 1
+            strategy.close('Short', comment = 'Close Short')
+            if s_needCTlong and i_CTlongType == 'Leledc'
+                if low < CTbandBottom
+                    strategy.close('Short', comment='Close Short')
+                    strategy.close('Counter Trend Short', comment='Close CT Short')
+                    strategy.close('Default Short', comment='Close Default Short')                    
+                    strategy.entry(id='Counter Trend Long', comment= 'CT Long', direction=strategy.long)
+    if s_useLele and numLele > 1
+        if countShortLele == numLele
+            strategy.close('Short', comment = 'Close Short')
+            if s_needCTlong and i_CTlongType == 'Leledc'
+                if low < CTbandBottom
+                    strategy.close('Short', comment='Close Short')
+                    strategy.close('Counter Trend Short', comment='Close CT Short')
+                    strategy.close('Default Short', comment='Close Default Short')                    
+                    strategy.entry(id='Counter Trend Long', comment= 'CT Long', direction=strategy.long)
+    if i_midClose == 'Nearest band'
+        if crossUpBotMB or wiggleUpBotMB
+            strategy.close('Short', comment = 'Close Short')
+    if i_midClose == 'Opposite band'
+        if crossUpTopMB or wiggleUpTopMB
+            strategy.close('Short', comment = 'Close Short')
+    if i_midClose == 'Delayed bars inside'
+        if crossUpTopMB or wiggleUpTopMB
+            strategy.close('Short', comment = 'Close Short')
+        if isAllMid() 
+            if open[i_numBars] < middleBandBot and close[i_numBars] > middleBandBot and inMid
+                strategy.close('Short', comment = 'Close Short')
+//}
+//COUNTER TREND STRATEGY POSITIONS OPEN AND CLOSE {
+//VARIABLES FOR CT STOP LOSSES
+CTlongSL = strategy.position_avg_price * (1 - i_CTlongSL / 100)
+CTshortSL = strategy.position_avg_price * (1 + i_CTshortSL / 100)
+//CT LONGS OPEN
+if s_needCTlong and strategy.position_size == 0 and (not s_squeezeFilter or not squeezing)
+    if i_CTlongType == 'Leledc'
+        if major == 1
+            if low < CTbandBottom
+                strategy.close('Short', comment='Close Short')
+                strategy.close('Counter Trend Short', comment='Close CT Short')
+                strategy.close('Default Short', comment='Close Default Short')
+                strategy.entry('Counter Trend Long', comment = 'CT Long', direction = strategy.long)
+    else
+        if OSOBcolor == color.blue
+            strategy.close('Short', comment='Close Short')
+            strategy.close('Counter Trend Short', comment='Close CT Short')
+            strategy.close('Default Short', comment='Close Default Short')
+            strategy.entry('Counter Trend Long', comment = 'CT Long', direction = strategy.long)
+//CT LONGS CLOSED
+if strategy.position_size > 0 and strategy.opentrades.entry_id(strategy.opentrades - 1) == 'Counter Trend Long'
+    if i_CTlongSL > 0
+        if na(CTlongTP)
+            strategy.exit(id='Counter Trend Long', stop=CTlongSL, comment = 'CT Long SL')
+        else
+            strategy.exit(id='Counter Trend Long', stop=CTlongSL, limit=CTlongTP, comment = 'CT Long TP/SL')
+    else if i_CTlongSL == 0
+        strategy.exit(id='Counter Trend Long', limit=CTlongTP, comment = 'CT Long TP')
+    if CTlongCloseCond
+        strategy.close(id='Counter Trend Long', comment = 'Close CT Long')
+//CT SHORTS OPEN
+if s_needCTshort and strategy.position_size == 0  and (not s_squeezeFilter or not squeezing)
+    if i_CTshortType == 'Leledc'
+        if major == -1
+            if high > CTbandTop
+                strategy.close('Long', comment='Close Long')
+                strategy.close('Counter Trend Long', comment='Close CT Long')
+                strategy.close('Default Long', comment='Close Default Long')                         
+                strategy.entry('Counter Trend Short', comment = 'CT Short', direction=strategy.short)
+    else
+        if OSOBcolor == color.yellow
+            strategy.close('Long', comment='Close Long')
+            strategy.close('Counter Trend Long', comment='Close CT Long')
+            strategy.close('Default Long', comment='Close Default Long')                     
+            strategy.entry('Counter Trend Short', comment= 'CT Short', direction=strategy.short)
+//CT SHORTS CLOSE
+if strategy.position_size < 0 and strategy.opentrades.entry_id(strategy.opentrades - 1) == 'Counter Trend Short'
+    if i_CTshortSL > 0
+        if na(CTshortTP)
+            strategy.exit(id='Counter Trend Short', stop=CTshortSL, comment = 'CT Short SL')
+        else
+            strategy.exit(id='Counter Trend Short', stop=CTshortSL, limit=CTshortTP, comment = 'CT Short TP/SL')
+    else if i_CTshortSL == 0
+        strategy.exit(id='Counter Trend Short', limit=CTshortTP, comment = 'CT Short TP')
+    if CTshortCloseCond
+        strategy.close(id='Counter Trend Short', comment = "Close CT Short")
+//}
+//DEFAULT POSITIONING STRATEGY OPENS {
+if s_alwaysLong and not s_alwaysShort and strategy.position_size == 0 
+    if s_useSlowEMA
+        if close > slowEMA
+            strategy.entry(id='Default Long', comment = 'Default Long', direction=strategy.long)
+    else
+        strategy.entry(id='Default Long', comment='Default Long', direction=strategy.long)
+if s_alwaysShort and not s_alwaysLong and strategy.position_size == 0 
+    if s_useSlowEMA
+        if close < slowEMA
+            strategy.entry(id='Default Short', comment = 'Default Short', direction=strategy.short)
+    else
+        strategy.entry(id='Default Short', comment='Default Short', direction=strategy.short)
+//}
+//SET BAR COLORS {
+var colorBar = color.new(color.white, 50)
+if s_trendColor
+    if s_switch1
+        if s_colorBuySellBars
+            if reverBarColor == color.purple or reverBarColor == color.orange
+                colorBar := reverBarColor
+            else if OSOBcolor == color.yellow or OSOBcolor == color.blue
+                colorBar := OSOBcolor
+            else if close > middleBandTop
+                if (s_alwaysShort or s_needCTshort) and strategy.position_size < 0
+                    colorBar := color.new(color.red, 0)
+                else
+                    colorBar := color.new(color.green, 0)
+            else if close < middleBandBot
+                if (s_alwaysLong or s_needCTlong) and strategy.position_size > 0
+                    colorBar := color.new(color.green, 0)
+                else
+                    colorBar := color.new(color.red, 0)
+            else if strategy.position_size > 0 and (i_midClose == 'Delayed bars inside' or i_midClose == 'Opposite band')
+                colorBar := color.new(#0a6136, 20)
+            else if strategy.position_size < 0 and (i_midClose == 'Delayed bars inside' or i_midClose == 'Opposite band')
+                colorBar := color.new(#600008, 20)
+            else
+                colorBar := color.new(color.gray, 0)
+        else
+            if OSOBcolor == color.yellow or OSOBcolor == color.blue
+                colorBar := OSOBcolor
+            else if close > middleBandTop
+                if (s_alwaysShort or s_needCTshort) and strategy.position_size < 0
+                    colorBar := color.new(color.red, 0)    
+                else    
+                    colorBar := color.new(color.green, 0)
+            else if close < middleBandBot
+                if (s_alwaysLong or s_needCTlong) and strategy.position_size > 0
+                    colorBar := color.new(color.green, 0)
+                else
+                    colorBar := color.new(color.red, 0)
+            else if strategy.position_size > 0 and (i_midClose == 'Delayed bars inside' or i_midClose == 'Opposite band')
+                colorBar := color.new(#0a6136, 20)
+            else if strategy.position_size < 0 and (i_midClose == 'Delayed bars inside' or i_midClose == 'Opposite band')
+                colorBar := color.new(#600008, 20)
+            else
+                colorBar := color.new(color.gray, 0)
+    else if s_colorBuySellBars
+        if reverBarColor == color.purple or reverBarColor == color.orange
+            colorBar := reverBarColor
+        else if close > middleBandTop
+            if (s_alwaysShort or s_needCTshort) and strategy.position_size < 0
+                colorBar := color.new(color.red, 0)
+            else
+                colorBar := color.new(color.green, 0)
+        else if close < middleBandBot
+            if (s_alwaysLong or s_needCTlong) and strategy.position_size > 0
+                colorBar := color.new(color.green, 0)
+            else    
+                colorBar := color.new(color.red, 0)
+        else if strategy.position_size > 0 and (i_midClose == 'Delayed bars inside' or i_midClose == 'Opposite band')
+            colorBar := color.new(#0a6136, 20)
+        else if strategy.position_size < 0 and (i_midClose == 'Delayed bars inside' or i_midClose == 'Opposite band')
+            colorBar := color.new(#600008, 20)
+        else
+            colorBar := color.new(color.gray, 0)
+    else
+        if close > middleBandTop
+            if (s_alwaysShort or s_needCTshort) and strategy.position_size < 0
+                colorBar := color.new(color.red, 0)
+            else    
+                colorBar := color.new(color.green, 0)
+        else if close < middleBandBot
+            if (s_alwaysLong or s_needCTlong) and strategy.position_size > 0
+                colorBar := color.new(color.green, 0)
+            else    
+                colorBar := color.new(color.red, 0)
+        else if strategy.position_size > 0 and (i_midClose == 'Delayed bars inside' or i_midClose == 'Opposite band')
+            colorBar := color.new(#0a6136, 20)
+        else if strategy.position_size < 0 and (i_midClose == 'Delayed bars inside' or i_midClose == 'Opposite band')
+            colorBar := color.new(#600008, 20)
+        else
+            colorBar := color.new(color.gray, 0)
+else if s_switch1 
+    if s_colorBuySellBars
+        if reverBarColor == color.purple or reverBarColor == color.orange
+            colorBar := reverBarColor
+        else if OSOBcolor == color.yellow or OSOBcolor == color.blue
+            colorBar := OSOBcolor
+        else 
+            colorBar := na
+    else
+        if OSOBcolor == color.yellow or OSOBcolor == color.blue
+            colorBar := OSOBcolor
+        else 
+            colorBar := na
+else if s_colorBuySellBars
+    if reverBarColor == color.purple or reverBarColor == color.orange
+        colorBar := reverBarColor
+    else
+        colorBar := na
+else
+    colorBar := na
+barcolor(colorBar)
+//}
+Expand (846 lines)

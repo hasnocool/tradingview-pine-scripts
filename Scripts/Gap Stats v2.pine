@@ -1,0 +1,135 @@
+Script Name: Gap Stats v2
+Author: PropTradingShop
+Description: This helpful analysis tool displays a table of days a stock has gapped, how much it gapped by and what percentage of the gap was covered.
+It is meant to be used on the daily timeframe and can help you distinguish if gaps are going to be filled or not. I like to use it mainly on medium + cap stocks
+that have gapped overnight or pre-market and see what the tendency...
+PineScript code:
+
+Pine Script™ strategy
+Gap Stats v2
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © PropTradingShop
+//@version=5
+strategy("Gap Stats v2", overlay=true, margin_long=100, margin_short=100)
+minGapPerc = input.float(1.0,"Min Gap %")/100
+var gapPercs = array.new<float>()
+var gapDates = array.new<string>()
+var gapAmounts = array.new<float>()
+var gapPercCovered = array.new<float>()
+theMonth = str.tostring(month)
+theDay = str.tostring(dayofmonth)
+theYear = str.tostring(year)
+theDate = theMonth+'/'+theDay+'/'+theYear
+isGapUp = open > high[1] + (high[1] * minGapPerc)
+isGapDown = open < low[1] - (low[1] * minGapPerc)
+var coveredCount = 0
+plotshape(isGapUp, style=shape.arrowup, color=color.green, location=location.bottom)
+plotshape(isGapDown, style=shape.arrowdown, color=color.red, location=location.top)
+if isGapUp
+    gapPerc = ((open - high[1])/high[1]) * 100
+    gapAmount = open-high[1]
+    diff = open-low
+    percCovered = math.abs(diff/gapAmount) > 1 ? 100 : (math.abs(diff/gapAmount)) * 100
+    array.push(gapDates,theDate)
+    array.push(gapPercs,gapPerc)
+    array.push(gapAmounts,gapAmount)
+    array.push(gapPercCovered,percCovered)
+    if percCovered >= 100
+        coveredCount := coveredCount+1
+    
+if isGapDown
+    gapPerc = ((low[1] - open)/low) * 100
+    gapAmount = open-low[1]
+    diff = high - open
+    percCovered = math.abs(diff/gapAmount) > 1 ? 100 : (math.abs(diff/gapAmount)) * 100
+    array.push(gapDates,theDate)
+    array.push(gapPercs,-gapPerc)
+    array.push(gapAmounts,gapAmount)
+    array.push(gapPercCovered,percCovered)
+    if percCovered >= 100
+        coveredCount := coveredCount+1
+gapTable = table.new(position = position.top_right, columns = 4, rows = array.size(gapDates) > 0 ? array.size(gapDates) + 1 : 1, frame_color=#151715, frame_width=1, border_width=1, border_color=color.white)
+table.cell(gapTable, 0, 0, 'Date', text_halign = text.align_center, bgcolor = color.gray, text_color = color.white, text_size = size.normal)
+table.cell(gapTable, 1, 0, 'Gap %', text_halign = text.align_center, bgcolor = color.gray, text_color = color.white, text_size = size.normal)
+table.cell(gapTable, 2, 0, 'Gap $', text_halign = text.align_center, bgcolor = color.gray, text_color = color.white, text_size = size.normal)
+table.cell(gapTable, 3, 0, 'Gap % Covered', text_halign = text.align_center, bgcolor = color.gray, text_color = color.white, text_size = size.normal)
+if barstate.islastconfirmedhistory and array.size(gapDates) > 0
+    array.reverse(gapDates)
+    array.reverse(gapPercs)
+    array.reverse(gapAmounts)
+    array.reverse(gapPercCovered)
+    for i = 0 to array.size(gapDates) - 1
+        table.cell(gapTable, column = 0, row = i + 1, text = array.get(gapDates,i),text_halign = text.align_left,   bgcolor = color.gray, text_color = color.white, text_size = size.small)
+        table.cell(gapTable, column = 1, row = i + 1, text = str.tostring(array.get(gapPercs,i),'.##')+'%', text_halign = text.align_left,   bgcolor = array.get(gapPercs,i) > 0 ? color.green : color.red, text_color = color.white, text_size = size.small)
+        table.cell(gapTable, column = 2, row = i + 1, text = '$'+str.tostring(array.get(gapAmounts,i),'.##'), text_halign = text.align_left,   bgcolor = array.get(gapAmounts,i) > 0 ? color.green : color.red, text_color = color.white, text_size = size.small)
+        table.cell(gapTable, column = 3, row = i + 1, text = str.tostring(array.get(gapPercCovered,i),'.##')+'%', text_halign = text.align_left,   bgcolor = color.gray, text_color = color.white, text_size = size.small)
+        
+Expand (67 lines)

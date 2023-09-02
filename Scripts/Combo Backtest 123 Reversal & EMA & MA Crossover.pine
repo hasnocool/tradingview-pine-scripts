@@ -1,0 +1,149 @@
+Script Name: Combo Backtest 123 Reversal & EMA & MA Crossover
+Author: HPotter
+Description: This is combo strategies for get a cumulative signal. 
+
+ First strategy
+ This System was created from the Book "How I Tripled My Money In The 
+ Futures Market" by Ulf Jensen, Page 183. This is reverse type of strategies.
+ The strategy buys at market, if close price is higher than the previous close 
+ during 2 days and the meaning of 9-days Stochastic Slow...
+PineScript code:
+
+Pine Script™ strategy
+Combo Backtest 123 Reversal & EMA & MA Crossover
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+//@version=4
+////////////////////////////////////////////////////////////
+//  Copyright by HPotter v1.0 19/06/2020
+// This is combo strategies for get a cumulative signal. 
+//
+// First strategy
+// This System was created from the Book "How I Tripled My Money In The 
+// Futures Market" by Ulf Jensen, Page 183. This is reverse type of strategies.
+// The strategy buys at market, if close price is higher than the previous close 
+// during 2 days and the meaning of 9-days Stochastic Slow Oscillator is lower than 50. 
+// The strategy sells at market, if close price is lower than the previous close price 
+// during 2 days and the meaning of 9-days Stochastic Fast Oscillator is higher than 50.
+//
+// Second strategy
+// The Moving Average Crossover trading strategy is possibly the most popular
+// trading strategy in the world of trading. First of them were written in the
+// middle of XX century, when commodities trading strategies became popular.
+// This strategy is a good example of so-called traditional strategies. 
+// Traditional strategies are always long or short. That means they are never 
+// out of the market. The concept of having a strategy that is always long or 
+// short may be scary, particularly in today’s market where you don’t know what 
+// is going to happen as far as risk on any one market. But a lot of traders 
+// believe that the concept is still valid, especially for those of traders who 
+// do their own research or their own discretionary trading. 
+// This version uses crossover of moving average and its exponential moving average.
+//
+// WARNING:
+// - For purpose educate only
+// - This script to change bars colors.
+////////////////////////////////////////////////////////////
+Reversal123(Length, KSmoothing, DLength, Level) =>
+    vFast = sma(stoch(close, high, low, Length), KSmoothing) 
+    vSlow = sma(vFast, DLength)
+    pos = 0.0
+    pos := iff(close[2] < close[1] and close > close[1] and vFast < vSlow and vFast > Level, 1,
+             iff(close[2] > close[1] and close < close[1] and vFast > vSlow and vFast < Level, -1, nz(pos[1], 0))) 
+    pos
+MACross(LengthMA,LengthEMA) =>
+    pos = 0
+    xMA = sma(close, LengthMA)
+    xEMA = ema(xMA, LengthEMA)
+    pos := iff(xEMA < xMA , 1,
+           iff(xEMA > xMA, -1, nz(pos[1], 0))) 
+    pos
+strategy(title="Combo Backtest 123 Reversal & EMA & MA Crossover", shorttitle="Combo", overlay = true)
+Length = input(14, minval=1)
+KSmoothing = input(1, minval=1)
+DLength = input(3, minval=1)
+Level = input(50, minval=1)
+//-------------------------
+LengthMA = input(10, minval=1)
+LengthEMA = input(10,minval=1)
+reverse = input(false, title="Trade reverse")
+posReversal123 = Reversal123(Length, KSmoothing, DLength, Level)
+posMACross = MACross(LengthMA,LengthEMA)
+pos = iff(posReversal123 == 1 and posMACross == 1 , 1,
+       iff(posReversal123 == -1 and posMACross == -1, -1, 0)) 
+possig = iff(reverse and pos == 1, -1,
+          iff(reverse and pos == -1 , 1, pos))     
+if (possig == 1) 
+    strategy.entry("Long", strategy.long)
+if (possig == -1)
+    strategy.entry("Short", strategy.short)  
+if (possig == 0) 
+    strategy.close_all()
+barcolor(possig == -1 ? #b50404: possig == 1 ? #079605 : #0536b3 )
+Expand (68 lines)

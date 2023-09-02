@@ -1,0 +1,595 @@
+Script Name: Rainbow Strategy Backtesting
+Author: inno14
+Description: Rainbow Strategy Backtesting base on "Rainbow Moving Average" Strategy as below:
+1.Rainbow Moving Average setup
+- Source: source of 1st MA
+- Type: SMA/EMA
+- Period: period of 1st MA
+- Displacement: period of 2nd MA to 7th MA with source is previous MA
+2.Trend Define
+- Up Trend: Main MA moving at the top of Rainbow
+- Down Trend: Main MA moving at the bottom of...
+PineScript code:
+
+Pine Script™ strategy
+Rainbow Strategy Backtesting
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+//╔════════════════════════════════════════════════════════════════════════════╗
+//║Rainbow Backtesting base on "Rainbow Moving Average" Strategy as below:     ║
+//║1.Rainbow Moving Average setup                                              ║
+//║- Source: source of 1st MA                                                  ║
+//║- Type: SMA/EMA                                                             ║
+//║- Period: period of 1st MA                                                  ║
+//║- Displacement: period of 2nd MA to 7th MA with source is previous MA       ║
+//║2.Trend Define                                                              ║
+//║- Up Trend: Main MA moving at the top of Rainbow                            ║
+//║- Down Trend: Main MA moving at the bottom of Rainbow                       ║
+//║- Sideway: Main MA moving between the top and the bottom of Rainbow         ║
+//║3.Signal                                                                    ║
+//║- Buy Signal: When Rainbow change to Up Trend.                              ║
+//║- Sell Signal: When Rainbow change to Down Trend.                           ║
+//║- Exit: When Rainbow change to Sideway.                                     ║
+//║4.RSI Filter                                                                ║
+//║- "Enable": Only signals have 1st RSI moving between Overbought and Oversold║
+//║and 2nd RSI moving outside Middle Channel are accepted.                     ║
+//║- The filter may help trader avoid bull trap, bear trap and choppy market.  ║
+//║- Apply RSI Divergence to pass the signals filtered by Middle Channel       ║
+//║5.Take profit by ATR                                                        ║
+//║- "Enable": Target of position equal to multiplier x atr(period)            ║
+//║6.Stoploss                                                                  ║
+//╚════════════════════════════════════════════════════════════════════════════╝
+//@version=4
+//v886
+strategy("Rainbow Strategy Backtesting",overlay=false)
+//++++++++++++++++++++++++++++++++++++++++++++++++++
+//+++++++++++++ Rainbow Moving Average +++++++++++++
+//++++++++++++++++++++++++++++++++++++++++++++++++++
+rainbow_tt="=== Rainbow Moving Average ==="
+ma1_source=input(hlc3,title="Source",type=input.source, inline="set1", group=rainbow_tt)
+rb_type=input("SMA",title="Type",options=["SMA","EMA"], inline="set1", group=rainbow_tt)
+ma1_len=input(12,title="Period", inline="set2", group=rainbow_tt)
+dis_len=input(3,title="Displacement", inline="set2", group=rainbow_tt,minval=2)
+trend_tt="=== Trend Color ==="
+up_col=input(color.new(color.blue,0),title="Up",inline="Color",group=trend_tt)
+dn_col=input(color.new(color.red,0),title="Down",inline="Color",group=trend_tt)
+sw_col=input(color.new(color.yellow,0),title="No",inline="Color",group=trend_tt)
+//1st
+ma1=rb_type=="SMA"?sma(ma1_source,ma1_len):ema(ma1_source,ma1_len)
+//2nd
+ma2=rb_type=="SMA"?sma(ma1,dis_len):ema(ma1,dis_len)
+//3rd
+ma3=rb_type=="SMA"?sma(ma2,dis_len):ema(ma2,dis_len)
+//4
+ma4=rb_type=="SMA"?sma(ma3,dis_len):ema(ma3,dis_len)
+//5
+ma5=rb_type=="SMA"?sma(ma4,dis_len):ema(ma4,dis_len)
+//6
+ma6=rb_type=="SMA"?sma(ma5,dis_len):ema(ma5,dis_len)
+//7
+ma7=rb_type=="SMA"?sma(ma6,dis_len):ema(ma6,dis_len)
+//MinMax
+rb_max=max(ma1,ma2,ma3,ma4,ma5,ma6,ma7)
+rb_min=min(ma1,ma2,ma3,ma4,ma5,ma6,ma7)
+dir_col=
+       ma1==rb_max?up_col:
+       ma1==rb_min?dn_col:
+       sw_col
+//++++++++++++++++++++++++++++++++++++++
+//+++++++++++++ RSI Filter +++++++++++++
+//++++++++++++++++++++++++++++++++++++++
+rsi_tt="=== RSI Filter ==="
+rsi_filter=input("Enable",title="Filter",options=["Enable","Disable"],inline="set",group=rsi_tt)
+over_tt="Over Filter"
+rsi_len_1=input(12,title="Period",inline="set",group=over_tt)
+rsi_ovb=input(65,title="Overbought",inline="set",group=over_tt)
+rsi_ovs=input(35,title="Oversold",inline="set",group=over_tt)
+rsi_1=rsi(close,rsi_len_1)
+mid_tt="Middle Filter"
+rsi_len_2=input(9,title="Period",inline="set",group=mid_tt)
+rsi_mid_top=input(56,title="Upper",inline="set",group=mid_tt)
+rsi_mid_bot=input(44,title="Lower",inline="set",group=mid_tt)
+rsi_2=rsi(close,rsi_len_2)
+div_tt="RSI Divergence"
+div_show=input("Enable",title="Apply",options=["Enable","Disable"],inline="set",group=div_tt)
+div_size=input(10,title="Back",inline="set",group=div_tt)
+rsi_div_len=input(10,title="Period",inline="set",group=div_tt)
+rsi_div_h=rsi(high,rsi_div_len)
+rsi_div_l=rsi(low,rsi_div_len)
+rsi_div_c=rsi(close,rsi_div_len)
+bull_div=
+       (low<low[div_size]
+       and
+       rsi_div_l>rsi_div_l[div_size])
+       or
+       (close<close[div_size]
+       and
+       rsi_div_c>rsi_div_c[div_size])
+bear_div=
+       (high>high[div_size]
+       and
+       rsi_div_h<rsi_div_h[div_size])
+       or
+       (close>close[div_size]
+       and
+       rsi_div_c<rsi_div_c[div_size])
+bull_div_sig=
+       bull_div 
+       and 
+       bull_div!=bull_div[1] 
+       and 
+       rsi_div_c==min(rsi_div_h,rsi_div_c,rsi_div_l)
+bear_div_sig=
+       bear_div 
+       and 
+       bear_div!=bear_div[1] 
+       and 
+       rsi_div_c==max(rsi_div_h,rsi_div_c,rsi_div_l)
+var div_status="None"
+var bull_div_val=0.0
+var bear_div_val=0.0
+if bull_div_sig==true
+    div_status:="Bull"
+    bull_div_val:=low
+if bear_div_sig==true
+    div_status:="Bear"
+    bear_div_val:=high
+if  div_status=="Bull" and close<bull_div_val and bull_div_val>0
+    div_status:="None"
+    bull_div_val:=0.0
+if  div_status=="Bear" and close>bear_div_val and bear_div_val>0
+    div_status:="None"
+    bear_div_val:=0.0
+if div_show=="Disable"
+    div_status:="None"
+//Status
+var rsi_status="None"
+if ((rsi_1>rsi_ovs and rsi_1<rsi_ovb) and (rsi_2[1]<rsi_mid_bot or rsi_2[1]>rsi_mid_top)) 
+       or (dir_col==up_col and div_status=="Bull" 
+           and rsi_div_h==max(rsi_div_h,rsi_div_l)
+           and rsi_2[1]<rsi_mid_top
+           and rsi_2[1]>rsi_mid_bot)
+       or (dir_col==dn_col and div_status=="Bear" 
+           and rsi_div_l==min(rsi_div_h,rsi_div_l)
+           and rsi_2[1]<rsi_mid_top
+           and rsi_2[1]>rsi_mid_bot)
+    rsi_status:="Normal"
+else
+    rsi_status:="None"
+//Signal
+BuySignal= 
+       rsi_filter=="Disable"?
+       dir_col[1]!=up_col
+       and
+       dir_col[0]==up_col
+       :
+       dir_col[1]!=up_col
+       and
+       dir_col[0]==up_col
+       and
+       rsi_status=="Normal"
+SellSignal= 
+       rsi_filter=="Disable"?
+       dir_col[1]!=dn_col
+       and
+       dir_col[0]==dn_col
+       :
+       dir_col[1]!=dn_col
+       and
+       dir_col[0]==dn_col
+       and
+       rsi_status=="Normal"
+exit=
+       (dir_col[1]!=sw_col
+       and
+       dir_col[0]==sw_col)
+       
+buycol =
+       BuySignal?
+       up_col: na
+sellcol =
+       SellSignal?
+       dn_col: na
+exitcol =
+       exit?
+       sw_col: na
+filter=
+       rsi_filter=="Enable"?
+       dir_col[1]!=dir_col 
+       and BuySignal==false 
+       and SellSignal==false 
+       and exit==false:
+       na
+filter_style=shape.xcross
+filtercol=
+       filter?
+       dir_col:na
+//++++++++++++++++++++++++++++++++++++++++++++++
+//+++++++++++++ Take profit by ATR +++++++++++++
+//++++++++++++++++++++++++++++++++++++++++++++++
+tp_tt="=== Take profit by ATR ==="
+atr_show=input("Enable",title="Apply",options=["Enable","Disable"],inline="set",group=tp_tt)
+atr_len=input(6,title="Period",inline="set",group=tp_tt)
+atr_mult=input(3.5,title="Multiplier",inline="set",group=tp_tt)
+var p_long=0.0
+var p_short=0.0
+if BuySignal
+    p_long:=close
+    p_short:=0.0
+if SellSignal
+    p_long:=0.0
+    p_short:=close
+if exit
+    p_long:=0.0
+    p_short:=0.0    
+tp_long=
+       dir_col==up_col and p_long>0.0 and (close-p_long)>=(atr_mult*atr(atr_len))
+tp_short=
+       dir_col==dn_col and p_short>0.0 and (p_short-close)>=(atr_mult*atr(atr_len))
+tp=
+       atr_show=="Enable"?
+       tp_long or tp_short
+       :na
+if tp
+    p_long:=0.0
+    p_short:=0.0  
+tpcol =
+       tp?
+       sw_col: na
+//++++++++++++++++++++++++++++++++++++++++++++++
+//+++++++++++++ Stoploss by ATR +++++++++++++
+//++++++++++++++++++++++++++++++++++++++++++++++
+atr_sl_tt="=== Stoploss by ATR ==="
+atr_sl_show=input("Enable",title="Apply",options=["Enable","Disable"],inline="set",group=atr_sl_tt)
+atr_sl_len=input(6,title="Period",inline="set",group=atr_sl_tt)
+atr_sl_mult=input(3.5,title="Multiplier",inline="set",group=atr_sl_tt)
+atr_sl_long=
+       p_long>0.0 and (p_long-close)>=(atr_sl_mult*atr(atr_sl_len))
+atr_sl_short=
+       p_short>0.0 and (close-p_short)>=(atr_sl_mult*atr(atr_sl_len))
+atr_sl=
+       atr_sl_show=="Enable"?
+       atr_sl_long or atr_sl_short
+       :na
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++
+//+++++++++++++ Stoloss by Risk's Percent +++++++++++++
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++
+rp_sl_tt="=== Stoloss by Risk's Percent ==="
+rp_sl_show=input("Enable",title="Apply",options=["Enable","Disable"],inline="set",group=rp_sl_tt)
+rp_sl_level=input(3.0,title="Percent",inline="set",group=rp_sl_tt)
+rp_sl_long=
+       (p_long>0.0 
+       and ((p_long-close)/p_long)*100>=rp_sl_level)
+rp_sl_short=
+       (p_short>0.0
+       and ((close-p_short)/p_short)*100>=rp_sl_level)
+rp_sl=
+       rp_sl_show=="Enable"?
+       rp_sl_long or rp_sl_short
+       :na
+sl=atr_sl or rp_sl
+if sl
+    p_long:=0.0
+    p_short:=0.0
+slcol =
+       sl?
+       sw_col: na    
+//++++++++++++++++++++++++++++++++
+//+++++++++++++ Plot +++++++++++++
+//++++++++++++++++++++++++++++++++
+//Signal
+buy_style=shape.arrowup
+sell_style=shape.arrowdown
+exit_style=shape.square
+plotshape(BuySignal?0:na,title="Buy",text="Buy",style=buy_style,color=buycol,location=location.absolute)
+plotshape(SellSignal?0:na,title="Sell",text="Sell",style=sell_style,color=sellcol,location=location.absolute)
+plotshape(exit?0:na,title="Exit",text="Exit",style=exit_style,color=exitcol,location=location.absolute)
+//Filter
+plotshape(filter?0:na,title="Filter",text="Filter",style=filter_style,color=filtercol,location=location.absolute)
+//Tp
+plotshape(tp?0:na,title="Take profit",text="Tp",style=exit_style,color=tpcol,location=location.absolute)
+//Sl
+plotshape(sl?0:na,title="Stoploss",text="SL",style=exit_style,color=slcol,location=location.absolute)
+//Trend
+dir_style=shape.circle
+plotshape(dir_col[1]==dir_col and not (tp or sl)?0:na,title="Trend",style=dir_style,color=dir_col,location=location.absolute)
+//+++++++++++++++++++++++++++++++++++++++++++++++++
+//++++++++++++++++++ Backtesting ++++++++++++++++++
+//+++++++++++++++++++++++++++++++++++++++++++++++++
+strategy.entry("Long", strategy.long, when=BuySignal)
+strategy.close("Long", when=exit or filter or tp or sl)
+strategy.entry("Short", strategy.short, when=SellSignal)
+strategy.close("Short", when=exit or filter or tp or sl)
+//EOF
+Expand (292 lines)

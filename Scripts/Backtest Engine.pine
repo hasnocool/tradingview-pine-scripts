@@ -1,0 +1,258 @@
+Script Name: Backtest Engine
+Author: panpanXBT
+Description: This is a simple backtest engine for your trading strategies. The idea behind this script is to make testing new strategies as easy as possible. Parameters such as take profit/stop loss and time period are built into the script and are customisable by the user via the settings interface. The only coding is to set the entry and exit conditions. Users need not touch...
+PineScript code:
+
+Pine Script™ strategy
+Backtest Engine
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+// Backtester v5 © gjfsdrtytru {
+// On lines 31-37, use the variable longCondition to trigger your long entry, closeLong to trigger close long, etc.
+// TP/SL are built into the script. There are also some inputs for bot commands in the settings UI if you want to set up a trading bot.
+// No user input is required beyond line 49. Just define your strategy and let the engine do the rest!
+// Thanks to Wunderbit Trading who helped in the making of this script with their open-source code and tutorials.
+//@version=5
+strategy(
+  title                 = "Backtester v5", 
+  shorttitle            = "Backtest",
+  overlay               = true,
+  calc_on_order_fills   = true,
+  default_qty_type      = strategy.percent_of_equity,
+  default_qty_value     = 100,
+  initial_capital       = 10000) // }
+// Start code here...
+sma1 = ta.sma(close,50)
+sma2 = ta.sma(close,200)
+plot(sma1,"Fast MA",color.blue)
+plot(sma2,"Slow MA",color.red)
+// Define Entry/Close Conditions {
+i_long  = input(true,"Long orders",group="Orders",tooltip="Toogle on/off long orders")
+i_short = input(true,"Short orders",group="Orders",tooltip="Toogle on/off short orders")
+longCondition   = false
+closeLong       = false
+shortCondition  = false
+closeShort      = false
+if i_long
+    longCondition   := ta.crossover(sma1,sma2)      // Enter your conditions here
+    closeLong       := ta.crossunder(sma1,sma2)     // Enter your conditions here
+if i_short
+    shortCondition  := ta.crossunder(sma1,sma2)     // Enter your conditions here
+    closeShort      := ta.crossover(sma1,sma2)      // Enter your conditions here
+// }
+// Bot Web-link Alert - {{strategy.order.comment}} {
+// LONG COMMENTS
+botLong         = input("Long Entry",   title="Entry Long Command", group="Bot Commands",tooltip="Long entry bot command")
+botLongClose    = input("Long Closed",  title="Exit Long Command",  group="Bot Commands",tooltip="Long close bot command")
+// SHORT COMMENTS
+botShort        = input("Short Entry",  title="Entry Short Command",group="Bot Commands",tooltip="Short entry bot command")
+botShortClose   = input("Short Closed", title="Exit Short Command", group="Bot Commands",tooltip="Short close bot command")
+// }
+// BACKTEST ENGINE [NO USER INPUT REQUIRED] ////////////////// {
+// Time period {
+testStartYear   = input.int(2018,   title="Backtest Start Year",    minval=2010,maxval=2100,group="Backtest Period")
+testStartMonth  = input.int(1,      title="Backtest Start Month",   minval=1,   maxval=12,  group="Backtest Period")
+testStartDay    = input.int(1,      title="Backtest Start Day",     minval=1,   maxval=31,  group="Backtest Period")
+testPeriodLen   = input.int(9999,   title="Backtest Period (days)", minval=1,               group="Backtest Period",tooltip="Days until strategy ends") * 86400000 // convert days into UNIX time
+testPeriodStart = timestamp(testStartYear,testStartMonth,testStartDay,0,0)
+testPeriodStop  = testPeriodStart + testPeriodLen
+testPeriod() =>
+    time >= testPeriodStart and time <= testPeriodStop ? true : false
+// }
+// Calculate TP/SL {
+// User inputs
+i_longTP     = input.float(title="Long Take Profit (%)" ,minval=0.0, step=1, defval=0,group="Take Profit/Stop Loss") * 0.01
+i_longSL     = input.float(title="Long Stop Loss (%)"   ,minval=0.0, step=1, defval=0,group="Take Profit/Stop Loss") * 0.01
+i_shortTP    = input.float(title="Short Take Profit (%)",minval=0.0, step=1, defval=0,group="Take Profit/Stop Loss") * 0.01
+i_shortSL    = input.float(title="Short Stop Loss (%)"  ,minval=0.0, step=1, defval=0,group="Take Profit/Stop Loss") * 0.01
+// 0% TP/SL = OFF (a value of 0 turns off TP/SL feature)
+longTP     = i_longTP  == 0 ? 1000 : i_longTP
+longSL     = i_longSL  == 0 ? 1    : i_longSL
+shortTP    = i_shortTP == 0 ? 1    : i_shortTP
+shortSL    = i_shortSL == 0 ? 1000 : i_shortSL
+// Determine TP/SL price based on percentage given
+longTP      := strategy.position_avg_price * (1 + longTP)
+longSL      := strategy.position_avg_price * (1 - longSL)
+shortTP     := strategy.position_avg_price * (1 - shortTP)
+shortSL     := strategy.position_avg_price * (1 + shortSL) 
+// }
+// Anti-overlap {
+isEntry_Long    = false
+isEntry_Long    := nz(isEntry_Long[1], false)
+isExit_Long     = false
+isExit_Long     := nz(isExit_Long[1], false)
+isEntry_Short   = false
+isEntry_Short   := nz(isEntry_Short[1], false)
+isExit_Short    = false
+isExit_Short    := nz(isExit_Short[1], false)
+entryLong       = not isEntry_Long and longCondition
+exitLong        = not isExit_Long and closeLong
+entryShort      = not isEntry_Short and  shortCondition
+exitShort       = not isExit_Short and closeShort
+if (entryLong)
+    isEntry_Long := true
+    isExit_Long := false
+if (exitLong)
+    isEntry_Long := false
+    isExit_Long := true
+if (entryShort)
+    isEntry_Short := true
+    isExit_Short := false
+if (exitShort)
+    isEntry_Short := false
+    isExit_Short := true
+// }
+// Order Execution {
+// Entries
+if testPeriod()
+    strategy.entry("Long" ,strategy.long ,when=entryLong ,comment=botLong)
+    strategy.entry("Short",strategy.short,when=entryShort,comment=botShort)
+// TP/SL
+if (strategy.position_size > 0) 
+    strategy.exit(from_entry="Long", id="Long SL/TP",   qty_percent=100,limit=longTP, stop=longSL) 
+    strategy.close(id       ="Long", when=exitLong,     qty_percent=100,comment=botLongClose)
+if (strategy.position_size < 0)
+    strategy.exit(from_entry="Short", id="Short TP/SL", qty_percent=100,limit=shortTP,stop=shortSL)
+    strategy.close(id       ="Short", when=exitShort,   qty_percent=100,comment=botShortClose)
+// }
+// Draw Entry, TP and SL Levels {
+// Long positions
+plot(strategy.position_size > 0 ? strategy.position_avg_price   : na, style=plot.style_linebr, color=color.blue,    title="Long Entry")
+plot(strategy.position_size > 0 ? i_longTP    == 0 ? na : longTP  : na, style=plot.style_linebr, color=color.green,   title="Long TP")
+plot(strategy.position_size > 0 ? i_longSL    == 0 ? na : longSL  : na, style=plot.style_linebr, color=color.red,     title="Long SL")
+// Short positions
+plot(strategy.position_size < 0 ? strategy.position_avg_price   : na, style=plot.style_linebr, color=color.blue,    title="Short Entry")
+plot(strategy.position_size < 0 ? i_shortTP   == 0 ? na : shortTP : na, style=plot.style_linebr, color=color.green,   title="Short TP")
+plot(strategy.position_size < 0 ? i_shortSL   == 0 ? na : shortSL : na, style=plot.style_linebr, color=color.red,     title="Short SL")
+// }
+// }
+Expand (130 lines)

@@ -1,0 +1,180 @@
+Script Name: Nabz-BBMACD-2022-V1.1
+Author: nabamb
+Description: I have tried to make script which triggers indicators on combination of different feedback including Bollinger bands and MACD. Also used some of my logic by trial and error,  It gave 744%+ profit on back-testing on coin RUNE/USDT from Jan 2021. It is my first script, I am happy to help the community. Please share your feedback.
+PineScript code:
+
+Pine Script™ strategy
+Nabz-BBMACD-2022-V1.1
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+//@version=5
+strategy("Nabz-BBMACD-2022-V1.1", shorttitle="BBM-Nabz", overlay=true)
+// My 1st Pine Scrpt Indicator
+// Work on best on 1Hr Chart
+// Open for Help/Donations.
+var float lastentry=1
+int result = 0
+float x = 0
+drawshape = false
+/////////////EMA
+shortest = ta.ema(close, 20)
+short = ta.ema(close, 50)
+longer = ta.ema(close, 100)
+longest = ta.ema(close, 200)
+plot(shortest, color = color.red)
+plot(short, color = color.orange)
+plot(longer, color = color.aqua)
+plot(longest, color = color.blue)
+///////////// RSI
+RSIlength = input(6,title="RSI Period Length") 
+RSIoverSold = 50
+RSIoverBought = 50
+price = close
+vrsi = ta.rsi(price, RSIlength)
+///////////// Bollinger Bands
+BBlength = input.int(200, minval=1,title="Bollinger Period Length")
+BBmult = 2 // input(2.0, minval=0.001, maxval=50,title="Bollinger Bands Standard Deviation")
+BBbasis = ta.sma(price, BBlength)
+BBdev = BBmult * ta.stdev(price, BBlength)
+BBupper = BBbasis + BBdev
+BBlower = BBbasis - BBdev
+source = close
+buyEntry = ta.crossover(source, BBlower)
+sellEntry = ta.crossunder(source, BBupper)
+////////////// MACD
+fastLength = input(12)
+slowlength = input(26)
+MACDLength = input(9)
+MACD = ta.ema(close, fastLength) - ta.ema(close, slowlength)
+aMACD = ta.ema(MACD, MACDLength)
+delta = MACD - aMACD
+///////////// Colors
+switch1=input(true, title="Enable Bar Color?")
+switch2=input(true, title="Enable Background Color?")
+TrendColor = RSIoverBought and (price[1] > BBupper and price < BBupper) and BBbasis < BBbasis[1] ? color.red : RSIoverSold and (price[1] < BBlower and price > BBlower) and BBbasis > BBbasis[1] ? color.green : na
+///////////Strategy
+bool tcu = not (ta.crossunder(price[0],shortest[0]))
+if (((price[1]<BBlower[1]) and (ta.crossover(price,BBlower))))
+    lastentry := low[1]
+    strategy.entry("RSI_BB_L", strategy.long, comment="Buy 1st IF")
+    
+if (((ta.crossover(delta, 0.0) and (ta.crossover(price,BBlower)))))
+    lastentry := low[1]
+    strategy.entry("RSI_BB_L", strategy.long, comment="Buy 2nd IF")    
+    
+if (((ta.crossover(delta, 0.0)) and (low[0]>shortest[0])) and (price[1]<low))
+    lastentry := low[1]
+    strategy.entry("RSI_BB_L", strategy.long, comment="Buy 3rd IF")   //else
+if (((ta.crossover(delta, 0.01)) and (high[1]<BBupper)) and (tcu))
+    lastentry := low[1]
+    strategy.entry("RSI_BB_L", strategy.long, comment="Buy 4th IF")
+       
+if ((ta.crossunder(low[0],shortest[0]) and close<shortest))
+    strategy.close(id="RSI_BB_L", comment="Close by 1st IF")
+    
+    
+    
+if (price<lastentry)
+    drawshape := true
+    
+if (price<strategy.opentrades.entry_price(0)/1.01175734321249)
+    strategy.close(id="RSI_BB_L", comment="Close by 2nd IF")
+plot(strategy.opentrades.entry_price(0), color=color.yellow)
+Expand (98 lines)

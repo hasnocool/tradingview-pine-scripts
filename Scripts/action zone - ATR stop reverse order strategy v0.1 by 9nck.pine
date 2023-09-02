@@ -1,0 +1,286 @@
+Script Name: action zone - ATR stop reverse order strategy v0.1 by 9nck
+Author: fenirlix
+Description: ACTION ZONE-ATR MOD v0.1 DOCUMENTATION
+ 
+
+ Overview
+ This tradingview pine script strategy is mainly created to enrich my coding skill. It is a combination of “CDC-ACTIONZONE” and my personal studies of trading techniques in various sources e.g.book, course or blog. This strategy purposefully built to connect with my automatic trading bot. However, It will be very...
+PineScript code:
+
+Pine Script™ strategy
+action zone - ATR stop reverse order strategy v0.1 by 9nck
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © fenirlix
+//@version=5
+// Strategy parameter incl. position size, commission and initial capital
+strategy("ACTIONZONE-ATR REVERSEORDER STRATEGY", "ACTIONZONEATR-REVERSEORDER", overlay=true
+     ,default_qty_type=strategy.percent_of_equity, default_qty_value=25
+     ,commission_type='strategy.commission_percent', commission_value=0.01
+     ,initial_capital=3000)
+// User Input Variable
+fastMaInput     = input.int(12, "Fast MA Period", minval=2, step=1)
+slowMaInput     = input.int(26, "Slow MA Period", minval=2, step=1)
+atrLengthInput  = input.int(14, "ATR length", minval=2,step=1)
+atrInnerMultInput = input.float(1, "atr inner multiplier", minval=0.1, step=0.1)
+atrMidMultInput = input.float(2, "atr middle multiplier", minval=0.1, step=0.1) //***** MOST OF RISK MANAGEMENT LOGIC BASE ON THIS INPUT *****//
+atrOuterMultInput = input.float(3, "atr outer multiplier", minval=0.1, step=0.1)
+// Backtesting Date range
+startYearInput      = input.int(2021, "Start Year", minval=1900, maxval=2100, step=1)
+startMonthInput     = input.int(12, "Start Month", minval=1, maxval=12, step=1)
+startDateInput      = input.int(1, "Start Day", minval=1, maxval=31, step=1)
+setEndRangeInput    = input.bool(false, "Using Specific End Test Date") //Set specific End date or use present(end of candle) data
+endYearInput        = input.int(2022, "End Year", minval=1900, maxval=2100, step=1)
+endMonthInput       = input.int(1, "End Month", minval=1, maxval=12, step=1)
+endDateInput        = input.int(31, "End Day", minval=1, maxval=31, step=1)
+startDate = timestamp(syminfo.timezone, startYearInput, startMonthInput, startDateInput)
+endDate = timestamp(syminfo.timezone, endYearInput, endMonthInput, endDateInput)
+inDateRange = time >= startDate //Set backtest date range to present data
+if setEndRangeInput
+    inDateRange and time <= endDate //set backtest date range to specific date
+// minimum position hold period (to get rid of false signal in sideway trend)
+minHoldInput = input.int(8, 'Minimum position Hold Limit', minval=1, maxval=365, step=1) // Set Minimum Position Hold
+var bool reverseToLong = false // Assign reverse order operator
+var bool reverseToShort = false // Assign reverse order operator
+// Indicator Declaration
+fastEma = ta.ema(close, fastMaInput)
+slowEma = ta.ema(close, slowMaInput)
+atr = ta.atr(atrLengthInput)
+// Declare trend of asset
+isBullish = fastEma > slowEma
+isBearish = fastEma <= slowEma
+// Record position hold length, to limit minimum hold period(candle)
+var int hold_length = 0
+if strategy.opentrades > 0 or strategy.opentrades < 0
+    hold_length := hold_length + 1
+else
+    hold_length := 0
+// create permanent variable of stop price
+var float longStopPrice = na
+var float shortStopPrice = na
+    
+// Chart-Indicator COLOR declaration
+REDBEAR     = color.new(color.red, 80)
+GREENBULL   = color.new(color.green, 80)
+greenLong = isBullish and close > fastEma
+yellowLong = isBullish and close < fastEma
+blueShort = isBearish and close > fastEma
+redShort = isBearish and close < fastEma
+// assign oversold, overbought condition(in this case, price over middle atr plus/minus fastEma)
+overBand = high[1] > fastEma + (atrMidMultInput * atr)
+underBand = low[1] < fastEma - (atrMidMultInput * atr)
+// Strategy
+// Main Entry Condition
+goLong = isBullish and isBullish[1] == 0
+goShort = isBearish and isBearish[1] == 0
+inPosition = strategy.position_size != 0
+minHoldPeriod = hold_length > minHoldInput ? true : false
+// Entry Condition
+if not inPosition and inDateRange and barstate.isconfirmed == true //compute after close of the bar to avoid repainting
+    if goLong or reverseToLong // Long if longcondition or reverse order receive.
+        strategy.entry('long', strategy.long)
+        longStopPrice := fastEma - (atr * atrMidMultInput) // Set stop loss price
+        reverseToLong := false // Reset reverse order status
+    
+    else if goShort or reverseToShort
+        strategy.entry('short', strategy.short)
+        shortStopPrice := fastEma + (atr * atrMidMultInput)
+        reverseToShort := false
+// Take profit and Set Higher Stop 
+if inPosition and minHoldPeriod and barstate.isconfirmed == true // check if we're in position and pass minimum hold period, confirm no repainting
+    if strategy.position_size > 0
+        // if exit position by Sellcondition(which is the same as ShortCondition), Exit Long position and make Short order(by set reverse order to true)
+        strategy.close('long', when=goShort, comment='exitLong(' + str.tostring(hold_length) + ')')
+        reverseToShort := true
+        if overBand //If overbought condition met, set Stop price to LAST LOW, and not reverse any position
+            longStopPrice := low[1]
+            reverseToShort := false
+    else if strategy.position_size < 0
+        strategy.close('short', when=goLong, comment='exitShort(' + str.tostring(hold_length) + ')')
+        reverseToLong := true
+        if underBand
+            shortStopPrice := high[1]
+            reverseToLong := false
+// Stop Loss and Set calculate stop loss using Atr Channel
+if inPosition 
+    if strategy.position_size > 0
+        if fastEma - (atr * atrMidMultInput) > longStopPrice // set long stop price to the higher of latest long stop price and ATR lower channel
+            longStopPrice := fastEma - (atr * atrMidMultInput)
+        strategy.exit('Long Stop atr ', 'long', stop=longStopPrice)
+    else if strategy.position_size < 0
+        if fastEma + (atr * atrMidMultInput) < shortStopPrice
+            shortStopPrice := fastEma + (atr * atrMidMultInput)
+        strategy.exit('Short Stop atr ', 'short', stop=shortStopPrice)
+// Plotting
+fastLine = plot(fastEma, title='fast ema line', linewidth=1, color=isBullish ? color.green : color.red)
+slowLine = plot(slowEma, title='slow ema line', linewidth=2, color= isBullish? color.green : color.red)
+atrUpperLine1 = plot(fastEma + (atr * atrInnerMultInput), title='ATR Upperline1', color=color.new(color.black,85))
+atrLowerLine1 = plot(fastEma - (atr * atrInnerMultInput), title='ATR Lowerline1', color=color.new(color.black,85))
+atrUpperLine2 = plot(fastEma + (atr * atrMidMultInput), title='ATR Upperline2', color=color.new(color.black,75))
+atrLowerLine2 = plot(fastEma - (atr * atrMidMultInput), title='ATR Lowerline2', color=color.new(color.black,75))
+atrUpperLine3 = plot(fastEma + (atr * atrOuterMultInput), title='ATR Upperline3', color=color.new(color.black,50))
+atrLowerLine3 = plot(fastEma - (atr * atrOuterMultInput), title='ATR Lowerline3', color=color.new(color.black,50))
+plot(longStopPrice, color=strategy.position_size > 0 ? color.blue : na, linewidth=2)
+plot(shortStopPrice, color=strategy.position_size < 0 ? color.blue : na, linewidth=2)
+//  Filling
+fill(fastLine, slowLine, color=isBullish ? GREENBULL : REDBEAR)
+fill(atrUpperLine3, atrLowerLine3, color=inPosition and (minHoldInput - hold_length > 0) ? color.new(color.blue,90): na)
+barColor = switch
+    greenLong => color.green
+    yellowLong =>  color.yellow
+    blueShort => color.blue
+    redShort => color.red
+    => color.black
+barcolor(color=barColor)
+// Fill background to distinguish inactive time(Zulu time)
+nightTime = time(timeframe.period, "1500-0100") ? color.new(color.black, 95): na
+bgcolor(nightTime)
+Expand (148 lines)

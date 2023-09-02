@@ -1,0 +1,446 @@
+Script Name: Estrategia Larry Connors [JoseMetal]
+Author: JoseMetal
+Description: ============
+ENGLISH
+============
+- Description:
+This strategy is based on the original Larry Connors strategy, using 2 SMAs and RSI.
+The strategy has been optimized for better total profit and works better on 4H (tested on BTCUSDT).
+
+LONG:
+Price must be ABOVE the slow SMA.
+When a candle closes in RSI oversold area, the next candle closes out of the oversold area...
+PineScript code:
+
+Pine Script™ strategy
+Estrategia Larry Connors [JoseMetal]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © JoseMetal
+//@version=5
+// Descripción de la estrategia:
+// + LONG:
+// El precio debe estar por encima de la SMA lenta.
+// Cuando una vela cierra en la zona de sobreventa del RSI, la siguiente vela cierra fuera de la zona de sobreventa y el precio de cierre está POR DEBAJO de la SMA rápida = abre LONG.
+// Se cierra cuando una vela cierra POR ENCIMA de la SMA rápida.
+// - SHORT:
+// El precio debe estar POR DEBAJO de la SMA lenta.
+// Cuando una vela cierra en la zona de sobrecompra del RSI, la siguiente vela cierra fuera de la zona de sobrecompra y el precio de cierre está POR ENCIMA de la SMA rápida = abre SHORT.
+// Se cierra cuando una vela cierra POR DEBAJO de la SMA rápida.
+// *La estrategia de Larry Connor NO utiliza un Stop Loss o Take Profit fijo, como él dijo, eso reduce el rendimiento significativamente
+//== Constantes
+c_blanco              = color.rgb(255, 255, 255, 0)
+c_negro               = color.rgb(0, 0, 0, 0)
+c_amarillo_radiactivo = color.rgb(255, 255, 0, 0)
+c_cian_radiactivo     = color.rgb(0, 255, 255, 0)
+c_verde_radiactivo    = color.rgb(0, 255, 0, 0)
+c_verde               = color.rgb(0, 128, 0, 0)
+c_verde_oscuro        = color.rgb(0, 80, 0, 0)
+c_rojo_radiactivo     = color.rgb(255, 0, 0, 0)
+c_rojo                = color.rgb(128, 0, 0, 0)
+c_rojo_oscuro         = color.rgb(80, 0, 0, 0) 
+c_naranja_oscuro      = color.rgb(200, 120, 0, 0)
+noneColor             = color.new(color.white, 100)
+max_float             = 10000000000.0
+//== Funciones
+//== Declarar estrategia y período de testeo
+strategy("Larry Connors Strategy [JoseMetal]", shorttitle="Larry Connors Strategy [JoseMetal]", overlay=true, initial_capital=10000, pyramiding=0, default_qty_value=10, default_qty_type=strategy.percent_of_equity, commission_type=strategy.commission.percent, commission_value=0.0, max_labels_count=500, max_bars_back=1000)
+GRUPO_per_pruebas = "Período de pruebas"
+fecha_inicio     = input.time(0, "• Fecha de inicio", group=GRUPO_per_pruebas, tooltip="Las fechas son inclusivas") // timestamp("1 Jan 2000")
+fecha_fin_usar   = input.bool(false, "Fecha de finalización", group=GRUPO_per_pruebas, inline="fecha_finalizacion")
+fecha_fin        = input.time(timestamp("1 Jan 2999"), "", group=GRUPO_per_pruebas, inline="fecha_finalizacion")
+vela_en_fecha    = time >= fecha_inicio and (fecha_fin_usar ? time <= fecha_fin : true)
+posicion_abierta = strategy.position_size != 0
+LONG_abierto     = strategy.position_size > 0
+SHORT_abierto    = strategy.position_size < 0
+GRUPO_P           = "Posiciones"
+P_permitir_LONGS  = input.bool(title="¿LONGS?", group=GRUPO_P, defval=true, inline="pos_activadas")
+P_permitir_SHORTS = input.bool(title="¿SHORTS?", group=GRUPO_P, defval=true, inline="pos_activadas")
+GRUPO_TPSL       = "Stop Loss y Take Profit (ATR)"
+TPSL_SL_ATR_usar = input.bool(false, "¿Usar Stop Loss? / Mult. ATR", group=GRUPO_TPSL, inline="stop_loss")
+TPSL_SL_ATR_mult = input.float(3.1, "", group=GRUPO_TPSL, minval=0.1, step=0.1, inline="stop_loss", tooltip="Si está activado, se usará el ATR multiplicado por éste valor como Stop Loss")
+TPSL_TP_ATR_usar = input.bool(false, "¿Usar Take Profit? / Mult. ATR", group=GRUPO_TPSL, inline="take_profit")
+TPSL_TP_ATR_mult = input.float(3.1, "", group=GRUPO_TPSL, minval=0.1, step=0.1, inline="take_profit", tooltip="Si está activado, se usará el ATR multiplicado por éste valor como Take Profit")
+GRUPO_BE = "Break Even (ATR)"
+usar_be = input.bool(false, "¿Proteger posiciones? (Break Even)", group=GRUPO_BE)
+TPSL_break_even_req_mult = input.float(title="• Mult. para BREAK EVEN y STOP LOSS", group=GRUPO_BE, defval=1.0, minval=0.0, step=0.1, inline="be", tooltip="Cuando el precio avance a nuestro favor y llegue éste ATR, el Stop Loss se moverá a BREAK EVEN, de modo que la operación quede protegida.\nEl 'nivel de stop loss' nos permite que el stop se mueva aún más a favor de nuestro precio de entrada para además asegurar ganancias")
+TPSL_break_even_mult     = input.float(title="", group=GRUPO_BE, defval=0.8, minval=0.0, step=0.1, inline="be")
+GRUPO_general = "General"
+mostrar_color_velas = input.bool(title="Colorear velas", defval=true, group=GRUPO_general)
+mostrar_color_velas_2 = input.bool(title="Marcar velas neutras", defval=true, group=GRUPO_general)
+//== Inputs de indicadores
+// Medias móviles
+GRUPO_MAs = "MAs"
+MA_SALIDA_tipo   = input.string(title="• (Media de salida) Tipo / Fuente / Long.", group=GRUPO_MAs, defval="SMA", options=["SMA", "EMA", "WMA", "HMA"], inline="ma_salida")
+MA_SALIDA_fuente = input.source(title="", group=GRUPO_MAs, defval=close, inline="ma_salida")
+MA_SALIDA_length = input.int(title="", group=GRUPO_MAs, defval=10, minval=1, inline="ma_salida")
+MA_SALIDA        = ta.sma(MA_SALIDA_fuente, MA_SALIDA_length)
+MA_TENDENCIA_tipo   = input.string(title="• (Media de tendencia) Tipo / Fuente / Long.", group=GRUPO_MAs, defval="SMA", options=["SMA", "EMA", "WMA", "HMA"], inline="ma_tendencia")
+MA_TENDENCIA_fuente = input.source(title="", group=GRUPO_MAs, defval=close, inline="ma_tendencia")
+MA_TENDENCIA_length = input.int(title="", group=GRUPO_MAs, defval=200, minval=1, inline="ma_tendencia")
+MA_TENDENCIA        = ta.sma(MA_TENDENCIA_fuente, MA_TENDENCIA_length)
+if (MA_SALIDA_tipo == "EMA")
+    MA_SALIDA := ta.ema(MA_SALIDA_fuente, MA_SALIDA_length)
+else if (MA_SALIDA_tipo == "WMA")
+    MA_SALIDA := ta.wma(MA_SALIDA_fuente, MA_SALIDA_length)
+else if (MA_SALIDA_tipo == "HMA")
+    MA_SALIDA := ta.hma(MA_SALIDA_fuente, MA_SALIDA_length)
+if (MA_TENDENCIA_tipo == "EMA")
+    MA_TENDENCIA := ta.ema(MA_TENDENCIA_fuente, MA_TENDENCIA_length)
+else if (MA_TENDENCIA_tipo == "WMA")
+    MA_TENDENCIA := ta.wma(MA_TENDENCIA_fuente, MA_TENDENCIA_length)
+else if (MA_TENDENCIA_tipo == "HMA")
+    MA_TENDENCIA := ta.hma(MA_TENDENCIA_fuente, MA_TENDENCIA_length)
+// RSI
+GRUPO_RSI    = "RSI"
+RSI_src      = input.source(title="• Fuente / Longitud", group=GRUPO_RSI, defval=close, inline="rsi_calc")
+RSI_length   = input.int(title="", group=GRUPO_RSI, defval=2, minval=1, inline="rsi_calc")
+RSI          = ta.rsi(RSI_src, RSI_length)
+RSI_nivel_os = input.int(title="• Sobreventa / Sobrecompra", group=GRUPO_RSI, defval=5, minval=0, maxval=99, inline="rsi_niveles")
+RSI_nivel_ob = input.int(title="", group=GRUPO_RSI, defval=95, minval=1, maxval=100, inline="rsi_niveles")
+// ATR
+GRUPO_ATR      = "ATR"
+ATR_referencia = input.source(title="• Referencia / Longitud", group=GRUPO_ATR, defval=close, inline="atr_calc") // La fuente no se aplica al cálculo del ATR, es para el posicionamiento respecto al precio en el gráfico
+ATR_length     = input.int(title="", group=GRUPO_ATR, defval=7, minval=1, inline="atr_calc")
+ATR            = ta.atr(ATR_length)
+ATR_sl         = ATR * TPSL_SL_ATR_mult
+ATR_tp         = ATR * TPSL_TP_ATR_mult
+ATR_be_req     = ATR * TPSL_break_even_req_mult
+ATR_be         = ATR * TPSL_break_even_mult
+ATR_LONG_sl    = ATR_referencia - ATR_sl // De forma contraria el inferior se puede usar como STOP LOSS o TRAILING STOP
+ATR_LONG_tp    = ATR_referencia + ATR_tp // El ATR sobre las velas se puede usar como TAKE PROFIT
+ATR_SHORT_sl   = ATR_referencia + ATR_sl // ""
+ATR_SHORT_tp   = ATR_referencia - ATR_tp // Para Shorts es al revés
+ATR_LONG_break_even_req  = ATR_referencia + ATR_be_req
+ATR_SHORT_break_even_req = ATR_referencia - ATR_be_req
+ATR_LONG_break_even  = ATR_referencia + ATR_be
+ATR_SHORT_break_even = ATR_referencia - ATR_be
+//== Cálculo de condiciones
+cierre_sobre_MA_SALIDA = close > MA_SALIDA
+tendencia_alcista  = close > MA_TENDENCIA
+RSI_en_sobreventa  = RSI < RSI_nivel_os
+RSI_en_sobrecompra = RSI > RSI_nivel_ob
+//== Salida de posiciones
+exit_LONG_conditions  = cierre_sobre_MA_SALIDA
+exit_SHORT_conditions = not cierre_sobre_MA_SALIDA
+if (LONG_abierto and exit_LONG_conditions)
+    strategy.close("Abrir Long")
+if (SHORT_abierto and exit_SHORT_conditions)
+    strategy.close("Abrir Short")
+//== Entrada de posiciones (deben cumplirse todas para entrar)
+LONG_condition_1    = tendencia_alcista
+LONG_condition_2    = not cierre_sobre_MA_SALIDA // Vela con cierre bajo la media rápida
+LONG_condition_3    = RSI_en_sobreventa[1] and not RSI_en_sobreventa // Sobreventa en la vela anterior y ya no en la actual
+all_LONG_conditions = LONG_condition_1 and LONG_condition_2 and LONG_condition_3
+entrar_en_LONG      = P_permitir_LONGS and all_LONG_conditions and vela_en_fecha and not LONG_abierto
+SHORT_condition_1    = not tendencia_alcista
+SHORT_condition_2    = cierre_sobre_MA_SALIDA // Vela con cierre sobre la media rápida
+SHORT_condition_3    = RSI_en_sobrecompra[1] and not RSI_en_sobrecompra // Sobrecompra en la vela anterior y ya no en la actual
+all_SHORT_conditions = SHORT_condition_1 and SHORT_condition_2 and SHORT_condition_3
+entrar_en_SHORT      = P_permitir_SHORTS and all_SHORT_conditions and vela_en_fecha and not SHORT_abierto
+var LONG_stop_loss       = 0.0
+var LONG_take_profit     = max_float
+var LONG_break_even_req  = 0.0
+var LONG_break_even      = 0.0
+var SHORT_stop_loss      = max_float
+var SHORT_take_profit    = 0.0
+var SHORT_break_even_req = 0.0
+var SHORT_break_even     = 0.0
+var en_be = false
+if (not posicion_abierta)
+    en_be := false
+    LONG_stop_loss    := 0.0
+    LONG_take_profit  := max_float
+    SHORT_stop_loss   := max_float
+    SHORT_take_profit := 0.0
+if (not posicion_abierta)
+    if (entrar_en_LONG)
+        if (TPSL_SL_ATR_usar)
+            LONG_stop_loss   := ATR_LONG_sl
+        if (TPSL_TP_ATR_usar)
+            LONG_take_profit := ATR_LONG_tp
+        if (usar_be)
+            LONG_break_even_req := ATR_LONG_break_even_req
+            LONG_break_even     := ATR_LONG_break_even
+        strategy.entry("Abrir Long", strategy.long)
+        strategy.exit("Cerrar Long", "Abrir Long", stop=TPSL_SL_ATR_usar ? LONG_stop_loss : na, limit=TPSL_TP_ATR_usar ? LONG_take_profit : na)
+    else if (entrar_en_SHORT)
+        if (TPSL_SL_ATR_usar)
+            SHORT_stop_loss   := ATR_SHORT_sl
+        if (TPSL_TP_ATR_usar)
+            SHORT_take_profit := ATR_SHORT_tp
+        if (usar_be)
+            SHORT_break_even_req := ATR_SHORT_break_even_req
+            SHORT_break_even     := ATR_SHORT_break_even
+        strategy.entry("Abrir Short", strategy.short)
+        strategy.exit("Cerrar Short", "Abrir Short", stop=TPSL_SL_ATR_usar ? SHORT_stop_loss : na, limit=TPSL_TP_ATR_usar ? SHORT_take_profit : na)
+// Proteger operativa (Break Even)
+if (usar_be and not en_be)
+    if (LONG_abierto and LONG_stop_loss < LONG_break_even and close > LONG_break_even_req)
+        LONG_stop_loss := LONG_break_even
+        strategy.exit("Cerrar Long", "Abrir Long", stop=LONG_stop_loss, limit=TPSL_TP_ATR_usar ? LONG_take_profit : na)
+        en_be := true
+    else if (SHORT_abierto and SHORT_stop_loss > SHORT_break_even and close < SHORT_break_even_req)
+        SHORT_stop_loss := SHORT_break_even
+        strategy.exit("Cerrar Short", "Abrir Short", stop=SHORT_stop_loss, limit=TPSL_TP_ATR_usar ? SHORT_take_profit : na)
+        en_be := true
+//== Ploteo en pantalla
+// SMAs
+plot(MA_SALIDA, "Media de salida", color=color.aqua, linewidth=2)
+plot(MA_TENDENCIA, "Media tendencial", color=tendencia_alcista ? #00a800 : #ca0000, linewidth=4)
+// Color de fondo
+bgcolor = entrar_en_LONG ? color.new(color.green, 85) : entrar_en_SHORT ? color.new(color.red, 85) : color.new(color.black, 100)
+bgcolor(bgcolor)
+// Color de las velas según sobrecompra/sobreventa del RSI
+color_velas = mostrar_color_velas ? (RSI_en_sobreventa ? c_verde_radiactivo : RSI_en_sobrecompra ? c_rojo_radiactivo : mostrar_color_velas_2 ? c_negro : na) : na
+barcolor(color_velas)
+// Precio de compra, Stop Loss, Take Profit, Break Even...
+avg_position_price_plot = plot(posicion_abierta ? strategy.position_avg_price : na, color=color.new(color.white, 25), style=plot.style_linebr, linewidth=2, title="Precio Entrada")
+break_even_req_plot     = plot(posicion_abierta and usar_be and not en_be ? (LONG_abierto ? LONG_break_even_req : SHORT_break_even_req) : na, color=color.new(color.blue, 25), style=plot.style_linebr, linewidth=1, title="Nivel requerido para activar 'Break Even'")
+break_even_plot         = plot(posicion_abierta and usar_be and not en_be ? (LONG_abierto ? LONG_break_even : SHORT_break_even) : na, color=color.new(color.aqua, 25), style=plot.style_linebr, linewidth=1, title="Nivel de 'Break Even'")
+LONG_sl_plot            = plot(LONG_abierto and LONG_stop_loss > 0.0 ? LONG_stop_loss : na, color=en_be ? color.new(color.aqua, 25) : color.new(color.red, 25), style=plot.style_linebr, linewidth=3, title="Long Stop Loss")
+LONG_tp_plot            = plot(LONG_abierto and LONG_take_profit < max_float ? LONG_take_profit : na, color=color.new(color.lime, 25), style=plot.style_linebr, linewidth=3, title="LONG Take Profit")
+fill(avg_position_price_plot, LONG_sl_plot, color=color.new(color.maroon, 85))
+fill(avg_position_price_plot, LONG_tp_plot, color=color.new(color.olive, 85))
+SHORT_sl_plot            = plot(SHORT_abierto and SHORT_stop_loss < max_float ? SHORT_stop_loss : na, color=en_be ? color.new(color.aqua, 25) : color.new(color.red, 25), style=plot.style_linebr, linewidth=3, title="Short Stop Loss")
+SHORT_tp_plot            = plot(SHORT_abierto and SHORT_take_profit > 0.0 ? SHORT_take_profit : na, color=color.new(color.lime, 25), style=plot.style_linebr, linewidth=3, title="SHORT Take Profit")
+fill(avg_position_price_plot, SHORT_sl_plot, color=color.new(color.maroon, 85))
+fill(avg_position_price_plot, SHORT_tp_plot, color=color.new(color.olive, 85))
+Expand (237 lines)

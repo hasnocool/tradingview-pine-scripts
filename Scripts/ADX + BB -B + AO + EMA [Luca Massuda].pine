@@ -1,0 +1,233 @@
+Script Name: ADX + BB -B + AO + EMA [Luca Massuda]
+Author: luca.massuda
+Description: This trading strategy combines different indicators:
+1) ADX, Average Directional Movement: to spot the trend
+2) BB %B Bollinger Band %B: to spost relative price position to Bollinger Bands
+3) AO Awesome Oscillator: to spot momentum
+4) ema 5,ema21, ema50, ema200: to decide long or short position
+
+You can configure:
+Take profit % : at which % gains to take profit...
+PineScript code:
+
+Pine Script™ strategy
+ADX + BB %B + AO + EMA [Luca Massuda]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+//@version=4
+//ADX + BB %B + AO + EMA
+strategy("ADX + BB %B + AO + EMA", overlay=true, initial_capital=10000)
+take_profit_perc = input(title="Take Profit %", type=input.integer, defval=10, minval=1, maxval=100)
+stop_loss_perc = input(title="Stop Loss %", type=input.integer, defval=5, minval=1, maxval=100)
+bb_overbought = input(title="BB %B Overbought", type=input.integer, defval=75, minval=1, maxval=100)
+bb_oversold = input(title="BB %B Oversold", type=input.integer, defval=25, minval=1, maxval=100)
+ao_value = input(title="Awesome Oscillator", type=input.integer, defval=2)
+adx_value = input(title="ADX", type=input.integer, defval=15)
+startDate = input(title="Start Date", type=input.integer, defval=1, minval=1, maxval=31)
+startMonth = input(title="Start Month", type=input.integer, defval=1, minval=1, maxval=12)
+startYear = input(title="Start Year", type=input.integer, defval=2018, minval=2008, maxval=2200)
+inDateRange = (time >= timestamp(syminfo.timezone, startYear, startMonth, startDate, 0, 0))
+ema5 = ema(close, 5)
+ema21 = ema(close, 21)
+ema50 = ema(close, 50)
+ema200 = ema(close, 200)
+//BB %B
+length = input(20, minval=1)
+src = input(close, title="Source")
+mult = input(2.0, minval=0.001, maxval=50, title="StdDev")
+basis = sma(src, length)
+dev = mult * stdev(src, length)
+upper = basis + dev
+lower = basis - dev
+bbr = (src - lower)/(upper - lower)
+//Awesome Oscillator
+ao = sma(hl2,5) - sma(hl2,34)
+// ADX
+adxlen = input(14, title="ADX Smoothing")
+dilen = input(14, title="DI Length")
+dirmov(len) =>
+    up = change(high)
+    down = -change(low)
+    plusDM = na(up) ? na : (up > down and up > 0 ? up : 0)
+    minusDM = na(down) ? na : (down > up and down > 0 ? down : 0)
+    truerange = rma(tr, len)
+    plus = fixnan(100 * rma(plusDM, len) / truerange)
+    minus = fixnan(100 * rma(minusDM, len) / truerange)
+    [plus, minus]
+adx(dilen, adxlen) =>
+    [plus, minus] = dirmov(dilen)
+    sum = plus + minus
+    adx = 100 * rma(abs(plus - minus) / (sum == 0 ? 1 : sum), adxlen)
+sig = adx(dilen, adxlen)
+long_strategy = ema5>ema21 and ema50>ema200 and bbr>(bb_overbought/100) and ao>ao_value and sig>adx_value
+short_strategy = ema5<ema21 and ema50<ema200 and bbr<(bb_oversold/100) and ao<-ao_value and sig>adx_value
+plot(ema5, color=color.blue)
+plot(ema21, color=color.aqua)
+plot(ema50, color=color.purple)
+plot(ema200, color=color.red)
+bgcolor(color=long_strategy ? color.green : na, transp=80)
+bgcolor(color=short_strategy ? color.purple : na, transp=80)
+    
+if inDateRange and long_strategy
+    strategy.entry("long", strategy.long, 100)
+    strategy.exit("exit", "long", stop=strategy.position_avg_price*(100-stop_loss_perc)/100, limit=strategy.position_avg_price*(100+take_profit_perc)/100)
+if inDateRange and short_strategy
+    strategy.entry("short", strategy.short, 100)
+    strategy.exit("exit", "short", stop=strategy.position_avg_price*(100+stop_loss_perc)/100, limit=strategy.position_avg_price*(100-take_profit_perc)/100)
+    
+// Squeeze
+sqsrc = close
+sqlength = input(34)
+sqmedian=0
+sqmult=input(2.5)
+sqoffset = input(20)
+tr_custom() => 
+    x1=high-low
+    x2=abs(high-close[1])
+    x3=abs(low-close[1])
+    max(x1, max(x2,x3))
+    
+atr_custom(x,y) => 
+    sma(x,y)
+    
+sqdev = (sqmult * stdev(sqsrc, sqlength))
+sqbasis=linreg(sqsrc, sqlength, sqmedian)
+ul = (sqbasis + sqdev)
+ll = (sqbasis - sqdev)
+tr_v = tr_custom()
+acustom=(2*atr_custom(tr_v, sqlength))
+uls=sqbasis+acustom
+lls=sqbasis-acustom
+// Plot stdev channel
+plot(sqbasis, linewidth=1, color=color.navy, style=plot.style_line, linewidth=1, title="sqmedian")
+lb=plot(ul, color=color.red, linewidth=1, title="BB+", style=plot.style_linebr)
+tb=plot(ll, color=color.green, linewidth=1, title="BB-", style=plot.style_linebr)
+fill(tb,lb, color.silver, title="Region fill")
+// Plot ATR channel
+plot(sqbasis, linewidth=2, color=color.navy, style=plot.style_line, linewidth=2, title="sqmedian")
+ls=plot(uls, color=color.red, linewidth=1, title="Starc+", style=plot.style_circles)
+ts=plot(lls, color=color.green, linewidth=1, title="Star-", style=plot.style_circles)
+fill(ts,tb, color.green, title="Region fill")
+fill(ls,lb, color.red, title="Region fill")
+// Mark SQZ
+plot_offs_high=2
+plot_offs_low=2 
+sqz_f=(uls>ul) and (lls<ll)
+b_color=sqz_f ? color.teal : na
+plot(sqz_f ? lls-plot_offs_low : na, color=b_color, style=plot.style_cross, linewidth=2)
+plot(sqz_f ? uls+plot_offs_high : na, color=b_color, style=plot.style_cross, linewidth=2)
+Expand (115 lines)

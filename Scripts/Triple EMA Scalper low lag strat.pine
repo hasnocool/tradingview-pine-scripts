@@ -1,0 +1,143 @@
+Script Name: Triple EMA Scalper low lag strat
+Author: capam
+Description: Hi all,
+
+This strategy is based on the Amazing scalper for majors with risk management by SoftKill21
+
+
+The change is in lines 11-20 where the sma's are replaced with Triple ema's to
+lower the lag. 
+
+The original author is SoftKill21. His explanation is repeated below:
+
+Best suited for 1M time frame and majors currency pairs.
+Note that I tried it at 3M time frame....
+PineScript code:
+
+Pine Script™ strategy
+Triple EMA Scalper low lag strat
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+// original author SoftKill21
+//@version=4
+//@capam 
+strategy(title="Triple EMA Scalper low lag strat", shorttitle="3EMA scalper", overlay=true)
+len1 = input(25, minval=1, title="Length")
+len2 = input(50, minval=1, title="Length")
+len3 = input(100, minval=1, title="Length")
+src = input(close, title="Source")
+tmp1 = ema(src, len1)
+tmp2 = ema(src, len2)
+tmp3 = ema(src, len3)
+fastemaOut = 2*tmp1 - ema(tmp1, len1)
+standardemaOut = 2*tmp2 - ema(tmp2, len2)
+slowemaOut = 2*tmp3 - ema(tmp3, len3)
+//fastemaOut = sma(src, len1)
+//standardemaOut = sma(src, len2)
+//slowemaOut = sma(src, len3)
+plot(fastemaOut, color=color.black, title="First EMA")
+plot(standardemaOut, color=color.yellow, title="Second EMA")
+plot(slowemaOut, color=color.blue, title="Third EMA")
+timeinrange(res, sess) => time(res, sess) != 0
+londopen = timeinrange(timeframe.period, "0300-1100") 
+nyopen = timeinrange(timeframe.period, "0800-1600") 
+longCondition = crossover(fastemaOut,standardemaOut) and crossover(fastemaOut,slowemaOut) and londopen //or nyopen)
+shortCondition = crossunder(fastemaOut,standardemaOut) and crossunder(fastemaOut,slowemaOut) and londopen// or nyopen)
+longCondition2 = crossover(fastemaOut,standardemaOut) and crossover(fastemaOut,slowemaOut) and nyopen
+shortCondition2 = crossunder(fastemaOut,standardemaOut) and crossunder(fastemaOut,slowemaOut) and nyopen
+tp = input(50,title="TP")
+sl = input(100, title="SL")
+tradeLondon =  input(title="Trade london session?", type=input.bool, defval=true)
+tradeNewyork = input(title="Trade new york session?", type=input.bool, defval=true)
+//MONEY MANAGEMENT--------------------------------------------------------------
+balance = strategy.netprofit + strategy.initial_capital //current balance
+floating = strategy.openprofit          //floating profit/loss
+risk = input(1,type=input.float,title="Risk % of equity ")/100           //risk % per trade
+temp01 = balance * risk     //Risk in USD
+temp02 = temp01/sl        //Risk in lots
+temp03 = temp02*100000      //Convert to contracts
+size = temp03 - temp03%1000 //Normalize to 1000s (Trade size)
+if(size < 1000)
+    size := 1000        
+if(tradeLondon==true)
+    strategy.entry("long",1,size,when=longCondition)
+    strategy.exit("tp/sl","long",profit=tp,loss=sl)
+    
+    strategy.entry("short",0,size,when=shortCondition)
+    strategy.exit("tp/sl","short",profit=tp,loss=sl)
+if(tradeNewyork==true)
+    strategy.entry("long",1,size,when=longCondition2)
+    strategy.exit("tp/sl","long",profit=tp,loss=sl)
+    
+    strategy.entry("short",0,size,when=shortCondition2)
+    strategy.exit("tp/sl","short",profit=tp,loss=sl)
+strategy.risk.max_intraday_filled_orders(2) 
+Expand (69 lines)

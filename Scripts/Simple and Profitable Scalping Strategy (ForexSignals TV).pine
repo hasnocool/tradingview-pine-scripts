@@ -1,0 +1,754 @@
+Script Name: Simple and Profitable Scalping Strategy (ForexSignals TV)
+Author: kevinmck100
+Description: Strategy is based on the "SIMPLE and PROFITABLE Forex Scalping Strategy" taken from YouTube channel ForexSignals TV.
+See video for a detailed explaination of the whole strategy.
+
+I'm not entirely happy with the performance of this strategy yet however I do believe it has potential as the concept makes a lot of sense. 
+I'm open to any ideas people have on how it...
+PineScript code:
+
+Pine Script™ strategy
+Simple and Profitable Scalping Strategy (ForexSignals TV)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © kevinmck100
+// @description
+//
+// Strategy called SIMPLE and PROFITABLE Forex Scalping Strategy taken from YouTube channel ForexSignals TV.
+// See video for a detailed explaination of the whole strategy.
+//
+// It works on the basis of waiting for pullbacks into the EMAs while trading in the direction of the higher timeframe trend
+//
+// Strategy incorporates the following features:
+//
+//      - Risk management:  Configurable X% loss per stop loss
+//                          Configurable R:R ratio
+//
+//      - Trade entry:      Calculated position size based on risk tolerance
+//                          Entry price is a stop order set just above the recent swing high/low (long/short)
+//
+//      - Trade exit:       Stop Loss is set just below trigger candle's low/high (long/short)
+//                          Take Profit calculated from Stop Loss using R:R ratio
+//
+//      - Backtesting:      Configurable backtesting range by date
+//
+//      - Trade drawings:   TP/SL boxes drawn for all trades. Can be turned on and off
+//                          Trade exit information labels. Can be turned on and off
+//                          NOTE: Trade drawings will only be applicable when using overlay strategies
+//
+//      - Debugging:        Includes section with useful debugging techniques
+//
+// Strategy conditions:
+//
+//      - Trade entry:      LONG:   C1: On higher timeframe trend EMAs, Fast EMA must be above Slow EMA
+//                                  C2: On higher timeframe trend EMAs, price must be above Fast EMA
+//                                  C3: On current timeframe entry EMAs, Fast EMA must be above Medium EMA and Medium EMA must be above Slow EMA
+//                                  C4: On current timeframe entry EMAs, all 3 EMA lines must have fanned out in upward direction for previous X candles
+//                                  C5: On current timeframe entry EMAs, previous candle must have closed above and not touched any EMA lines
+//                                  C6: On current timeframe entry EMAs, current candle must have pulled back to touch the EMA line(s)
+//                                  C7: Price must break through the high of the last X candles to trigger entry
+//                          
+//                          SHORT:  C1: On higher timeframe trend EMAs, Fast EMA must be below Slow EMA
+//                                  C2: On higher timeframe trend EMAs, price must be below Fast EMA
+//                                  C3: On current timeframe entry EMAs, Fast EMA must be below Medium EMA and Medium EMA must be below Slow EMA
+//                                  C4: On current timeframe entry EMAs, all 3 EMA lines must have fanned out in downward direction for previous X candles
+//                                  C5: On current timeframe entry EMAs, previous candle must have closed above and not touched any EMA lines
+//                                  C6: On current timeframe entry EMAs, current candle must have pulled back to touch the EMA line(s)
+//                                  C7: Price must break through the low of the last X candles to trigger entry
+//
+//      - Trade exit:       Trade Invalidation: Price closes below/above (long/short) the current timeframe Slow EMA
+//                          Stop Loss:          Placed just below trigger candle low/high (long/short)
+//                          Take Profit:        R:R multiplier * Stop Loss is hit 
+//                                              NOTE: The original strategy uses 2 TP levels. I may add this in future but would like to see some better results from a single TP before I go to the effort to add this
+//@version=5
+INITIAL_CAPITAL = 1000
+DEFAULT_COMMISSION = 0.02
+MAX_DRAWINGS = 500
+IS_OVERLAY = true
+strategy("Simple and Profitable Scalping Strategy (ForexSignals TV)", "Scalping Strategy", overlay = IS_OVERLAY, initial_capital = INITIAL_CAPITAL, currency = currency.NONE, max_labels_count = MAX_DRAWINGS, max_boxes_count = MAX_DRAWINGS, max_lines_count = MAX_DRAWINGS, default_qty_type = strategy.cash, commission_type = strategy.commission.percent, commission_value = DEFAULT_COMMISSION)
+// =============================================================================
+// INPUTS
+// =============================================================================
+trendFilterTf       = input.timeframe   ("60",  "Trend Timeframe        ",          group = "Strategy: Higher Timeframe Trend Filter",  inline = "TF1",             tooltip = "Higher timeframe to use for finding main trand direction")
+trendFastEmaLen     = input.int         (8,     "Fast EMA Length        ",          group = "Strategy: Higher Timeframe Trend Filter",  inline = "TF2", minval = 1, tooltip = "Length of Fast EMA of higher timeframe")
+trendSlowEmaLen     = input.int         (21,    "Slow EMA Length          ",        group = "Strategy: Higher Timeframe Trend Filter",  inline = "TF3", minval = 1, tooltip = "Length of Slow EMA of higher timeframe")
+// ----------------------
+// Trade Entry Conditions
+// ----------------------
+entryFastEmaLen     = input.int         (8,     "Fast EMA Length          ",        group = "Strategy: Trade Entry Conditions",         inline = "TE1", minval = 1, tooltip = "Fast EMA used to find entry candles when price pulls back into this line")
+entryMedEmaLen      = input.int         (13,    "Medium EMA Length      ",          group = "Strategy: Trade Entry Conditions",         inline = "TE2", minval = 1, tooltip = "Medium EMA used to filter out entries when lines are not fanned out or not trending in the desired direction")
+entrySlowEmaLen     = input.int         (21,    "Slow EMA Length         ",         group = "Strategy: Trade Entry Conditions",         inline = "TE3", minval = 1, tooltip = "Slow EMA used to filter out entries when lines are not fanned out or not trending in the desired direction.\n\nAlso used to cancel open orders which close below this EMA before entry has been triggered")
+fanoutAtrMult       = input.float       (0.5,   "EMA Fanout ATR Multiplier    ",    group = "Strategy: Trade Entry Conditions",         inline = "TE4", step = 0.1, tooltip = "ATR multiplier to determine how but the fanout gap must be between the Fast EMA and Slow EMA over the specified number of candles")
+fanoutLookback      = input.int         (3,     "EMA Fanout Lookback      ",        group = "Strategy: Trade Entry Conditions",         inline = "TE5", minval = 1, tooltip = "Number of candles over which the entry EMA lines must be fanned out by the specified amount")
+priceBufferAtrMult  = input.float       (0.5,   "Price Buffer ATR Multiplier    ",  group = "Strategy: Trade Entry Conditions",         inline = "TE6", step = 0.1, tooltip = "ATR multiplier to determine how big of a butter should be set above/below trade entry and stop loss")
+localHighLookback   = input.int         (5,     "Entry Price High/Low Lookback ",   group = "Strategy: Trade Entry Conditions",         inline = "TE7", minval = 1, tooltip = "Number of candles to lookback on to find the local high/low which is used to establish the stop order entry price")
+// ---------------
+// Risk Management
+// ---------------
+riskReward          = input.float(2,    "Risk : Reward        1 :",                 group = "Strategy: Risk Management",                inline = "RM1", minval = 0, step = 0.1,     tooltip = "Previous high or low (long/short dependant) is used to determine TP level. 'Risk : Reward' ratio is then used to calculate SL based of previous high/low level.\n\nIn short, the higher the R:R ratio, the smaller the SL since TP target is fixed by previous high/low price data.")
+accountRiskPercent  = input.float(1,    "Portfolio Risk %         ",                group = "Strategy: Risk Management",                inline = "RM2", minval = 0, step = 0.1,     tooltip = "Percentage of portfolio you lose if trade hits SL.\n\nYou then stand to gain\n  Portfolio Risk % * Risk : Reward\nif trade hits TP.")
+// ----------
+// Date Range
+// ----------
+startYear           = input.int (2022,  "Start Date       ",                        group = 'Strategy: Date Range',                     inline = 'DR1', minval    = 1900, maxval = 2100)
+startMonth          = input.int (1,     "",                                         group = 'Strategy: Date Range',                     inline = 'DR1', options   = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+startDate           = input.int (1,     "",                                         group = 'Strategy: Date Range',                     inline = 'DR1', options   = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31])
+endYear             = input.int (2100,  "End Date      ",                           group = 'Strategy: Date Range',                     inline = 'DR2', minval    = 1900, maxval = 2100)
+endMonth            = input.int (1,     "",                                         group = 'Strategy: Date Range',                     inline = 'DR2', options   = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+endDate             = input.int (1,     "",                                         group = 'Strategy: Date Range',                     inline = 'DR2', options   = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31])
+// ----------------
+// Drawing Settings
+// ----------------
+showTpSlBoxes       = input.bool(true,  "Show TP / SL Boxes",                       group = "Strategy: Drawings",                       inline = "D1",  tooltip = "Show or hide TP and SL position boxes.\n\nNote: TradingView limits the maximum number of boxes that can be displayed to 500 so they may not appear for all price data under test.")
+showLabels          = input.bool(false, "Show Trade Exit Labels",                   group = "Strategy: Drawings",                       inline = "D2",  tooltip = "Useful labels to identify Profit/Loss and cumulative portfolio capital after each trade closes.\n\nAlso note that TradingView limits the max number of 'boxes' that can be displayed on a chart (max 500). This means when you lookback far enough on the chart you will not see the TP/SL boxes. However you can check this option to identify where trades exited.")
+// =============================================================================
+// INDICATORS
+// =============================================================================
+// --------------------------
+// Trend Higher Timeframe EMA
+// --------------------------
+var float currTrendFastEma  = na
+var float currTrendSlowEma  = na
+var color emaFillColor      = na
+trendFastEma                = ta.ema(close, trendFastEmaLen)
+trendSlowEma                = ta.ema(close, trendSlowEmaLen)
+fastSec                     = request.security(syminfo.tickerid, trendFilterTf, trendFastEma, barmerge.gaps_off, barmerge.lookahead_off)
+slowSec                     = request.security(syminfo.tickerid, trendFilterTf, trendSlowEma, barmerge.gaps_off, barmerge.lookahead_off)
+currTrendFastEma           := na(fastSec) ? currTrendFastEma[1] : fastSec
+currTrendSlowEma           := na(slowSec) ? currTrendSlowEma[1] : slowSec
+fastEmaPlot                 = plot(fastSec, color=color.green)
+slowEmaPlot                 = plot(slowSec, color=color.red)
+emaFillColor               := fastSec > slowSec ? color.new(color.green, 80) : fastSec < slowSec ? color.new(color.red, 80) : emaFillColor[1]
+fill(fastEmaPlot, slowEmaPlot, color = emaFillColor, fillgaps = true)
+// ---------------
+// Trade Entry EMA
+// ---------------
+entryFastEma    = ta.ema(close, entryFastEmaLen)
+entryMedEma     = ta.ema(close, entryMedEmaLen)
+entrySlowEma    = ta.ema(close, entrySlowEmaLen)
+plot(entryFastEma,  color = color.orange)
+plot(entryMedEma,   color = color.yellow)
+plot(entrySlowEma,  color = color.purple)
+// =============================================================================
+// STRATEGY LOGIC
+// =============================================================================
+// ---------
+// FUNCTIONS
+// ---------
+printLabel(barIndex, msg) => label.new(barIndex, close, msg)
+percentAsPoints(pcnt) =>
+    math.round(pcnt / 100 * close / syminfo.mintick)
+    
+calcStopLossPrice(pointsOffset, entryPrice, isLong) =>
+    priceOffset = pointsOffset * syminfo.mintick
+    if isLong
+        entryPrice - priceOffset
+    else 
+        entryPrice + priceOffset
+calcProfitTrgtPrice(pointsOffset, entryPrice, isLong) => calcStopLossPrice(-pointsOffset, entryPrice, isLong)
+    
+        
+printTpSlHitBox(left, right, slHit, tpHit, entryPrice, slPrice, tpPrice) => 
+    if showTpSlBoxes
+        box.new (left = left,   top = entryPrice,   right = right,  bottom = slPrice,   bgcolor = slHit ? color.new(color.red, 60)   : color.new(color.gray, 90), border_width = 0)
+        box.new (left = left,   top = entryPrice,   right = right,  bottom = tpPrice,   bgcolor = tpHit ? color.new(color.green, 60) : color.new(color.gray, 90), border_width = 0)
+        line.new(x1 = left,     y1 = entryPrice,    x2 = right,     y2 = entryPrice,    color = color.new(color.yellow, 20))
+        line.new(x1 = left,     y1 = slPrice,       x2 = right,     y2 = slPrice,       color = color.new(color.red, 20))
+        line.new(x1 = left,     y1 = tpPrice,       x2 = right,     y2 = tpPrice,       color = color.new(color.green, 20))
+        
+printTpSlNotHitBox(left, right, entryPrice, slPrice, tpPrice) => 
+    if showTpSlBoxes
+        box.new (left = left,   top = entryPrice,   right = right,  bottom = slPrice,   bgcolor = color.new(color.orange, 90), border_width = 0)
+        box.new (left = left,   top = entryPrice,   right = right,  bottom = tpPrice,   bgcolor = color.new(color.orange, 90), border_width = 0)
+        line.new(x1 = left,     y1 = entryPrice,    x2 = right,     y2 = entryPrice,    color = color.new(color.yellow, 20))
+        line.new(x1 = left,     y1 = slPrice,       x2 = right,     y2 = slPrice,       color = color.new(color.red, 20))
+        line.new(x1 = left,     y1 = tpPrice,       x2 = right,     y2 = tpPrice,       color = color.new(color.green, 20))
+        
+printTradeExitLabel(x, y, posSize, entryPrice, pnl) => 
+    if showLabels
+        labelStr = pnl != 0 ? "Position Size: " + str.tostring(math.abs(posSize), "#.##") + "\nPNL: " + str.tostring(pnl, "#.##") + "\nCapital: " + str.tostring(strategy.equity, "#.##") + "\nEntry Price: " + str.tostring(entryPrice, "#.##") : "Trade Cancelled"
+        label.new(x = x, y = y, text = labelStr, color = pnl > 0 ? color.new(color.green, 60) : pnl < 0 ? color.new(color.red, 60) : color.new(color.orange, 60), textcolor = color.white, style = label.style_label_down)
+printVerticalLine(col) => line.new(bar_index, close, bar_index, close * 1.01, extend = extend.both, color = col)
+// ----------
+// CONDITIONS
+// ----------
+inDateRange         = time >= timestamp(syminfo.timezone, startYear, startMonth, startDate, 0, 0) and time < timestamp(syminfo.timezone, endYear, endMonth, endDate, 0, 0)
+// Condition 1: Higher timeframe trend EMAs must be in correct order
+bullTrendDir        = currTrendFastEma > currTrendSlowEma
+bearTrendDir        = currTrendFastEma < currTrendSlowEma
+// Condition 2: Price must be outside the EMA trend band
+bullTrendPrice      = close > currTrendFastEma
+bearTrendPrice      = close < currTrendFastEma
+// Condition 3: EMA lines must be in correct order
+bullEmaOrder        = entryFastEma > entryMedEma and entryMedEma > entrySlowEma
+bearEmaOrder        = entryFastEma < entryMedEma and entryMedEma < entrySlowEma
+// Condition 4: EMA lines must fanned out for previous X candles
+fanOutGap           = ta.atr(14) * fanoutAtrMult
+var bullFanOutGap   = false
+var bearFanOutGap   = false
+bullFanOutGap      := false
+bearFanOutGap      := false
+for lookback = 0 to fanoutLookback - 1
+    bullFanOutGap := (entryFastEma[lookback] - fanOutGap) >  entrySlowEma[lookback]
+    if bullFanOutGap == false
+        break
+for lookback = 0 to fanoutLookback - 1
+    bearFanOutGap := (entryFastEma[lookback] + fanOutGap) <  entrySlowEma[lookback]
+    if bearFanOutGap == false
+        break
+        
+// This will ensure a given fannout gap exists between EACH EMA line, rather than just checking between Fast and Slow
+// Leaving it here in case  I decide to go back to it, or make it configurable between the two
+// for lookback = 0 to 3 - 1
+//     bullFanOutGap := (entryFastEma[lookback] - fanOutGap) > entryMedEma[lookback] and (entryMedEma[lookback] - fanOutGap) >  entrySlowEma[lookback]
+//     if bullFanOutGap == false
+//         break
+// for lookback = 0 to 3 - 1
+//     bearFanOutGap := (entryFastEma[lookback] + fanOutGap) < entryMedEma[lookback] and (entryMedEma[lookback] + fanOutGap) <  entrySlowEma[lookback]
+//     if bearFanOutGap == false
+//         break
+// Condition 5: Previous candle must not have touched any entry EMA lines
+bullBreakout        = low[1]  > entryFastEma[1]
+bearBreakout        = high[1] < entryFastEma[1]
+// Condition 6: Current candle must have touched the Fast EMA
+bullPullback        = low < entryFastEma
+bearPullback        = high > entryFastEma
+// Combine all entry conditions
+goLong              = inDateRange and bullTrendDir and bullTrendPrice and bullEmaOrder and bullFanOutGap and bullBreakout and bullPullback
+goShort             = inDateRange and bearTrendDir and bearTrendPrice and bearEmaOrder and bearFanOutGap and bearBreakout and bearPullback
+// Trade entry and exit variables
+var tradeEntryBar   = bar_index
+var profitPoints    = 0.
+var lossPoints      = 0.
+var slPrice         = 0.
+var slAmount        = 0.
+var slPercent       = 0.
+var tpPrice         = 0.
+var tpPercent       = 0.
+var inLong          = false
+var inShort         = false
+var float entryPrice= na
+var tradeCancelled  = false
+var tradeActive     = false
+// Entry decisions
+openLong            = (goLong and not inLong)
+openShort           = (goShort and not inShort)
+flippingSides       = (goLong and inShort) or (goShort and inLong)
+enteringTrade       = openLong or openShort
+inTrade             = inLong or inShort
+// Exit calculations
+// Condition 7: Price which must be broken to enter trade
+priceBuffer         = ta.atr(14) * priceBufferAtrMult
+localHigh           = ta.highest(high, localHighLookback)
+localLow            = ta.lowest(low, localHighLookback)
+if enteringTrade
+    entryPrice     := goLong ? localHigh + priceBuffer : goShort ? localLow - priceBuffer : na
+    slPrice        := openLong ? low - priceBuffer : openShort ? high + priceBuffer : na
+    slAmount       := math.abs(entryPrice - slPrice)
+    slPercent      := math.abs((1 - (entryPrice - slAmount) / entryPrice) * 100)
+    tpPercent      := slPercent * riskReward
+// Risk calculations
+riskAmt             = strategy.equity * accountRiskPercent / 100
+entryQty            = math.abs(riskAmt / slPercent * 100)  / close
+if openLong
+    if strategy.position_size < 0
+        printTpSlNotHitBox(tradeEntryBar + 1, bar_index + 1, strategy.position_avg_price, slPrice, tpPrice)
+        printTradeExitLabel(bar_index + 1, math.max(tpPrice, slPrice), strategy.position_size, strategy.position_avg_price, strategy.openprofit)
+    strategy.entry("Long", strategy.long, stop = entryPrice, qty = entryQty, alert_message = "Long Entry")
+    enteringTrade   := true
+    inLong          := true
+    inShort         := false
+    printVerticalLine(color.new(color.green, 60))
+if openShort
+    if strategy.position_size > 0
+        printTpSlNotHitBox(tradeEntryBar + 1, bar_index + 1, strategy.position_avg_price, slPrice, tpPrice)
+        printTradeExitLabel(bar_index + 1, math.max(tpPrice, slPrice), strategy.position_size, strategy.position_avg_price, strategy.openprofit)
+    strategy.entry("Short", strategy.short, stop = entryPrice, qty = entryQty, alert_message = "Short Entry")
+    enteringTrade   := true
+    inShort         := true
+    inLong          := false
+    printVerticalLine(color.new(color.red, 60))
+// Check if trade is active or not
+longActive = strategy.position_size[1] > 0
+shortActive = strategy.position_size[1] < 0
+activeTrade = longActive or shortActive
+// If price closes beyond the Slow EMA, then cancel any pending orders
+if not activeTrade and ((inLong and close < entrySlowEma) or (inShort and close > entrySlowEma))
+    printVerticalLine(color.new(color.silver, 60))
+    inLong          := false
+    inShort         := false
+    strategy.cancel_all()
+    tradeCancelled := true
+    
+if enteringTrade
+    profitPoints    := percentAsPoints(tpPercent)
+    lossPoints      := percentAsPoints(slPercent)
+    tpPrice         := calcProfitTrgtPrice(profitPoints, entryPrice, openLong)
+    tradeEntryBar   := bar_index
+strategy.exit("TP/SL", profit = profitPoints, loss = lossPoints, comment_profit = "TP Hit", comment_loss = "SL Hit", alert_profit = "TP Hit Alert", alert_loss = "SL Hit Alert")
+// =============================================================================
+// DRAWINGS
+// =============================================================================
+// -----------
+// TP/SL Boxes
+// -----------
+exitedOnCurrentBar =  strategy.closedtrades.entry_bar_index(strategy.closedtrades - 1) == bar_index
+slHit           = ((shortActive or exitedOnCurrentBar) and high >= slPrice) or ((longActive or exitedOnCurrentBar)  and low <= slPrice)
+tpHit           = ((longActive or exitedOnCurrentBar)  and high >= tpPrice) or ((shortActive or exitedOnCurrentBar) and low <= tpPrice)
+exitTriggered   = slHit or tpHit
+pnl             = strategy.closedtrades.profit      (strategy.closedtrades - 1)
+posSize         = strategy.closedtrades.size        (strategy.closedtrades - 1)
+// Print boxes for trades closed at profit or loss
+if (inTrade and exitTriggered and not tradeCancelled or exitedOnCurrentBar) 
+    inShort    := false
+    inLong     := false 
+    printTpSlHitBox(tradeEntryBar, bar_index, slHit, tpHit, entryPrice, slPrice, tpPrice)
+    printTradeExitLabel(bar_index, math.max(tpPrice, slPrice), posSize, entryPrice, pnl)
+// Print TP/SL box for current open trade
+else if barstate.islastconfirmedhistory and strategy.position_size != 0
+    printTpSlNotHitBox(tradeEntryBar + 1, bar_index + 1, strategy.position_avg_price, slPrice, tpPrice)
+// Trade cancelled before entry
+else if tradeCancelled
+    tradeCancelled := false
+    printTpSlNotHitBox(tradeEntryBar, bar_index, entryPrice, slPrice, tpPrice)
+    printTradeExitLabel(bar_index + 1, math.max(tpPrice, slPrice), strategy.position_size, strategy.position_avg_price, strategy.openprofit)
+    
+// =============================================================================
+// DEBUGGING
+// =============================================================================
+// Data window plots
+// Leaving all debugging plots in for now as they may be useful during future development/improvements for this strategy
+plotchar(currTrendFastEma,          "currTrendFastEma",     "")
+plotchar(currTrendSlowEma,          "currTrendSlowEma",     "")
+plotchar(fanOutGap,                 "fanGap",               "")
+plotchar(bullTrendDir,              "bullTrendDir",         "")
+plotchar(bullTrendPrice,            "bullTrendPrice",       "")
+plotchar(bullEmaOrder,              "bullEmaOrder",         "")
+plotchar(bullFanOutGap,             "bullFanOutGap",        "")
+plotchar(bullBreakout,              "bullBreakout",         "")
+plotchar(bullPullback,              "bullPullback",         "")
+plotchar(goLong,                    "goLong",               "")
+plotchar(inLong,                    "inLong",               "")
+plotchar(bearTrendDir,              "bearTrendDir",         "")
+plotchar(bearTrendPrice,            "bearTrendPrice",       "")
+plotchar(bearEmaOrder,              "bearEmaOrder",         "")
+plotchar(bearFanOutGap,             "bearFanOutGap",        "")
+plotchar(bearBreakout,              "bearBreakout",         "")
+plotchar(bearPullback,              "bearPullback",         "")
+plotchar(goShort,                   "goShort",              "")
+plotchar(inShort,                   "inShort",              "")
+plotchar(openLong,                  "openLong",             "")
+plotchar(openShort,                 "openShort",            "")
+plotchar(enteringTrade,             "enteringTrade",        "")
+plotchar(entryPrice,                "entryPrice",           "")
+plotchar(slPrice,                   "slPrice",              "")
+plotchar(tpPrice,                   "tpPrice",              "")
+plotchar(tpPercent,                 "tpPercent",            "")
+plotchar(slPercent,                 "slPercent",            "")
+plotchar(longActive,                "longActive",           "")
+plotchar(shortActive,               "shortActive",          "")
+plotchar(exitedOnCurrentBar,        "exitedOnCurrentBar",   "")
+plotchar(strategy.position_size,    "position_size After",  "")
+plotchar(slHit,                     "slHit",                "")
+plotchar(tpHit,                     "tpHit",                "")
+// Label plots
+// plotDebugLabels = false
+// if plotDebugLabels
+//     if bar_index == tradeEntryBar 
+//         printLabel(bar_index, "Position size: " + str.tostring(entryQty * close, "#.##"))
+Expand (395 lines)

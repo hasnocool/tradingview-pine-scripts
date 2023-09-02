@@ -1,0 +1,336 @@
+Script Name: BuyHighSellLow - Pivot points
+Author: Trendoscope
+Description: Another version of  buy-high sell-low  strategy. This time using pivot points.
+
+Strategy is simple:
+
+ 
+ Buy when price closes above R1 of pivot point level
+ Sell when price closes below S2 of pivot point level.
+ 
+
+Use  Resolution   parameter to define pivot points. Higher the resolution, longer the trade time will be. If resolution is set to same as symbol,...
+PineScript code:
+
+Pine Script™ strategy
+BuyHighSellLow - Pivot points
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HeWhoMustNotBeNamed
+//@version=4
+strategy("BuyHighSellLow - Pivot points", overlay=true, initial_capital = 100000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, pyramiding = 1, commission_value = 0.01)
+Source = input(close)
+resolution = input("4D", type=input.resolution)
+HTFMultiplier = input(4, title="Higher Timeframe multiplier (Used when resolution is set to Same as Symbol)", minval=2, step=1)
+//ppType = input(title="Pivot points type", defval="classic", options=["classic", "fib"])
+ppType = "fib"
+tradeDirection = input(title="Trade Direction", defval=strategy.direction.long, options=[strategy.direction.all, strategy.direction.long, strategy.direction.short])
+backtestBars = input(title="Backtest from ", defval=10, minval=1, maxval=30)
+backtestFrom = input(title="Timeframe", defval="years", options=["days", "months", "years"])
+hideBands = input(true)
+f_multiple_resolution(HTFMultiplier) => 
+    target_Res_In_Min = timeframe.multiplier * HTFMultiplier * (
+      timeframe.isseconds   ? 1. / 60. :
+      timeframe.isminutes   ? 1. :
+      timeframe.isdaily     ? 1440. :
+      timeframe.isweekly    ? 7. * 24. * 60. :
+      timeframe.ismonthly   ? 30.417 * 24. * 60. : na)
+    target_Res_In_Min     <= 0.0417       ? "1S"  :
+      target_Res_In_Min   <= 0.167        ? "5S"  :
+      target_Res_In_Min   <= 0.376        ? "15S" :
+      target_Res_In_Min   <= 0.751        ? "30S" :
+      target_Res_In_Min   <= 1440         ? tostring(round(target_Res_In_Min)) :
+      tostring(round(min(target_Res_In_Min / 1440, 365))) + "D"
+f_getBackTestTimeFrom(backtestFrom, backtestBars)=>
+    byDate = backtestFrom == "days"
+    byMonth = backtestFrom == "months"
+    byYear = backtestFrom == "years"
+    
+    date = dayofmonth(timenow)
+    mth = month(timenow)
+    yr = year(timenow)
+    
+    leapYearDaysInMonth = array.new_int(12,0)
+    array.set(leapYearDaysInMonth,0,31)
+    array.set(leapYearDaysInMonth,1,29)
+    nonleapYearDaysInMonth = array.new_int(12,0)
+    array.set(leapYearDaysInMonth,0,31)
+    array.set(leapYearDaysInMonth,1,28)
+    
+    restMonths = array.new_int(10,0)
+    array.set(leapYearDaysInMonth,0,31)
+    array.set(leapYearDaysInMonth,1,30)
+    array.set(leapYearDaysInMonth,2,31)
+    array.set(leapYearDaysInMonth,3,30)
+    array.set(leapYearDaysInMonth,4,31)
+    array.set(leapYearDaysInMonth,5,31)
+    array.set(leapYearDaysInMonth,6,30)
+    array.set(leapYearDaysInMonth,7,31)
+    array.set(leapYearDaysInMonth,8,30)
+    array.set(leapYearDaysInMonth,9,31)
+    
+    array.concat(leapYearDaysInMonth,restMonths)
+    array.concat(nonleapYearDaysInMonth,restMonths)
+    isLeapYear = yr % 4 == 0 and (year%100 != 0 or year%400 == 0)
+    numberOfDaysInCurrentMonth = isLeapYear ? array.get(leapYearDaysInMonth, mth-2) : array.get(nonleapYearDaysInMonth, mth-2)
+    if(byDate)
+        mth := (date - backtestBars) < 0 ? mth - 1 : mth
+        yr := mth < 1 ? yr - 1 : yr
+        mth := mth < 1 ? 1 : mth
+        date := (date - backtestBars) < 0 ? numberOfDaysInCurrentMonth - backtestBars + date + 1 : date - backtestBars + 1
+    if(byMonth)
+        date := 1
+        yr := (mth - (backtestBars%12)) < 0 ? yr - int(backtestBars/12) - 1 : yr - int(backtestBars/12)
+        mth := mth - (backtestBars%12) + 1
+    if(byYear)
+        date := 1
+        mth := 1
+        yr := yr - backtestBars
+    [date, mth, yr]
+f_secureSecurity(_symbol, _res, _src) => security(_symbol, _res, _src[1], lookahead = barmerge.lookahead_on)
+f_getClassicPivots(HIGHprev, LOWprev, CLOSEprev)=>
+    PP = (HIGHprev + LOWprev + CLOSEprev) / 3
+    R1 = PP * 2 - LOWprev
+    S1 = PP * 2 - HIGHprev
+    R2 = PP + (HIGHprev - LOWprev)
+    S2 = PP - (HIGHprev - LOWprev)
+    R3 = PP * 2 + (HIGHprev - 2 * LOWprev)
+    S3 = PP * 2 - (2 * HIGHprev - LOWprev)
+    R4 = PP * 3 + (HIGHprev - 3 * LOWprev)
+    S4 = PP * 3 - (3 * HIGHprev - LOWprev)
+    R5 = PP * 4 + (HIGHprev - 4 * LOWprev)
+    S5 = PP * 4 - (4 * HIGHprev - LOWprev)
+    [R5, R4, R3, R2, R1, PP, S1, S2, S3, S4, S5]
+    
+f_getFibPivots(HIGHprev, LOWprev, CLOSEprev)=>
+    PP = (HIGHprev + LOWprev + CLOSEprev) / 3
+    R1 = PP + 0.382 * (HIGHprev - LOWprev)
+    S1 = PP - 0.382 * (HIGHprev - LOWprev)
+    R2 = PP + 0.618 * (HIGHprev - LOWprev)
+    S2 = PP - 0.618 * (HIGHprev - LOWprev)
+    R3 = PP + (HIGHprev - LOWprev)
+    S3 = PP - (HIGHprev - LOWprev)
+    R4 = PP + 1.41 * (HIGHprev - LOWprev)
+    S4 = PP - 1.41 * (HIGHprev - LOWprev)
+    R5 = PP + 1.65 * (HIGHprev - LOWprev)
+    S5 = PP - 1.65 * (HIGHprev - LOWprev)
+    [R5, R4, R3, R2, R1, PP, S1, S2, S3, S4, S5]
+    
+f_getPivotPoints(HTFMultiplier, resolution, ppType)=>
+    derivedResolution = resolution == ""? f_multiple_resolution(HTFMultiplier) : resolution
+    HIGHprev = f_secureSecurity(syminfo.tickerid, derivedResolution, high)
+    LOWprev = f_secureSecurity(syminfo.tickerid, derivedResolution, low)
+    CLOSEprev = f_secureSecurity(syminfo.tickerid, derivedResolution, close)
+    [R5, R4, R3, R2, R1, PP, S1, S2, S3, S4, S5] = f_getClassicPivots(HIGHprev, LOWprev, CLOSEprev)
+    [Rf5, Rf4, Rf3, Rf2, Rf1, PPf, Sf1, Sf2, Sf3, Sf4, Sf5] = f_getFibPivots(HIGHprev, LOWprev, CLOSEprev)
+    [R5, R4, R3, R2, R1, PP, S1, S2, S3, S4, S5]
+f_getState(Source, R5, R4, R3, R2, R1, PP, S1, S2, S3, S4, S5)=>
+    state =
+     Source > R5 ? 5 :
+     Source > R4 ? 4 :
+     Source > R3 ? 3 : 
+     Source > R2 ? 2 :
+     Source > R1 ? 1 :
+     Source > PP ? 0 :
+     Source > S1 ? -1 :
+     Source > S2 ? -2 :
+     Source > S3 ? -3 :
+     Source > S4 ? -4 :
+     Source > S5 ? -5 : -6
+    state
+[R5, R4, R3, R2, R1, PP, S1, S2, S3, S4, S5] = f_getPivotPoints(HTFMultiplier, resolution, ppType)
+[date, mth, yr] = f_getBackTestTimeFrom(backtestFrom, backtestBars)
+inDateRange = time >= timestamp(syminfo.timezone, yr, mth, date, 0, 0)
+BBU5 = plot(not hideBands ? R5: na, title="R5", color=color.orange, linewidth=1, transp=50, style=plot.style_linebr)
+BBU4 = plot(not hideBands ? R4: na, title="R4", color=color.yellow, linewidth=1, transp=50, style=plot.style_linebr)
+BBU3 = plot(not hideBands ? R3: na, title="R3", color=color.navy, linewidth=1, transp=50, style=plot.style_linebr)
+BBU2 = plot(not hideBands ? R2: na, title="R2", color=color.olive, linewidth=1, transp=50, style=plot.style_linebr)
+BBU1 = plot(not hideBands ? R1: na, title="R1", color=color.lime, linewidth=1, transp=50, style=plot.style_linebr)
+BBM4 = plot(not hideBands ? PP:na, title="PP", color=color.black, linewidth=2, style=plot.style_linebr)
+BBL1 = plot(not hideBands ? S1: na, title="S1", color=color.lime, linewidth=1, transp=50, style=plot.style_linebr)
+BBL2 = plot(not hideBands ? S2: na, title="S2", color=color.olive, linewidth=1, transp=50, style=plot.style_linebr)
+BBL3 = plot(not hideBands ? S3: na, title="S3", color=color.navy, linewidth=1, transp=50, style=plot.style_linebr)
+BBL4 = plot(not hideBands ? S4: na, title="S4", color=color.yellow, linewidth=1, transp=50, style=plot.style_linebr)
+BBL5 = plot(not hideBands ? S5: na, title="S5", color=color.orange, linewidth=1, transp=50, style=plot.style_linebr)
+fill(BBU5, BBU4, title="RZ5", color=color.green, transp=90)
+fill(BBU4, BBU3, title="RZ4", color=color.lime, transp=90)
+fill(BBU3, BBU2, title="RZ3", color=color.olive, transp=90)
+fill(BBU2, BBU1, title="RZ2", color=color.navy, transp=90)
+fill(BBU1, BBM4, title="RZ1", color=color.yellow, transp=90)
+fill(BBM4, BBL1, title="SZ1", color=color.orange, transp=90)
+fill(BBL1, BBL2, title="SZ2", color=color.red, transp=90)
+fill(BBL2, BBL3, title="SZ3", color=color.maroon, transp=90)
+fill(BBL3, BBL4, title="SZ4", color=color.maroon, transp=90)
+fill(BBL4, BBL5, title="SZ5", color=color.maroon, transp=90)
+strategy.risk.allow_entry_in(tradeDirection)
+longCondition = crossover(Source[1],R1) and inDateRange
+shortCondition = crossunder(Source[1], S2) and inDateRange
+strategy.entry("Buy", strategy.long, when=longCondition, oca_name="oca", oca_type=strategy.oca.cancel)
+strategy.entry("Sell", strategy.short, when=shortCondition, oca_name="oca", oca_type=strategy.oca.cancel)
+Expand (166 lines)

@@ -1,0 +1,307 @@
+Script Name: First Script, buy-sell on EMA
+Author: dejoski
+Description: Spent many hours working on a script to find out when the next earnings report is.. there should be a builtin feature but anyways, it's done now.. The strat is to buy and sell based on the EMA (Whatever that is) and to exit all entries if the Earnings report is within a week.
+PineScript code:
+
+Pine Script™ strategy
+First Script, buy/sell on EMA
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © dejoski
+//@version=4
+strategy(title="My Strategy ", default_qty_type = strategy.percent_of_equity,overlay=true, default_qty_value=100)
+fastLength = input(12, minval=1), slowLength=input(26,minval=1)
+signalLength=input(9,minval=1)
+// fastLength = 12, signalLength = 26
+fastMA = ema(close, fastLength)
+slowMA = ema(close, slowLength)
+macd = fastMA - slowMA
+signal = sma(macd, signalLength)
+hist = macd - signal
+pricedif7 = close-close[15]
+// plot(rsi(open,7))
+fastMA2 = ema(close[1], fastLength)
+slowMA2 = ema(close[1], slowLength)
+macd2 = fastMA2 - slowMA2
+signal2 = sma(macd2, signalLength)
+hist2 = macd2 - signal2
+// outSignal = security(tickerid, res, signal)
+sigdif = signal-signal2
+histdif = hist - hist2
+// plot(histdif)
+fastMA3 = ema(close[2], fastLength)
+slowMA3 = ema(close[2], slowLength)
+macd3 = fastMA3 - slowMA3
+signal3 = sma(macd3, signalLength)
+hist3 = macd3 - signal3
+// outSignal = security(tickerid, res, signal)
+sigdif2 = signal-signal3
+histdif2 = hist2 - hist3
+// plot(histdif2)
+hist_momentum = histdif+histdif2
+momentum = (abs(hist_momentum)/(open/10))
+fastMA7 = ema(close[10], fastLength)
+slowMA7 = ema(close[10], slowLength)
+macd7 = fastMA7 - slowMA7
+signal7 = sma(macd7, signalLength)
+hist7 = macd7 - signal7
+// outSignal = security(tickerid, res, signal)
+sigdif7 = signal-signal7
+histdif7 = hist - hist7
+// plot(histdif7)
+// plot(outSignal[1])
+// percent_red = (5+hist)/(5+(signal))
+// macd = fastMA - slowMA
+// signal = sma(macd, 9)
+//these were on
+// plot(pricedif7)
+// plot(histdif, color=color.green)
+// plot(histdif2, color=color.green)
+// plot(hist_momentum, color=color.orange)
+// plot((momentum), color=color.orange)
+// plot(sigdif7)
+// plot(macd, color=color.blue)
+// plot(signal, color=color.orange)
+// plot(hist, color=color.red)
+// plot(percent_red, color=color.green)
+GoodMacd = false
+madc_threshold = 0.5
+sell_threshold = -0.5
+if (signal>=madc_threshold)
+    GoodMacd := true
+if (signal<madc_threshold)
+    GoodMacd := false
+    
+// t = "ESD:" + ticker + "_EARNINGS"
+// esti = security(t, "D", open, true)
+// earn = security(t, "D", close, true)
+// plot(esti, style=circles, linewidth=4)
+// plot(earn, style=cross, linewidth=4)
+// longCondition = crossover(sma(close, 14), sma(close, 28))
+esd = "EARNINGS"
+t = tickerid(prefix = "ESD", ticker=syminfo.prefix + ";" + syminfo.ticker + ";" + esd)
+prefix = syminfo.prefix  //input("NASDAQ", "Exchange Prefix")
+tick = syminfo.ticker  // input("TSLA", "Ticker")
+earning = security("ESD_FACTSET:" + prefix + ";" + tick + ";EARNINGS", "D", close, true)
+c = security(t, "D", close, true)
+o = security(t, "D", open, true)
+h = security(t, "D", high, true)
+// h2 = security(t, "D", high[1], true, lookahead = barmerge.lookahead_on)
+u = security(t, "D", updatetime, true)
+// c - earning
+// o - estimate
+// h - date (in unix time)
+// u - period ending (in unix time)
+// last_c = c
+// last_c := c?c:nz(last_c[1])
+last_earnings_time = h
+last_earnings_time := h?h:last_earnings_time[1]
+t_minus = time/1000-last_earnings_time
+max = 0.0
+max := t_minus>nz(max[1]) or max[1]>22820200.00?t_minus:nz(max[1])
+// plotchar(max, "check", "", location = location.top)
+// plotchar(c, location=location.absolute, color=color.green, size=size.tiny)
+// plotchar(t_minus>=max-172800?true:na, location=location.absolute, color=color.red, size=size.tiny)
+emaplot = input (true, title="Show EMA on chart")
+len = input(8, minval=1, title="ema Length")
+src = close
+out = ema(src, len)
+up = out > out[1]
+down = out < out[1]
+buy = up ? true : down ? false : false
+mycolor = up ? color.green : down ? color.red : color.blue
+plot(out and emaplot ? out :na, title="EMA", color=mycolor, linewidth=3)
+// if (GoodMacd and (macd >= signal))
+// if (GoodMacd and hist> 0)
+sigdif_thresh = 0.0
+days = 7
+days_in_sec = days*86400
+time_before_earnings = days_in_sec
+earnings_soon = t_minus>=(max-time_before_earnings)?true:na
+// plotshape(earnings_soon)
+plotchar(earnings_soon,"Exit all, earnings soon!", location=location.bottom, color=color.orange, size=size.tiny)
+if (buy and not earnings_soon)
+    strategy.close("short")
+    strategy.entry("long", strategy.long, when = strategy.position_size == 0 )
+if (not buy and not earnings_soon)    
+    strategy.close("long")
+    strategy.entry("short", strategy.short, when = strategy.position_size == 0 )
+if (earnings_soon)
+    strategy.close("short")
+    strategy.close("long")
+    
+    
+    
+    
+    
+Expand (170 lines)

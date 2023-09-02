@@ -1,0 +1,535 @@
+Script Name: Triple Threat
+Author: alexjnelson
+Description: This indicator provides buy and sell signals for Bitcoin based on confluence from well-known momentum, volatility, and trend indicators. It has successfully captured the major directional trends on Bitcoin's daily chart since 2018, and the settings are currently optimized for this chart in particular. This indicator implements RSI to gauge momentum, BBWP to gauge...
+PineScript code:
+
+Pine Script™ strategy
+Triple Threat
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+//////////////////////////////////////////////////////////////////////////////
+// The following is code by The_Caretaker used to create the BBWP indicator. 
+// Shoutout to The_Caretaker as well as the rest of the Krown Crypto team.
+// Past this section is original code.
+//
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// @version = 4
+// @author  = The_Caretaker
+// © The_Caretaker
+//
+// Much respect to John A Bollinger the creator of Bollinger Bands® and Bollinger Band Width indicators.
+// 
+// Feel free to reuse or develop this script further, please drop me a note below if you find it useful.
+//
+strategy("Triple Threat", overlay=false, precision=2, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=100000, pyramiding=0)
+i_priceSrc      = input ( close,            "Price Source", input.source,       group = "General Properties" )
+show_rsi = input(true, 'Show RSI?', type=input.bool, group="General Properties")
+show_bbwp = input(true, 'Show BBWP?', type=input.bool, group="General Properties")
+show_signals = input(true, 'Show Signals?', type=input.bool, group="General Properties")
+show_unconfirmed = input(true, 'Show Unconfirmed Signals?', type=input.bool, group="General Properties")
+///////////////////////////////////////////////////////////////////////////////
+// inputs
+                                                              
+i_basisType     = input ( "SMA",            "Basis Type",   input.string,  options = [ "SMA", "EMA", "VWMA" ],                          group = "BBWP Properties" )
+i_bbwpLen       = input ( 21,               "Length",       input.integer, minval  = 1,                                                 group = "BBWP Properties" )
+i_bbwpLkbk      = input ( 255,              "Lookback",     input.integer, minval  = 1,                                                 group = "BBWP Properties" )
+i_c_bbwpTyped   = input ( "Spectrum",       "Color Type",   input.string,  options = [ "Spectrum", "Solid" ],           inline = "1",   group = "BBWP Plot Settings" )
+i_c_spctrmType  = input ( "Blue Green Red", "Spectrum",     input.string,  options = [ "Blue Red", "Blue Green Red"],   inline = "1",   group = "BBWP Plot Settings" )
+i_c_bbwpsolid   = input ( #FFFF00,          "Solid",        input.color,                                                inline = "1",   group = "BBWP Plot Settings" )
+i_bbwpWidth     = input ( 2,                "Line Width",   input.integer, minval  = 1, maxval = 4,                     inline = "2",   group = "BBWP Plot Settings" )
+i_ma1On         = input ( true,             "",             input.bool,                                                 inline = "1",   group = "Moving Average Settings" )
+i_ma1Type       = input ( "SMA",            "MA 1 Type",    input.string,  options = [ "SMA", "EMA", "VWMA" ],          inline = "1",   group = "Moving Average Settings" )
+i_c_ma1         = input ( #FFFFFF,          "",             input.color,                                                inline = "1",   group = "Moving Average Settings" )
+i_ma1Len        = input ( 8,                "Length",       input.integer, minval  = 1,                                 inline = "1",   group = "Moving Average Settings" )
+///////////////////////////////////////////////////////////////////////////////
+// variable declarations
+var c_prcntSpctrm1 = array.new_color ( na )
+if barstate.isfirst
+    array.push ( c_prcntSpctrm1, #0000FF ),
+    array.push ( c_prcntSpctrm1, #000AFF ), array.push ( c_prcntSpctrm1, #0014FF ), array.push ( c_prcntSpctrm1, #001FFF ), array.push ( c_prcntSpctrm1, #0029FF ), array.push ( c_prcntSpctrm1, #0033FF ),
+    array.push ( c_prcntSpctrm1, #003DFF ), array.push ( c_prcntSpctrm1, #0047FF ), array.push ( c_prcntSpctrm1, #0052FF ), array.push ( c_prcntSpctrm1, #005CFF ), array.push ( c_prcntSpctrm1, #0066FF ),
+    array.push ( c_prcntSpctrm1, #0070FF ), array.push ( c_prcntSpctrm1, #007AFF ), array.push ( c_prcntSpctrm1, #0085FF ), array.push ( c_prcntSpctrm1, #008FFF ), array.push ( c_prcntSpctrm1, #0099FF ), 
+    array.push ( c_prcntSpctrm1, #00A3FF ), array.push ( c_prcntSpctrm1, #00ADFF ), array.push ( c_prcntSpctrm1, #00B8FF ), array.push ( c_prcntSpctrm1, #00C2FF ), array.push ( c_prcntSpctrm1, #00CCFF ), 
+    array.push ( c_prcntSpctrm1, #00D6FF ), array.push ( c_prcntSpctrm1, #00E0FF ), array.push ( c_prcntSpctrm1, #00EBFF ), array.push ( c_prcntSpctrm1, #00F5FF ), array.push ( c_prcntSpctrm1, #00FFFF ), 
+    array.push ( c_prcntSpctrm1, #00FFF5 ), array.push ( c_prcntSpctrm1, #00FFEB ), array.push ( c_prcntSpctrm1, #00FFE0 ), array.push ( c_prcntSpctrm1, #00FFD6 ), array.push ( c_prcntSpctrm1, #00FFCC ), 
+    array.push ( c_prcntSpctrm1, #00FFC2 ), array.push ( c_prcntSpctrm1, #00FFB8 ), array.push ( c_prcntSpctrm1, #00FFAD ), array.push ( c_prcntSpctrm1, #00FFA3 ), array.push ( c_prcntSpctrm1, #00FF99 ), 
+    array.push ( c_prcntSpctrm1, #00FF8F ), array.push ( c_prcntSpctrm1, #00FF85 ), array.push ( c_prcntSpctrm1, #00FF7A ), array.push ( c_prcntSpctrm1, #00FF70 ), array.push ( c_prcntSpctrm1, #00FF66 ), 
+    array.push ( c_prcntSpctrm1, #00FF5C ), array.push ( c_prcntSpctrm1, #00FF52 ), array.push ( c_prcntSpctrm1, #00FF47 ), array.push ( c_prcntSpctrm1, #00FF3D ), array.push ( c_prcntSpctrm1, #00FF33 ), 
+    array.push ( c_prcntSpctrm1, #00FF29 ), array.push ( c_prcntSpctrm1, #00FF1F ), array.push ( c_prcntSpctrm1, #00FF14 ), array.push ( c_prcntSpctrm1, #00FF0A ), array.push ( c_prcntSpctrm1, #00FF00 ), 
+    array.push ( c_prcntSpctrm1, #0AFF00 ), array.push ( c_prcntSpctrm1, #14FF00 ), array.push ( c_prcntSpctrm1, #1FFF00 ), array.push ( c_prcntSpctrm1, #29FF00 ), array.push ( c_prcntSpctrm1, #33FF00 ), 
+    array.push ( c_prcntSpctrm1, #3DFF00 ), array.push ( c_prcntSpctrm1, #47FF00 ), array.push ( c_prcntSpctrm1, #52FF00 ), array.push ( c_prcntSpctrm1, #5CFF00 ), array.push ( c_prcntSpctrm1, #66FF00 ), 
+    array.push ( c_prcntSpctrm1, #70FF00 ), array.push ( c_prcntSpctrm1, #7AFF00 ), array.push ( c_prcntSpctrm1, #85FF00 ), array.push ( c_prcntSpctrm1, #8FFF00 ), array.push ( c_prcntSpctrm1, #99FF00 ), 
+    array.push ( c_prcntSpctrm1, #A3FF00 ), array.push ( c_prcntSpctrm1, #ADFF00 ), array.push ( c_prcntSpctrm1, #B8FF00 ), array.push ( c_prcntSpctrm1, #C2FF00 ), array.push ( c_prcntSpctrm1, #CCFF00 ), 
+    array.push ( c_prcntSpctrm1, #D6FF00 ), array.push ( c_prcntSpctrm1, #E0FF00 ), array.push ( c_prcntSpctrm1, #EBFF00 ), array.push ( c_prcntSpctrm1, #F5FF00 ), array.push ( c_prcntSpctrm1, #FFFF00 ), 
+    array.push ( c_prcntSpctrm1, #FFF500 ), array.push ( c_prcntSpctrm1, #FFEB00 ), array.push ( c_prcntSpctrm1, #FFE000 ), array.push ( c_prcntSpctrm1, #FFD600 ), array.push ( c_prcntSpctrm1, #FFCC00 ), 
+    array.push ( c_prcntSpctrm1, #FFC200 ), array.push ( c_prcntSpctrm1, #FFB800 ), array.push ( c_prcntSpctrm1, #FFAD00 ), array.push ( c_prcntSpctrm1, #FFA300 ), array.push ( c_prcntSpctrm1, #FF9900 ), 
+    array.push ( c_prcntSpctrm1, #FF8F00 ), array.push ( c_prcntSpctrm1, #FF8500 ), array.push ( c_prcntSpctrm1, #FF7A00 ), array.push ( c_prcntSpctrm1, #FF7000 ), array.push ( c_prcntSpctrm1, #FF6600 ), 
+    array.push ( c_prcntSpctrm1, #FF5C00 ), array.push ( c_prcntSpctrm1, #FF5200 ), array.push ( c_prcntSpctrm1, #FF4700 ), array.push ( c_prcntSpctrm1, #FF3D00 ), array.push ( c_prcntSpctrm1, #FF3300 ), 
+    array.push ( c_prcntSpctrm1, #FF2900 ), array.push ( c_prcntSpctrm1, #FF1F00 ), array.push ( c_prcntSpctrm1, #FF1400 ), array.push ( c_prcntSpctrm1, #FF0000 ), array.push ( c_prcntSpctrm1, #FF0000 )
+var c_prcntSpctrm2 = array.new_color ( na )
+if barstate.isfirst
+    array.push ( c_prcntSpctrm2, #0000FF ),
+    array.push ( c_prcntSpctrm2, #0200FC ), array.push ( c_prcntSpctrm2, #0500F9 ), array.push ( c_prcntSpctrm2, #0700F7 ), array.push ( c_prcntSpctrm2, #0A00F4 ), array.push ( c_prcntSpctrm2, #0C00F2 ), 
+    array.push ( c_prcntSpctrm2, #0F00EF ), array.push ( c_prcntSpctrm2, #1100ED ), array.push ( c_prcntSpctrm2, #1400EA ), array.push ( c_prcntSpctrm2, #1600E8 ), array.push ( c_prcntSpctrm2, #1900E5 ), 
+    array.push ( c_prcntSpctrm2, #1C00E2 ), array.push ( c_prcntSpctrm2, #1E00E0 ), array.push ( c_prcntSpctrm2, #2100DD ), array.push ( c_prcntSpctrm2, #2300DB ), array.push ( c_prcntSpctrm2, #2600D8 ),
+    array.push ( c_prcntSpctrm2, #2800D6 ), array.push ( c_prcntSpctrm2, #2B00D3 ), array.push ( c_prcntSpctrm2, #2D00D1 ), array.push ( c_prcntSpctrm2, #3000CE ), array.push ( c_prcntSpctrm2, #3300CC ),
+    array.push ( c_prcntSpctrm2, #3500C9 ), array.push ( c_prcntSpctrm2, #3800C6 ), array.push ( c_prcntSpctrm2, #3A00C4 ), array.push ( c_prcntSpctrm2, #3D00C1 ), array.push ( c_prcntSpctrm2, #3F00BF ), 
+    array.push ( c_prcntSpctrm2, #4200BC ), array.push ( c_prcntSpctrm2, #4400BA ), array.push ( c_prcntSpctrm2, #4700B7 ), array.push ( c_prcntSpctrm2, #4900B5 ), array.push ( c_prcntSpctrm2, #4C00B2 ),
+    array.push ( c_prcntSpctrm2, #4F00AF ), array.push ( c_prcntSpctrm2, #5100AD ), array.push ( c_prcntSpctrm2, #5400AA ), array.push ( c_prcntSpctrm2, #5600A8 ), array.push ( c_prcntSpctrm2, #5900A5 ), 
+    array.push ( c_prcntSpctrm2, #5B00A3 ), array.push ( c_prcntSpctrm2, #5E00A0 ), array.push ( c_prcntSpctrm2, #60009E ), array.push ( c_prcntSpctrm2, #63009B ), array.push ( c_prcntSpctrm2, #660099 ),
+    array.push ( c_prcntSpctrm2, #680096 ), array.push ( c_prcntSpctrm2, #6B0093 ), array.push ( c_prcntSpctrm2, #6D0091 ), array.push ( c_prcntSpctrm2, #70008E ), array.push ( c_prcntSpctrm2, #72008C ), 
+    array.push ( c_prcntSpctrm2, #750089 ), array.push ( c_prcntSpctrm2, #770087 ), array.push ( c_prcntSpctrm2, #7A0084 ), array.push ( c_prcntSpctrm2, #7C0082 ), array.push ( c_prcntSpctrm2, #7F007F ),
+    array.push ( c_prcntSpctrm2, #82007C ), array.push ( c_prcntSpctrm2, #84007A ), array.push ( c_prcntSpctrm2, #870077 ), array.push ( c_prcntSpctrm2, #890075 ), array.push ( c_prcntSpctrm2, #8C0072 ), 
+    array.push ( c_prcntSpctrm2, #8E0070 ), array.push ( c_prcntSpctrm2, #91006D ), array.push ( c_prcntSpctrm2, #93006B ), array.push ( c_prcntSpctrm2, #960068 ), array.push ( c_prcntSpctrm2, #990066 ),
+    array.push ( c_prcntSpctrm2, #9B0063 ), array.push ( c_prcntSpctrm2, #9E0060 ), array.push ( c_prcntSpctrm2, #A0005E ), array.push ( c_prcntSpctrm2, #A3005B ), array.push ( c_prcntSpctrm2, #A50059 ), 
+    array.push ( c_prcntSpctrm2, #A80056 ), array.push ( c_prcntSpctrm2, #AA0054 ), array.push ( c_prcntSpctrm2, #AD0051 ), array.push ( c_prcntSpctrm2, #AF004F ), array.push ( c_prcntSpctrm2, #B2004C ), 
+    array.push ( c_prcntSpctrm2, #B50049 ), array.push ( c_prcntSpctrm2, #B70047 ), array.push ( c_prcntSpctrm2, #BA0044 ), array.push ( c_prcntSpctrm2, #BC0042 ), array.push ( c_prcntSpctrm2, #BF003F ), 
+    array.push ( c_prcntSpctrm2, #C1003D ), array.push ( c_prcntSpctrm2, #C4003A ), array.push ( c_prcntSpctrm2, #C60038 ), array.push ( c_prcntSpctrm2, #C90035 ), array.push ( c_prcntSpctrm2, #CC0033 ),
+    array.push ( c_prcntSpctrm2, #CE0030 ), array.push ( c_prcntSpctrm2, #D1002D ), array.push ( c_prcntSpctrm2, #D3002B ), array.push ( c_prcntSpctrm2, #D60028 ), array.push ( c_prcntSpctrm2, #D80026 ), 
+    array.push ( c_prcntSpctrm2, #DB0023 ), array.push ( c_prcntSpctrm2, #DD0021 ), array.push ( c_prcntSpctrm2, #E0001E ), array.push ( c_prcntSpctrm2, #E2001C ), array.push ( c_prcntSpctrm2, #E50019 ),
+    array.push ( c_prcntSpctrm2, #E80016 ), array.push ( c_prcntSpctrm2, #EA0014 ), array.push ( c_prcntSpctrm2, #ED0011 ), array.push ( c_prcntSpctrm2, #EF000F ), array.push ( c_prcntSpctrm2, #F2000C ), 
+    array.push ( c_prcntSpctrm2, #F4000A ), array.push ( c_prcntSpctrm2, #F70007 ), array.push ( c_prcntSpctrm2, #F90005 ), array.push ( c_prcntSpctrm2, #FC0002 ), array.push ( c_prcntSpctrm2, #FF0000 )
+///////////////////////////////////////////////////////////////////////////////
+// function declarations
+f_maType ( price, len, type ) => type == "SMA" ? sma ( price, len ) : type == "EMA" ? ema ( price, len ) : vwma ( price, len )
+    
+f_bbwp ( price, bbwLen, bbwpLen, type ) =>
+    float basis = f_maType ( price, bbwLen, type )
+    float dev = stdev ( price, bbwLen )
+    _bbw = (( basis + dev ) - ( basis - dev )) / basis
+    _bbwSum = 0
+    for i = 1 to bbwpLen
+        _bbwSum := _bbwSum + ( _bbw [i] > _bbw ? 0 : 1 )
+    return = ( _bbwSum / i_bbwpLkbk ) * 100
+f_clrSlct ( percent, select, type, solid, array1, array2 ) => select == "Solid" ? solid : array.get ( type == "Blue Green Red" ? array1 : array2, round ( percent ) )
+/////////////////////////////////////////////////////////////////////////////// 
+// calculations
+bbwp        = f_bbwp ( i_priceSrc, i_bbwpLen, i_bbwpLkbk, i_basisType )
+c_bbwp      = f_clrSlct ( bbwp, i_c_bbwpTyped, i_c_spctrmType, i_c_bbwpsolid, c_prcntSpctrm1, c_prcntSpctrm2 )
+bbwpMA1     = i_ma1On ? f_maType ( bbwp, i_ma1Len, i_ma1Type ) : na
+/////////////////////////////
+// end of code created by The_Caretaker
+//////////////////////////////////////////////////////////////////////////////
+rsi_length = input (14, 'RSI Length', group='RSI Settings')
+rsi_ma_length = input (7, 'RSI MA Length', group='RSI Settings')
+crossover_threshold = input (5, 'Crossover Threshold', type=input.float, group='RSI Strategy Settings')
+retest_threshold = input (3, 'Retest Threshold',  type=input.float, group='RSI Strategy Settings')
+instant_threshold = input (12, 'Instant Signal Threshold',  type=input.float, group='RSI Strategy Settings')
+confirmation_ma_basisType     = input ( "EMA", "Moving Average Type", input.string,  options = [ "SMA", "EMA", "VWMA" ], group = "Confirmation Moving Average Properties")
+confirmation_ma_length    = input (50, "Moving Average Length", input.integer, group = "Confirmation Moving Average Properties")
+oversold_level = input (35, 'Oversold Level',  type=input.float, group='RSI Strategy Settings')
+overbought_level = input (65, 'Overbought Level',  type=input.float, group='RSI Strategy Settings')
+bbwp_threshold = input (4, 'BBWP Confirmation Threshold', type=input.float, group='RSI Strategy Settings')
+enable_stoploss = input(false, 'Enable Stoploss?', type=input.bool, group="Other Strategy Settings")
+stoploss = input(0.07, 'Stop Loss %', type=input.float, group="Other Strategy Settings")
+enable_takeprofit = input(false, 'Enable Takeprofit?', type=input.bool, group="Other Strategy Settings")
+takeprofit = input(0.55, 'Take Profit %', type=input.float, group="Other Strategy Settings")
+enable_long = input(true, 'Enable Long Positions?', type=input.bool, group="Other Strategy Settings")
+enable_short = input(true, 'Enable Short Positions?', type=input.bool, group="Other Strategy Settings")
+// allow start and end dates
+startDate = input(title="Start Date (set any start time to 0 for furthest date)", type=input.integer, defval=1, minval=0, maxval=31, group="Timeframe")
+startMonth = input(title="Start Month (set any start time to 0 for furthest date)", type=input.integer, defval=1, minval=0, maxval=12, group="Timeframe")
+startYear = input(title="Start Year (set any start time to 0 for furthest date)", type=input.integer, defval=2019, minval=0, maxval=2100, group="Timeframe")
+endDate = input(title="End Date (set any end time to 0 for today's date)", type=input.integer, defval=0, minval=0, maxval=31, group="Timeframe")
+endMonth = input(title="End Month (set any end time to 0 for today's date)", type=input.integer, defval=0, minval=0, maxval=12, group="Timeframe")
+endYear = input(title="End Year (set any end time to 0 for today's date)", type=input.integer, defval=0, minval=0, maxval=2100, group="Timeframe")
+inDateRange = false
+if (endDate == 0 or endMonth == 0 or endYear == 0) and (startDate == 0 or startMonth == 0 or startYear == 0)
+    inDateRange := true
+else if endDate == 0 or endMonth == 0 or endYear == 0
+    inDateRange := time >= timestamp(syminfo.timezone, startYear, startMonth, startDate, 0, 0)
+else if startDate == 0 or startMonth == 0 or startYear == 0
+    inDateRange := time <= timestamp(syminfo.timezone, endYear, endMonth, endDate, 0, 0)
+else
+    inDateRange := (time >= timestamp(syminfo.timezone, startYear, startMonth, startDate, 0, 0)) and (time < timestamp(syminfo.timezone, endYear, endMonth, endDate, 0, 0))
+rsi = rsi(i_priceSrc, rsi_length)
+rsi_ma = sma(rsi, rsi_ma_length)
+rsi_crossed_up = false
+rsi_retested_up = false
+// start checking for upwards retests when the RSI has crossed above the MA by at least 3 pts (or the crossover_threshold) and has not fallen to 2 pts below the MA (or the retest_threshold)
+rsi_crossed_up := (rsi_crossed_up[1] and not (rsi_ma - rsi > retest_threshold)) or (rsi - rsi_ma > crossover_threshold)
+// keep of track of when a retest occured (rsi exceeds MA by less than the retest threshold), until the RSI falls below the MA by the threshold
+// rsi_crossed_up must be true, because this already checks if the rsi has fallen below the MA by the threshold to cancel the signal
+rsi_retested_up := rsi_crossed_up and (rsi_retested_up[1] or (rsi - rsi_ma < retest_threshold))
+// if there has been a retest and the rsi exceeds the MA by the crossover threshold again, trigger a buy signal
+// also trigger a buy signal if the RSI exceeds the MA by the "instant signal threshold"
+rsi_retest_buy = (rsi_retested_up and (rsi - rsi_ma > crossover_threshold)) or (rsi - rsi_ma > instant_threshold)
+// do the same thing to the downside
+rsi_crossed_down = false
+rsi_retested_down = false
+rsi_crossed_down := (rsi_crossed_down[1] and not (rsi - rsi_ma > retest_threshold)) or (rsi_ma - rsi > crossover_threshold)
+rsi_retested_down := rsi_crossed_down and (rsi_retested_down[1] or (rsi_ma - rsi < retest_threshold))
+rsi_retest_sell = (rsi_retested_down and (rsi_ma - rsi > crossover_threshold)) or (rsi_ma - rsi > instant_threshold)
+rsi_buy_zone = false
+rsi_buy_zone := (rsi_retest_buy or rsi_buy_zone[1]) and not rsi_retest_sell
+rsi_sell_zone = false
+rsi_sell_zone := (rsi_retest_sell or rsi_sell_zone[1]) and not rsi_retest_buy
+// when the sell zone switches to a buy zone or vice versa
+rsi_buy_signal = rsi_buy_zone and rsi_sell_zone[1]
+rsi_sell_signal = rsi_sell_zone and rsi_buy_zone[1]
+// if RSI is oversold in a Buy zone, confirm the most recent Buy signal. if RSI is oversold in a Sell zone, confirm the next Buy signal.
+forward_buy_confirmation = false
+// carry over the previous confirmation unless entering a sell zone for the first time
+forward_buy_confirmation := (forward_buy_confirmation[1] and not rsi_sell_signal) or rsi <= oversold_level
+// if RSI is overbought in a Sell zone, confirm the most recent Sell signal. if RSI is overbought in a Buy zone, confirm the next Sell signal.
+forward_sell_confirmation = false
+// carry over the previous confirmation unless entering a buy zone for the first time
+forward_sell_confirmation := (forward_sell_confirmation[1] and not rsi_buy_signal) or rsi >= overbought_level
+// a long position may only be entered if the RSI MA is no longer below the oversold level, and RSI is now above the MA
+allow_buy = rsi > rsi_ma and rsi_ma > oversold_level
+// a short position may only be entered if the RSI MA is no longer above the overbought level, and RSI is now below the MA
+allow_sell = rsi < rsi_ma and rsi_ma < overbought_level
+// confirm any signal if BBWP > the BBWP confirmation threshold
+bbwp_confirmation = bbwp - bbwpMA1 > bbwp_threshold
+// trade on confirmed signals
+full_buy_signal = rsi_buy_zone and (forward_buy_confirmation or bbwp_confirmation) and allow_buy
+full_sell_signal = rsi_sell_zone and (forward_sell_confirmation or bbwp_confirmation) and allow_sell
+confirmed_buy_zone = false
+confirmed_sell_zone = false
+// only enter a buy or sell zone if there was confirmation with either the RSI or BBWP, and a position is allowed based on the relative placement of the RSI and its MA (allow_buy or allow_sell)
+confirmed_buy_zone := (confirmed_buy_zone[1] or full_buy_signal) and not full_sell_signal
+confirmed_sell_zone := (confirmed_sell_zone[1] or full_sell_signal) and not full_buy_signal
+confirmed_buy_signal = confirmed_buy_zone and confirmed_sell_zone[1]
+confirmed_sell_signal = confirmed_sell_zone and confirmed_buy_zone[1]
+// EMAs and EMA signals
+confirmation_ma = f_maType ( i_priceSrc, confirmation_ma_length, confirmation_ma_basisType )
+ma_buy_zone = confirmed_buy_zone and (i_priceSrc > confirmation_ma)
+ma_sell_zone = confirmed_sell_zone and (i_priceSrc < confirmation_ma)
+ma_buy_confirmation = ma_buy_zone and not ma_buy_zone[1]
+ma_sell_confirmation = ma_sell_zone and not ma_sell_zone[1]
+ma_full_buy_zone = false
+ma_full_sell_zone = false
+ma_full_buy_zone := (ma_full_buy_zone[1] or ma_buy_confirmation) and not ma_sell_confirmation
+ma_full_sell_zone := (ma_full_sell_zone[1] or ma_sell_confirmation) and not ma_buy_confirmation
+ma_buy_signal = ma_full_buy_zone and not ma_full_buy_zone[1]
+ma_sell_signal = ma_full_sell_zone and not ma_full_sell_zone[1]
+// plots
+p_oversold   = hline ( show_rsi ? oversold_level : na, "Oversold", #990000, hline.style_dashed, 1)
+p_overbought   = hline ( show_rsi ? overbought_level : na, "Overbought", #009900,  hline.style_dashed, 1)
+p_rsi_buy    = plot ( show_signals and show_unconfirmed and rsi_buy_signal ? 25 : na,    "RSI Buy Signal",   #009900,         1,      plot.style_columns,     editable = false,       histbase = 0)
+p_rsi_sell    = plot ( show_signals and show_unconfirmed and rsi_sell_signal ? 25 : na,   "RSI Sell Signal",  #990000,         1,      plot.style_columns,     editable = false,      histbase = 0)
+p_rsi_confirmed_buy    = plot ( show_signals and show_unconfirmed and confirmed_buy_signal ? 50 : na,    "RSI Confirmed Buy Signal",   #009900,         1,      plot.style_columns,     editable = false,       histbase = 0)
+p_rsi_confirmed_sell    = plot ( show_signals and show_unconfirmed and confirmed_sell_signal ? 50 : na,   "RSI Confirmed Sell Signal",  #990000,         1,      plot.style_columns,     editable = false,      histbase = 0)
+p_confirmed_buy    = plot ( show_signals and ma_buy_signal ? 100 : na,   "Fully Confirmed Buy Signal",  #00ff00,         1,      plot.style_columns,     editable = false,      histbase = 0)
+p_confirmed_sell    = plot ( show_signals and ma_sell_signal ? 100 : na,   "Fully Confirmed Sell Signal",  #ff0000,         1,      plot.style_columns,     editable = false,      histbase = 0)
+p_bbwp      = plot ( show_bbwp ? bbwp : na,      "BBWP",         c_bbwp,         1,      plot.style_line,        editable = false )
+p_ma1       = plot ( show_bbwp ? bbwpMA1 : na,   "MA 1",         i_c_ma1,        1,      plot.style_circles,    0 )
+p_rsi       = plot ( show_rsi ? rsi : na,       "RSI",          color.purple,   2)
+p_rsi_ma    = plot( show_rsi ? rsi_ma : na,     "RSI MA",       color.orange,   1)
+// position entries and exits
+if inDateRange and strategy.equity > 0
+    if enable_long
+        strategy.entry('Long', strategy.long, when=ma_buy_signal, alert_message="BUY signal on BTCUSD")
+    else
+        strategy.close('Short', when=ma_buy_signal, alert_message="BUY signal on BTCUSD")
+    if enable_short
+        strategy.entry('Short', strategy.short, when=ma_sell_signal, alert_message="SELL signal on BTCUSD")
+    else
+        strategy.close('Long', when=ma_sell_signal, alert_message="SELL signal on BTCUSD")
+    
+    if enable_stoploss and enable_takeprofit
+        strategy.exit('SL/TP Long', 'Long', stop=strategy.position_avg_price * (1 - stoploss), limit=strategy.position_avg_price * (1 + takeprofit), when=strategy.position_size > 0, alert_message="SL/TP reached on BTCUSD")
+        strategy.exit('SL/TP Short', 'Short', stop=strategy.position_avg_price * (1 + stoploss), limit=strategy.position_avg_price * (1 - takeprofit), when=strategy.position_size < 0, alert_message="SL/TP reached on BTCUSD")
+    else if enable_stoploss
+        strategy.exit('SL Long', 'Long', stop=strategy.position_avg_price * (1 - stoploss), when=strategy.position_size > 0, alert_message="SL/TP reached on BTCUSD")
+        strategy.exit('SL Short', 'Short', stop=strategy.position_avg_price * (1 + stoploss), when=strategy.position_size < 0, alert_message="SL/TP reached on BTCUSD")
+    else if enable_takeprofit
+        strategy.exit('TP Long', 'Long', limit=strategy.position_avg_price * (1 + takeprofit), when=strategy.position_size > 0, alert_message="SL/TP reached on BTCUSD")
+        strategy.exit('TP Short', 'Short', limit=strategy.position_avg_price * (1 - takeprofit), when=strategy.position_size < 0, alert_message="SL/TP reached on BTCUSD")
+Expand (297 lines)

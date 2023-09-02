@@ -1,0 +1,432 @@
+Script Name: RELATIVE VALUE TRADE MANAGEMENT WEBHOOK
+Author: ExpensiveJok
+Description: This script it's created to send open-close  signals via webhook. It allows you to open a relative value position based in the relative graph. You can set the TP and SL levels and the script will send the signal to your exchange.
+
+Due a pine limitations it is necessary apply the script in the 2 different actives and set the alerts. You can just do the relative...
+PineScript code:
+
+Pine Script™ strategy
+RELATIVE VALUE TRADE MANAGEMENT WEBHOOK
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ExpensiveJok
+// The purpose of this script is send orders and provide stops levels for our relative trades.
+//@version=5
+strategy("RELATIVES MANAGEMENT", overlay=true, margin_long=100, margin_short=100, initial_capital = 1000, precision = 8)
+//----------------------------------------------------------------  TIPS    ---------------------------------------------------------------------------
+long_tick_tip   = "This is the EXACT ticker name of the active you want to be LONG. It is important add the exchange, or market, for a correct work. Example : BINANCE:SUSHIUSDTPERP"
+short_tick_tip  = "This is the EXACT ticker name of the active you want to be SHORT. It is important add the exchange, or market, for a correct work. Example : BINANCE:IOTXUSDTPERP"
+time_frame_tip  = "Select the timeframe for the orders. Also it is the timeframe of the RELATIVE GRAPH that you can deploy."
+lvl_in_tip  = "It is the entry level based in the relative graph."
+lvl_out_tip = "It is the STOP LOSS level based in the relative graph."
+lvl_tp_tip  = "It is the TAKE PROFIT level based in the relative graph."
+qty_type_tip= "It allows you to select the type of risk for the order. You can choose between a permanent qty (in dollars or other currency) or a percent of your equity."
+qty_tip     = "It is the quantity you will lose if the STOP LOSS is triggered."
+qty_exit_tip= "It is the close percent of the order if the TAKE PROFIT is triggered."
+id_long_tip = "If you have a current open position write here the LONG side ID in case that you want to close the signal via STOPs. If your position is not open leave it in blank."
+id_short_tip= "If you have a current open position write here the SHORT side ID in case that you want to close the signal via STOPs. If your position is not open leave it in blank."
+//----------------------------------------------------------------  INPUTS  ----------------------------------------------------------------------------
+long_tick   = input.string(title = "Ticker Long"    , defval = "", tooltip = long_tick_tip                                  , group = "--  ACTIVES  --")
+short_tick  = input.string(title = "Ticker Short"   , defval = "", tooltip = short_tick_tip                                 , group = "--  ACTIVES  --")
+time_frame  = input.string(title = "Timeframe"      , defval = "4h", options = ["15min", "1h", "4h", "D", "W"], tooltip = time_frame_tip, group = "--  ACTIVES  --")
+lvl_in  = input.float(title = "Nivel de entrada", defval = 0, step = 1, minval = 0, tooltip = lvl_in_tip    , group = "--  LEVELS --")
+lvl_out = input.float(title = "Nivel de SL"     , defval = 0, step = 1, minval = 0, tooltip = lvl_out_tip   , group = "--  LEVELS --")
+lvl_tp  = input.float(title = "Nivel de TP"     , defval = 0, step = 1, minval = 0, tooltip = lvl_tp_tip    , group = "--  LEVELS --")
+leverage= input.int     (title = "Leverage", defval = 1, minval = 1                                                                     , group = "--  MONEY MANAGEMENT --")
+qty_type= input.string  (title = "Risk", defval = "Money Amount", options = ["Money Amount", "Equity Percent"]  , tooltip = qty_type_tip, group = "--  MONEY MANAGEMENT --")
+qty     = input.int     (title = "Quantity risk"        , defval = 10, minval = 1                               , tooltip = qty_tip     , group = "--  MONEY MANAGEMENT --")
+qty_exit= input.int     (title = "Order close percent"  , defval = 100, minval = 1, step = 1                    , tooltip = qty_exit_tip, group = "--  MONEY MANAGEMENT --")
+        //DATE
+date_in     = input.time  (title = "Date of beginning"  , defval = timestamp("1 Jul 2020 00:00 +0300")  , group = "--  DATES  --")
+date_out    = input.time  (title = "Date of ending"     , defval = timestamp("20 Jul 2022 00:00 +0300") , group = "--  DATES  --")
+        //ZIGNALY
+id_long = input.string(title = "Long ID", defval = "", tooltip = id_long_tip    , group = "--  IDs  --")
+id_short= input.string(title = "Short ID",defval = "", tooltip = id_short_tip   , group = "--  IDs  --")
+        //TABLE
+table_on    = input.bool(title = "Deploy Table",   defval = true                                       , group = "--  DATA  --")
+table_bg_c  = input.color(defval = color.gray, title = "Table Background Color")
+table_txt_c = input.color(defval = color.white, title = "Text Color") 
+table_pos   = input.string(defval = "Top Right", title = "Table Position", options = ["Top Left", "Top Center", "Top Right", "Middle Left", "Middle Center", "Middle Right", "Bottom Left", 
+ "Bottom Center", "Bottom Right"])
+//----------------------------------------------------------------  PROCESS ----------------------------------------------------------------------------
+confirm     = barstate.isconfirmed ? 0 : 1 
+    
+    //------------- RELATIVES GRAPH
+time_scale = switch time_frame
+    "15min" => "15"
+    "1h"    => "60"
+    "4h"    => "240"
+    "D"     => "1D"
+    "W"     =>"1W"
+    // I request the OHLC values to draw the graph in the same window.
+        // ACTIVES REQUEST
+ohlc_side_long()   =>
+    o   = request.security(symbol = long_tick, timeframe = time_scale, expression = open[confirm], gaps = barmerge.gaps_on)
+    h   = request.security(symbol = long_tick, timeframe = time_scale, expression = high[confirm], gaps = barmerge.gaps_on)
+    l   = request.security(symbol = long_tick, timeframe = time_scale, expression =  low[confirm], gaps = barmerge.gaps_on)
+    c   = request.security(symbol = long_tick, timeframe = time_scale, expression =close[confirm], gaps = barmerge.gaps_on)
+    [o,h,l,c]
+ohlc_side_short() =>
+    o   = request.security(symbol = short_tick, timeframe = time_scale, expression = open[confirm], gaps = barmerge.gaps_on)
+    h   = request.security(symbol = short_tick, timeframe = time_scale, expression = high[confirm], gaps = barmerge.gaps_on)
+    l   = request.security(symbol = short_tick, timeframe = time_scale, expression =  low[confirm], gaps = barmerge.gaps_on)
+    c   = request.security(symbol = short_tick, timeframe = time_scale, expression =close[confirm], gaps = barmerge.gaps_on)
+    [o,h,l,c]
+[open_long, high_long, low_long, close_long]    = ohlc_side_long()
+[open_short, high_short, low_short, close_short]= ohlc_side_short()
+open_graph  = open_long / open_short
+high_graph  = high_long / high_short
+low_graph   = low_long  / low_short
+close_graph = close_long/ close_short
+    //------------------ STOPS
+stop_dif= (lvl_in - lvl_out) < 0 ?  (lvl_in - lvl_out) * (-1) : (lvl_in - lvl_out)      //Difference in points between the entry point and the stop.
+stop_per= (stop_dif * 100) / lvl_in                                                     //Percentage difference between the entry point and the stop.
+    //---------------- CONTRACTS
+contracts  = if qty_type == "Money Amount"
+    ((100 * qty) / (((lvl_in - lvl_out) < 0 ? (lvl_in - lvl_out) *(-1) : (lvl_in - lvl_out)) * 100 / lvl_in)) / close                          //lvl in - lvl out *100/lvl in is the % that I loss. With that % I can calculate the total value in the operation and then divide it by the close to find out the number of contracts.
+else if qty_type == "Equity Percent"
+    (100 * (strategy.equity * qty/100)) / (((lvl_in - lvl_out) < 0 ? (lvl_in - lvl_out) *(-1) : (lvl_in - lvl_out)) * 100 / lvl_in) / close
+    //---------------- RISK/REWARD
+rr = ((lvl_tp - lvl_in) < 0 ? ((lvl_tp - lvl_in)*(-1)) : (lvl_tp - lvl_in)) / ((lvl_in - lvl_out) < 0 ? ((lvl_in - lvl_out) *(-1)) : (lvl_in - lvl_out))
+//----------------------------------------------------------------  CONDITIONS -------------------------------------------------------------------------
+    //----- DATE
+in_date = time >= date_in and time <= date_out
+    //----- FILLED CONDITION
+filled = if (lvl_in != 0) and (lvl_out != 0)
+    true
+else
+    false
+    //------ ORDERS STUFF
+bought  = strategy.position_size > 0
+sold    = strategy.position_size < 0
+correct_side = if syminfo.tickerid == long_tick
+    "Long"
+else if syminfo.tickerid == short_tick
+    "Short"
+else if syminfo.tickerid != long_tick and syminfo.tickerid != short_tick
+    "Invalid ticker"
+long  = ((ta.crossunder(close_graph, lvl_in) or ta.crossover (close_graph, lvl_in))) and filled and not bought and not sold and correct_side == "Long"   and in_date
+short = ((ta.crossover (close_graph, lvl_in) or ta.crossunder(close_graph, lvl_in))) and filled and not bought and not sold and correct_side == "Short"  and in_date
+//That is an identifier for the orders.
+id_in   = long      ? ("Long"       + " " + str.tostring(syminfo.ticker)) : short   ? ("Short"      + " " + str.tostring(syminfo.ticker)) : "None"
+id_out  = bought    ? ("Long exit"  + " " + str.tostring(syminfo.ticker)) : sold    ? ("Short exit" + " " + str.tostring(syminfo.ticker)) : "None"
+//Set the SL and TP levels
+sl = lvl_out != 0 ? lvl_out : na 
+tp = lvl_tp  != 0 ? lvl_tp  : na
+// I use Zignaly as a exchange but here you must set the correct JSON msg for your webhook.
+// ------------- ZIGNALY --------------------
+string zig_quote= '"'
+string zig_coma = ","
+string zig_sep  = ":"
+string system_key       = "XXXXXXXXXxx_YOUR KEY_xxXXXXXXXXX"
+contracts_zig           = (((contracts * (long ? close_long : short? close_short : na)) / leverage) * 100) / strategy.equity
+string side             = (long) ? "Long" : (short) ? "Short" : "Flat"
+string price_zig        = long ? str.tostring(close_long) : short ? str.tostring(close_short) : na 
+string ticker           = str.substring(syminfo.ticker, 0, end_pos = str.pos(syminfo.ticker, "PERP"))                       // Remove the PERP string in all tickers. That is optional, cheeck if you need it.
+    
+    // ------  IDs  -----
+if id_long != ""
+    id_long := id_long
+else if id_long == ""
+    id_long := str.tostring(syminfo.ticker)
+if id_short != ""
+    id_short := id_short
+else if id_short == ""
+    id_short := str.tostring(syminfo.ticker)
+id_zig = (long or bought) ? id_long : (short or sold) ? id_short : "Error. Unopened order."
+entry_msg = zig_quote + "key"               + zig_quote + zig_sep + zig_quote + system_key                                  + zig_quote + zig_coma + 
+ zig_quote + "type"                         + zig_quote + zig_sep + zig_quote + "entry"                                     + zig_quote + zig_coma + 
+ zig_quote + "exchange"                     + zig_quote + zig_sep + zig_quote + "zignaly"                                   + zig_quote + zig_coma +
+ zig_quote + "exchangeAccountType"          + zig_quote + zig_sep + zig_quote + "futures"                                   + zig_quote + zig_coma +
+ zig_quote + "pair"                         + zig_quote + zig_sep + zig_quote + ticker                                      + zig_quote + zig_coma + 
+ zig_quote + "orderType"                    + zig_quote + zig_sep + zig_quote + "limit"                                     + zig_quote + zig_coma +
+ zig_quote + "limitPrice"                   + zig_quote + zig_sep + zig_quote + price_zig                                   + zig_quote + zig_coma +
+ zig_quote + "side"                         + zig_quote + zig_sep + zig_quote + str.tostring(side)                          + zig_quote + zig_coma +
+ zig_quote + "leverage"                     + zig_quote + zig_sep + zig_quote + str.tostring(leverage)                      + zig_quote + zig_coma +
+ zig_quote + "positionSizePercentage"       + zig_quote + zig_sep + zig_quote + str.tostring(contracts_zig)                 + zig_quote + zig_coma +
+ zig_quote + "signalId"                     + zig_quote + zig_sep + zig_quote + id_zig                                      + zig_quote
+exit_msg = zig_quote + "key"                + zig_quote + zig_sep + zig_quote + system_key                                  + zig_quote + zig_coma + 
+ zig_quote + "type"                         + zig_quote + zig_sep + zig_quote + "exit"                                      + zig_quote + zig_coma + 
+ zig_quote + "exchange"                     + zig_quote + zig_sep + zig_quote + "zignaly"                                   + zig_quote + zig_coma +
+ zig_quote + "exchangeAccountType"          + zig_quote + zig_sep + zig_quote + "futures"                                   + zig_quote + zig_coma +
+ zig_quote + "pair"                         + zig_quote + zig_sep + zig_quote + ticker                                      + zig_quote + zig_coma + 
+ zig_quote + "orderType"                    + zig_quote + zig_sep + zig_quote + "market"                                    + zig_quote + zig_coma +
+ zig_quote + "signalId"                     + zig_quote + zig_sep + zig_quote + id_zig                                      + zig_quote + zig_coma 
+update_msg = zig_quote + "key"              + zig_quote + zig_sep + zig_quote + system_key                                  + zig_quote + zig_coma +
+ zig_quote + "type"                         + zig_quote + zig_sep + zig_quote + "update"                                    + zig_quote + zig_coma +
+ zig_quote + "exchange"                     + zig_quote + zig_sep + zig_quote + "zignaly"                                   + zig_quote + zig_coma +
+ zig_quote + "exchangeAccountType"          + zig_quote + zig_sep + zig_quote + "futures"                                   + zig_quote + zig_coma +
+ zig_quote + "pair"                         + zig_quote + zig_sep + zig_quote + ticker                                      + zig_quote + zig_coma + 
+ zig_quote + "signalId"                     + zig_quote + zig_sep + zig_quote + id_zig                                      + zig_quote + zig_coma +
+ zig_quote + "reduceTargetpercentage"       + zig_quote + zig_sep + zig_quote + str.tostring(qty_exit)                      + zig_quote 
+    //--------- POSITIONS
+if long
+    strategy.entry(id = id_in, direction = strategy.long, qty = contracts, alert_message = entry_msg)
+if bought
+    strategy.exit(id = id_out, from_entry = id_in, qty_percent = qty_exit, limit = tp, stop = sl, alert_loss = exit_msg, alert_profit = update_msg)
+if short
+    strategy.entry(id = id_in, direction = strategy.short, qty = contracts, alert_message = entry_msg)
+if bought
+    strategy.exit(id = id_out, from_entry = id_in, qty_percent = qty_exit, limit = tp, stop = sl, alert_loss = exit_msg, alert_profit = update_msg)
+//----------------------------------------------------------------  PLOTS ----------------------------------------------------------------------------
+    //-----RELATIVE GRAPHIC
+plotbar(open_graph, high_graph, low_graph, close_graph, title = "Relative Graphic", color = color.gray, editable = true)
+    //-----LEVELS
+hline(lvl_in != 0? lvl_in : na, title = "Entry", color = color.purple, editable = true)
+hline(sl, title = "Stop Loss"    , color = color.yellow  , editable = true)
+hline(tp, title = "Take Profit"  , color = color.green   , editable = true)
+    
+    //----------- TABLE
+t_position = switch table_pos
+    "Top Left"      => position.top_left
+    "Top Center"    => position.top_center
+    "Top Right"     => position.top_right
+    "Middle Left"   => position.middle_left
+    "Middle Center" => position.middle_center
+    "Middle Right"  => position.middle_right
+    "Bottom Left"   => position.bottom_left
+    "Bottom Center" => position.bottom_center
+    "Bottom Right"  => position.bottom_right
+    
+stuff_table = table.new(position = t_position, columns = 2, rows = 5, bgcolor = table_bg_c, frame_width = 0, border_width = 5, border_color = color.black)
+if table_on
+    table.cell(stuff_table, column = 0, row = 0, text = "Ticker side:"  , text_color = table_txt_c, text_halign = text.align_left)
+    table.cell(stuff_table, column = 1, row = 0, text = correct_side    , text_color = table_txt_c, text_halign = text.align_left)
+    table.cell(stuff_table, column = 0, row = 1, text = "Actual Ticker:", text_color = table_txt_c, text_halign = text.align_left)
+    table.cell(stuff_table, column = 1, row = 1, text = syminfo.tickerid, text_color = table_txt_c, text_halign = text.align_left)
+    table.cell(stuff_table, column = 0, row = 2, text = "Signal id:"    , text_color = table_txt_c, text_halign = text.align_left)
+    table.cell(stuff_table, column = 1, row = 2, text = id_zig          , text_color = table_txt_c, text_halign = text.align_left)
+    table.cell(stuff_table, column = 0, row = 3, text = "R/R:"          , text_color = table_txt_c, text_halign = text.align_left)
+    table.cell(stuff_table, column = 1, row = 3, text = str.tostring(rr), text_color = table_txt_c, text_halign = text.align_left)
+    table.cell(stuff_table, column = 0, row = 4, text = "Contracts:"    , text_color = table_txt_c, text_halign = text.align_left)
+    table.cell(stuff_table, column = 1, row = 4, text = str.tostring(contracts), text_color = table_txt_c, text_halign = text.align_left)
+Expand (229 lines)

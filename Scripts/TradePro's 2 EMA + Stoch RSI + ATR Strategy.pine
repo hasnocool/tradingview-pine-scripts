@@ -1,0 +1,345 @@
+Script Name: TradePro's 2 EMA + Stoch RSI + ATR Strategy
+Author: PtGambler
+Description: Saw TradePro's "NEW BEST HIGHEST PROFITING STRATEGY WITH CRAZY RESULTS - 2 EMA+ Stochastic RSI+ ATR", and was curious on the back testing results. This strategy is an attempt to recreate it.
+
+This strategy uses 50 / 200 EMAs, Stochastic RSI and ATR.
+
+Long Entry Criteria:
+ - 50 EMA > 200 EMA
+ - Price closes below 50 EMA
+ - Stochastic RSI has gone into oversold <...
+PineScript code:
+
+Pine Script™ strategy
+TradePro's 2 EMA + Stoch RSI + ATR Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © PtGambler
+//@version=5
+strategy("2 EMA + Stoch RSI + ATR [Pt]", shorttitle = "2EMA+Stoch+ATR", overlay=true, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, calc_on_order_fills = false, max_bars_back = 500)
+// ********************************** Trade Period / Strategy Setting **************************************
+startY = input(title='Start Year', defval=2011, group = "Backtesting window")
+startM = input.int(title='Start Month', defval=1, minval=1, maxval=12, group = "Backtesting window")
+startD = input.int(title='Start Day', defval=1, minval=1, maxval=31, group = "Backtesting window")
+finishY = input(title='Finish Year', defval=2050, group = "Backtesting window")
+finishM = input.int(title='Finish Month', defval=12, minval=1, maxval=12, group = "Backtesting window")
+finishD = input.int(title='Finish Day', defval=31, minval=1, maxval=31, group = "Backtesting window")
+timestart = timestamp(startY, startM, startD, 00, 00)
+timefinish = timestamp(finishY, finishM, finishD, 23, 59)
+// ******************************************************************************************
+group_ema = "EMA"
+group_stoch = "Stochastic RSI"
+group_atr = "ATR Stoploss Finder"
+// ----------------------------------------- 2 EMA -------------------------------------
+ema1_len = input.int(50, "EMA Length 1", group = group_ema)
+ema2_len = input.int(200, "EMA Length 2", group = group_ema)
+ema1 = ta.ema(close, ema1_len)
+ema2 = ta.ema(close, ema2_len)
+plot(ema1, "ema1", color.white, linewidth = 2)
+plot(ema2, "ema2", color.orange, linewidth = 2)
+ema_bull = ema1 > ema2
+ema_bear = ema1 < ema2
+// -------------------------------------- Stochastic RSI -----------------------------
+smoothK = input.int(3, "K", minval=1, group = group_stoch)
+smoothD = input.int(3, "D", minval=1, group = group_stoch)
+lengthRSI = input.int(14, "RSI Length", minval=1, group = group_stoch)
+lengthStoch = input.int(14, "Stochastic Length", minval=1, group = group_stoch)
+src = close
+rsi1 = ta.rsi(src, lengthRSI)
+k = ta.sma(ta.stoch(rsi1, rsi1, rsi1, lengthStoch), smoothK)
+d = ta.sma(k, smoothD)
+var trigger_stoch_OB = k > 80
+var trigger_stoch_OS = k < 20
+stoch_crossdown = ta.crossunder(k, d)
+stoch_crossup = ta.crossover(k, d)
+P_hi = ta.pivothigh(k,1,1)
+P_lo = ta.pivotlow(k,1,1)
+previous_high = ta.valuewhen(P_hi, k, 1)
+previous_low = ta.valuewhen(P_lo, k, 1)
+recent_high = ta.valuewhen(P_hi, k, 0)
+recent_low = ta.valuewhen(P_lo, k, 0)
+// --------------------------------------- ATR stop loss finder ------------------------
+length = input.int(title='Length', defval=14, minval=1, group = group_atr)
+smoothing = input.string(title='Smoothing', defval='EMA', options=['RMA', 'SMA', 'EMA', 'WMA'], group = group_atr)
+m = input.float(0.7, 'Multiplier', step = 0.1, group = group_atr)
+src1 = input(high, "Source for upper band", group = group_atr)
+src2 = input(low, "Source for lower band", group = group_atr)
+showatr = input.bool(true, 'Show ATR Bands', group = group_atr)
+collong = input.color(color.purple, 'Long ATR SL', inline='1', group = group_atr)
+colshort = input.color(color.purple, 'Short ATR SL', inline='2', group = group_atr)
+ma_function(source, length) =>
+    if smoothing == 'RMA'
+        ta.rma(source, length)
+    else
+        if smoothing == 'SMA'
+            ta.sma(source, length)
+        else
+            if smoothing == 'EMA'
+                ta.ema(source, length)
+            else
+                ta.wma(source, length)
+a = ma_function(ta.tr(true), length) * m
+up = ma_function(ta.tr(true), length) * m + src1
+down = src2 - ma_function(ta.tr(true), length) * m
+p1 = plot(showatr ? up : na, title='ATR Short Stop Loss', color=colshort)
+p2 = plot(showatr ? down : na, title='ATR Long Stop Loss', color=collong)
+// ******************************* Profit Target / Stop Loss *********************************************
+RR = input.float(2.0, "Reward to Risk ratio (X times SL)", step = 0.1, group = "Profit Target")
+breakeven = input.bool(true, "Move SL to breakeven when RR hit", group = "Profit Target", inline = 'breakenven')
+be_RR = input.float(1.0, "", inline = 'breakeven', group = "Profit Target")
+var L_PT = 0.0
+var S_PT = 0.0
+var L_SL = 0.0
+var S_SL = 0.0
+var L_be_PT = 0.0
+var S_be_PT = 0.0
+BSLE = ta.barssince(strategy.opentrades.entry_bar_index(0) == bar_index)
+entry_price = strategy.position_size != 0 ? strategy.opentrades.entry_price(0) : na
+if strategy.position_size > 0 //and BSLE == 1
+    L_PT := L_PT[1]
+    L_SL := (breakeven and high >= L_be_PT) ? entry_price : L_SL[1]
+    S_PT := close - (up - close)*RR
+    S_SL := up
+    L_be_PT := L_be_PT[1]
+    S_be_PT := close - (up - close)*be_RR
+else if strategy.position_size < 0 //and BSLE == 1
+    S_PT := S_PT[1]
+    S_SL := (breakeven and low <= S_be_PT) ? entry_price : S_SL[1]
+    L_PT := close + (close-down)*RR
+    L_SL := down
+    S_be_PT := S_be_PT[1]
+    L_be_PT := close + (close-down)*be_RR
+else if strategy.position_size != 0
+    L_PT := L_PT[1] 
+    S_PT := S_PT[1]
+else
+    L_PT := close + (close-down)*RR
+    L_SL := down
+    S_PT := close - (up - close)*RR
+    S_SL := up
+    L_be_PT := close + (close-down)*be_RR
+    S_be_PT := close - (up - close)*be_RR
+entry_line = plot(entry_price, "Entry Price", color.white, linewidth = 1, style = plot.style_linebr)
+L_PT_line = plot(strategy.position_size > 0 and BSLE > 0 ? L_PT : na, "L PT", color.green, linewidth = 2, style = plot.style_linebr)
+S_PT_line = plot(strategy.position_size < 0 and BSLE > 0 ? S_PT : na, "S PT", color.green, linewidth = 2, style = plot.style_linebr)
+L_SL_line = plot(strategy.position_size > 0 and BSLE > 0 ? L_SL : na, "L SL", color.red, linewidth = 2, style = plot.style_linebr)
+S_SL_line = plot(strategy.position_size < 0 and BSLE > 0 ? S_SL : na, "S SL", color.red, linewidth = 2, style = plot.style_linebr)
+L_be_PT_line = plot(strategy.position_size > 0 and BSLE > 0 ? L_be_PT : na, "L BE PT", color.blue, linewidth = 2, style = plot.style_linebr)
+S_be_PT_line = plot(strategy.position_size < 0 and BSLE > 0 ? S_be_PT : na, "S BE PT", color.blue, linewidth = 2, style = plot.style_linebr)
+fill(L_PT_line, entry_line, color = color.new(color.green,90))
+fill(S_PT_line, entry_line, color = color.new(color.green,90))
+fill(L_SL_line, entry_line, color = color.new(color.red,90))
+fill(S_SL_line, entry_line, color = color.new(color.red,90))
+// ---------------------------------- strategy setup ------------------------------------------------------
+var L_entry_trigger1 = false
+var S_entry_trigger1 = false
+L_entry_trigger1 := ema_bull and close < ema1 and k < 20 and strategy.position_size == 0
+S_entry_trigger1 := ema_bear and close > ema1 and k > 80 and strategy.position_size == 0
+L_entry1 = L_entry_trigger1[1] and stoch_crossup and recent_low > previous_low
+S_entry1 = S_entry_trigger1[1] and stoch_crossdown and recent_high < previous_high
+//debugging
+plot(L_entry_trigger1[1]?1:0, "L Entry Trigger")
+plot(stoch_crossup?1:0, "Stoch Cross Up")
+plot(recent_low > previous_low?1:0, "Higher low")
+plot(S_entry_trigger1[1]?1:0, "S Entry Trigger")
+plot(stoch_crossdown?1:0, "Stoch Cross down")
+plot(recent_high < previous_high?1:0, "Lower high")
+if L_entry1
+    strategy.entry("Long", strategy.long)
+if S_entry1
+    strategy.entry("Short", strategy.short)
+strategy.exit("Exit Long", "Long", limit = L_PT, stop = L_SL, comment_profit = "Exit Long, PT hit", comment_loss = "Exit Long, SL hit")
+strategy.exit("Exit Short", "Short", limit = S_PT, stop = S_SL, comment_profit = "Exit Short, PT hit", comment_loss = "Exit Short, SL hit")
+//resetting triggers
+L_entry_trigger1 := L_entry_trigger1[1] ? L_entry1 or ema_bear or S_entry1 ? false : true : L_entry_trigger1
+S_entry_trigger1 := S_entry_trigger1[1] ? S_entry1 or ema_bull or L_entry1 ? false : true : S_entry_trigger1
+//Trigger zones
+bgcolor(L_entry_trigger1 ? color.new(color.green ,90) : na)
+bgcolor(S_entry_trigger1 ? color.new(color.red,90) : na)
+Expand (186 lines)

@@ -1,0 +1,168 @@
+Script Name: JBravo Swing with GoGo Juice
+Author: bradvaughn
+Description: This follows Johnny Bravo Dominate Stocks strategy. When a full price bar closes above SMA 9, this indicates a buy. When the price bar closes below EMA20, this indicates a sell. If the MAs are all sloping up and aligned in order 9,20,180, then this indicates a Strong Buy. If the MAs are all sloping down and aligned in order 180,20,9, then this indicates a Strong...
+PineScript code:
+
+Pine Script™ strategy
+JBravo Swing with GoGo Juice
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © bradvaughn
+//@version=4
+strategy("JBravo Swing", overlay = false)
+var buy_in_progress = false
+//Moving Averages
+smaInput1 = input(title="Display SMA 9", type=input.bool, defval=true)
+smaInput2 = input(title="Display EMA 20", type=input.bool, defval=true)
+smaInput4 = input(title="Display SMA 180", type=input.bool, defval=true)
+colored_180 = input(false, title="Color-code 180 trend direction")
+vwapInput = input(title="Display VWAP", type=input.bool, defval=true)
+sma9 = sma(close, 9)
+ema20 = ema(close, 20)
+sma180 = sma(close, 180)
+//Plot Moving Averages
+plot(smaInput1 ? sma9 : na, color= color.red, title="SMA 9")
+plot(smaInput2 ? ema20 : na, color = color.yellow, title="EMA 20")
+// Plot VWAP
+vwap1 = vwap(hlc3)
+plot(vwapInput ? vwap1 : na, color = color.blue, title="VWAP")
+vwaplong = vwap1 > ema20
+vwapshort = vwap1 < ema20
+//Color SMA 180 trend direction if selected
+sma180_uptrend = sma(close, 180) > sma(close[2], 180)
+colr = sma180_uptrend == true or colored_180 == false ? color.white : colored_180 == true ? color.gray : na
+plot(smaInput4 ? sma180 : na, color = colr, title="SMA 180")
+//Get value of lower end of candle
+buyLow = iff(lowest(open, 1) < lowest(close, 1), lowest(open, 1), lowest(close, 1))
+sellLow = lowest(close, 1)
+// Find the lower MA for crossover sell condition
+sellma = iff((sma9<ema20), sma9, ema20)
+//SMA 9 trend direction
+sma9_uptrend = sma(close, 9) > sma(close[2], 9)
+//EMA 20 trend direction
+ema20_uptrend = ema(close, 20) > sma(close[2], 20)
+//Buy or sell if conditions are met
+// Buy when the candle low is above the SMA9
+// Sell when the candle low is below the lower of SMA9 and EMA20
+Buy = iff(buy_in_progress == false and buyLow > sma9 == true, true, false)
+Sell = iff(buy_in_progress == true and sellLow < sellma == true, true, false)
+// Determine stong buy and strong sell conditions.
+// If moving averages are all up, then this will qualify a buy as a strong buy.
+// If the moving averages are not up (ie. down) then this will qualify a sell as a strong sell
+StrongBuy = iff (Buy and sma9_uptrend and sma180_uptrend and ema20_uptrend and (sma9 > ema20) and (ema20 > sma180), true, false)
+StrongSell = iff (Sell and not sma9_uptrend and not sma180_uptrend and not ema20_uptrend and (sma9 < ema20) and (ema20 < sma180), true, false)
+//Update Trading status if bought or sold
+if Buy
+    buy_in_progress := true
+if Sell
+    buy_in_progress := false
+    
+// Clear Buy and Sell conditions if StrongBuy or StrongSell conditions exist.  
+// This disables plotting Buy and Sell conditions
+if StrongBuy
+    Buy := false
+if StrongSell
+    Sell := false
+    
+//Display BUY/SELL indicators
+plotshape(Buy,title="Buy", color=color.green, style=shape.arrowup,location=location.belowbar, text="Buy")
+plotshape(StrongBuy,title="Strong Buy", color=color.green, style=shape.arrowup,location=location.belowbar, text="Strong Buy")
+plotshape(Sell,title="Sell", color=color.red, style=shape.arrowdown,text="Sell")
+plotshape(StrongSell,title="Strong Sell", color=color.red, style=shape.arrowdown,text="Strong Sell")
+strategy.entry("GoGo Long", strategy.long, 1, when=vwaplong and vwapInput)
+strategy.entry("GoGo Short", strategy.short, 1, when=vwapshort and vwapInput)
+strategy.close("GoGo Long", when = vwapshort and vwapInput)
+strategy.close("GoGo Short", when = vwaplong and vwapInput)
+alertcondition(Buy, title="Buy Signal", message="Buy")
+alertcondition(Sell, title="Sell Signal", message="Sell")
+Expand (90 lines)

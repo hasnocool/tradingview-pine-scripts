@@ -1,0 +1,71 @@
+Script Name: Rsi strategy for BTC with (Rsi SPX)
+Author: AmosTradingSystem
+Description: I hope this strategy is just an idea and a starting point, I use the correlation of the Sp500 with the Btc, this does not mean that this correlation will exist forever!. I love Trading view and I'm learning to program, I find correlations very interesting and here is a simple strategy.
+This is a trading strategy script written in Pine Script language for use in...
+PineScript code:
+
+Pine Script™ strategy
+Rsi strategy for BTC with (Rsi SPX)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+//This strategy is just a starting point that serves to see the correlation between rsi SPX and rsi of the BTC, it is noted that it works better with a TIMEFRIME of 1 hour
+//@version=5
+strategy("rsi fix", overlay= false) // margin_long=100, margin_short=100)
+// Impostazione dell'input per il take profit
+tp_input = input.float(3, title="Take Profit %")
+Spx_1h = request.security("SPX", "60", ta.rsi(close, 14))
+Btc_1h_fixed = request.security(syminfo.tickerid, "60", ta.rsi(close, 14))
+// disegni trazdizionali
+// plot(Spx_1h, color=color.rgb(220, 228, 109), linewidth = 3)
+// plot(Btc_1h_fixed, color=color.rgb(162, 8, 189), linewidth = 3)
+longCondition = ta.crossover(Btc_1h_fixed, Spx_1h)
+if (longCondition)
+    strategy.entry("My Long Entry Id", strategy.long)
+shortCondition = ta.crossunder (Btc_1h_fixed, Spx_1h)
+if (shortCondition)
+    strategy.entry("My Short Entry Id", strategy.short)  
+// Impostazione del take profit
+strategy.exit("My Long Entry Id", "My Long TP", profit = strategy.position_avg_price * (1 + tp_input/100))
+strategy.exit("My Short Entry Id", "My Short TP", profit = strategy.position_avg_price * (1 - tp_input/100))
+// colorare gli spazi
+color1 = Spx_1h > Btc_1h_fixed ? color.new(color.fuchsia,30) : color.new(color.yellow,40)
+color2 = Spx_1h > Btc_1h_fixed ? color.red : color.green
+plot1 = plot(Spx_1h, "rsi 1h", color=color2, linewidth = 2)
+plot2 = plot(Btc_1h_fixed, "Btc_rsi", color=color2, linewidth = 2)
+fill(plot1,plot2, color1)
+Expand (36 lines)

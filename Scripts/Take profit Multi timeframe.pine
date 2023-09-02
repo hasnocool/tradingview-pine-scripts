@@ -1,0 +1,276 @@
+Script Name: Take profit Multi timeframe
+Author: TrendCrypto2022
+Description: Republish:
+Take profit Multi timeframe:
+In this scipts, I build risk-reward system managemant. You can take profit in two way: percent or at resistant in higher timeframe or both.
+Strategy in this scripts, I use Wave trend indicator as example strategy.
+PineScript code:
+
+Pine Script™ strategy
+Take profit Multi timeframe
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © TrendCrypto2022
+//@version=5
+strategy(title = "Take profit Multi timeframe", overlay = true,  pyramiding=0,initial_capital = 10000, default_qty_type= strategy.fixed, default_qty_value =1, calc_on_order_fills=false, slippage=0,commission_type=strategy.commission.percent,commission_value=0)
+//Input
+takepercent     = input.bool(title="Take profit %",                 defval=true ,       group="Set up take profit")
+takemtf         = input.bool(title="Take profit Multi timeframe",   defval=false ,      group="Set up take profit")
+//Paste your strategy at here. This is example strategy: I use WaveTrend indicator
+//WaveTrend indicator
+n1          = input(10, "Channel Length",       group="Example Strategy")
+n2          = input(21, "Average Length",       group="Example Strategy")
+oblv1       = input(60, "Over Bought Lv 1",     group="Example Strategy")
+oblv2       = input(53, "Over Bought Lv 2",     group="Example Strategy")
+oslv1       = input(-60, "Over Sold Lv 1",      group="Example Strategy")
+oslv2       = input(-53, "Over Sold Lv 2",      group="Example Strategy")
+ap          = hlc3 
+esa         = ta.ema(ap, n1)
+d           = ta.ema(math.abs(ap - esa), n1)
+ci          = (ap - esa) / (0.015 * d)
+tci         = ta.ema(ci, n2)
+wt1         = tci
+wt2         = ta.sma(wt1,4)
+//Strategy
+buy         = ta.crossover(wt1, wt2)    and wt1 < -20
+closebuy    = ta.crossunder(wt1, wt2)    and wt1 > 0
+if buy
+    strategy.entry("Long", strategy.long)
+//Set up take profit %
+percent(pcnt) =>
+    strategy.position_size != 0 ? math.round(pcnt / 100 * strategy.position_avg_price / syminfo.mintick) : float(na)
+TP1     =input.float(3, title="TP1 %", step=0.1,    group="Take profit %", inline = "1")
+TP2     =input.float(5, title="TP2 %", step=1,      group="Take profit %", inline = "1")
+TP3     =input.float(8, title="TP3 %", step=1,      group="Take profit %", inline = "2")
+TP4     =input.float(10, title="TP4 %", step=1,     group="Take profit %", inline = "2")
+SL      =input.float(5, title="Stop Loss %", step=1,        group="Take profit %")
+qty1    =input.float(5, title="% Close At TP1", step=1,     group="Take profit %", inline = "3")
+qty2    =input.float(5, title="% Close At TP2", step=1,     group="Take profit %", inline = "3")
+qty3    =input.float(5, title="% Close At TP3", step=1,     group="Take profit %", inline = "4")
+qty4    =input.float(5, title="% Close At TP4", step=1,     group="Take profit %", inline = "4")
+lossSTL = percent(SL)
+//Set up take profit at higher TF
+ema_len1        = input.int(title='EMA1',                   defval=100,     group='Take profit Mtf')
+ema_len2        = input.int(title='EMA2',                   defval=200,     group='Take profit Mtf')
+src             = close
+tf1             = input.timeframe(title='Timeframe 1',      defval='240',   group='Take profit Mtf')
+tf2             = input.timeframe(title='Timeframe 2',      defval='D',     group='Take profit Mtf')
+htf_ma1         = ta.ema(src, ema_len1)
+htf_ma2         = ta.ema(src, ema_len2)
+ema1            = request.security(syminfo.tickerid, tf1, htf_ma1)
+ema2            = request.security(syminfo.tickerid, tf1, htf_ma2)
+ema3            = request.security(syminfo.tickerid, tf2, htf_ma1)
+ema4            = request.security(syminfo.tickerid, tf2, htf_ma2)
+//Set up take profit multi timeframe
+a       = array.from((ema1), (ema2), (ema3), (ema4))
+tpmtf1  = array.min(a)
+tpmtf2  = array.min(a, 2)
+tpmtf3  = array.min(a, 3)
+tpmtf4  = array.min(a, 4)
+//Set up exit
+long_sl_lv = strategy.position_avg_price - lossSTL*syminfo.mintick
+if takepercent == true
+    strategy.exit("TP1%", "Long", qty_percent = qty1,   profit = percent(TP1), loss = lossSTL)
+    strategy.exit("TP2%", "Long", qty_percent = qty2,   profit = percent(TP2), loss = lossSTL)
+    strategy.exit("TP3%", "Long", qty_percent = qty3,   profit = percent(TP3), loss = lossSTL)
+    strategy.exit("TP4%", "Long", qty_percent = qty3,   profit = percent(TP4), loss = lossSTL)
+    strategy.close_all(when= closebuy, comment="Close All")
+if takemtf == true and array.max(a, 1) > strategy.position_avg_price
+    strategy.exit("TP1Mtf", "Long", qty_percent = qty1, limit = tpmtf1, stop = long_sl_lv)
+    strategy.exit("TP2Mtf", "Long", qty_percent = qty2, limit = tpmtf2, stop = long_sl_lv)
+    strategy.exit("TP3Mtf", "Long", qty_percent = qty3, limit = tpmtf3, stop = long_sl_lv)
+    strategy.close_all(when= closebuy, comment="Close All")
+// Plot TP & SL
+long_tp1_lv = strategy.position_avg_price + percent(TP1)*syminfo.mintick
+long_tp2_lv = strategy.position_avg_price + percent(TP2)*syminfo.mintick
+long_tp3_lv = strategy.position_avg_price + percent(TP3)*syminfo.mintick
+long_tp4_lv = strategy.position_avg_price + percent(TP4)*syminfo.mintick
+plot(strategy.position_size > 0 ? long_sl_lv : na, color=color.red, style=plot.style_linebr, title="SL Long")
+plot(strategy.position_size > 0 ? long_tp1_lv : na, color=color.lime, style=plot.style_linebr, title="Long TP1%")
+plot(strategy.position_size > 0 ? long_tp2_lv : na, color=color.lime, style=plot.style_linebr, title="Long TP2%")
+plot(strategy.position_size > 0 ? long_tp3_lv : na, color=color.lime, style=plot.style_linebr, title="Long TP3%")
+plot(strategy.position_size > 0 ? long_tp4_lv : na, color=color.lime, style=plot.style_linebr, title="Long TP4%")
+plot(strategy.position_size > 0 ? tpmtf1 : na, color=color.orange, style=plot.style_linebr, title="Long TP1Mtf", display = display.none)
+plot(strategy.position_size > 0 ? tpmtf2 : na, color=color.orange, style=plot.style_linebr, title="Long TP2Mtf", display = display.none)
+plot(strategy.position_size > 0 ? tpmtf3 : na, color=color.orange, style=plot.style_linebr, title="Long TP3Mtf", display = display.none)
+//Plot Resistant in higher TF
+plotema1 = plot(ema1, color=color.new(color.silver, 0),     style=plot.style_line, linewidth=1, offset=0, title='Ema100 4h',    display=display.none)
+plotema2 = plot(ema2, color=color.new(color.silver, 0),     style=plot.style_line, linewidth=1, offset=0, title='Ema200 4h',    display=display.none)
+plotema3 = plot(ema3, color=color.new(color.orange, 20),    style=plot.style_line, linewidth=1, offset=0, title='Ema100 D',     display=display.none)
+plotema4 = plot(ema4, color=color.new(color.orange, 20),    style=plot.style_line, linewidth=1, offset=0, title='Ema200 D',     display=display.none)
+//Label TP
+_x = timenow + math.round(ta.change(time) * 2)
+var label labelema1 = na
+label.delete(labelema1)
+labelema1 := label.new(x=_x, y=ema1, text='Ema' + str.tostring(ema_len1) + ' ' + str.tostring(tf1) + ': ' + str.tostring(math.round(ema1,4)) + '', color=color.new(#000000, 100), textcolor =  color.yellow, size=size.small, style=label.style_label_left, xloc=xloc.bar_time, yloc=yloc.price)
+var label labelema2 = na
+label.delete(labelema2)
+labelema2 := label.new(x=_x, y=ema2, text='Ema' + str.tostring(ema_len2) + ' ' + str.tostring(tf1) + ': ' + str.tostring(math.round(ema2,4)) + '', color=color.new(#000000, 100), textcolor = color.yellow, size=size.small, style=label.style_label_left, xloc=xloc.bar_time, yloc=yloc.price)
+var label labelema3 = na
+label.delete(labelema3)
+labelema3 := label.new(x=_x, y=ema3, text='Ema' + str.tostring(ema_len1) + ' ' + str.tostring(tf2) + ': ' + str.tostring(math.round(ema3,4)) + '', color=color.new(#000000, 100), textcolor = color.yellow, size=size.small, style=label.style_label_left, xloc=xloc.bar_time, yloc=yloc.price)
+var label labelema4 = na
+label.delete(labelema4)
+labelema4 := label.new(x=_x, y=ema4, text='Ema' + str.tostring(ema_len2) + ' ' + str.tostring(tf2) + ': ' + str.tostring(math.round(ema4,4)) + '', color=color.new(#000000, 100), textcolor = color.yellow, size=size.small, style=label.style_label_left, xloc=xloc.bar_time, yloc=yloc.price)
+if strategy.position_size > 0
+    var label labellongtp1 = na
+    label.delete(labellongtp1)
+    labellongtp1 := label.new(x=_x, y=long_tp1_lv, text='TP1: ' + str.tostring(math.round(long_tp1_lv,2)) + '', color=color.new(#000000, 100), textcolor = color.lime, size=size.small, style=label.style_label_left, xloc=xloc.bar_time, yloc=yloc.price)
+     
+    var label labellongtp2 = na
+    label.delete(labellongtp2)
+    labellongtp2 := label.new(x=_x, y=long_tp2_lv, text='TP2: ' + str.tostring(math.round(long_tp2_lv,2)) + '', color=color.new(#000000, 100), textcolor = color.lime, size=size.small, style=label.style_label_left, xloc=xloc.bar_time, yloc=yloc.price)
+     
+    var label labellongtp3 = na
+    label.delete(labellongtp3)
+    labellongtp3 := label.new(x=_x, y=long_tp3_lv, text='TP3: ' + str.tostring(math.round(long_tp3_lv,2)) + '', color=color.new(#000000, 100), textcolor = color.lime, size=size.small, style=label.style_label_left, xloc=xloc.bar_time, yloc=yloc.price)
+        
+    var label labellongtp4 = na
+    label.delete(labellongtp4)
+    labellongtp4 := label.new(x=_x, y=long_tp4_lv, text='TP4: ' + str.tostring(math.round(long_tp4_lv,2)) + '', color=color.new(#000000, 100), textcolor = color.lime, size=size.small, style=label.style_label_left, xloc=xloc.bar_time, yloc=yloc.price)
+    
+Expand (144 lines)

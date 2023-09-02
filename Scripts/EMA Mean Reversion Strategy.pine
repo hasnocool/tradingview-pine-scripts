@@ -1,0 +1,366 @@
+Script Name: EMA Mean Reversion Strategy
+Author: jordanfray
+Description: This strategy is built on the simple idea that when the price gets far enough away from an EMA, it's bound to reverse. This strategy uses the percent distance the price is from the EMA to trigger ladder orders and sells when the price crosses a trailing stop. This strategy uses the  EMA Price Distance Tracker indicator .
+PineScript code:
+
+Pine Script™ strategy
+EMA Mean Reversion Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © jordanfray
+//@version=5
+strategy(title="EMA Mean Reversion Strategy", overlay=true, max_bars_back=5000, default_qty_type=strategy.percent_of_equity, default_qty_value=100,initial_capital=100000, commission_type=strategy.commission.percent, commission_value=0.05, backtest_fill_limits_assumption=2)
+// Indenting Classs
+indent_1 = " "
+indent_2 = "  "
+indent_3 = "   "
+indent_4 = "    "
+// Tooltips
+longEntryToolTip = "When the percentage that the price is away from the selected EMA reaches this point, a long postion will open."
+shortEntryToolTip = "When the percentage that the price is away from the selected EMA reaches this point, a short postion will open."
+closeEntryToolTip = "When the percentage that the price is away from the selected EMA reaches this point, open postion will close."
+ladderInToolTip = "Enable this to use the laddering settings below."
+cancelEntryToolTip = "When the percentage that the price is away from the selected EMA reaches this point, any unfilled entries will be canceled."
+// Group Titles
+group_one_title = "EMA Settings"
+group_two_title = "Entry Settings"
+// Colors
+blue = color.new(#00A5FF,0)
+lightBlue = color.new(#00A5FF,90)
+green = color.new(#2DBD85,0)
+gray_80 =  color.new(#7F7F7F,80)
+gray_60 =  color.new(#7F7F7F,60)
+gray_40 =  color.new(#7F7F7F,40)
+white = color.new(#ffffff,0)
+red = color.new(#E02A4A,0)
+transparent = color.new(#000000,100)
+// Strategy Settings
+EMAtimeframe = input.timeframe(defval="", title="Timeframe", group=group_one_title)
+EMAlength = input.int(defval=200, minval=1, title="Length", group=group_one_title)
+EMAtype = input.string(defval="EMA", options = ["EMA", "SMA", "RMA", "WMA"], title="Type", group=group_one_title)
+EMAsource = input.source(defval=close, title="Source", group=group_one_title)
+openLongEntryAbove = input.float(defval=9, title="Long Position Entry Trigger", tooltip=longEntryToolTip, group=group_two_title)
+openEntryEntryAbove = input.float(defval=9, title="Short Position Entry Trigger", tooltip=shortEntryToolTip, group=group_two_title)
+closeEntryBelow = input.float(defval=1.0, title="Close Position Trigger", tooltip=closeEntryToolTip, group=group_two_title)
+cancelEntryBelow = input.float(defval=4, title="Cancel Unfilled Entries Trigger", tooltip=cancelEntryToolTip, group=group_two_title)
+enableLaddering = input.bool(defval=true, title="Ladder Into Positions", tooltip=ladderInToolTip, group=group_two_title)
+ladderRungs = input.int(defval=4, minval=2, maxval=4, step=1, title=indent_4+"Ladder Rungs", group=group_two_title)
+ladderStep = input.float(defval=.5, title=indent_4+"Ladder Step (%)", step=.1, group=group_two_title)/100
+stop_loss_val = input.float(defval=4.0, title="Stop Loss (%)", step=0.1, group=group_two_title)/100
+start_trailing_after = input.float(defval=1, title="Start Trailing After (%)", step=0.1, group=group_two_title)/100
+trail_behind = input.float(defval=1, title="Trail Behind (%)", step=0.1, group=group_two_title)/100
+// Calculate trailing stop values
+long_start_trailing_val = strategy.position_avg_price + (strategy.position_avg_price * start_trailing_after)
+long_trail_behind_val = close - (strategy.position_avg_price * trail_behind)
+long_stop_loss = strategy.position_avg_price * (1.0 - stop_loss_val)
+short_start_trailing_val = strategy.position_avg_price - (strategy.position_avg_price * start_trailing_after)
+short_trail_behind_val = close + (strategy.position_avg_price * trail_behind)
+short_stop_loss = strategy.position_avg_price * (1 + stop_loss_val)
+// Calulate EMA
+EMA = switch EMAtype
+    "EMA" => ta.ema(EMAsource, EMAlength)
+    "SMA" => ta.sma(EMAsource, EMAlength)
+    "RMA" => ta.rma(EMAsource, EMAlength)
+    "WMA" => ta.wma(EMAsource, EMAlength)
+    => na
+EMA_ = EMAtimeframe == timeframe.period ? EMA : request.security(syminfo.ticker, EMAtimeframe, EMA[1], lookahead = barmerge.lookahead_on)
+plot(EMA_, title="EMA", linewidth=2, color=blue, editable=true)
+EMA_cloud_upper_band_val = EMA_ + (EMA_ * openLongEntryAbove/100)
+EMA_cloud_lower_band_val = EMA_ - (EMA_ * openLongEntryAbove/100)
+EMA_cloud_upper_band = plot(EMA_cloud_upper_band_val, title="EMA Cloud Upper Band", color=blue)
+EMA_cloud_lower_band = plot(EMA_cloud_lower_band_val, title="EMA Cloud Upper Band", color=blue)
+fill(EMA_cloud_upper_band, EMA_cloud_lower_band, editable=false, color=lightBlue)
+distance_from_EMA = ((close - EMA_)/close)*100
+if distance_from_EMA < 0
+    distance_from_EMA := distance_from_EMA * -1
+// Calulate Ladder Entries
+long_ladder_1_limit_price = close - (close * 1 * ladderStep)
+long_ladder_2_limit_price = close - (close * 2 * ladderStep)
+long_ladder_3_limit_price = close - (close * 3 * ladderStep)
+long_ladder_4_limit_price = close - (close * 4 * ladderStep)
+short_ladder_1_limit_price = close + (close * 1 * ladderStep)
+short_ladder_2_limit_price = close + (close * 2 * ladderStep)
+short_ladder_3_limit_price = close + (close * 3 * ladderStep)
+short_ladder_4_limit_price = close + (close * 4 * ladderStep)
+var position_qty = strategy.equity/close
+if enableLaddering
+    position_qty := (strategy.equity/close) / ladderRungs
+else
+    position_qty := strategy.equity/close
+    
+plot(position_qty, color=white)
+//plot(strategy.equity, color=green)
+// Entry Conditions
+currently_in_a_postion = strategy.position_size != 0
+currently_in_a_long_postion = strategy.position_size > 0
+currently_in_a_short_postion = strategy.position_size < 0
+average_price = strategy.position_avg_price
+bars_since_entry = currently_in_a_postion ? bar_index - strategy.opentrades.entry_bar_index(strategy.opentrades - 1) + 1 : 5
+long_run_up = ta.highest(high, bar_index == 0 ? 5000: bars_since_entry)
+long_run_up_line = plot(long_run_up, style=plot.style_stepline, editable=false, color=currently_in_a_long_postion ? green : transparent)
+start_trailing_long_entry = currently_in_a_long_postion and long_run_up > long_start_trailing_val
+long_trailing_stop = start_trailing_long_entry ? long_run_up - (long_run_up * trail_behind) : long_stop_loss
+long_trailing_stop_line = plot(long_trailing_stop, style=plot.style_stepline, editable=false, color=currently_in_a_long_postion ? long_trailing_stop > strategy.position_avg_price ? green : red : transparent)
+short_run_up = ta.lowest(low, bar_index == 0 ? 5000: bars_since_entry)
+short_run_up_line = plot(short_run_up, style=plot.style_stepline, editable=false, color=currently_in_a_short_postion ? green : transparent)
+start_trailing_short_entry = currently_in_a_short_postion and short_run_up < short_start_trailing_val
+short_trailing_stop = start_trailing_short_entry ? short_run_up + (short_run_up * trail_behind) : short_stop_loss
+short_trailing_stop_line = plot(short_trailing_stop, style=plot.style_stepline, editable=false, color=currently_in_a_short_postion ? short_trailing_stop < strategy.position_avg_price ? green : red : transparent)
+long_conditions_met = distance_from_EMA > openLongEntryAbove and close < EMA_ and not currently_in_a_postion
+short_conditions_met = distance_from_EMA > openEntryEntryAbove and close > EMA_ and not currently_in_a_postion
+close_long_entries = distance_from_EMA <= closeEntryBelow or close <= long_trailing_stop
+close_short_entries = distance_from_EMA <= closeEntryBelow or close >= short_trailing_stop
+cancel_entries = distance_from_EMA <= cancelEntryBelow
+plotshape(long_conditions_met ? close : na, style=shape.diamond, title="Long Conditions Met" )
+plotshape(short_conditions_met ? close : na, style=shape.diamond, title="Short Conditions Met" )
+plot(average_price,style=plot.style_stepline, editable=false, color=currently_in_a_postion ? blue : transparent)
+// Long Entry
+if enableLaddering
+    if ladderRungs == 2
+        strategy.entry(id="Long Ladder 1", direction=strategy.long, qty=position_qty, limit=long_ladder_1_limit_price, when=long_conditions_met)
+        strategy.entry(id="Long Ladder 2", direction=strategy.long, qty=position_qty, limit=long_ladder_2_limit_price, when=long_conditions_met)
+    else if ladderRungs == 3
+        strategy.entry(id="Long Ladder 1", direction=strategy.long, qty=position_qty, limit=long_ladder_1_limit_price, when=long_conditions_met)
+        strategy.entry(id="Long Ladder 2", direction=strategy.long, qty=position_qty, limit=long_ladder_2_limit_price, when=long_conditions_met)
+        strategy.entry(id="Long Ladder 3", direction=strategy.long, qty=position_qty, limit=long_ladder_3_limit_price, when=long_conditions_met)
+    else if ladderRungs == 4
+        strategy.entry(id="Long Ladder 1", direction=strategy.long, qty=position_qty, limit=long_ladder_1_limit_price, when=long_conditions_met)
+        strategy.entry(id="Long Ladder 2", direction=strategy.long, qty=position_qty, limit=long_ladder_2_limit_price, when=long_conditions_met)
+        strategy.entry(id="Long Ladder 3", direction=strategy.long, qty=position_qty, limit=long_ladder_3_limit_price, when=long_conditions_met)
+        strategy.entry(id="Long Ladder 4", direction=strategy.long, qty=position_qty, limit=long_ladder_4_limit_price, when=long_conditions_met)
+    
+    strategy.exit(id="Close Long Ladder 1", from_entry="Long Ladder 1", stop=long_trailing_stop, limit=long_trailing_stop, when=close_long_entries)
+    strategy.exit(id="Close Long Ladder 2", from_entry="Long Ladder 2", stop=long_trailing_stop, limit=long_trailing_stop, when=close_long_entries)
+    strategy.exit(id="Close Long Ladder 3", from_entry="Long Ladder 3", stop=long_trailing_stop, limit=long_trailing_stop, when=close_long_entries)
+    strategy.exit(id="Close Long Ladder 4", from_entry="Long Ladder 4", stop=long_trailing_stop, limit=long_trailing_stop, when=close_long_entries)
+    
+    strategy.cancel(id="Long Ladder 1", when=cancel_entries)
+    strategy.cancel(id="Long Ladder 2", when=cancel_entries)
+    strategy.cancel(id="Long Ladder 3", when=cancel_entries)
+    strategy.cancel(id="Long Ladder 4", when=cancel_entries)
+else
+    strategy.entry(id="Long", direction=strategy.long, qty=100, when=long_conditions_met)
+    strategy.exit(id="Close Long", from_entry="Long", stop=long_stop_loss, limit=EMA_, when=close_long_entries)
+    strategy.cancel(id="Long", when=cancel_entries)
+// Short Entry
+if enableLaddering
+    if ladderRungs == 2
+        strategy.entry(id="Short Ladder 1", direction=strategy.short, qty=position_qty, limit=short_ladder_1_limit_price, when=short_conditions_met)
+        strategy.entry(id="Short Ladder 2", direction=strategy.short, qty=position_qty, limit=short_ladder_2_limit_price, when=short_conditions_met)
+    else if ladderRungs == 3
+        strategy.entry(id="Short Ladder 1", direction=strategy.short, qty=position_qty, limit=short_ladder_1_limit_price, when=short_conditions_met)
+        strategy.entry(id="Short Ladder 2", direction=strategy.short, qty=position_qty, limit=short_ladder_2_limit_price, when=short_conditions_met)
+        strategy.entry(id="Short Ladder 3", direction=strategy.short, qty=position_qty, limit=short_ladder_3_limit_price, when=short_conditions_met)
+    else if ladderRungs == 4
+        strategy.entry(id="Short Ladder 1", direction=strategy.short, qty=position_qty, limit=short_ladder_1_limit_price, when=short_conditions_met)
+        strategy.entry(id="Short Ladder 2", direction=strategy.short, qty=position_qty, limit=short_ladder_2_limit_price, when=short_conditions_met)
+        strategy.entry(id="Short Ladder 3", direction=strategy.short, qty=position_qty, limit=short_ladder_3_limit_price, when=short_conditions_met)
+        strategy.entry(id="Short Ladder 4", direction=strategy.short, qty=position_qty, limit=short_ladder_4_limit_price, when=short_conditions_met)
+    
+    strategy.exit(id="Close Short Ladder 1", from_entry="Short Ladder 1", stop=short_trailing_stop, limit=EMA_, when=close_short_entries)
+    strategy.exit(id="Close Short Ladder 2", from_entry="Short Ladder 2", stop=short_trailing_stop, limit=EMA_, when=close_short_entries)
+    strategy.exit(id="Close Short Ladder 3", from_entry="Short Ladder 3", stop=short_trailing_stop, limit=EMA_, when=close_short_entries)
+    strategy.exit(id="Close Short Ladder 4", from_entry="Short Ladder 4", stop=short_trailing_stop, limit=EMA_, when=close_short_entries)
+    
+    strategy.cancel(id="Short Ladder 1", when=cancel_entries)
+    strategy.cancel(id="Short Ladder 2", when=cancel_entries)
+    strategy.cancel(id="Short Ladder 3", when=cancel_entries)
+    strategy.cancel(id="Short Ladder 4", when=cancel_entries)
+else
+    strategy.entry(id="Short", direction=strategy.short, when=short_conditions_met)
+    strategy.exit(id="Close Short", from_entry="Short", limit=EMA_, when=close_short_entries)
+    strategy.cancel(id="Short", when=cancel_entries)
+Expand (193 lines)

@@ -1,0 +1,372 @@
+Script Name: CM_SlingShotSystem+_CassicEMA+Willams21EMA13 htc1977 edition
+Author: Arivadis
+Description: This strategy is a combination of 2 indicators based on EMA(actually x3 EMAs and Williams ind.
+We usin this to see where EMA fast is above EMA slow(for long), entry position when price hit fast EMA and exit if trend changes or price overbought, or by stoploss 1%.
+The opposite for a short position.
+
+
+For better result You can change every EMA's, stoploss, Willam's...
+PineScript code:
+
+Pine Script™ strategy
+CM_SlingShotSystem+_CassicEMA+Willams21EMA13 htc1977 edition
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © svatvlad1993
+//@version=5
+strategy("CM_SlingShotSystem", overlay=true, margin_long = 100, margin_short = 100, initial_capital = 500, currency=currency.USDT, calc_on_every_tick = false)
+// do not use 'calc_on_every_tick = true', better to use lower timeframe
+// if You strong need - you can, but the part of code(some variables) should be overwritten
+//                                  CM_SLING_SHOT_SYSTEM
+// Has updated for pinescript v5
+// this is first indicator you provided https://tr.tradingview.com/script/GE7tSQK1-CM-Sling-Shot-System/
+// this indicator based on EMA, so there are some reasons to use much bigger/lower EMA classic(see below)
+sae = input(true, title="Show Aggressive Entry?, Or Use as Alert To Potential Conservative Entry?")
+sce = input(true, title="Show Conservative Entry?")
+st = input(true, title="Show Trend Arrows at Top and Bottom of Screen?")
+def = input(false, title="Only Choose 1 - Either Conservative Entry Arrows or 'B'-'S' Letters")
+pa = input(true, title="Show Conservative Entry Arrows?")
+sl = input(false, title="Show 'B'-'S' Letters?")
+//                                  EMA Definitions
+// This part for input each EMA for CM_SLING_SHOT_SYSTEM
+CM_SLING_SHOT_emaSlow_input = input.int(62 ,minval = 2)
+CM_SLING_SHOT_emaFast_input = input.int(38, minval = 1)
+emaSlow = ta.ema(close, CM_SLING_SHOT_emaSlow_input)
+emaFast = ta.ema(close, CM_SLING_SHOT_emaFast_input)
+//Aggressive Entry or Alert To Potential Trade
+pullbackUpT() => emaFast > emaSlow and close < emaFast
+pullbackDnT() => emaFast < emaSlow and close > emaFast
+//Conservative Entry Code For Highlight Bars
+entryUpT() => emaFast > emaSlow and close[1] < emaFast and close > emaFast
+entryDnT() => emaFast < emaSlow and close[1] > emaFast and close < emaFast
+//Conservative Entry True/False Condition
+entryUpTrend = emaFast > emaSlow and close[1] < emaFast and close > emaFast ? 1 : 0
+entryDnTrend = emaFast < emaSlow and close[1] > emaFast and close < emaFast ? 1 : 0
+//Define Up and Down Trend for Trend Arrows at Top and Bottom of Screen
+upTrend = emaFast >= emaSlow
+downTrend = emaFast < emaSlow
+//Definition for Conseervative Entry Up and Down PlotArrows
+codiff = entryUpTrend == 1 ? entryUpTrend : 0
+codiff2 = entryDnTrend == 1 ? entryDnTrend : 0
+//Color definition for Moving Averages
+col = emaFast > emaSlow ? color.lime : emaFast < emaSlow ? color.red : color.yellow
+//Moving Average Plots and Fill
+p1 = plot(emaSlow, title="Slow MA", style=plot.style_linebr, linewidth=4, color=col)
+p2 = plot(emaFast, title="Fast MA", style=plot.style_linebr, linewidth=2, color=col)
+fill(p1, p2, color.new(color.silver, 50))
+//Aggressive Entry, Conservative Entry Highlight Bars
+barcolor(sae and pullbackUpT() ? color.yellow : sae and pullbackDnT() ? color.yellow : na)
+barcolor(sce and entryUpT() ? color.aqua : sce and entryDnT() ? color.aqua : na)
+//Trend Triangles at Top and Bottom of Screen
+plotshape(st and upTrend ? upTrend : na, title="Conservative Buy Entry Triangle",style=shape.triangleup, location=location.bottom, color=color.new(color.lime, transp=0), offset=0)
+plotshape(st and downTrend ? downTrend : na, title="Conservative Short Entry Triangle",style=shape.triangledown, location=location.top, color=color.new(color.red, transp=0), offset=0)
+//Plot Arrows OR Letters B and S for Buy Sell Signals
+plotarrow(pa and codiff ? codiff : na, title="Up Entry Arrow", colorup=color.new(color.lime, transp=0), maxheight=30, minheight=30)
+plotarrow(pa and codiff2*-1 ? codiff2*-1 : na, title="Down Entry Arrow", colordown=color.new(color.red, transp=0), maxheight=30, minheight=30)
+plotchar(sl and codiff ? low - ta.tr : na, title="Buy Entry", offset=0, char='B', location=location.absolute, color=color.new(color.lime, transp=0))
+plotchar(sl and codiff2 ? high + ta.tr : na, title="Short Entry", offset=0, char='S', location=location.absolute, color=color.new(color.red, transp=0))
+//                            Willams21EMA13 htc1977 edition
+// second indicator https://tr.tradingview.com/v/BYEfUEKp/
+//  input number of candles for diapason
+Willams_candles_back_length = input.int(21, minval=1)
+upper = ta.highest(Willams_candles_back_length)
+lower = ta.lowest(Willams_candles_back_length)
+// calc willy
+willyout = 100 * (close - upper) / (upper - lower)
+src = willyout
+Willams_len = input.int(13, minval=1, title="Length")
+// compute the EMA of willy
+emaout = ta.ema(willyout, Willams_len)
+// draw willy and EMA
+current_price = close
+//                             EMA classic
+// You can use this EMA for bult indicator or/and inside strategy buy logic
+// You can ON/OFF EMA for calculating(but for OFF indicator there is another field in settings)
+switcher_EMA = input.bool(true)
+EMA_classic_len = input.int(200, minval=1, title="Length")
+EMA_OHLC = input(close, title="Source")
+offset2 = input.int(title="Offset", defval=0, minval=-500, maxval=500)
+out2 = ta.ema(EMA_OHLC, EMA_classic_len)
+plot(out2, title="EMA", color=color.blue, offset=offset2)
+ma(source, length, type) =>
+    switch type
+        "SMA" => ta.sma(source, length)
+        "EMA" => ta.ema(source, length)
+        "SMMA (RMA)" => ta.rma(source, length)
+        "WMA" => ta.wma(source, length)
+        "VWMA" => ta.vwma(source, length)
+// choose indicator - for You it is EMA
+typeMA2 = input.string(title = "Method", defval = "SMA", options=["SMA", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group="Smoothing")
+smoothingLength2 = input.int(title = "Length", defval = 5, minval = 1, maxval = 100, group="Smoothing")
+smoothingLine2 = ma(out2, smoothingLength2, typeMA2)
+plot(smoothingLine2, title="Smoothing Line", color=#f37f20, offset=offset2, display=display.none)
+// logic for strategy_ema_switcher
+var long_EMA_classic = true
+var short_EMA_classic = true
+if switcher_EMA == true
+    if close > out2
+        long_EMA_classic := true
+        short_EMA_classic := false
+    else
+        long_EMA_classic := false
+        short_EMA_classic := true
+else
+    long_EMA_classic := true
+    short_EMA_classic := true
+// var for entered order + stop_loss for each side
+var calc = 0
+var cust_stop_long = 0.0
+var cust_stop_short = 0.0
+if strategy.position_size == 0
+    cust_stop_long := 0.0
+    cust_stop_short := 0.0
+custom_stop_percent = input.float(0.01, minval = 0.001, title = 'custom stop') //this is 1%, 55% = 0.55
+// logict enry order
+if calc == 0
+    if emaFast > emaSlow and ta.crossunder(low, emaFast) and low[1] > emaFast and long_EMA_classic == true
+        strategy.order('long_entry', strategy.long, 50)
+        alert('long_signal')
+        cust_stop_long := close - (close * custom_stop_percent)
+        strategy.exit('long_entry', stop=cust_stop_long)
+        calc := 1
+    if emaFast < emaSlow  and ta.crossover(high, emaFast) and high[1] < emaFast and short_EMA_classic == true
+        strategy.order('short_entry', strategy.short, 50)
+        alert('short_signal')
+        cust_stop_short := close + (close * custom_stop_percent)
+        strategy.exit('short_entry', stop=cust_stop_short)
+        calc := -1
+    
+// logic for close position
+if calc == 1 and (emaFast < emaSlow or (emaout > -20 and willyout > -20) or close < cust_stop_long)
+    strategy.close('long_entry', immediately = true)
+    calc := 0
+    
+if calc == -1 and (emaFast > emaSlow or (emaout < -80 and willyout < -80) or close > cust_stop_short)
+    strategy.close('short_entry', immediately = true)
+    calc := 0
+plot(strategy.equity)
+// a piece of advice
+// here are a lot of ema, probably You have to try some else indicators.
+// a lot of negative orders were also opened on period of small difference between emaslow and emafast. This could be avoided.
+// Play with variables, see profit, gave fan!!!
+// Arivadis
+Expand (219 lines)

@@ -1,0 +1,71 @@
+Script Name: Easy Bands Custom Indicator
+Author: weatherbeats
+Description: Based on 21 Week SMA
+--- // Buy when the market is oversold  -  Sell when the Market is overbought // --
+
+If you don't know what that means don't use this indicator. Good luck out there!
+PineScript code:
+
+Pine Script™ strategy
+Easy Bands Custom Indicator
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+//Step One: Initial Setting
+//@version=4
+strategy("Easy Bands Custom", overlay = true, currency = currency.USD, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, commission_value = 0)
+//Step Two: Parameter Setting
+mdl = sma(close, 140) // 20 trading days simple moving average
+dev = stdev(close, 20) // 20 trading days standard deviation
+upr = mdl * 1.45 // upper_band 20 trading days moving average plus 2 standard deviation
+lwr = mdl * .65 // lower_band 20 trading days moving average minus 2 standard deviation
+upr_2 = mdl * 1.8 // upper_band 20 trading days moving average plus 2 standard deviation
+lwr_2 = mdl * .50 // lower_band 20 trading days moving average minus 2 standard deviation
+pb = (close - lwr)*100/(upr - lwr) //Percent B
+bbw = (upr - lwr)*100/mdl //Bollinger Bands Width
+//Step Three: Plot
+plot(mdl, color = color.green) //Plot 20 days simple moving average on the chart
+p1 = plot(upr, color = color.red) //Plot upper_band
+p2 = plot(lwr, color = color.red) //Plot lower_band
+fill(p1,p2)
+p3 = plot(upr_2, color = color.red)
+p4 = plot(lwr_2, color = color.green)
+//plot(pb, color = color.blue) // Plot Percent B
+//plot(bbw, color = color.blue) // Plot Bollinger Bands Width
+//Step Four: Strategy Entry and Strategy Close
+if close[1] < lwr[1] and close > lwr
+    strategy.entry(id = 'bb', long = true)
+if close[1] > upr[1] and close < upr
+    strategy.close(id = 'bb')
+Expand (33 lines)

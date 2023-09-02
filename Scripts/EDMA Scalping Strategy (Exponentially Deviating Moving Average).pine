@@ -1,0 +1,298 @@
+Script Name: EDMA Scalping Strategy (Exponentially Deviating Moving Average)
+Author: MightyZinger
+Description: This strategy uses crossover of Exponentially Deviating Moving Average (MZ  EDMA ) along with Exponential Moving Average for trades entry/exits. Exponentially Deviating Moving Average (MZ  EDMA ) is derived from Exponential Moving Average to predict better exit in top reversal case.
+
+ EDMA   Philosophy 
+ EDMA  is calculated in following steps:
+ 
+ In first step,...
+PineScript code:
+
+Pine Script™ strategy
+EDMA Scalping Strategy (Exponentially Deviating Moving Average)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © MightyZinger
+//@version=5
+strategy('EDMA Scalping Strategy (Exponentially Deviating Moving Average)', shorttitle='MZ EDMA Strategy', overlay=true, initial_capital=10000, default_qty_type=strategy.percent_of_equity, default_qty_value=5, calc_on_every_tick=false, commission_type=strategy.commission.percent, commission_value=0.1)
+import MightyZinger/Chikou/3 as filter
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+/////                     Source Options                       //////
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+// ─── Different Sources Options List ───► [
+string SRC_Tv = 'Use traditional TradingView Sources '
+string SRC_Wc = '(open+close+3(high+low))/8'
+string SRC_Wo = 'close+high+low-2*open'
+string SRC_Wu = '(close+5(high+low)-7(open))/4'
+string SRC_Wi = '(open+close+5(high+low))/12'
+string SRC_Exi = 'close>open ? high : low'
+string SRC_Exj = 'Heiken-ashi(close>open) ? high : low'
+string src_grp = 'Source Parameters'
+// ●───────── Inputs ─────────● {
+diff_src = input.string(SRC_Exi, '→ Different Sources Options', options=[SRC_Tv, SRC_Wc, SRC_Wo, SRC_Wu, SRC_Wi, SRC_Exi, SRC_Exj], group=src_grp)
+i_sourceSetup = input.source(close, 'Tradingview Source Setup', group=src_grp)
+i_Sym = input.bool(true, 'Apply Symmetrically Weighted Moving Average at the price source (May Result Repainting)', group=src_grp)
+// Heikinashi Candles for calculations
+f_ha_open() =>
+    haopen   = float(na)
+    haopen := na(haopen[1]) ? (open + close) / 2 : (nz(haopen[1]) + nz(ohlc4[1])) / 2
+    haopen
+h_open  = f_ha_open()
+// Get Source 
+src_o = diff_src == SRC_Wc ? (open+close+3*(high+low))/8 :
+     diff_src == SRC_Wo ? close+high+low-2*open :
+     diff_src == SRC_Wu ? (close+5*(high+low)-7*(open))/4 :
+     diff_src == SRC_Wi ? (open+close+5*(high+low))/12 : 
+     diff_src == SRC_Exi ? (close > open ? high : low) :
+     diff_src == SRC_Exj ? (ohlc4 > h_open ? high : low) :
+     i_sourceSetup
+     
+src_f = i_Sym ? ta.swma(src_o) : src_o  // Symmetrically Weighted Moving Average?
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+string grp1 = 'MA Parameters'
+edma_Length = input.int(20, title='MA Length:', group=grp1)
+i_Symmetrical = input(true, '‍ Apply Symmetrically Weighted Moving Average at EDMA')
+ema1_Length = input.int(20, title='EMA 1 Length:', group=grp1)
+show_ema1 = input(true, '‍ Show EMA 1')
+ema2_Length = input.int(40, title='EMA 2 Length:', group=grp1)
+show_ema2 = input(false, '‍ Show EMA 2')
+string grp2 = 'Chikou Filter Parameters'
+c_len = input.int(25, title='Chikou Period (Displaced Source)', group=grp2)
+c_bull_col = input.color(color.green, 'Bull Color  ', group = grp2, inline='c_col')
+c_bear_col = input.color(color.red, 'Bear Color  ', group = grp2, inline='c_col')
+c_rvsl_col = input.color(color.yellow, 'Consollidation/Reversal Color  ', group = grp2, inline='c_col')
+string grp3 = 'EMA Color Settings'
+ema1_col = input.color(#2962FF, 'EMA 1 Color  ', group = grp3, inline='e_col')
+ema2_col = input.color(#FF6D00, 'EMA 2 Color  ', group = grp3, inline='e_col')
+string grp4 = 'ETrade Parameters'
+showSignals = input.bool(true, title='Show Cross Alerts', group=grp4)
+conf_chk = input.bool(false, title='Use Chikou Filter for Confirmation', group=grp4)
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+// EDMA Function
+f_edma(src, len)=>
+    var hexp = float(na)    // Initiallizing Variables
+    var lexp = float(na)
+    var _hma = float(na)
+    var _edma = float(na)
+    float smoothness = 1.0  // Increasing smoothness will result in MA same as EMA
+    h_len = int(len/1.5)    // Length to be used in final calculation of Hull Moving Average
+    // Defining Exponentially Expanding Moving Line
+    hexp := na(hexp[1]) ? src : src >= hexp[1] ? src : hexp[1] + (src - hexp[1]) * (smoothness / (len + 1))
+    // Defining Exponentially Contracting Moving Line
+    lexp := na(lexp[1]) ? hexp : src <= lexp[1] ? hexp : lexp[1] + (src - lexp[1]) * (smoothness / (len + 1))
+    // Calculating Hull Moving Average of resulted Exponential Moving Line with 3/2 of total length
+    _hma := ta.wma(2 * ta.wma(lexp, h_len / 2) - ta.wma(lexp, h_len), math.round(math.sqrt(h_len)))
+    _edma := _hma   // EDMA will be equal to resulted smoothened Hull Moving Average
+    _edma
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+edma = i_Symmetrical ? ta.swma(f_edma(src_f, edma_Length)) : f_edma(src_f, edma_Length)
+ema1 = ta.ema(src_f, ema1_Length)
+ema2 = ta.ema(src_f, ema2_Length)
+// Calling Chikou filter function from library to obtaing dynamic color of EDMA Band and also Chikou Trend 
+[edma_col, _trend] = filter.chikou(src_f, c_len, high, low, c_bull_col, c_bear_col, c_rvsl_col)  
+edma_plot = plot(edma, title='EDMA', color= edma_col , linewidth=4)     // Plotting EDMA with dynamic color from Chikou Filter Function
+ema1_plot = plot(show_ema1 ? ema1 : na, title='EMA 1', color= ema1_col , linewidth=3)
+ema2_plot = plot(show_ema2 ? ema2 : na, title='EMA 2', color= ema2_col , linewidth=3)
+fill(ema1_plot , edma_plot, title = "Background", color = color.new(edma_col,70)) // Filling the bands inbetween EMA and EDMA
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+// Trade Signals and Alerts
+L1 = ema2 > edma    // Weak Uptrend Condition
+L2 = ema1 > edma    // Strong Uptrend Condition
+L3 = _trend == 1    // Chikou Filter Uptrend Condition
+S1 = ema2 < edma    // Weak Downtrend Condition
+S2 = ema1 < edma    // Strong Downtrend Condition
+S3 = _trend == -1   // Chikou Filter Downtrend Condition
+// Setting confirmation conditional operator for Chikou Filter
+weak_up = conf_chk ? L1 and L3 : L1
+strong_up = conf_chk ? L2 and L3 : L2
+weak_dn = conf_chk ? S1 and S3 : S1
+strong_dn = conf_chk ? S2 and S3 : S2
+// Defining condition equivalent to Crossover & Crossunder
+bool[] signal_a = array.from(weak_up, strong_up, weak_dn, strong_dn)
+var swing_a = array.new_int(2)
+f_signal()=>
+    for i = 0 to 1
+        var sig = 0
+        if array.get(signal_a, i) and sig <= 0
+            sig := 1
+        if array.get(signal_a, i+2) and sig >= 0
+            sig := -1
+        array.set(swing_a, i, sig)    
+f_signal()
+buy_weak = array.get(swing_a, 0) == 1 and array.get(swing_a, 0)[1] != 1 
+buy_strong =  array.get(swing_a, 1) == 1 and array.get(swing_a, 1)[1] != 1 
+sell_weak = array.get(swing_a, 0) == -1 and array.get(swing_a, 0)[1] != -1 
+sell_strong =  array.get(swing_a, 1) == -1 and array.get(swing_a, 1)[1] != -1 
+// Plotting Signals on Chart
+//atrOver = 0.7 * ta.atr(5)   // Atr to place alert shape on chart
+//plotshape(showSignals and buy_strong ? (low - atrOver) : na, style=shape.triangleup, color=color.new(color.green, 30), location=location.absolute, text='Buy', size=size.small)
+//plotshape(showSignals and sell_strong ? (high + atrOver) : na, style=shape.triangledown, color=color.new(color.red, 30), location=location.absolute, text='Sell', size=size.small)
+strategy.close('sell', when = buy_strong)
+strategy.entry("buy", strategy.long, when = buy_strong)
+strategy.close('buy', when = sell_strong)
+strategy.entry("sell", strategy.short, when = sell_strong)
+Expand (158 lines)

@@ -1,0 +1,78 @@
+Script Name: 2HL
+Author: EduardoMattje
+Description: A very simple, almost naive strategy, in which you buy on the lowest of the two previous candles and sell at the highest of the two previous candles. You can configure these highest and lowest lenght, in some assets two is too small of a number to make profit. You can also configure to exit the position after X, and I found that 7 (which is a week of working days)...
+PineScript code:
+
+Pine Script™ strategy
+2HL
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Coded by Eduardo Mattje
+strategy("Highs and lows", "HsLs", true, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=50000, process_orders_on_close=true)
+// Inputs
+var I_ENTRY_LENGTH = input(2, "Entry length", minval=1, inline="Length", group="Basic settings")
+var I_EXIT_LENGTH = input(2, "Exit length", minval=1, inline="Length", group="Basic settings")
+var I_CLOSE_AFTER = input(5, "Close after X candles", tooltip="Leave 0 if you want this to be disabled.", group="Basic settings")
+var I_ATR_ENTRY_MULT = input(0.0, "ATR entry multiplier", step=0.1, inline="ATR settings", group="ATR settings")
+var I_ATR_EXIT_MULT = input(0.0, "ATR exit multiplier", step=0.1, inline="ATR settings", group="ATR settings")
+var I_ATR_PERIOD = input(20, "ATR period", minval=2, inline="ATR settings", group="ATR settings")
+var I_INITIAL_DATE = input(0, "Initial date", input.time, tooltip="Leave this value as it is to disable.", inline="Date selection", group="Date selection")
+var I_FINAL_DATE = input(0, "Final date", input.time, tooltip="Leave this value as it is to disable.", inline="Date selection", group="Date selection")
+// Calculations
+_lowest = lowest(I_ENTRY_LENGTH) - atr(I_ENTRY_LENGTH) * I_ATR_ENTRY_MULT
+_highest = highest(I_EXIT_LENGTH) + atr(I_EXIT_LENGTH) * I_ATR_EXIT_MULT
+inMarket = strategy.opentrades != 0
+opened = strategy.opentrades[0] > strategy.opentrades[1]
+plot(not inMarket or not inMarket[1] ? _lowest[1] : na, "Entry price", color.red, 2, plot.style_linebr, offset=0)
+plot(inMarket or inMarket[1] ? _highest[1] : na, "Exit price", color.teal, 2, plot.style_linebr, offset=0)
+// Range check
+inRange = (I_INITIAL_DATE == 0 ? true : time >= I_INITIAL_DATE) and (I_FINAL_DATE == 0 ? true : time <= I_FINAL_DATE)
+// Orders
+strategy.entry("Long", true, limit=_lowest, comment="Entry long", when=inRange)
+strategy.exit("Long", "Long", limit=_highest, comment="Exit long")
+if I_CLOSE_AFTER and barssince(opened) >= I_CLOSE_AFTER
+    strategy.close_all(comment="It has been " + tostring(I_CLOSE_AFTER) + " candle" + (I_CLOSE_AFTER > 1 ? "s" : "")  + " since you entered")
+Expand (42 lines)

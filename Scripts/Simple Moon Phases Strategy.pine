@@ -1,0 +1,99 @@
+Script Name: Simple Moon Phases Strategy
+Author: Dustin_D_RLT
+Description: Simple Moon Phases Strategy 
+
+This strategy is very basic and needs some filters to improve results. It was created to test the Moon Phase theory compared to just a buy and hold strategy and it did not beat the buy and hold. However, if you flip the entry and exit signals to the opposite signals it performs a lot worse, so there might be some validity to the Moon...
+PineScript code:
+
+Pine Script™ strategy
+Simple Moon Phases Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+//This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//@version=4
+//Author: Dustin Drummond https://www.tradingview.com/u/Dustin_D_RLT/
+//Simple Moon Phases Strategy
+//This strategy is very basic and needs some filters to improve results. 
+//It was created to test the Moon Phase theory compared to just a buy and hold strategy and it did not beat the buy and hold. 
+//However, if you flip the entry and exit signals to the opposite signals it performs a lot worse, so there might be some validity to the Moon Phases having an effect on the markets.
+//I might try to add some filters and increase hold times with trailing stops in a separate version.
+//This strategy uses hard-coded dates from 1/1/2015 until 12/31/2021 only! 
+//Any dates outside of that range need to be added manually in the code or it will not work. 
+//I may or may not update this so please don't be upset if it stops working after 12/31/2021.
+//Feel free to use any part of this code and please let me know if you can improve on this strategy.
+strategy(title="Simple Moon Phases Strategy", shorttitle = "Moon Phases", overlay = true, calc_on_every_tick=true, default_qty_value=100, initial_capital = 100000, default_qty_type=strategy.percent_of_equity, pyramiding = 0, process_orders_on_close=false)
+//Define Full Moons and New Moons per year (idetifies 1 day prior so order entry can be on open of next day)
+fullMoon2015 = year == 2015 and ((month == 1 and dayofmonth == 2) or (month == 2 and dayofmonth == 3) or (month == 3 and dayofmonth == 5) or (month == 4 and dayofmonth == 2) or (month == 5 and dayofmonth == 1) or (month == 6 and dayofmonth == 2) or (month == 7 and dayofmonth == 1) or (month == 7 and dayofmonth == 30) or (month == 8 and dayofmonth == 28) or (month == 9 and dayofmonth == 25) or (month == 10 and dayofmonth == 26) or (month == 11 and dayofmonth == 25) or (month == 12 and dayofmonth == 24)) ? 1 : na
+newMoon2015 = year == 2015 and ((month == 1 and dayofmonth == 16) or (month == 2 and dayofmonth == 18) or (month == 3 and dayofmonth == 19) or (month == 4 and dayofmonth == 17) or (month == 5 and dayofmonth == 15) or (month == 6 and dayofmonth == 16) or (month == 7 and dayofmonth == 15) or (month == 8 and dayofmonth == 14) or (month == 9 and dayofmonth == 11) or (month == 10 and dayofmonth == 12) or (month == 11 and dayofmonth == 11) or (month == 12 and dayofmonth == 10)) ? 1 : na
+fullMoon2016 = year == 2016 and ((month == 1 and dayofmonth == 22) or (month == 2 and dayofmonth == 22) or (month == 3 and dayofmonth == 22) or (month == 4 and dayofmonth == 21) or (month == 5 and dayofmonth == 20) or (month == 6 and dayofmonth == 17) or (month == 7 and dayofmonth == 19) or (month == 8 and dayofmonth == 17) or (month == 9 and dayofmonth == 16) or (month == 10 and dayofmonth == 14) or (month == 11 and dayofmonth == 11) or (month == 12 and dayofmonth == 13)) ? 1 : na
+newMoon2016 = year == 2016 and ((month == 1 and dayofmonth == 8) or (month == 2 and dayofmonth == 8) or (month == 3 and dayofmonth == 8) or (month == 4 and dayofmonth == 6) or (month == 5 and dayofmonth == 6) or (month == 6 and dayofmonth == 3) or (month == 7 and dayofmonth == 1) or (month == 8 and dayofmonth == 2) or (month == 8 and dayofmonth == 31) or (month == 9 and dayofmonth == 30) or (month == 10 and dayofmonth == 28) or (month == 11 and dayofmonth == 28) or (month == 12 and dayofmonth == 28)) ? 1 : na
+fullMoon2017 = year == 2017 and ((month == 1 and dayofmonth == 11) or (month == 2 and dayofmonth == 10) or (month == 3 and dayofmonth == 10) or (month == 4 and dayofmonth == 10) or (month == 5 and dayofmonth == 10) or (month == 6 and dayofmonth == 8) or (month == 7 and dayofmonth == 7) or (month == 8 and dayofmonth == 7) or (month == 9 and dayofmonth == 5) or (month == 10 and dayofmonth == 5) or (month == 11 and dayofmonth == 3) or (month == 12 and dayofmonth == 1) or (month == 12 and dayofmonth == 29)) ? 1 : na
+newMoon2017 = year == 2017 and ((month == 1 and dayofmonth == 27) or (month == 2 and dayofmonth == 24) or (month == 3 and dayofmonth == 27) or (month == 4 and dayofmonth == 25) or (month == 5 and dayofmonth == 25) or (month == 6 and dayofmonth == 23) or (month == 7 and dayofmonth == 21) or (month == 8 and dayofmonth == 21) or (month == 9 and dayofmonth == 19) or (month == 10 and dayofmonth == 19) or (month == 11 and dayofmonth == 17) or (month == 12 and dayofmonth == 15)) ? 1 : na
+fullMoon2018 = year == 2018 and ((month == 1 and dayofmonth == 30) or (month == 3 and dayofmonth == 1) or (month == 3 and dayofmonth == 29) or (month == 4 and dayofmonth == 27) or (month == 5 and dayofmonth == 29) or (month == 6 and dayofmonth == 27) or (month == 7 and dayofmonth == 27) or (month == 8 and dayofmonth == 24) or (month == 9 and dayofmonth == 24) or (month == 10 and dayofmonth == 24) or (month == 11 and dayofmonth == 21) or (month == 12 and dayofmonth == 21)) ? 1 : na
+newMoon2018 = year == 2018 and ((month == 1 and dayofmonth == 16) or (month == 2 and dayofmonth == 15) or (month == 3 and dayofmonth == 16) or (month == 4 and dayofmonth == 13) or (month == 5 and dayofmonth == 14) or (month == 6 and dayofmonth == 13) or (month == 7 and dayofmonth == 12) or (month == 8 and dayofmonth == 10) or (month == 9 and dayofmonth == 7) or (month == 10 and dayofmonth == 8) or (month == 11 and dayofmonth == 7) or (month == 12 and dayofmonth == 6)) ? 1 : na
+fullMoon2019 = year == 2019 and ((month == 1 and dayofmonth == 18) or (month == 2 and dayofmonth == 19) or (month == 3 and dayofmonth == 20) or (month == 4 and dayofmonth == 18) or (month == 5 and dayofmonth == 17) or (month == 6 and dayofmonth == 14) or (month == 7 and dayofmonth == 16) or (month == 8 and dayofmonth == 14) or (month == 9 and dayofmonth == 13) or (month == 10 and dayofmonth == 11) or (month == 11 and dayofmonth == 11) or (month == 12 and dayofmonth == 11)) ? 1 : na
+newMoon2019 = year == 2019 and ((month == 1 and dayofmonth == 4) or (month == 2 and dayofmonth == 4) or (month == 3 and dayofmonth == 6) or (month == 4 and dayofmonth == 4) or (month == 5 and dayofmonth == 3) or (month == 5 and dayofmonth == 31) or (month == 7 and dayofmonth == 2) or (month == 7 and dayofmonth == 31) or (month == 8 and dayofmonth == 29) or (month == 9 and dayofmonth == 27) or (month == 10 and dayofmonth == 25) or (month == 11 and dayofmonth == 26) or (month == 12 and dayofmonth == 24)) ? 1 : na
+fullMoon2020 = year == 2020 and ((month == 1 and dayofmonth == 10) or (month == 2 and dayofmonth == 7) or (month == 3 and dayofmonth == 9) or (month == 4 and dayofmonth == 7) or (month == 5 and dayofmonth == 6) or (month == 6 and dayofmonth == 5) or (month == 7 and dayofmonth == 2) or (month == 8 and dayofmonth == 3) or (month == 9 and dayofmonth == 1) or (month == 10 and dayofmonth == 1) or (month == 10 and dayofmonth == 30) or (month == 11 and dayofmonth == 27) or (month == 12 and dayofmonth == 29)) ? 1 : na
+newMoon2020 = year == 2020 and ((month == 1 and dayofmonth == 24) or (month == 2 and dayofmonth == 21) or (month == 3 and dayofmonth == 23) or (month == 4 and dayofmonth == 22) or (month == 5 and dayofmonth == 22) or (month == 6 and dayofmonth == 19) or (month == 7 and dayofmonth == 20) or (month == 8 and dayofmonth == 18) or (month == 9 and dayofmonth == 16) or (month == 10 and dayofmonth == 16) or (month == 11 and dayofmonth == 13) or (month == 12 and dayofmonth == 14)) ? 1 : na
+fullMoon2021 = year == 2021 and ((month == 1 and dayofmonth == 28) or (month == 2 and dayofmonth == 26) or (month == 3 and dayofmonth == 26) or (month == 4 and dayofmonth == 26) or (month == 5 and dayofmonth == 25) or (month == 6 and dayofmonth == 24) or (month == 7 and dayofmonth == 23) or (month == 8 and dayofmonth == 20) or (month == 9 and dayofmonth == 20) or (month == 10 and dayofmonth == 20) or (month == 11 and dayofmonth == 18) or (month == 12 and dayofmonth == 17)) ? 1 : na
+newMoon2021 = year == 2021 and ((month == 1 and dayofmonth == 12) or (month == 2 and dayofmonth == 11) or (month == 3 and dayofmonth == 12) or (month == 4 and dayofmonth == 9) or (month == 5 and dayofmonth == 11) or (month == 6 and dayofmonth == 9) or (month == 7 and dayofmonth == 9) or (month == 8 and dayofmonth == 6) or (month == 9 and dayofmonth == 6) or (month == 10 and dayofmonth == 5) or (month == 11 and dayofmonth == 4) or (month == 12 and dayofmonth == 3)) ? 1 : na
+//All Full and New Moons
+fullMoon = fullMoon2015 or fullMoon2016 or fullMoon2017 or fullMoon2018 or fullMoon2019 or fullMoon2020 or fullMoon2021
+newMoon = newMoon2015 or newMoon2016 or newMoon2017 or newMoon2018 or newMoon2019 or newMoon2020 or newMoon2021
+//Plot Full and New Moons (offset 1 bar to make up for 1 day prior calculation)
+plotshape(fullMoon, "Full Moon", shape.circle, location.belowbar, color.new(color.gray, 20), offset=1, size=size.normal) 
+plotshape(newMoon, "New Moon", shape.circle, location.abovebar, color.new(color.white, 20), offset=1, size=size.normal)
+//Define Entry and Exit Signals
+entrySignal = (strategy.position_size <= 0 and fullMoon)
+exitSignal = (strategy.position_size >= 0 and newMoon)
+//Entry Order
+strategy.order("Full Moon Entry", long = true, when = (strategy.position_size <= 0 and entrySignal))
+//Exit Order
+strategy.close_all(when = exitSignal, comment = "New Moon Exit")
+//Background fill
+backgroundColour = (strategy.position_size > 0) ? color.green : color.red
+bgcolor(color=backgroundColour, transp=85)
+Expand (44 lines)

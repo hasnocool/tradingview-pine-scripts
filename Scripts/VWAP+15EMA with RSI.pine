@@ -1,0 +1,182 @@
+Script Name: VWAP+15EMA with RSI
+Author: Soeccke
+Description: VWAP+EMA+RSI Strategy for the group MelléCasH
+
+This strategy will enter a long position when the closing price is above both the VWAP and the 15 EMA, and the RSI is above the specified overbought level. It will exit the position when the price falls by the specified stop loss percentage, rises by the specified take profit percentage, or when the trailing stop loss...
+PineScript code:
+
+Pine Script™ strategy
+VWAP+15EMA with RSI
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+//@version=5
+strategy("VWAP+15EMA with RSI", overlay=true, calc_on_order_fills = true)
+//Strategy - VWAP + EMA + RSI
+// Inputs
+stop_loss_pct = input.float(0.5, title="Stop Loss %", group = "Strategy settings")
+take_profit_pct = input.float(3.5, title="Take Profit %", group = "Strategy settings")
+trailing_stop_pct = input.float(1, title="Trailing Stop %", group = "Strategy settings")
+//Volume Weighted Average Price indicator
+hideonDWM = input(false, title="Hide VWAP on 1D or Above", group="VWAP Settings")
+var anchor = input.string(defval = "Session", title="Anchor Period",
+ options=["Session", "Week", "Month", "Quarter", "Year", "Decade", "Century", "Earnings", "Dividends", "Splits"], group="VWAP Settings")
+vwap_src = input(title = "Source", defval = hlc3, group="VWAP Settings")
+vwap_offset = input(0, title="Offset", group="VWAP Settings")
+showBand_1 = input(true, title="", group="Standard Deviation Bands Settings", inline="band_1")
+stdevMult_1 = input(2.0, title="Bands Multiplier #1", group="Standard Deviation Bands Settings", inline="band_1")
+if barstate.islast and ta.cum(volume) == 0
+    runtime.error("No volume is provided by the data vendor.")
+new_earnings = request.earnings(syminfo.tickerid, earnings.actual, barmerge.gaps_on, barmerge.lookahead_on, ignore_invalid_symbol=true)
+new_dividends = request.dividends(syminfo.tickerid, dividends.gross, barmerge.gaps_on, barmerge.lookahead_on, ignore_invalid_symbol=true)
+new_split = request.splits(syminfo.tickerid, splits.denominator, barmerge.gaps_on, barmerge.lookahead_on, ignore_invalid_symbol=true)
+isNewPeriod = switch anchor
+    "Earnings"  => not na(new_earnings)
+    "Dividends" => not na(new_dividends)
+    "Splits"    => not na(new_split)
+    "Session"   => timeframe.change("D")
+    "Week"      => timeframe.change("W")
+    "Month"     => timeframe.change("M")
+    "Quarter"   => timeframe.change("3M")
+    "Year"      => timeframe.change("12M")
+    "Decade"    => timeframe.change("12M") and year % 10 == 0
+    "Century"   => timeframe.change("12M") and year % 100 == 0
+    => false
+isEsdAnchor = anchor == "Earnings" or anchor == "Dividends" or anchor == "Splits"
+if na(vwap_src[1]) and not isEsdAnchor
+    isNewPeriod := true
+float vwapValue = na
+float upperBandValue1 = na
+float lowerBandValue1 = na
+if not (hideonDWM and timeframe.isdwm)
+    [_vwap, _stdevUpper, _] = ta.vwap(vwap_src, isNewPeriod, 1)
+    vwapValue := _vwap
+    stdevAbs = _stdevUpper - _vwap
+    upperBandValue1 := _vwap + stdevAbs * stdevMult_1
+    lowerBandValue1 := _vwap - stdevAbs * stdevMult_1
+plot(vwapValue, title="VWAP", color=#2962FF, offset=vwap_offset)
+upperBand_1 = plot(upperBandValue1, title="Upper Band #1", color=color.green, offset=vwap_offset, display = showBand_1 ? display.all : display.none)
+lowerBand_1 = plot(lowerBandValue1, title="Lower Band #1", color=color.green, offset=vwap_offset, display = showBand_1 ? display.all : display.none)
+fill(upperBand_1, lowerBand_1, title="Bands Fill #1", color= color.new(color.green, 95)    , display = showBand_1 ? display.all : display.none)
+//Moving Average Exponential indicator
+ema_len = input.int(15, minval=1, title="EMA Length", group = "EMA settings")
+ema_src = input(close, title="EMA Source", group = "EMA settings")
+ema_offset = input.int(title="EMA Offset", defval=0, minval=-500, maxval=500, group = "EMA settings")
+ema_out = ta.ema(ema_src, ema_len)
+plot(ema_out, title="EMA", color=color.red, offset=ema_offset)
+//Relative Strength Index indicator
+rsiLengthInput = input.int(14, minval=1, title="RSI Length", group="RSI Settings")
+rsiSourceInput = input.source(close, "Source", group="RSI Settings")
+rsi_overbought = input.int(45, title="RSI Overbought Level")
+rsi_value = ta.rsi(rsiSourceInput, rsiLengthInput)
+plotshape(rsi_value > rsi_overbought ? close : na, title="RSI Overbought", style = shape.triangledown, location = location.abovebar, color = color.purple)
+//Strategy - VWAP + EMA + RSI - Continue
+// Entry Condition
+long_entry = close > vwapValue and close > ema_out and rsi_value > rsi_overbought
+// Exit Conditions
+stop_loss = strategy.position_avg_price * (1 - stop_loss_pct / 100)
+take_profit = strategy.position_avg_price * (1 + take_profit_pct / 100)
+trailing_stop = strategy.position_avg_price * (1 - trailing_stop_pct / 100)
+// Submit Orders
+if long_entry and strategy.position_size == 0
+    strategy.entry("Long", strategy.long)
+if strategy.position_size > 0
+    strategy.exit("TP/SL", "Long", profit = take_profit, stop = stop_loss, trail_offset = trailing_stop)
+Expand (99 lines)

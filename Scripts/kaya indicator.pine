@@ -1,0 +1,191 @@
+Script Name: kaya indicator
+Author: kai7a
+Description: Kaya Indicator with Backtest
+
+This script is designed to provide trading signals based on Exponential Moving Average (EMA) crossovers and Stochastic RSI (Stoch RSI) indicators. It also includes backtesting capabilities to simulate trades based on these signals.
+
+Features:
+
+EMA Crossovers:
+
+Uses three EMAs: Fast EMA, Slow EMA, and a Consolidated EMA.
+The EMAs can...
+PineScript code:
+
+Pine Script™ strategy
+kaya indicator
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+// ©kaya
+//@version=5
+strategy('kaya indicator with backtest', overlay=true)
+// Variables
+var ok = 0
+var countBuy = 0
+var countSell = 0
+src = input(close, title='OHLC Type')
+i_fastEMA = input(12, title='Fast EMA')
+i_slowEMA = input(25, title='Slow EMA')
+i_defEMA = input(25, title='Consolidated EMA')
+// Allow the option to show single or double EMA
+i_bothEMAs = input(title='Show Both EMAs', defval=true)
+// Define EMAs
+v_fastEMA = ta.ema(src, i_fastEMA)
+v_slowEMA = ta.ema(src, i_slowEMA)
+v_biasEMA = ta.ema(src, i_defEMA)
+// Color the EMAs
+emaColor = v_fastEMA > v_slowEMA ? color.green : v_fastEMA < v_slowEMA ? color.red : #FF530D
+// Plot EMAs
+plot(i_bothEMAs ? na : v_biasEMA, color=emaColor, linewidth=3, title='Consolidated EMA')
+plot(i_bothEMAs ? v_fastEMA : na, title='Fast EMA', color=emaColor)
+plot(i_bothEMAs ? v_slowEMA : na, title='Slow EMA', color=emaColor)
+// Colour the bars
+buy = v_fastEMA > v_slowEMA
+sell = v_fastEMA < v_slowEMA
+if buy
+    countBuy += 1
+    countBuy
+if buy
+    countSell := 0
+    countSell
+if sell
+    countSell += 1
+    countSell
+if sell
+    countBuy := 0
+    countBuy
+buysignal = countBuy < 2 and countBuy > 0 and countSell < 1 and buy and not buy[1]
+sellsignal = countSell > 0 and countSell < 2 and countBuy < 1 and sell and not sell[1]
+barcolor(buysignal ? color.green : na)
+barcolor(sellsignal ? color.red : na)
+// Plot Bull/Bear
+plotshape(buysignal, title='buy', text='buy', style=shape.triangleup, location=location.belowbar, color=color.new(color.green, 0), textcolor=color.new(color.black, 0), size=size.tiny)
+plotshape(sellsignal, title='sell', text='sell', style=shape.triangledown, location=location.abovebar, color=color.new(color.red, 0), textcolor=color.new(color.black, 0), size=size.tiny)
+bull = countBuy > 1
+bear = countSell > 1
+barcolor(bull ? color.green : na)
+barcolor(bear ? color.red : na)
+// Set Alerts
+alertcondition(ta.crossover(v_fastEMA, v_slowEMA), title='Bullish EMA Cross', message='Bullish EMA crossover')
+alertcondition(ta.crossunder(v_fastEMA, v_slowEMA), title='Bearish EMA Cross', message='Bearish EMA Crossover')
+// Stoch RSI code
+smoothK = input.int(3, 'K', minval=1)
+smoothD = input.int(3, 'D', minval=1)
+lengthRSI = input.int(14, 'RSI Length', minval=1)
+lengthStoch = input.int(14, 'Stochastic Length', minval=1)
+rsi1 = ta.rsi(src, lengthRSI)
+k = ta.sma(ta.stoch(rsi1, rsi1, rsi1, lengthStoch), smoothK)
+d = ta.sma(k, smoothD)
+bandno0 = input.int(80, minval=1, title='Upper Band', group='Bands (change this instead of length in Style for Stoch RSI colour to work properly)')
+bandno2 = input.int(50, minval=1, title='Middle Band', group='Bands (change this instead of length in Style for Stoch RSI colour to work properly)')
+bandno1 = input.int(20, minval=1, title='Lower Band', group='Bands (change this instead of length in Style for Stoch RSI colour to work properly)')
+// ... [rest of your Stoch RSI code]
+// Backtesting
+if (buysignal)
+    strategy.entry("Long", strategy.long)
+if (sellsignal)
+    strategy.entry("Short", strategy.short)
+// Close conditions (optional, based on your strategy)
+// For this example, I'm closing the long position when there's a sell signal and vice versa.
+if (sellsignal)
+    strategy.close("Long")
+if (buysignal)
+    strategy.close("Short")
+Expand (98 lines)

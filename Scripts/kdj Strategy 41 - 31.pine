@@ -1,0 +1,89 @@
+Script Name: kdj Strategy 41 - 31
+Author: mfilippi
+Description: very profitable on 1D timeframe on btcusd or btceur
+PineScript code:
+
+Pine Script™ strategy
+kdj Strategy 41 - 31
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+strategy("kdj Strategy pJ<1",shorttitle="kdj Strategy pJ<1",overlay=true,max_bars_back=200,default_qty_value=1,initial_capital=1000,currency=currency.USD)
+// with alert pJ<20 
+ilong = input(41)
+isig = input(31, title="signal")
+bcwsma(s,l,m) => 
+    _s = s
+    _l = l
+    _m = m
+    _bcwsma = (_m*_s+(_l-_m)*nz(_bcwsma[1]))/_l
+    _bcwsma
+    
+c = close
+h = highest(high, ilong)
+l = lowest(low,ilong)
+RSV = 100*((c-l)/(h-l))
+pK = bcwsma(RSV, isig, 1)
+pD = bcwsma(pK, isig, 1)
+pJ = 3 * pK-2 * pD
+plot(pK, color= #1E88E5,transp=0)
+plot(pD, color=#FF6F00,transp=0)
+plot(pJ, color=black,transp=0)
+go_long= crossover(pJ,pD) 
+go_short=crossover(pD,pJ) 
+strategy.entry("Buy",strategy.long,1,when =go_long)
+// strategy.entry("close short position",strategy.long,1,when =pJ<1)
+strategy.entry("Sell",strategy.short,1,when = go_short)
+// strategy.entry("close Long position",strategy.short,1,when = pJ>110)
+alertcondition(pJ>110, title='Alert pJ>110 sell ')
+alertcondition(pJ<20, title='Alert -pJ<20 buy Opportunity')
+alertcondition(go_long, title='Alert - go long')
+alertcondition(go_short, title='Alert - go short')
+Expand (49 lines)

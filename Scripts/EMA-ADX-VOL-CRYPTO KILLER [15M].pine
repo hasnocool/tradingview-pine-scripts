@@ -1,0 +1,527 @@
+Script Name: EMA-ADX-VOL-CRYPTO KILLER [15M]
+Author: Babehdyo
+Description: A tester indicators for BTC and all alt coin. This is a start. If anyone can make an alert for this sript, i'll be happy though..
+PineScript code:
+
+Pine Script™ strategy
+EMA/ADX/VOL-CRYPTO KILLER [15M]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © BabehDyo
+//@version=4
+strategy("EMA/ADX/VOL-CRYPTO KILLER [15M]", overlay = true, pyramiding=1,initial_capital = 10000, default_qty_type= strategy.percent_of_equity, default_qty_value = 100, calc_on_order_fills=false, slippage=0,commission_type=strategy.commission.percent,commission_value=0.03)
+//SOURCE =============================================================================================================================================================================================================================================================================================================
+src                 =                   input(open,                             title="  Source")
+// Inputs ========================================================================================================================================================================================================================================================================================================
+//ADX --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ADX_options         =                   input("MASANAKAMURA",                   title="  Adx Type",                                       options = ["CLASSIC", "MASANAKAMURA"],                                            group="ADX")
+ADX_len             =                   input(21,                               title="  Adx Length",                                     type=input.integer, minval = 1,                                                   group="ADX")
+th                  =                   input(20,                               title="  Adx Treshold",                                   type=input.float, minval = 0, step = 0.5,                                         group="ADX")
+//EMA--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Length_ema1 = input(8,  title="  1-EMA Length", minval=1)
+Length_ema2 = input(13, title="  2-EMA Length", minval=1)
+Length_ema3 = input(21, title="  3-EMA Length", minval=1)
+Length_ema4 = input(34, title="  4-EMA Length", minval=1)
+Length_ema5 = input(55, title="  5-EMA Length", minval=1)
+// Range Filter ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+per_                =                   input(15,                               title="  Period",                                             minval=1,                                                                       group = "Range Filter")
+mult                =                   input(2.6,                              title="  mult.",                                              minval=0.1, step = 0.1,                                                         group = "Range Filter")
+// Volume ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+volume_f            =                   input(3.2,                              title="  Volume mult.",                                       minval = 0, step = 0.1,                                                         group="Volume")
+sma_length          =                   input(20,                               title="  Volume lenght",                                      minval = 1,                                                                     group="Volume")
+volume_f1            =                   input(1.9,                              title="  Volume mult. 1",                                       minval = 0, step = 0.1,                                                         group="Volume")
+sma_length1          =                   input(22,                               title="  Volume lenght 1",                                      minval = 1,                                                                     group="Volume")
+//TP PLOTSHAPE -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+tp_long0            =                   input(0.9,                              title="  % TP Long",                                        type = input.float,     minval = 0,     step = 0.1,                           group="Target Point") 
+tp_short0           =                   input(0.9,                              title="  % TP Short",                                       type = input.float,     minval = 0,     step = 0.1,                           group="Target Point") 
+// SL PLOTSHAPE ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+sl0                 =                   input(4.2,                              title="  % Stop loss",                                        type = input.float,     minval = 0,     step = 0.1,                             group="Stop Loss")
+//INDICATORS =======================================================================================================================================================================================================================================================================================================
+//ADX-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+calcADX(_len) =>
+    up              =                                                                                                                       change(high)
+    down            =                                                                                                                      -change(low)
+    plusDM          =                                                                                                                       na(up)   ? na : (up > down and up > 0   ? up   : 0)
+    minusDM         =                                                                                                                       na(down) ? na : (down > up and down > 0 ? down : 0)
+    truerange       =                                                                                                                       rma(tr, _len)
+    _plus           =                                                                                                                       fixnan(100 * rma(plusDM, _len)  / truerange)
+    _minus          =                                                                                                                       fixnan(100 * rma(minusDM, _len) / truerange)
+    sum             =                                                                                                                       _plus + _minus
+    _adx            =                                                                                                                       100 * rma(abs(_plus - _minus) / (sum == 0 ? 1 : sum), _len)
+    [_plus,_minus,_adx]
+calcADX_Masanakamura(_len) =>
+    SmoothedTrueRange                   =                                                                                                   0.0
+    SmoothedDirectionalMovementPlus     =                                                                                                   0.0
+    SmoothedDirectionalMovementMinus    =                                                                                                   0.0
+    TrueRange                           =                                                                                                   max(max(high - low, abs(high - nz(close[1]))), abs(low - nz(close[1])))
+    DirectionalMovementPlus             =                                                                                                   high - nz(high[1]) > nz(low[1]) - low ? max(high - nz(high[1]), 0) : 0
+    DirectionalMovementMinus            =                                                                                                   nz(low[1]) - low > high - nz(high[1]) ? max(nz(low[1]) - low, 0)   : 0
+    SmoothedTrueRange                   :=                                                                                                  nz(SmoothedTrueRange[1]) - (nz(SmoothedTrueRange[1]) /_len) + TrueRange
+    SmoothedDirectionalMovementPlus     :=                                                                                                  nz(SmoothedDirectionalMovementPlus[1])  - (nz(SmoothedDirectionalMovementPlus[1])  / _len) + DirectionalMovementPlus
+    SmoothedDirectionalMovementMinus    :=                                                                                                  nz(SmoothedDirectionalMovementMinus[1]) - (nz(SmoothedDirectionalMovementMinus[1]) / _len) + DirectionalMovementMinus
+    DIP                                 =                                                                                                   SmoothedDirectionalMovementPlus  / SmoothedTrueRange * 100
+    DIM                                 =                                                                                                   SmoothedDirectionalMovementMinus / SmoothedTrueRange * 100
+    DX                                  =                                                                                                   abs(DIP-DIM) / (DIP+DIM)*100
+    adx                                 =                                                                                                   sma(DX, _len)
+    [DIP,DIM,adx]
+[DIPlusC,DIMinusC,ADXC] =                                                                                                                   calcADX(ADX_len) 
+[DIPlusM,DIMinusM,ADXM] =                                                                                                                   calcADX_Masanakamura(ADX_len)
+DIPlus                  =                                                                                                                   ADX_options == "CLASSIC" ? DIPlusC    : DIPlusM
+DIMinus                 =                                                                                                                   ADX_options == "CLASSIC" ? DIMinusC   : DIMinusM
+ADX                     =                                                                                                                   ADX_options == "CLASSIC" ? ADXC       : ADXM
+L_adx                   =                                                       DIPlus > DIMinus and ADX > th
+S_adx                   =                                                       DIPlus < DIMinus and ADX > th
+//EMA-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+xPrice = close
+EMA1 = ema(xPrice, Length_ema1)
+EMA2 = ema(xPrice, Length_ema2)
+EMA3 = ema(xPrice, Length_ema3)
+EMA4 = ema(xPrice, Length_ema4)
+EMA5 = ema(xPrice, Length_ema5)
+L_ema           =                           EMA1 < close and  EMA2 < close and  EMA3  < close and  EMA4  < close and  EMA5  < close
+S_ema           =                           EMA1 > close and  EMA2 > close and  EMA3  > close and  EMA4  > close and  EMA5  > close
+// Range Filter ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+var bool L_RF = na,  var bool S_RF = na
+Range_filter(_src, _per_, _mult)=>
+    var float _upward   =                                                                                                                   0.0
+    var float _downward =                                                                                                                   0.0
+    wper                =                                                                                                                   (_per_*2) - 1
+    avrng               =                                                                                                                   ema(abs(_src - _src[1]), _per_)
+    _smoothrng          =                                                                                                                   ema(avrng, wper)*_mult
+    _filt               =                                                                                                                   _src
+    _filt               :=                                                                                                                  _src > nz(_filt[1]) ? ((_src-_smoothrng) < nz(_filt[1]) ? nz(_filt[1]) : (_src-_smoothrng)) : ((_src+_smoothrng) > nz(_filt[1]) ? nz(_filt[1]) : (_src+_smoothrng))
+    _upward             :=                                                                                                                  _filt > _filt[1] ? nz(_upward[1]) + 1 : _filt < _filt[1] ? 0 : nz(_upward[1])
+    _downward           :=                                                                                                                  _filt < _filt[1] ? nz(_downward[1]) + 1 : _filt > _filt[1] ? 0 : nz(_downward[1])
+    [_smoothrng,_filt,_upward,_downward]
+[smoothrng, filt, upward, downward] = Range_filter(src, per_, mult)
+hband                   =                                                                                                                   filt + smoothrng
+lband                   =                                                                                                                   filt - smoothrng
+L_RF                    :=                                                      high > hband and upward > 0
+S_RF                    :=                                                      low < lband and downward > 0
+// Volume -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Volume_condt            =                                                       volume > sma(volume,sma_length)*volume_f
+Volume_condt1           =                                                       volume > sma(volume,sma_length1)*volume_f1
+//STRATEGY ==========================================================================================================================================================================================================================================================================================================
+var bool longCond = na, var bool shortCond = na
+var int CondIni_long = 0, var int CondIni_short = 0
+var bool _Final_longCondition = na, var bool _Final_shortCondition = na
+var float last_open_longCondition = na, var float last_open_shortCondition = na
+var int last_longCondition = na, var int last_shortCondition = na
+var int last_Final_longCondition = na, var int last_Final_shortCondition = na
+var int nLongs = na, var int nShorts = na
+L_1     =                                                                       L_adx and Volume_condt  and L_RF and L_ema
+S_1     =                                                                       S_adx and Volume_condt  and S_RF and S_ema
+L_2     =                                                                       L_adx and  L_RF and L_ema and Volume_condt1
+S_2     =                                                                       S_adx and  S_RF and S_ema and Volume_condt1
+L_basic_condt       =         L_1 or L_2
+S_basic_condt       =         S_1 or S_2
+longCond                :=                                                      L_basic_condt
+shortCond               :=                                                      S_basic_condt
+CondIni_long                := longCond[1]              ? 1 :                   shortCond[1] ? -1 :                             nz(CondIni_long[1]                                          )
+CondIni_short               := longCond[1]              ? 1 :                   shortCond[1] ? -1 :                             nz(CondIni_short[1]                                         )
+longCondition               = (longCond[1]              and                                                                     nz(CondIni_long[1])                 == -1                   )
+shortCondition              = (shortCond[1]             and                                                                     nz(CondIni_short[1])                ==  1                   )
+//POSITION PRICE-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+var float sum_long = 0.0, var float sum_short = 0.0
+var float Position_Price = 0.0
+last_open_longCondition     :=                      longCondition               ? close[1]      : nz(last_open_longCondition[1]                     )
+last_open_shortCondition    :=                      shortCondition              ? close[1]      : nz(last_open_shortCondition[1]                    )
+last_longCondition          :=                      longCondition               ? time          : nz(last_longCondition[1]                          )
+last_shortCondition         :=                      shortCondition              ? time          : nz(last_shortCondition[1]                         )
+in_longCondition            =                       last_longCondition          >           last_shortCondition
+in_shortCondition           =                       last_shortCondition         >           last_longCondition
+last_Final_longCondition    :=                      longCondition               ? time                                                  :    nz(last_Final_longCondition[1]                 )
+last_Final_shortCondition   :=                      shortCondition              ? time                                                  :    nz(last_Final_shortCondition[1]                )
+nLongs                      :=                      nz(nLongs[1]                                                                                                                            )
+nShorts                     :=                      nz(nShorts[1]                                                                                                                           )
+if longCondition
+    nLongs                  :=                      nLongs                      + 1
+    nShorts                 := 0
+    sum_long                :=                      nz(last_open_longCondition) +           nz(sum_long[1])
+    sum_short               := 0.0
+if shortCondition
+    nLongs                  := 0
+    nShorts                 :=                      nShorts + 1
+    sum_short               :=                      nz(last_open_shortCondition)+ nz(sum_short[1])
+    sum_long                := 0.0
+    
+Position_Price              :=                      nz(Position_Price[1])
+Position_Price              :=                      longCondition               ?       sum_long/nLongs         :       shortCondition      ?       sum_short/nShorts       :       na
+//TP---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+var bool long_tp = na, var bool short_tp = na
+var int last_long_tp = na, var int last_short_tp = na
+var bool Final_Long_tp = na, var bool Final_Short_tp = na
+var bool Final_Long_sl0 = na, var bool Final_Short_sl0 = na
+var bool Final_Long_sl = na, var bool Final_Short_sl = na
+var int last_long_sl = na, var int last_short_sl = na
+tp_long             =       ((nLongs  > 1)              ?                       tp_long0  / nLongs              :           tp_long0)                       / 100
+tp_short            =       ((nShorts > 1)              ?                       tp_short0 / nShorts             :           tp_short0)                      / 100
+long_tp             := high                             >                       (fixnan(Position_Price)         *           (1 + tp_long))                  and                 in_longCondition
+short_tp            := low                              <                       (fixnan(Position_Price)         *           (1 - tp_short))                 and                 in_shortCondition
+last_long_tp        :=      long_tp                     ?                       time : nz(last_long_tp[1])
+last_short_tp       :=      short_tp                    ?                       time : nz(last_short_tp[1])
+Final_Long_tp       :=      (long_tp                    and                     last_longCondition              >           nz(last_long_tp[1])             and                 last_longCondition  > nz(last_long_sl[1]))
+Final_Short_tp      :=      (short_tp                   and                     last_shortCondition             >           nz(last_short_tp[1])            and                 last_shortCondition > nz(last_short_sl[1]))
+L_tp                 =      iff(Final_Long_tp,                                  fixnan(Position_Price)          *           (1 + tp_long)                   ,                   na) 
+S_tp                 =      iff(Final_Short_tp,                                 fixnan(Position_Price)          *           (1 - tp_short)                  ,                   na) 
+//TP SIGNALS--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+tplLevel            = (in_longCondition                 and 
+                      (last_longCondition               >                       nz(last_long_tp[1]))            and 
+                      (last_longCondition               >                       nz(last_long_sl[1]))            and not Final_Long_sl[1])                   ? 
+                      (nLongs > 1)                      ? 
+                      (fixnan(Position_Price)           *                       (1 + tp_long))                  :               (last_open_longCondition    *              (1 + tp_long)) : na
+tpsLevel            = (in_shortCondition                and 
+                      (last_shortCondition              >                       nz(last_short_tp[1]))           and 
+                      (last_shortCondition              >                       nz(last_short_sl[1]))           and not Final_Short_sl[1])                  ? 
+                      (nShorts > 1)                     ? 
+                      (fixnan(Position_Price)           *                       (1 - tp_short))                 :               (last_open_shortCondition   *             (1 - tp_short)) : na
+//SL ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Risk                = sl0
+Percent_Capital     = 99
+sl                  =  in_longCondition  ?  min(sl0,(((Risk) * 100) / (Percent_Capital *  max(1, nLongs))))  : 
+                       in_shortCondition ?  min(sl0,(((Risk) * 100) / (Percent_Capital *  max(1, nShorts)))) : sl0
+                       
+Normal_long_sl      =               ((in_longCondition                and low                             <= ((1 - (sl / 100))    *               (fixnan(Position_Price)))))
+Normal_short_sl     =               ((in_shortCondition               and high                            >= ((1 + (sl / 100))    *               (fixnan(Position_Price)))))  
+last_long_sl        :=              Normal_long_sl      ? time : nz(last_long_sl[1])
+last_short_sl       :=              Normal_short_sl     ? time : nz(last_short_sl[1])
+Final_Long_sl       :=              Normal_long_sl      and last_longCondition              > nz(last_long_sl[1])               and last_longCondition  > nz(last_long_tp[1])  and not Final_Long_tp
+Final_Short_sl      :=              Normal_short_sl     and last_shortCondition             > nz(last_short_sl[1])              and last_shortCondition > nz(last_short_tp[1]) and not Final_Short_tp
+//RE-ENTRY ON TP-HIT-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+if Final_Long_tp                    or                                          Final_Long_sl
+    CondIni_long    :=                                                          -1
+    sum_long        :=                                                          0.0
+    nLongs          :=                                                          na
+    
+if Final_Short_tp                   or                                          Final_Short_sl
+    CondIni_short   :=                                                          1
+    sum_short       :=                                                          0.0
+    nShorts         :=                                                          na
+// Colors ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Bar_color = in_longCondition ? #009688 : in_shortCondition ? #f06292 : color.orange
+barcolor                                                                        (color = Bar_color)
+//PLOTS==============================================================================================================================================================================================================================================================================================================
+plot(L_tp,                                                  title = "TP_L",                 style = plot.style_cross,                                                                 color = color.fuchsia,                          linewidth = 7   )
+plot(S_tp,                                                  title = "TP_S",                 style = plot.style_cross,                                                                 color = color.fuchsia,                          linewidth = 7   )
+//Price plots ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+plot((nLongs > 1) or (nShorts > 1) ? Position_Price : na, title = "Price", color = in_longCondition ? color.aqua : color.orange, linewidth = 2, style = plot.style_cross)
+plot(tplLevel,                      title="Long TP ",               style = plot.style_cross,                                                                   color=color.fuchsia,                                                                                      linewidth = 1               )
+plot(tpsLevel,                      title="Short TP ",              style = plot.style_cross,                                                                   color=color.fuchsia,                                                                                        linewidth = 1               )
+//PLOTSHAPES----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+plotshape(Final_Long_tp,            title="TP Long Signal",         style = shape.triangledown,                     location=location.abovebar,                         color=color.red,            size=size.tiny ,          text="TP",             textcolor=color.red,               transp = 0                  ) 
+plotshape(Final_Short_tp,           title="TP Short Signal",        style = shape.triangleup,                     location=location.belowbar,                         color=color.green,          size=size.tiny ,            text="TP",           textcolor=color.green,             transp = 0                  ) 
+plotshape(longCondition,            title="Long",                   style=shape.triangleup,                 location=location.belowbar,                         color=color.blue,           size=size.tiny ,                                                           transp = 0                  )
+plotshape(shortCondition,           title="Short",                  style=shape.triangledown,               location=location.abovebar,                         color=color.red,            size=size.tiny ,                                                           transp = 0                  )
+// Backtest  ==================================================================================================================================================================================================================================================================================================================================
+if                                                                              L_basic_condt
+    strategy.entry                                                              ("LONG", strategy.long )
+if                                                                              S_basic_condt
+    strategy.entry                                                              ("SHORT", strategy.short )
+    
+    
+strategy.exit("TP_L", "LONG", profit = (abs((last_open_longCondition  * (1 + tp_long)) - last_open_longCondition) / syminfo.mintick), limit = nLongs >= 1 ? strategy.position_avg_price * (1 + tp_long) : na, loss = (abs((last_open_longCondition*(1-(sl/100)))-last_open_longCondition)/syminfo.mintick))
+strategy.exit("TP_S", "SHORT", profit = (abs((last_open_shortCondition * (1 - tp_short)) - last_open_shortCondition) / syminfo.mintick), limit = nShorts >= 1 ? strategy.position_avg_price*(1-(tp_short)) : na, loss     = (abs((last_open_shortCondition*(1+(sl/100)))-last_open_shortCondition)/syminfo.mintick))
+//By BabehDyo
+Expand (302 lines)

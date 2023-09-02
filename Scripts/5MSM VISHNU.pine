@@ -1,0 +1,806 @@
+Script Name: 5MSM VISHNU
+Author: patrick199415
+Description: 5MSM VISHNU Indicator for Trending Markets originally written by patrick1994.
+It was originally based on the MACD 12-26 and the 50 bar EMA .
+The macd hist is color coded with green as buy and sell as red.
+I added an option to use a couple of lower lag ema's (See line 13 - ema_signal).
+
+5MSM VISHNU with MACD Indicator for Trending Markets
+Originally written by...
+PineScript code:
+
+Pine Script™ strategy
+5MSM VISHNU
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+//@version=5
+strategy("5msm VISHNU", overlay=true, overlay=true,process_orders_on_close=true, pyramiding = 1)
+//indicator(title="mahakaal", shorttitle="mahakaal", timeframe="", timeframe_gaps=true,process_orders_on_close=true),calc_on_every_tick=true
+green = #26A69A
+red = #FF0000
+//Yellow = #fcf932
+// Getting inputs
+fast_length = input(title="Fast Length", defval=12)
+slow_length = input(title="Slow Length", defval=26)
+src3 = input(title="Source", defval=close)
+signal_length = input.int(title="Signal Smoothing",  minval = 1, maxval = 50, defval = 9)
+sma_source = input.string(title="Oscillator MA Type",  defval="EMA", options=["SMA", "EMA"])
+sma_signal = input.string(title="Signal Line MA Type", defval="EMA", options=["SMA", "EMA"])
+// Plot colors
+// col_macd = input(#2962FF, "MACD Line  ", group="Color Settings", inline="MACD")
+// col_signal = input(#FF6D00, "Signal Line  ", group="Color Settings", inline="Signal")
+// col_grow_above = input(#26A69A, "Above   Grow", group="Histogram", inline="Above")
+//col_fall_above = input(#B2DFDB, "Fall", group="Histogram", inline="Above")
+//col_grow_below = input(#FFCDD2, "Below Grow", group="Histogram", inline="Below")
+//col_fall_below = input(#FF5252, "Fall", group="Histogram", inline="Below")
+// Calculating
+fast_ma = sma_source == "SMA" ? ta.sma(src3, fast_length) : ta.ema(src3, fast_length)
+slow_ma = sma_source == "SMA" ? ta.sma(src3, slow_length) : ta.ema(src3, slow_length)
+macd = fast_ma - slow_ma
+signal = sma_signal == "SMA" ? ta.sma(macd, signal_length) : ta.ema(macd, signal_length)
+hist = macd - signal
+//hline(0, "Zero Line", color=color.new(#787B86, 50))
+//@version=5
+//indicator(title="Moving Average Exponential", shorttitle="EMA", overlay=true, timeframe="", timeframe_gaps=true)
+len = input.int(200, minval=1, title="Length")
+src2 = input(close, title="Source")
+//offset = input.int(title="Offset", defval=0, minval=-500, maxval=500)
+Bahubali = ta.ema(src2, len)
+//plot(out, title="EMA", color=color.blue, offset=offset)
+//@version=5
+//indicator(title="Williams Alligator", shorttitle="Alligator", overlay=true, timeframe="", timeframe_gaps=true)
+smma(src, length) =>
+    smma =  0.0
+    smma := na(smma[1]) ? ta.sma(src, length) : (smma[1] * (length - 1) + src) / length
+    smma
+jawLength = input.int(13, minval=1, title="Jaw Length")
+teethLength = input.int(8, minval=1, title="Teeth Length")
+lipsLength = input.int(5, minval=1, title="Lips Length")
+jawOffset = input(8, title="Jaw Offset")
+teethOffset = input(5, title="Teeth Offset")
+lipsOffset = input(3, title="Lips Offset")
+jaw = smma(hl2, jawLength)
+teeth = smma(hl2, teethLength)
+lips = smma(hl2, lipsLength)
+tyme = time("1440", "0930-2300")
+//plot(jaw, "Jaw", offset = jawOffset, color=#2962FF)
+//@version=5
+//indicator(title="Volume Weighted Average Price", shorttitle="VWAP", overlay=true, timeframe="", timeframe_gaps=true)
+hideonDWM = input(false, title="Hide VWAP on 1D or Above", group="VWAP Settings")
+var anchor = input.string(defval = "Session", title="Anchor Period",
+ options=["Session", "Week", "Month", "Quarter", "Year", "Decade", "Century", "Earnings", "Dividends", "Splits"], group="VWAP Settings")
+src9 = input(title = "Source", defval = hlc3, group="VWAP Settings")
+offsetvwap = input(0, title="Offset", group="VWAP Settings")
+if barstate.islast and ta.cum(volume) == 0
+    runtime.error("No volume is provided by the data vendor.")
+new_earnings = request.earnings(syminfo.tickerid, earnings.actual, barmerge.gaps_on, barmerge.lookahead_on, ignore_invalid_symbol=true)
+new_dividends = request.dividends(syminfo.tickerid, dividends.gross, barmerge.gaps_on, barmerge.lookahead_on, ignore_invalid_symbol=true)
+new_split = request.splits(syminfo.tickerid, splits.denominator, barmerge.gaps_on, barmerge.lookahead_on, ignore_invalid_symbol=true)
+isNewPeriod = switch anchor
+    "Earnings"  => not na(new_earnings)
+    "Dividends" => not na(new_dividends)
+    "Splits"    => not na(new_split)
+    "Session"   => timeframe.change("D")
+    "Week"      => timeframe.change("W")
+    "Month"     => timeframe.change("M")
+    "Quarter"   => timeframe.change("3M")
+    "Year"      => timeframe.change("12M")
+    "Decade"    => timeframe.change("12M") and year % 10 == 0
+    "Century"   => timeframe.change("12M") and year % 100 == 0
+    => false
+isEsdAnchor = anchor == "Earnings" or anchor == "Dividends" or anchor == "Splits"
+if na(src9[1]) and not isEsdAnchor
+    isNewPeriod := true
+float vwapValue = na
+if not (hideonDWM and timeframe.isdwm)
+    [_vwap, _stdevUpper, _] = ta.vwap(src9, isNewPeriod, 1)
+    vwapValue := _vwap
+    //stdevAbs = _stdevUpper - _vwap
+//plot(vwapValue, title="VWAP", color=#2962FF, offset=offsetvwap)
+bullbody = close - open
+bearbody = open - close
+vwapup = (close > vwapValue) and (open > vwapValue) and (hist > 0) and (low[1] < vwapValue) and (bullbody > 5) and tyme
+vwapdwn = (close < vwapValue) and (open < vwapValue) and (hist < 0) and (high[1] > vwapValue) and (bearbody > 5) and tyme
+plotshape(vwapup, style=shape.arrowup, color=color.green,location=location.belowbar, title="vwap uptrend", size = size.normal) //
+plotshape(vwapdwn, style=shape.arrowdown, color=color.red,location=location.abovebar, title="vwap down trend", size = size.normal) //
+// Get ATR inputs
+//indicator('ATR Trailing Stop Indicator [Chart]', 'S/L+', overlay=true)
+atrLength = input.int(title='ATR Length', defval=14, minval=1, group='ATR Settings')
+lookback = input.int(title='Bars To Look Back For Highs/Lows', defval=7, minval=1, group='ATR Settings')
+multiplier = input.float(title='ATR Multiplier', defval=1.0, minval=0.1, group='ATR Settings')
+trailType = input.string(title='Trailing Stop Type', defval='Open', options=['High/Low', 'Close', 'Open'], group='ATR Settings')
+// Get display table inputs
+showATR = input.bool(title='Show ATR?', defval=true, group='Display Settings')
+atrColor = input.color(title='ATR Color', defval=color.new(color.blue, 100), group='Display Settings')
+// atrLocation = input.string(title='ATR Location', defval='BR', options=['TR', 'TC', 'BR', 'BC'], group='Display Settings')
+// Calculate data
+atr = ta.atr(atrLength) - 5
+longStopatr = (trailType == 'High/Low' ? ta.lowest(low, lookback) : trailType == 'Close' ? close : open) - atr * multiplier
+shortStopatr = (trailType == 'High/Low' ? ta.highest(high, lookback) : trailType == 'Close' ? close : open) + atr * multiplier
+//@version=5
+//strategy(title='Range Filter Buy and Sell 5min [Strategy]', overlay=true, commission_type=strategy.commission.percent, commission_value=0.025, default_qty_type=strategy.cash, default_qty_value=10000, initial_capital=10000, slippage=0)
+sources = input(defval=close, title='Source')
+isHA = input(false, 'Use HA Candles')
+heikenashi_1 = ticker.heikinashi(syminfo.tickerid)
+security_1 = request.security(heikenashi_1, timeframe.period, sources)
+srcz = isHA ? security_1 : sources
+// Sampling Period
+// Settings for 5min chart, BTCUSDC. For Other coin, change the paremeters
+per = input.int(defval=50, minval=1, title='Sampling Period')
+// Range Multiplier
+mult = input.float(defval=3.0, minval=0.1, title='Range Multiplier')
+// Smooth Average Range
+smoothrng(x, t, m) =>
+    wper = t * 2 - 1
+    avrng = ta.ema(math.abs(x - x[1]), t)
+    smoothrng = ta.ema(avrng, wper) * m
+    smoothrng
+smrng = smoothrng(srcz, per, mult)
+// Range Filter
+rngfilt(x, r) =>
+    rngfilt = x
+    rngfilt := x > nz(rngfilt[1]) ? x - r < nz(rngfilt[1]) ? nz(rngfilt[1]) : x - r : x + r > nz(rngfilt[1]) ? nz(rngfilt[1]) : x + r
+    rngfilt
+filt = rngfilt(srcz, smrng)
+// Filter Direction
+upward = 0.0
+upward := filt > filt[1] ? nz(upward[1]) + 1 : filt < filt[1] ? 0 : nz(upward[1])
+downward = 0.0
+downward := filt < filt[1] ? nz(downward[1]) + 1 : filt > filt[1] ? 0 : nz(downward[1])
+// Break Outs 
+longCond = bool(na)
+shortCond = bool(na)
+longCond := srcz > filt and srcz > srcz[1] and upward > 0 or srcz > filt and srcz < srcz[1] and upward > 0
+shortCond := srcz < filt and srcz < srcz[1] and downward > 0 or srcz < filt and srcz > srcz[1] and downward > 0
+CondIni = 0
+CondIni := longCond ? 1 : shortCond ? -1 : CondIni[1]
+longCondition = longCond and CondIni[1] == -1
+shortCondition = shortCond and CondIni[1] == 1
+//Alerts
+plotshape(longCondition, title='Buy Signal', text='b_z', textcolor=color.new(color.white, 0), style=shape.labelup, size=size.normal, location=location.belowbar, color=color.new(color.green, 0))
+plotshape(shortCondition, title='Sell Signal', text='s_z', textcolor=color.new(color.white, 0), style=shape.labeldown, size=size.normal, location=location.abovebar, color=color.new(color.red, 0))
+// indicator(title='UT Bot', overlay=true)
+//CREDITS to HPotter for the orginal code. The guy trying to sell this as his own is a scammer lol. 
+srcUT = close
+keyvalue = input.float(3, title='Key Vaule. \'This changes the sensitivity\'', step=.5)
+atrperiod = input(10, title='ATR Period')
+xATR = ta.atr(atrperiod)
+nLoss = keyvalue * xATR
+xATRTrailingStop = 0.0
+iff_1 = srcUT > nz(xATRTrailingStop[1], 0) ? srcUT - nLoss : srcUT + nLoss
+iff_2 = srcUT < nz(xATRTrailingStop[1], 0) and srcUT[1] < nz(xATRTrailingStop[1], 0) ? math.min(nz(xATRTrailingStop[1]), srcUT + nLoss) : iff_1
+xATRTrailingStop := srcUT > nz(xATRTrailingStop[1], 0) and srcUT[1] > nz(xATRTrailingStop[1], 0) ? math.max(nz(xATRTrailingStop[1]), srcUT - nLoss) : iff_2
+pos = 0
+iff_3 = srcUT[1] > nz(xATRTrailingStop[1], 0) and srcUT < nz(xATRTrailingStop[1], 0) ? -1 : nz(pos[1], 0)
+pos := srcUT[1] < nz(xATRTrailingStop[1], 0) and srcUT > nz(xATRTrailingStop[1], 0) ? 1 : iff_3
+xcolor = pos == -1 ? color.red : pos == 1 ? color.green : color.blue
+// plot(xATRTrailingStop, color=xcolor, title='Trailing Stop')
+buyUT = ta.crossover(srcUT, xATRTrailingStop)
+sellUT = ta.crossunder(srcUT, xATRTrailingStop)
+barcolor = srcUT > xATRTrailingStop
+plotshape(buyUT, title='Buy', text='BOD', style=shape.labelup, location=location.belowbar, color=color.new(color.green, 0), textcolor=color.new(color.white, 0), size=size.tiny)
+plotshape(sellUT, title='Sell', text='SOR', style=shape.labeldown, color=color.new(color.red, 0), textcolor=color.new(color.white, 0), size=size.tiny)
+// srcUT
+barcolor(barcolor ? color.green : color.red)
+// alertcondition(buy, title='UT BOT Buy', message='UT BOT Buy')
+// alertcondition(sell, title='UT BOT Sell', message='UT BOT Sell')
+// Compose alert message
+// Entry
+alert_msg_long_entry =  
+             "BUY 💚 NIFTY50 CE " + str.tostring(math.floor((close + 150)/100)*100)       + "\n"   + 
+             "BUY Within 60 seconds at Current Market Price" + "\n"   +  
+             "⏰💸⏰💸⏰💸⏰💸⏰💸\n\n" + 
+             "{{strategy.order.id}}💹 Target 1: PAID "  + "\n"   +  
+             "ENTRY PRICE: " + str.tostring(math.round(close))        + "\n"   +   
+             "ITM NIFTY CE " + str.tostring(math.floor((close - 100)/100)*100)           
+// Entry
+alert_msg_short_entry =  
+             "BUY 💚 NIFTY50 PE " + str.tostring(math.floor((close - 150)/100)*100)       + "\n"   + 
+             "BUY Within 60 seconds at Current Market Price" + "\n"   +  
+             "⏰💸⏰💸⏰💸⏰💸⏰💸\n\n" + 
+             "{{strategy.order.id}}💹 Target 1: PAID "  + "\n"   +  
+             "ENTRY PRICE: " + str.tostring(math.round(close))        + "\n"   +   
+             "ITM NIFTY PE " + str.tostring(math.floor((close + 100)/100)*100)    
+// EXIT
+alert_msg_long_exit =  
+             "🚨 EXIT NIFTY50 CE LONG POSITION  ! \n" +
+             "EXIT PRICE: "                  + str.tostring(math.round(close))            + "\n"   + 
+             "\n"   + 
+             "For 💯% profitable 💰💰💰 exit BUY our COURSE \n" +
+             "https://wa.me/917020641496?text=hi"
+// EXIT
+alert_msg_short_exit =  
+             "🚨 EXIT NIFTY50 PE Short POSITION  ! \n" +
+             "EXIT PRICE: "                  + str.tostring(math.round(close))            + "\n"   + 
+             "\n"   + 
+             "For 💯% profitable 💰💰💰 exit BUY our COURSE \n" +
+             "https://wa.me/917020641496?text=hi"
+bullrejection = close[1] - open[1]
+bearrejection = open[1] - close[1]
+//sideways = (Bahubali - lips) * (Bahubali - lips)plot(hist, title="Histogram", style=plot.style_columns, color=(hist > 0 ? ( bullishtrend ? green : Yellow ) : ( bearishtrend ? red : Yellow ) ))
+bullishtrend = ((hist > 0)  and (close > lips ) and (open > lips )   and tyme  and (vwapValue < close) and upward and (high > teeth )  and (lips > jaw) and (bullrejection < 40) ) //and (bullbody < 40) and (sideways > 700) and (close > Bahubali) and (lips > jaw)
+bearishtrend = ((hist < 0)  and (close < lips ) and (open < lips )   and tyme and (vwapValue > close) and downward and (high < teeth )  and (lips < jaw) and (bearrejection < 40)) // and (bearbody < 40) and (sideways > 700) and (close < Bahubali) and (lips < jaw)
+//plot(hist, title="Histogram", style=plot.style_columns, color=(hist > 0 ? ( bullishtrend ? green : Yellow ) : ( bearishtrend ? red : Yellow ) ))
+if strategy.position_size != 1
+    strategy.entry("C_ENT", strategy.long, when = bullishtrend , alert_message = alert_msg_long_entry )
+if strategy.position_size != -1
+    strategy.entry("P_ENT",strategy.short,when = bearishtrend , alert_message = alert_msg_short_entry)
+longexit = ((close < lips) and (hist < -1.4))  //or (close < Bahubali) or time("1440", "1515-1530")  and (vwapValue > close)
+shortexit = ((close > lips) and (hist > 1.4)) //or (close > Bahubali) or time("1440", "1515-1530")  and (vwapValue < close)
+//strategy.exit("long tsl", "long", trail_points = close * 0.01 / syminfo.mintick, trail_offset = close * 0.01 / syminfo.mintick)
+//strategy.exit("shoty tsl", "short", trail_points = close * 0.01 / syminfo.mintick, trail_offset = close * 0.01 / syminfo.mintick)
+strategy.exit("C_EX", "C_ENT", stop = vwapValue ,when = longexit, alert_message = alert_msg_long_exit) //limit = lips ,
+strategy.exit("P_EX","P_ENT", stop = vwapValue , when = shortexit, alert_message = alert_msg_short_exit) //,limit = lips 
+//PLOT FIXED SLTP LINE
+// LONG POSITION
+long_take_level_1 = strategy.position_avg_price + 30
+//long_stop_level2 = strategy.position_avg_price - 40
+long_stop_level = strategy.position_avg_price - 30
+//long_take_level_2 = (close - lips) > 30 ? strategy.position_avg_price + 30 : strategy.position_avg_price + 45
+//long_take_level_2 = high > shortStopatr
+//long_stop_level2 = low < lips
+plot(strategy.position_size > 0 ? long_take_level_1 : na, style=plot.style_linebr, color=color.blue, linewidth=2, title="1st Long Take Profit")
+//plot(strategy.position_size > 0 ? long_take_level_2 : na, style=plot.style_linebr, color=color.black, transp = 60, linewidth=1, title="2nd Long Take Profit")
+//plot(strategy.position_size > 0 ? long_stop_level : na, style=plot.style_linebr, color=color.red, linewidth=2, title="Long Stop Loss")
+//plot(strategy.position_size > 0 ? long_stop_level2 : na, style=plot.style_linebr, color=color.red, transp = 60, linewidth=2, title="Long Stop Loss2")
+//PLOT FIXED SLTP LINE
+// SHORT POSITION
+SHORT_take_level_1 = strategy.position_avg_price - 30
+//SHORT_stop_level2 = strategy.position_avg_price + 45
+SHORT_stop_level = strategy.position_avg_price + 30
+//SHORT_take_level_2 = ( lips - close) < 30 ? strategy.position_avg_price - 30 : strategy.position_avg_price - 45
+//SHORT_take_level_2 = low < longStopatr
+//SHORT_stop_level2 = high > lips
+plot(strategy.position_size < 0 ? SHORT_take_level_1 : na, style=plot.style_linebr, color=color.blue, linewidth=2, title="1st SHORT Take Profit")
+//plot(strategy.position_size < 0 ? SHORT_take_level_2 : na, style=plot.style_linebr, color=color.black, transp = 60, linewidth=1, title="2nd SHORT Take Profit")
+//plot(strategy.position_size < 0 ? SHORT_stop_level : na, style=plot.style_linebr, color=color.red, linewidth=2, title="SHORT Stop Loss")
+//plot(strategy.position_size < 0 ? SHORT_stop_level2 : na, style=plot.style_linebr, color=color.red, transp = 60, linewidth=2, title="SHORT Stop Loss")
+plot(strategy.position_size < 0 ? shortStopatr : na, color=color.new(#84f588, 28), style=plot.style_linebr, title='Long Trailing Stop')
+plot(strategy.position_size > 0 ? longStopatr: na, color=color.new(#84f588, 28), style=plot.style_linebr, title='Short Trailing Stop')
+// shortStopatr
+///////////////////////////////////////////////////////////////
+LT1 = (strategy.position_size > 0) and (high > long_take_level_1) and (open < long_take_level_1)
+// LT1 = (strategy.position_size > 0) and (ta.crossover(close, long_take_level_1))
+//LT1 = (strategy.position_size > 0) and long_take_level_2
+LSL = (strategy.position_size > 0) and (close[1] < longStopatr[1]) and (close[1] < strategy.position_avg_price)
+// LSL = (strategy.position_size > 0) and (ta.crossunder(close, long_stop_level))
+//LSL = (strategy.position_size > 0) and long_stop_level2
+ST1 = (strategy.position_size < 0) and (low < SHORT_take_level_1) and (open > SHORT_take_level_1)
+// ST1 = (strategy.position_size < 0) and (ta.crossunder(close, SHORT_take_level_1))
+//ST1 = (strategy.position_size < 0) and SHORT_take_level_2
+SSL = (strategy.position_size < 0) and (close[1] > shortStopatr[1])  and (close[1] > strategy.position_avg_price)
+// SSL = (strategy.position_size < 0) and (ta.crossover(close, SHORT_stop_level))
+//SSL = (strategy.position_size < 0) and SHORT_stop_level2
+//LT2 = (strategy.position_size > 0) and long_take_level_2
+//LSL2 = (strategy.position_size > 0) and long_stop_level2
+//ST2 = (strategy.position_size < 0) and SHORT_take_level_2
+//SSL2 = (strategy.position_size < 0) and SHORT_stop_level2
+if LT1
+    alert(message= "NIFTY50 TARGET1 HIT !L! book profit now !!" , freq=alert.freq_once_per_bar)
+if LSL
+    alert(message= "NIFTY50 STOPLOSS HIT !L! Exit with loss !!" , freq=alert.freq_once_per_bar_close)
+if SSL
+    alert(message= "NIFTY50 STOPLOSS HIT !S! Exit with loss !! " , freq=alert.freq_once_per_bar)
+if ST1
+    alert(message= "NIFTY50 TARGET1 HIT !S! book profit now !!" , freq=alert.freq_once_per_bar_close)
+//////
+//if LT2
+//    alert(message= "NIFTY TARGET2 HIT !L! book profit now !!" , freq=alert.freq_once_per_bar)
+//if LSL2
+//    alert(message= "NIFTY STOPLOSS2 HIT !L! Exit with loss !!" , freq=alert.freq_once_per_bar)
+//if SSL2
+//    alert(message= "NIFTY STOPLOSS2 HIT !S! Exit with loss !! " , freq=alert.freq_once_per_bar)
+//if ST2
+//    alert(message= "NIFTY TARGET2 HIT !S! book profit now !!" , freq=alert.freq_once_per_bar)
+///////////////////ALERTCONDITION IS ABOVE/////////////////////////////////////
+// This work is licensed under a Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) https://creativecommons.org/licenses/by-nc-sa/4.0/
+// © LuxAlgo
+//@version=5
+//indicator('The Echo Forecast [LUX]', 'ECHO [LuxAlgo]', overlay=true, max_bars_back=1000, max_lines_count=200)
+//lengths = input.int(50, 'Evaluation Window', minval=0, maxval=200)
+//fcast = input.int(50, 'Forecast Window', minval=1, maxval=200)
+//fmode = input.string('Similarity', 'Forecast Mode', options=['Similarity', 'Dissimilarity'])
+//cmode = input.string('Cumulative', 'Forecast Construction', options=['Cumulative', 'Mean', 'Linreg'])
+//srcf = input(close)
+//fcast_col = input.color(#2157f3, 'Forecast Style', inline='fcast_style', group='Style')
+//fcast_style = input.string('· · ·', '', options=['──', '- - -', '· · ·'], inline='fcast_style', group='Style')
+//show_area = input.bool(true, 'Show Area', inline='areas', group='Style')
+//fcast_area = input.color(color.new(#ffffff, 95), '', inline='areas', group='Style')
+//corr_area = input.color(color.new(#ffffff, 95), '', inline='areas', group='Style')
+//eval_area = input.color(color.new(#ffffff, 95), '', inline='areas', group='Style')
+//----
+//var lines = array.new_line(0)
+//if barstate.isfirst
+ //   for i = 0 to fcast - 1 by 1
+ //       array.push(lines, line.new(na, na, na, na))
+//----
+//n = bar_index
+//d = ta.change(srcf)
+//top = ta.highest(srcf, lengths + fcast * 2)
+//btm = ta.lowest(srcf, lengths + fcast * 2)
+//if barstate.islast
+//    float val = na
+//    k = 0
+//    A = array.new_float(0)
+//    X = array.new_int(0)
+//    for i = 0 to fcast * 2 + lengths by 1
+//        array.push(A, srcf[i])
+//        if cmode == 'Linreg'
+//            array.push(X, n[i])
+//    a = array.slice(A, 0, fcast - 1)
+//    for i = 0 to lengths - 1 by 1
+//        b = array.slice(A, fcast + i, fcast * 2 + i - 1)
+//        r = array.covariance(a, b) / (array.stdev(a) * array.stdev(b))
+//        if fmode == 'Similarity'
+//            val := r >= nz(val, r) ? r : val
+//            val
+//        else
+//            val := r <= nz(val, r) ? r : val
+//            val
+//        k := val == r ? i : k
+//        k
+//    prev = srcf
+//    current = srcf
+//    for i = 0 to fcast - 1 by 1
+//        e = d[fcast + k + fcast - i - 1]
+//        if cmode == 'Mean'
+//            current := array.avg(a) + e
+//            current
+//        else if cmode == 'Linreg'
+//            a = array.slice(A, 0, fcast)
+//            x = array.slice(X, 0, fcast)
+//            alpha = array.covariance(a, x) / array.variance(x)
+//            beta = array.avg(a) - alpha * array.avg(x)
+//            current := alpha * (n + i + 1) + beta + e
+//            current
+//        else
+//            current += e
+//            current
+//
+//        l = array.get(lines, i)
+//        line.set_xy1(l, n + i, prev)
+//        line.set_xy2(l, n + i + 1, current)
+//        line.set_color(l, fcast_col)
+//        if fcast_style == '- - -'
+//            line.set_style(l, line.style_dashed)
+//        else if fcast_style == '· · ·'
+//            line.set_style(l, line.style_dotted)
+//        prev := current
+//        prev
+//
+//    if show_area
+//        box.delete(box.new(n - lengths - fcast * 2 + 1, top, n - fcast + 1, btm, border_color=na, bgcolor=eval_area)[1])
+//        box.delete(box.new(n - fcast + 1, top, n, btm, border_color=na, bgcolor=fcast_area)[1])
+//        box.delete(box.new(n - k - fcast * 2 + 1, btm, n - k - fcast, top, border_color=na, bgcolor=corr_area)[1])
+Expand (432 lines)

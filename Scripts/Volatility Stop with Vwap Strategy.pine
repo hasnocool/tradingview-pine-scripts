@@ -1,0 +1,264 @@
+Script Name: Volatility Stop with Vwap Strategy
+Author: exlux99
+Description: First the credits goes to @TradingView for their release of the volatility stop mtf indicator.
+
+I have took it, and inside I have added a weekly vwap for a better trend direction and at the same time I have added a dynamic risk managment which is calculated from the distance between the volatility line to the close of the candle.
+
+The rules for entry are...
+PineScript code:
+
+Pine Script™ strategy
+Volatility Stop with Vwap Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © TradingView
+// @ exlux99
+//@version=5
+// Volatility Stop MTF
+// v3, 2022.05.29
+// This code was written using the recommendations from the Pine Script™ User Manual's styleInput Guide:
+//   https://www.tradingview.com/pine-script-docs/en/v5/writing/Style_guide.html
+strategy("Volatility Stop with Vwap Strategy", "VStop  Vwap", true)
+import PineCoders/Time/1 as pcTimeLib
+string GRP1           = "═════════ Stop Calculations ═════════"
+float  srcInput       = input.source(close, "Source",     group = GRP1)
+int    lenInput       = input.int(20,       "Length",     group = GRP1, minval = 2)
+float  atrInput       = input.float(2.0,    "ATR Factor", group = GRP1, minval = 0.25, step = 0.25)
+vwap_weekly = request.security(syminfo.tickerid, 'W', ta.vwap)
+// ———————————————————— Functions {
+// @function        Calculates a value from the ATR, which is offset from price action to use as a stop loss or trend detection. 
+// @param source    (series int/float) The source to calculate the stop value from.  
+// @param atrLength (simple int) The length over which to calcualte the RMA of the true range. (number of bars back).
+// @param atrInput (series int/float) A multiplier to allow adjustment of the stop as a function of the ATR value. Example: 1 is 100% of the calculated ATR value. 
+// @param offset    (series int) The first half of the offset calculations required to achieve repainting/non-repainting data when used in `request.security()`.
+// @returns         ([float, bool]) A tuple of the volatility stop value and the trend direction as a bool. 
+vStop(series float source, simple int atrLength, series float atrInput, series int offset = 0) =>
+    float src = nz(source, close)
+    var bool  trendUp = true
+    var float max = src
+    var float min = src
+    var float stop = 0.0
+    float atrM  = nz(ta.atr(atrLength) * atrInput, ta.tr)
+    max  := math.max(max, src)
+    min  := math.min(min, src)
+    stop := nz(trendUp ? math.max(stop, max - atrM) : math.min(stop, min + atrM), src)
+    trendUp := src - stop >= 0.0
+    if trendUp != nz(trendUp[1], true)
+        max  := src
+        min  := src
+        stop := trendUp ? max - atrM : min + atrM
+    [stop[offset], trendUp[offset]]
+// ————— Stop calcs
+[stopChartTf, trendUpChartTf] = vStop(srcInput, lenInput, atrInput, 0)
+float stop       = stopChartTf
+bool  trendUp    = trendUpChartTf
+var bool inLimbo = false
+// Get conditions for colors, plotting, and alerts.
+bool trendReversal   = trendUp != trendUp[1]
+bool trendChangeToUp = trendUp and not trendUp[1]
+bool trendChangeToDn = not trendUp and trendUp[1]
+inLimbo := inLimbo and trendUp == trendUp[1]
+plot(stop)
+long = trendUp and close > stop and close > vwap_weekly
+short = not trendUp and close < stop and close < vwap_weekly
+distance_long =  close + (close - stop )   
+distance_short = close - (stop - close)
+var longOpened = false
+var int timeOfBuyLong = na
+var float tpLong_long = na
+var float slLong_long = na
+var bool longEntry = na
+longEntry := long and not longOpened and not long[1]
+if longEntry
+    longOpened := true
+    tpLong_long := distance_long
+    slLong_long := distance_short
+    
+tpLong_trigger = longOpened[1] and (ta.crossover(close, tpLong_long) or ta.crossover(high, tpLong_long)) //or high > lowest_low_var_tp
+slLong_Trigger = longOpened[1] and (ta.crossunder(close, slLong_long) or ta.crossover(low, slLong_long)) //or low < lowest_low_var_sl
+longExitSignal = tpLong_trigger or slLong_Trigger or short 
+longExit = longOpened[1] and longExitSignal
+if longExit 
+    longOpened := false
+    timeOfBuyLong := na
+    tpLong_long := na
+    slLong_long := na
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
+var shortOpened = false
+var int timeOfBuyShort = na
+var float tp_short = na
+var float sl_short = na
+var bool shortEntry = na
+shortEntry := short and not shortOpened  and not short[1]
+if shortEntry
+    shortOpened := true
+    timeOfBuyShort := time
+    tp_short := distance_short
+    sl_short := distance_long
+tpShort_trigger = shortOpened[1] and (ta.crossunder(close, tp_short) or ta.crossunder(low, tp_short)) //or low < highest_high_var_tp
+slShort_Trigger = shortOpened[1] and (ta.crossover(close, sl_short) or ta.crossover(high, sl_short)) //or high > highest_high_var_sl
+shortExitSignal = long or tpShort_trigger or slShort_Trigger
+shortExit = shortOpened[1] and shortExitSignal 
+if shortExit 
+    shortOpened := false
+    timeOfBuyShort := na
+    timeOfBuyShort
+    tp_short := na
+    sl_short := na
+strategy.entry("long",strategy.long,when=longEntry)
+strategy.close("long",when=longExit)
+strategy.entry("short",strategy.short,when=shortEntry)
+strategy.close('short',when=shortExit)
+Expand (152 lines)

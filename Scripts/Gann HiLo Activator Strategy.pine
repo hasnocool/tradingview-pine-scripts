@@ -1,0 +1,76 @@
+Script Name: Gann HiLo Activator Strategy
+Author: starbolt
+Description: █ OVERVIEW
+
+Strategy based on the  Gann Hilo Activator . This is a trend following strategy, which means it will go long (and close the previous short position) once the price closes above the high SMA, and go short (and close the previous long position) once the price closes below the low SMA.
+
+█ PARAMETERS
+
+- Length
+- Displace (or offset): default is 1
+- Begin...
+PineScript code:
+
+Pine Script™ strategy
+Gann HiLo Activator Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © starbolt
+//@version=5
+strategy('Gann HiLo Activator Strategy', overlay=true, pyramiding=0, default_qty_type=strategy.percent_of_equity, default_qty_value=20, initial_capital=1000, process_orders_on_close=true)
+len = input.int(3, 'Length', step=1, minval=1)
+displace = input.int(1, 'Offset', step=1, minval=0)
+from_start = input(false, 'Begin from start?')
+backtest_year = input(2017, 'From Year')
+backtest_month = input.int(01, 'From Month', minval=1, maxval=12, step=1)
+backtest_day = input.int(01, 'From Day', minval=1, maxval=31, step=1)
+start_time = from_start ? 0 : timestamp(backtest_year, backtest_month, backtest_day, 00, 00)
+float hilo = na
+hi = ta.sma(high, len)
+lo = ta.sma(low, len)
+hilo := close > hi[displace] ? 1 : close < lo[displace] ? -1 : hilo[1]
+ghla = hilo == -1 ? hi[displace] : lo[displace]
+color = hilo == -1 ? color.red : color.green
+buyCondition = hilo == 1 and hilo[1] == -1
+sellCondition = hilo == -1 and hilo[1] == 1
+if buyCondition and time >= start_time
+    strategy.entry('Long', strategy.long)
+if sellCondition and time >= start_time
+    strategy.entry('Short', strategy.short)
+plot(ghla, color=color, style=plot.style_cross)
+Expand (35 lines)

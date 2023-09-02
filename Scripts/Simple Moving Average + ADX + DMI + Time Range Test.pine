@@ -1,0 +1,107 @@
+Script Name: Simple Moving Average + ADX + DMI + Time Range Test
+Author: codachang0726
+Description: Use long and short moving average to look for a potential price in/out. (default as 14 and 7, bases on the history experience)
+ADX and DMI to prevent the small volatility and tangling MA.
+
+This script allows you to set the beginning & end time to test the bullish & bearish market.
+If you want an indicator version, here is it. 
+
+
+Thanks.
+PineScript code:
+
+Pine Script™ strategy
+Simple Moving Average + ADX + DMI + Time Range Test
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+//@version=4
+// author: codachang0726
+strategy(title = "(S)MA+ADX+DI+time", shorttitle = "(S)MA+ADX+DI+time", overlay = true, precision = 8, max_bars_back = 200, pyramiding = 0, initial_capital = 1000, 
+     currency = currency.NONE, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = "percent", commission_value = 0.1)
+// === INPUT MA LENGTHS ===
+fastMA    = input(defval = 7,   title = "FastMA",          type = input.integer, minval = 1, step = 1)
+slowMA    = input(defval = 14,   title = "SlowMA",          type = input.integer, minval = 1, step = 1)
+// === INPUT BACKTEST RANGE ===
+fromMonth = input(defval = 9,    title = "From Month",      type = input.integer, minval = 1, maxval = 12)
+fromDay   = input(defval = 1,    title = "From Day",        type = input.integer, minval = 1, maxval = 31)
+fromYear  = input(defval = 2020, title = "From Year",       type = input.integer, minval = 1970)
+thruMonth = input(defval = 1,    title = "Thru Month",      type = input.integer, minval = 1, maxval = 12)
+thruDay   = input(defval = 1,    title = "Thru Day",        type = input.integer, minval = 1, maxval = 31)
+thruYear  = input(defval = 2022, title = "Thru Year",       type = input.integer, minval = 1970)
+// === INPUT SHOW PLOT ===
+showDate  = input(defval = true, title = "Show Date Range", type = input.bool)
+// === FUNCTION EXAMPLE ===
+start     = timestamp(fromYear, fromMonth, fromDay, 00, 00)        // backtest start window
+finish    = timestamp(thruYear, thruMonth, thruDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+// === MA LOGIC ===
+crossOv   =  sma(close, fastMA) > sma(close, slowMA)     // true when fastMA over slowMA
+crossUn   =  sma(close, fastMA) < sma(close, slowMA)     // true when fastMA under slowMA
+// DI+ADX
+adxlen      = input(14, title="ADX Smoothing")
+dilen       = input(14, title="DI Period")
+keyLevel    = input(20, title="Keylevel for ADX")
+[diplus, diminus, adx] = dmi(dilen, adxlen)
+di = (diplus - diminus)
+buy = di > 0 and crossOv and adx > keyLevel
+sell = di < 0 and crossUn and adx > keyLevel
+buy_time = buy and not buy[1]
+sell_time = sell and not sell[1]
+// === EXECUTION ===
+strategy.entry("L", strategy.long, when = window() and buy_time)    // enter long when "within window of time" AND crossover
+strategy.close("L", when = window() and sell_time)                   // exit long when "within window of time" AND crossunder         
+// === PLOTTING ===
+bgcolor(color = showDate and window() ? color.gray : na, transp = 90)                                     // plot "within window of time"
+plot(sma(close, fastMA), title = 'FastMA', color = color.yellow, linewidth = 2, style = plot.style_line)  // plot FastMA
+plot(sma(close, slowMA), title = 'SlowMA', color = color.aqua,   linewidth = 2, style = plot.style_line)  // plot SlowMA
+Expand (51 lines)

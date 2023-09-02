@@ -1,0 +1,179 @@
+Script Name: [Strategy] Simple Golden Cross
+Author: CJDeegan
+Description: Simple Golden Cross Strategy.
+
+Works best on a daily chart on "Blue Chip" cryptos such as BTC, ETH, and LTC.
+
+Entry Signal:
+-50 day moving average crosses over the 100 day moving average.
+
+Exit Signal:
+-50 day moving average crosses under the 100 day moving average.
+-Daily candle closes under the 100 day moving average (support).
+-100 day moving average crosses...
+PineScript code:
+
+Pine Script™ strategy
+[Strategy] Simple Golden Cross
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © CJDeegan
+//@version=4
+strategy(title = "[LIVE] Golden Cross", overlay=true, initial_capital=400, default_qty_type=strategy.percent_of_equity, default_qty_value=10, currency="USD")
+// ------------Functions------------
+//Percent to Decimal Conversion
+perToDec(a) => a * 0.01
+//Price Difference to Tick
+diffToTick(a,b) => (a - b) / syminfo.mintick 
+    
+// ------------Strategy Inputs------------
+takeProfitInput = input(300, "Take Profit Price (% Gain)")
+stopLossInput = input(25, "Stop Loss (% Loss)")
+startDate = input(title="Start Date", type=input.integer,
+     defval=1, minval=1, maxval=31)
+startMonth = input(title="Start Month", type=input.integer,
+     defval=1, minval=1, maxval=12)
+startYear = input(title="Start Year", type=input.integer,
+     defval=2018, minval=1800, maxval=2100)
+endDate = input(title="End Date", type=input.integer,
+     defval=1, minval=1, maxval=31)
+endMonth = input(title="End Month", type=input.integer,
+     defval=1, minval=1, maxval=12)
+endYear = input(title="End Year", type=input.integer,
+     defval=2021, minval=1800, maxval=2100)
+inDateRange = (time >= timestamp(syminfo.timezone, startYear,
+         startMonth, startDate, 0, 0)) and
+     (time < timestamp(syminfo.timezone, endYear, endMonth, endDate, 0, 0))
+     
+// ------------Populate Indicators------------
+//EMA
+sma50 = sma(close,50)
+sma100 = sma(close,100)
+sma200 = sma(close,200)
+// ------------Entry Logic------------
+//Guards
+entryGuard = true
+//Triggers
+entryTrigger = crossover(sma50,sma100)
+//Conditions
+entryCondition = entryGuard and entryTrigger
+//Calculations
+//Execution
+if (inDateRange and entryCondition)
+    strategy.entry("Long", strategy.long, when = entryCondition, comment = "Entry")
+//------------Exit Logic------------
+//Guards
+//Triggers
+exitTrigger = crossunder(sma50,sma100) or close < sma100 or crossunder(sma100,sma200)
+//Conditions
+exitCondition = exitTrigger
+//Calculations
+//Take Profit
+takeProfitPrice = strategy.position_avg_price + (strategy.position_avg_price * perToDec(takeProfitInput))
+//Take Profit Ticks
+takeProfitTicks = diffToTick(takeProfitPrice, strategy.position_avg_price)
+//StopLoss
+stopLossPrice = strategy.position_avg_price - (strategy.position_avg_price * perToDec(stopLossInput))
+//Execution
+if (inDateRange)
+    strategy.close("Long", when = exitCondition, comment = "Sell Trigger")
+    strategy.exit("Exit", "Long", comment="Stop", profit=takeProfitTicks, stop=stopLossPrice)
+//Plots
+plot(sma50, "SMA 50", color = color.blue)
+plot(sma100, "SMA 100", color = color.green)
+plot(sma200, "SMA 200", color = color.yellow)
+entry = plot(strategy.position_size <= 0 ? na : strategy.position_avg_price, "Entry Price", color = color.yellow, style = plot.style_linebr)
+profit = plot(strategy.position_size <= 0 ? na : takeProfitPrice, "Take Profit (Price)", color = color.green, style = plot.style_linebr)
+stop = plot(strategy.position_size <= 0 ? na : stopLossPrice, "Stop Loss", color = color.red, style = plot.style_linebr)
+fill(entry,profit, color=color.green)
+fill(entry,stop, color=color.red)
+Expand (89 lines)

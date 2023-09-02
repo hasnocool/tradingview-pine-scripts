@@ -1,0 +1,107 @@
+Script Name: BTC Hashrate ribbons
+Author: Powerscooter
+Description: BTC Hash Rate ribbons / Hash Rate cross
+
+This strategy goes long when BTCs Hash Rate 30 day moving average crosses above the 60 day moving average, signifying that miner capitulation is over and recovery has started.
+When the opposite signal is given, which signifies the beginning of miner capitulation, the strategy goes short (or flat, depending on...
+PineScript code:
+
+Pine Script™ strategy
+BTC Hashrate ribbons
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Powerscooter
+// Since IntoTheBlock only provides daily hashrate data, this chart might look chunky on lower timeframes, even with smoothing.
+//@version=5
+strategy("BTC Hashrate ribbons", overlay = true, scale=scale.none, default_qty_type = strategy.cash, default_qty_value = 100, initial_capital = 100)
+enableDirection = input(0, title="Both(0), Long(1), Short(-1)", group="Direction")
+smoothingS = input.string(title="Smoothing short MA", defval="SMA", options=["SMA", "RMA", "EMA", "WMA"], group="Hashrate Settings")
+SmoothLengthS = input(30, 'Short MA length', group="Hashrate Settings")
+smoothingL = input.string(title="Smoothing long MA", defval="SMA", options=["SMA", "RMA", "EMA", "WMA"], group="Hashrate Settings")
+SmoothLengthL = input(60, 'Long MA length', group="Hashrate Settings")
+ma_functionS(source, length) =>
+    switch smoothingS
+        "RMA" => ta.rma(source, length)
+        "SMA" => ta.sma(source, length)
+        "EMA" => ta.ema(source, length)
+        => ta.wma(source, length)
+ma_functionL(source, length) =>
+    switch smoothingL
+        "RMA" => ta.rma(source, length)
+        "SMA" => ta.sma(source, length)
+        "EMA" => ta.ema(source, length)
+        => ta.wma(source, length)
+Source = input.string(title="Data Source", defval="Quandl", options=["Quandl", "Glassnode", "IntoTheBlock"], group="Source Settings")
+SourceE = switch Source
+    "Quandl" => "QUANDL:BCHAIN/HRATE"
+    "Glassnode" => "GLASSNODE:BTC_HASHRATE"
+    "IntoTheBlock" => "INTOTHEBLOCK:BTC_HASHRATE"
+HashRate = request.security(SourceE, "D", close)
+SignalLine = ma_functionS(HashRate, SmoothLengthS)
+LongLine = ma_functionL(HashRate, SmoothLengthL)
+plot(ma_functionS(HashRate, SmoothLengthS), "Short MA", color=color.yellow)
+plot(ma_functionL(HashRate, SmoothLengthL), "Long MA", color=color.blue)
+LongCondition = ta.crossover(SignalLine, LongLine)
+ShortCondition = ta.crossunder(SignalLine, LongLine)
+//Long Entry Condition
+if LongCondition and (enableDirection == 1 or enableDirection == 0)
+    strategy.entry("Long", strategy.long)
+if LongCondition and (enableDirection == -1)
+    strategy.close("Short")
+//Short Entry condition
+if ShortCondition and (enableDirection == -1 or enableDirection == 0)
+    strategy.entry("Short", strategy.short)
+if ShortCondition and (enableDirection == 1)
+    strategy.close("Long")
+Expand (51 lines)

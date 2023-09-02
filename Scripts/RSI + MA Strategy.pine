@@ -1,0 +1,69 @@
+Script Name: RSI + MA Strategy
+Author: The-4xdev-company
+Description: Hello, everyone!
+
+
+We have just released an innovative strategy for TradingView. It allows you to facilitate the trading process when you have to use both indicators.
+
+This strategy is:
+
+ 
+ User-friendly
+ Configurable
+ Equipped with the combination of Relative Strength Index (RSI) and Moving Average (MA) indicators
+ Designed with all required functions to manage...
+PineScript code:
+
+Pine Script™ strategy
+RSI + MA Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+//@version=4
+strategy(title="RSI + MA", shorttitle="RSI + MA")
+reverseTrade = input(false, title = "Use Reverse Trade?")
+lengthRSI = input(14, minval=1, title="RSI Length")
+sourceRSI = input(close, "RSI Source", type = input.source)
+showMA = input(true, title="Show MA")
+lengthMA = input(9, minval=1, title="MA Length")
+offsetMA = input(title="MA Offset", type=input.integer, defval=0, minval=-500, maxval=500)
+up = rma(max(change(sourceRSI), 0), lengthRSI)
+down = rma(-min(change(sourceRSI), 0), lengthRSI)
+rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+ma = sma(rsi, lengthMA)
+plot(showMA ? ma : na, "MA", color=color.blue, linewidth=2, style=0, offset=offsetMA)
+plot(rsi, "RSI", color=#9915FF, linewidth=1, style=0)
+band1 = hline(70, "Upper Band", color=#C0C0C0, linestyle=2, linewidth=1)
+band0 = hline(30, "Lower Band", color=#C0C0C0, linestyle=2, linewidth=1)
+fill(band1, band0, color=color.new(#9915FF,95), title="Background")
+buy = reverseTrade ? rsi[1] < ma[1] and rsi > ma : rsi[1] > ma[1] and rsi < ma
+sell = reverseTrade ? rsi[1] > ma[1] and rsi < ma : rsi[1] < ma[1] and rsi > ma
+strategy.entry("Buy", true, when = buy)
+strategy.entry("Sell", false, when = sell)
+Expand (28 lines)

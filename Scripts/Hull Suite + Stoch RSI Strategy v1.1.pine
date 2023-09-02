@@ -1,0 +1,261 @@
+Script Name: Hull Suite + Stoch RSI Strategy v1.1
+Author: nyamkamunhjin
+Description: This strategy uses Hull Suite with Stoch RSI
+
+Uses Hull Suite as trend and only trades with the direction of the trend.
+
+Entry conditions:
+ 
+  Hull Suite as a trend
+  Stoch RSI overbought for short entries & oversold for long entries
+ 
+
+Current parameters works best on  BINANCE:BNBBUSDPERP  pair.
+PineScript code:
+
+Pine Script™ strategy
+Hull Suite + Stoch RSI Strategy v1.1
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+//@version=4
+//Basic Hull Ma Pack tinkered by InSilico 
+//Converted to Strategy by DashTrader
+strategy("Hull Suite + Stoch RSI Strategy v1.1", overlay=true, pyramiding=1, initial_capital=100, default_qty_type= strategy.percent_of_equity, default_qty_value = 100, calc_on_order_fills=false, slippage=0,commission_type=strategy.commission.percent,commission_value=0.023)
+strat_dir_input = input(title="Strategy Direction", defval="all", options=["long", "short", "all"])
+strat_dir_value = strat_dir_input == "long" ? strategy.direction.long : strat_dir_input == "short" ? strategy.direction.short : strategy.direction.all
+strategy.risk.allow_entry_in(strat_dir_value)
+//////////////////////////////////////////////////////////////////////
+// Testing Start dates
+testStartYear = input(2016, "Backtest Start Year")
+testStartMonth = input(1, "Backtest Start Month")
+testStartDay = input(1, "Backtest Start Day")
+testPeriodStart = timestamp(testStartYear,testStartMonth,testStartDay,0,0)
+//Stop date if you want to use a specific range of dates
+testStopYear = input(2030, "Backtest Stop Year")
+testStopMonth = input(12, "Backtest Stop Month")
+testStopDay = input(30, "Backtest Stop Day")
+testPeriodStop = timestamp(testStopYear,testStopMonth,testStopDay,0,0)
+stoch_upper_input = input(88, "Stoch Upper Threshold", type=input.float)
+stoch_lower_input = input(5, "Stoch Lower Threshold", type=input.float)
+sl = input(0.7, "SL %", type=input.float, step=0.1)
+tp = input(2.1, "TP %", type=input.float, step=0.1)
+// slowEMA = ema(close, slowEMA_input)
+// vwap = vwap(close)
+// rsi = rsi(close, rsi_input)
+// stoch rsi
+smoothK = 3
+smoothD = 3
+lengthRSI = 14
+lengthStoch = 14
+rsi1 = rsi(close, 14)
+k = sma(stoch(rsi1, rsi1, rsi1, lengthStoch), smoothK)
+d = sma(k, smoothD)
+testPeriod() =>
+    time >= testPeriodStart and time <= testPeriodStop ? true : false
+// Component Code Stop
+//////////////////////////////////////////////////////////////////////
+//INPUT
+src = input(close, title="Source")
+modeSwitch = input("Hma", title="Hull Variation", options=["Hma", "Thma", "Ehma"])
+length = input(180, title="Length(180-200 for floating S/R , 55 for swing entry)")
+switchColor = input(true, "Color Hull according to trend?")
+candleCol = input(false,title="Color candles based on Hull's Trend?")
+visualSwitch  = input(true, title="Show as a Band?")
+thicknesSwitch = input(1, title="Line Thickness")
+transpSwitch = input(40, title="Band Transparency",step=5)
+//FUNCTIONS
+//HMA
+HMA(_src, _length) =>  wma(2 * wma(_src, _length / 2) - wma(_src, _length), round(sqrt(_length)))
+//EHMA    
+EHMA(_src, _length) =>  ema(2 * ema(_src, _length / 2) - ema(_src, _length), round(sqrt(_length)))
+//THMA    
+THMA(_src, _length) =>  wma(wma(_src,_length / 3) * 3 - wma(_src, _length / 2) - wma(_src, _length), _length)
+    
+//SWITCH
+Mode(modeSwitch, src, len) =>
+      modeSwitch == "Hma"  ? HMA(src, len) :
+      modeSwitch == "Ehma" ? EHMA(src, len) : 
+      modeSwitch == "Thma" ? THMA(src, len/2) : na
+      
+//OUT
+HULL = Mode(modeSwitch, src, length)
+MHULL = HULL[0]
+SHULL = HULL[2]
+//COLOR
+hullColor = switchColor ? (HULL > HULL[2] ? #00ff00 : #ff0000) : #ff9800
+//PLOT
+///< Frame
+Fi1 = plot(MHULL, title="MHULL", color=hullColor, linewidth=thicknesSwitch, transp=50)
+Fi2 = plot(visualSwitch ? SHULL : na, title="SHULL", color=hullColor, linewidth=thicknesSwitch, transp=50)
+///< Ending Filler
+fill(Fi1, Fi2, title="Band Filler", color=hullColor, transp=transpSwitch)
+///BARCOLOR
+barcolor(color = candleCol ? (switchColor ? hullColor : na) : na)
+bgcolor(color = k < stoch_lower_input  and crossover(k, d) ? color.green : na)
+bgcolor(color = d > stoch_upper_input and crossover(d, k) ? color.red : na)
+notInTrade = strategy.position_size == 0
+if notInTrade and HULL[0] > HULL[2] and testPeriod() and k < stoch_lower_input and crossover(k, d)
+// if HULL[0] > HULL[2] and testPeriod()
+    stopLoss = close * (1 - sl / 100) 
+    profit25 = close * (1 + (tp / 100) * 0.25)
+    profit50 = close * (1 + (tp / 100) * 0.5)
+    takeProfit = close * (1 + tp / 100)
+    
+    
+    strategy.entry("long", strategy.long, alert_message="buy")
+    strategy.exit("exit long 25%", "long", stop=stopLoss, limit=profit25, qty_percent=25, alert_message="profit_25")
+    strategy.exit("exit long 50%", "long", stop=stopLoss, limit=profit50, qty_percent=25, alert_message="profit_50")
+    strategy.exit("exit long", "long", stop=stopLoss, limit=takeProfit)
+    
+    line.new(bar_index, profit25, bar_index + 4, profit25, color=color.green)
+    line.new(bar_index, profit50, bar_index + 4, profit50, color=color.green)
+    box.new(bar_index, stopLoss, bar_index + 4, close, border_color=color.red, bgcolor=color.new(color.red, 80))
+    box.new(bar_index, close, bar_index + 4, takeProfit, border_color=color.green, bgcolor=color.new(color.green, 80))
+    
+if notInTrade and HULL[0] < HULL[2] and testPeriod() and d > stoch_upper_input and crossover(d, k)
+// if HULL[0] < HULL[2] and testPeriod()
+    stopLoss = close * (1 + sl / 100)
+    profit25 = close * (1 - (tp / 100) * 0.25)
+    profit50 = close * (1 - (tp / 100) * 0.5)
+    takeProfit = close * (1 - tp / 100)
+    
+    
+    strategy.entry("short", strategy.short, alert_message="sell")
+    strategy.exit("exit short 25%", "short", stop=stopLoss, limit=profit25, qty_percent=25, alert_message="profit_25")
+    strategy.exit("exit short 50%", "short", stop=stopLoss, limit=profit50, qty_percent=25, alert_message="profit_50")
+    strategy.exit("exit short", "short", stop=stopLoss, limit=takeProfit)
+    
+    line.new(bar_index, profit25, bar_index + 4, profit25, color=color.green)
+    line.new(bar_index, profit50, bar_index + 4, profit50, color=color.green)
+    box.new(bar_index, stopLoss, bar_index + 4, close, border_color=color.red, bgcolor=color.new(color.red, 80))
+    box.new(bar_index, close, bar_index + 4, takeProfit, border_color=color.green, bgcolor=color.new(color.green, 80))
+var table winrateDisplay = table.new(position.bottom_right, 1, 1)
+table.cell(winrateDisplay, 0, 0, "Winrate: " + tostring(strategy.wintrades / strategy.closedtrades * 100, '#.##')+" %", text_color=color.white)
+Expand (128 lines)

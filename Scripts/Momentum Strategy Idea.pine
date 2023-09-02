@@ -1,0 +1,122 @@
+Script Name: Momentum Strategy Idea
+Author: QuantCT
+Description: This strategy idea uses two, fast and slow, momentum indicators for trade setups and exits. This is a fast reacting strategy which is very useful in trending instruments on 1D and 4H timeframes. This is the implementation used in QuantCT app.
+
+You can set operation mode to be Long/Short or long-only.
+You also can set a fixed stop-loss or ignore it so that the...
+PineScript code:
+
+Pine Script™ strategy
+Momentum Strategy Idea
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © QuantCT
+//@version=4
+strategy("Momentum Strategy Idea",
+         shorttitle="Momentum", 
+         overlay=false,
+         pyramiding=0,     
+         default_qty_type=strategy.percent_of_equity, 
+         default_qty_value=100, 
+         initial_capital=1000,           
+         commission_type=strategy.commission.percent, 
+         commission_value=0.075)
+// ____ Inputs
+fast_period = input(title="Fast Period", defval=5) 
+slow_period = input(title="Slow Period", defval=10)
+long_only = input(title="Long Only", defval=false)
+slp = input(title="Stop-loss (%)", minval=1.0, maxval=25.0, defval=5.0)
+use_sl = input(title="Use Stop-Loss", defval=false)
+// ____ Logic
+mom_fast = mom(close, fast_period)
+mom_slow = mom(close, slow_period)
+    
+enter_long = (mom_slow > 0 and mom_fast > 0)
+exit_long = (mom_slow < 0 or mom_fast < 0)
+enter_short = (mom_slow < 0 and mom_fast < 0)
+exit_short = (mom_slow > 0 or mom_fast > 0)
+strategy.entry("Long", strategy.long, when=enter_long)
+strategy.close("Long", when=exit_long) 
+if (not long_only)
+    strategy.entry("Short", strategy.short, when=enter_short)
+    strategy.close("Short", when=exit_short) 
+   
+// ____ SL
+sl_long = strategy.position_avg_price * (1- (slp/100))
+sl_short = strategy.position_avg_price * (1 + (slp/100))
+if (use_sl)
+    strategy.exit(id="SL", from_entry="Long", stop=sl_long)
+    strategy.exit(id="SL", from_entry="Short", stop=sl_short)
+    
+// ____ Plots
+colors = 
+ enter_long ? #27D600 :
+ enter_short ? #E30202 :
+ color.orange
+mom_fast_plot = plot(mom_fast, color=colors)
+mom_slow_plot = plot(mom_slow, color=colors)
+fill(mom_fast_plot, mom_slow_plot, color=colors, transp=50)
+Expand (63 lines)

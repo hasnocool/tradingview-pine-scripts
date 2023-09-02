@@ -1,0 +1,304 @@
+Script Name: Big Bar Strategy
+Author: tweakerID
+Description: // This strategy detects and uses big bars to enter a position. When the Big Bar 
+// is bearish (red candle) the position will be long and viceversa
+// for short positions. The stop loss (optional) is placed on the low of the 
+// candle used to trigger the position and user inputs allow you to modify the
+// size of the SL. Take profit is placed on a reward ratio...
+PineScript code:
+
+Pine Script™ strategy
+Big Bar Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © tweakerID
+// This strategy detects and uses big bars to enter a position. When the Big Bar 
+// is bearish (red candle) the position will be long and viceversa
+// for short positions. The stop loss (optional) is placed on the low of the 
+// candle used to trigger the position and user inputs allow you to modify the
+// size of the SL. Take profit is placed on a reward ratio of 1. User can also modify 
+// the size of the bar body used to determine if we have a real Big Bar and
+// filter out Doji bars. Big Bars are determined relative to the previous X period size, 
+// which can also be modified, as well as the required size of the Big Bar relative to this period average.
+//@version=4
+strategy("Big Bar Strategy", 
+     overlay=true, 
+     default_qty_type=strategy.percent_of_equity, 
+     default_qty_value=100, 
+     initial_capital=10000, 
+     commission_value=0.04, 
+     calc_on_every_tick=false, 
+     slippage=0)
+direction = input(0, title = "Strategy Direction", type=input.integer, minval=-1, maxval=1)
+strategy.risk.allow_entry_in(direction == 0 ? strategy.direction.all : (direction < 0 ? strategy.direction.short : strategy.direction.long))
+/////////////////////// STRATEGY INPUTS ////////////////////////////////////////
+title1=input(true, "-----------------Strategy Inputs-------------------")  
+barsizeThreshold=input(.5, step=.1, minval=.5, maxval=.9, title="Bar Body Size")
+period=input(10, title="Period for bar size average")
+mult=input(2, step=.2, title="Big Size Avg Mult to determine Big Bar")
+i_Confirmation=input(true, title="Enter trade after confirmation bar")
+/////////////////////// BACKTESTER /////////////////////////////////////////////
+title2=input(true, "-----------------General Inputs-------------------")  
+// Backtester General Inputs
+i_SL=input(true, title="Use Stop Loss and Take Profit")
+i_SLType=input(defval="ATR Stop", title="Type Of Stop", options=["Strategy Stop", "Swing Lo/Hi", "ATR Stop"])
+i_SPL=input(defval=10, title="Swing Point Lookback")
+i_PercIncrement=input(defval=3, step=.1, title="Swing Point SL Perc Increment")*0.01
+i_ATR = input(14, title="ATR Length")
+i_ATRMult = input(4, step=.1, title="ATR Multiple")
+i_TPRRR = input(1, step=.1, title="Take Profit Risk Reward Ratio")
+TS=input(false, title="Trailing Stop")
+// Bought and Sold Boolean Signal
+bought = strategy.position_size > strategy.position_size[1] 
+ or strategy.position_size < strategy.position_size[1]
+// Price Action Stop and Take Profit
+LL=(lowest(i_SPL))*(1-i_PercIncrement)
+HH=(highest(i_SPL))*(1+i_PercIncrement)
+LL_price = valuewhen(bought, LL, 0)
+HH_price = valuewhen(bought, HH, 0)
+entry_LL_price = strategy.position_size > 0 ? LL_price : na 
+entry_HH_price = strategy.position_size < 0 ? HH_price : na 
+tp=strategy.position_avg_price + (strategy.position_avg_price - entry_LL_price)*i_TPRRR
+stp=strategy.position_avg_price - (entry_HH_price - strategy.position_avg_price)*i_TPRRR
+// ATR Stop
+ATR=atr(i_ATR)*i_ATRMult
+ATRLong = ohlc4 - ATR
+ATRShort = ohlc4 + ATR
+ATRLongStop = valuewhen(bought, ATRLong, 0)
+ATRShortStop = valuewhen(bought, ATRShort, 0)
+LongSL_ATR_price = strategy.position_size > 0 ? ATRLongStop : na 
+ShortSL_ATR_price = strategy.position_size < 0 ? ATRShortStop : na 
+ATRtp=strategy.position_avg_price + (strategy.position_avg_price - LongSL_ATR_price)*i_TPRRR
+ATRstp=strategy.position_avg_price - (ShortSL_ATR_price - strategy.position_avg_price)*i_TPRRR
+/////////////////////// STRATEGY LOGIC /////////////////////////////////////////
+barsize=high-low
+barbodysize=close>open?(open-close)*-1:(open-close)
+barsizeavg=sum(barsize, period)/period
+bigbar=barsize >= barsizeavg*mult and barbodysize>barsize*barsizeThreshold
+barcolor(bigbar ? color.white : na)
+// Strategy Stop
+barsizemult=input(1, step=.1, title="Strategy SL/TP Mult")
+float LongStop = strategy.position_avg_price - (valuewhen(bought,barsize,0)*barsizemult)
+float ShortStop = strategy.position_avg_price + (valuewhen(bought,barsize,0)*barsizemult)
+float StratTP = strategy.position_avg_price + (valuewhen(bought,barsize,0)*barsizemult)
+float StratSTP = strategy.position_avg_price - (valuewhen(bought,barsize,0)*barsizemult)
+BUY=i_Confirmation ? close[1] < open[1] and bigbar[1] and close > open : close < open and bigbar
+SELL=i_Confirmation ? close[1] > open[1] and bigbar[1] and close < open : close > open and bigbar
+//Trading Inputs
+DPR=input(true, "Allow Direct Position Reverse")
+reverse=input(false, "Reverse Trades")
+// Entries
+if reverse
+    if not DPR
+        strategy.entry("long", strategy.long, when=SELL and strategy.position_size == 0)
+        strategy.entry("short", strategy.short, when=BUY and strategy.position_size == 0)
+    else     
+        strategy.entry("long", strategy.long, when=SELL)
+        strategy.entry("short", strategy.short, when=BUY)
+else
+    if not DPR 
+        strategy.entry("long", strategy.long, when=BUY and strategy.position_size == 0)
+        strategy.entry("short", strategy.short, when=SELL and strategy.position_size == 0)
+    else
+        strategy.entry("long", strategy.long, when=BUY)
+        strategy.entry("short", strategy.short, when=SELL)
+SL= i_SLType == "Swing Lo/Hi" ? entry_LL_price : i_SLType == "ATR Stop" ? LongSL_ATR_price : LongStop
+SSL= i_SLType == "Swing Lo/Hi" ? entry_HH_price : i_SLType == "ATR Stop" ? ShortSL_ATR_price : ShortStop
+TP= i_SLType == "Swing Lo/Hi" ? tp : i_SLType == "ATR Stop" ? ATRtp : StratTP
+STP= i_SLType == "Swing Lo/Hi" ? stp : i_SLType == "ATR Stop" ? ATRstp : StratSTP
+//TrailingStop
+dif=(valuewhen(strategy.position_size>0 and strategy.position_size[1]<=0, high,0))
+ -strategy.position_avg_price
+trailOffset     = strategy.position_avg_price - SL
+var tstop = float(na)
+if strategy.position_size > 0
+    tstop := high- trailOffset - dif
+    if tstop<tstop[1]
+        tstop:=tstop[1]
+else
+    tstop := na
+StrailOffset     = SSL - strategy.position_avg_price
+var Ststop = float(na)
+Sdif=strategy.position_avg_price-(valuewhen(strategy.position_size<0 
+ and strategy.position_size[1]>=0, low,0))
+if strategy.position_size < 0
+    Ststop := low+ StrailOffset + Sdif
+    if Ststop>Ststop[1]
+        Ststop:=Ststop[1]
+else
+    Ststop := na
+strategy.exit("TP & SL", "long", limit=TP, stop=TS? tstop : SL, when=i_SL)
+strategy.exit("TP & SL", "short", limit=STP, stop=TS? Ststop : SSL, when=i_SL)
+/////////////////////// PLOTS //////////////////////////////////////////////////
+plot(i_SL and strategy.position_size > 0 and not TS ? SL : i_SL and strategy.position_size > 0 and TS ? tstop : na , title='SL', style=plot.style_cross, color=color.red)
+plot(i_SL and strategy.position_size < 0 and not TS ? SSL : i_SL and strategy.position_size < 0 and TS ? Ststop : na , title='SSL', style=plot.style_cross, color=color.red)
+plot(i_SL and strategy.position_size > 0 ? TP : na, title='TP', style=plot.style_cross, color=color.green)
+plot(i_SL and strategy.position_size < 0 ? STP : na, title='STP', style=plot.style_cross, color=color.green)
+// Draw price action setup arrows
+plotshape(BUY ? 1 : na, style=shape.triangleup, location=location.belowbar, 
+ color=color.green, title="Bullish Setup", size=size.auto)
+plotshape(SELL ? 1 : na, style=shape.triangledown, location=location.abovebar, 
+ color=color.red, title="Bearish Setup", size=size.auto)
+ 
+Expand (161 lines)

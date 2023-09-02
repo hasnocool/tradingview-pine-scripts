@@ -1,0 +1,81 @@
+Script Name: AkiMosi Super Super Trend
+Author: PremiumUser_1
+Description: Updation of SuperTrend
+PineScript code:
+
+Pine Script™ strategy
+AkiMosi Super Super Trend
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+strategy("TTK TOOL", overlay=true, default_qty_value=100)
+res = input(title="Main SuperTrend Time Frame", type=resolution, defval="720")
+Factor=input(2, minval=1,maxval = 100)
+Pd=input(10, minval=1,maxval = 100)
+tp = input(500,title="Take Profit")
+sl = input(400,title="Stop Loss")
+Up=hl2-(Factor*atr(Pd))
+Dn=hl2+(Factor*atr(Pd))
+MUp=security(tickerid,res,hl2-(Factor*atr(Pd)))
+MDn=security(tickerid,res,hl2+(Factor*atr(Pd)))
+Mclose=security(tickerid,res,close)
+TrendUp=close[1]>TrendUp[1]? max(Up,TrendUp[1]) : Up
+TrendDown=close[1]<TrendDown[1]? min(Dn,TrendDown[1]) : Dn
+MTrendUp=Mclose[1]>MTrendUp[1]? max(MUp,MTrendUp[1]) : MUp
+MTrendDown=Mclose[1]<MTrendDown[1]? min(MDn,MTrendDown[1]) : MDn
+Trend = close > TrendDown[1] ? 1: close< TrendUp[1]? -1: nz(Trend[1],1)
+Tsl = Trend==1? TrendUp: TrendDown
+MTrend = Mclose > MTrendDown[1] ? 1: Mclose< MTrendUp[1]? -1: nz(MTrend[1],1)
+MTsl = MTrend==1? MTrendUp: MTrendDown
+linecolor = Trend == 1 ? green: red
+plot(Tsl, color = linecolor , style = line , linewidth = 4,title = "SuperTrend")
+Mlinecolor = MTrend == 1 ? black : red
+plot(MTsl, color = Mlinecolor , style = line , linewidth = 4,title = "Main SuperTrend")
+plotshape(cross(close,Tsl) and close>Tsl , "Up Arrow", shape.triangleup,location.belowbar,green,0,0)
+plotshape(cross(Tsl,close) and close<Tsl , "Down Arrow", shape.triangledown , location.abovebar, red,0,0)
+up = Trend == 1 and Trend[1] == -1 and MTrend == 1 
+down = Trend == -1 and Trend[1] == 1 and MTrend == -1 
+golong = Trend == 1 and Trend[1] == -1 and MTrend == 1 
+goshort = Trend == -1 and Trend[1] == 1 and MTrend == -1 
+Expand (43 lines)

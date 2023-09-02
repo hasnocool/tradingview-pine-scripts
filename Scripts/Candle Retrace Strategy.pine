@@ -1,0 +1,1932 @@
+Script Name: Candle Retrace Strategy
+Author: UnknownUnicorn36161431
+Description: The WHAT
+=============>
+A strategy focused on opening trades during a retracement of the so-called Big Candles. Instead of having to recalibrate a strategy every so often (so it stays consistent with the current trend), this Candle strategy tries to use a different approach. It will detect candles with big bodies (which are usually created during a strong push...
+PineScript code:
+
+Pine Script™ strategy
+Candle Retrace Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+540
+541
+542
+543
+544
+545
+546
+547
+548
+549
+550
+551
+552
+553
+554
+555
+556
+557
+558
+559
+560
+561
+562
+563
+564
+565
+566
+567
+568
+569
+570
+571
+572
+573
+574
+575
+576
+577
+578
+579
+580
+581
+582
+583
+584
+585
+586
+587
+588
+589
+590
+591
+592
+593
+594
+595
+596
+597
+598
+599
+600
+601
+602
+603
+604
+605
+606
+607
+608
+609
+610
+611
+612
+613
+614
+615
+616
+617
+618
+619
+620
+621
+622
+623
+624
+625
+626
+627
+628
+629
+630
+631
+632
+633
+634
+635
+636
+637
+638
+639
+640
+641
+642
+643
+644
+645
+646
+647
+648
+649
+650
+651
+652
+653
+654
+655
+656
+657
+658
+659
+660
+661
+662
+663
+664
+665
+666
+667
+668
+669
+670
+671
+672
+673
+674
+675
+676
+677
+678
+679
+680
+681
+682
+683
+684
+685
+686
+687
+688
+689
+690
+691
+692
+693
+694
+695
+696
+697
+698
+699
+700
+701
+702
+703
+704
+705
+706
+707
+708
+709
+710
+711
+712
+713
+714
+715
+716
+717
+718
+719
+720
+721
+722
+723
+724
+725
+726
+727
+728
+729
+730
+731
+732
+733
+734
+735
+736
+737
+738
+739
+740
+741
+742
+743
+744
+745
+746
+747
+748
+749
+750
+751
+752
+753
+754
+755
+756
+757
+758
+759
+760
+761
+762
+763
+764
+765
+766
+767
+768
+769
+770
+771
+772
+773
+774
+775
+776
+777
+778
+779
+780
+781
+782
+783
+784
+785
+786
+787
+788
+789
+790
+791
+792
+793
+794
+795
+796
+797
+798
+799
+800
+801
+802
+803
+804
+805
+806
+807
+808
+809
+810
+811
+812
+813
+814
+815
+816
+817
+818
+819
+820
+821
+822
+823
+824
+825
+826
+827
+828
+829
+830
+831
+832
+833
+834
+835
+836
+837
+838
+839
+840
+841
+842
+843
+844
+845
+846
+847
+848
+849
+850
+851
+852
+853
+854
+855
+856
+857
+858
+859
+860
+861
+862
+863
+864
+865
+866
+867
+868
+869
+870
+871
+872
+873
+874
+875
+876
+877
+878
+879
+880
+881
+882
+883
+884
+885
+886
+887
+888
+889
+890
+891
+892
+893
+894
+895
+896
+897
+898
+899
+900
+901
+902
+903
+904
+905
+906
+907
+908
+909
+910
+911
+912
+913
+914
+915
+916
+917
+918
+919
+920
+921
+922
+923
+924
+925
+926
+927
+928
+929
+930
+931
+932
+933
+934
+935
+936
+937
+938
+939
+940
+941
+942
+943
+944
+945
+946
+947
+948
+949
+950
+951
+952
+953
+954
+955
+956
+957
+958
+959
+960
+961
+962
+963
+964
+965
+966
+967
+968
+969
+970
+971
+972
+973
+974
+975
+976
+977
+978
+979
+980
+981
+982
+983
+984
+985
+986
+987
+988
+989
+990
+991
+992
+993
+994
+995
+996
+997
+998
+999
+1000
+1001
+1002
+1003
+1004
+1005
+1006
+1007
+1008
+1009
+1010
+1011
+1012
+1013
+1014
+//@version=5
+strategy(title = "Candle Retrace Strategy", shorttitle="Retrace Strategy", overlay=true, process_orders_on_close = false, calc_on_order_fills = false, pyramiding = 0, default_qty_type = strategy.percent_of_equity, default_qty_value = 75, commission_type = strategy.commission.percent, commission_value = 0.04, initial_capital = 100, max_labels_count = 500, max_lines_count = 500, max_bars_back = 5000)
+AUTO = "Auto"
+DAILY = "Daily"
+WEEKLY = "Weekly"
+MONTHLY = "Monthly"
+QUARTERLY = "Quarterly"
+YEARLY = "Yearly"
+BIYEARLY = "Biyearly"
+TRIYEARLY = "Triyearly"
+QUINQUENNIALLY = "Quinquennially"
+DECENNIALLY = "Decennially"
+TRADITIONAL = "Traditional"
+FIBONACCI = "Fibonacci"
+WOODIE = "Woodie"
+CLASSIC = "Classic"
+DEMARK = "DM"
+CAMARILLA = "Camarilla"
+GROUP_DETECTION = "Big Candle Detection"
+GROUP_RETRACEMENT = "Retracement Options"
+GROUP_LIMITATIONS = "Limitation Options"
+GROUP_PIVOTS = "Pivot Points"
+GROUP_CRSI_OPTIONS = "cRSI Options"
+GROUP_HTF_MESA_MA = "HTF Adaptive MESA MA Options"
+// BIG CANDLES
+size = input.float( 1.2, "Big Candle Minimum Size", minval = 0.01, step = 0.1, inline = "candlesize", group = GROUP_DETECTION )
+percentage = input.bool( true, "Percentage", inline = "candlesize", group = GROUP_DETECTION )
+//disable_2_subsequent_big_candles = input.bool( false, "Disable 2 Subsequent Big Candles", tooltip="If this option is ON, then any newfound Big Candle in the opposite direction will be disregarded and the old Big Candle will be kept for retracement recognition. For instance, when a green Big Candle is immediatelly followed by a red Big Candle, the red one is ignored and all subsequent retracement checks are made against the first, green Big Candle.\n\nThis is a tradeoff option, as it might bring higher rewards in some case but lower in others, depending on the asset being traded.", group = GROUP_DETECTION )
+// RETRACEMENT
+min_retracement = input.float( 30, "Minimum Retracement %", step=1, tooltip="When current candle retraces at least this much % of the previous big candle, consider this a trade signal.", group = GROUP_RETRACEMENT )
+extend_sl_by = input.float( 0, "Extend SL by this much %", step=1, tooltip="Stop Loss is trigerred at the high/low side of the previous candle. This option will allow to extend (or contract if you use negative value) that SL value by the given percentage.", group = GROUP_RETRACEMENT )
+extend_tp_by = input.float( 0, "Extend TP by this much %", step=1, tooltip="Take Profit is trigerred at the highest high / lowest low of the previous uninterrupted trend (i.e. all previous candles with the same color until an opposite candle is found). This option will allow to extend (or contract if you use negative value) that TP value by the given percentage.", group = GROUP_RETRACEMENT )
+max_sl_percent = input.float( 0, "[Optional] Maximum SL %", minval=0, step=0.1, tooltip="You can choose to have SL at maximum this much percent from the entry price.", group = GROUP_RETRACEMENT )
+require_previous_same_bars = input.int( 1, "[Optional] Min previous bars in same trend", minval=0, step=1, tooltip="If you set this to anything above 0, the strategy will make sure there is at least this number of previous bars with the same direction as the Big Candle.", group = GROUP_RETRACEMENT )
+sl_ends_with_trend = input.bool( false, "Adjust SL to End With Trend", tooltip="When this option is ON, Stop Loss is moved to the last candle high/low in the same trend after the Big Candle. For instance, if a green Big Candle still had 2 smaller candles making a higher high after it, SL will be moved to the highest high they did in that trend.\n\nIf this option is OFF, Stop Loss will be set at the high/low of the actual Big Candle itself (which makes for better risk management but also smaller potential reward).", group = GROUP_RETRACEMENT )
+// PIVOTS
+pivots_info = input.bool(true, "Pivot Points Info", tooltip="This strategy uses pivot points to check whether the Big Candle crosses at least 1 pivot point - which signals a really strong candle.\n\nIf a candle crosses multiple pivot points in one go, it is automatically considered tradeable. Otherwise, a Big Candle needs to cross the pivot point with at least the predefined % of its height to be considered tradeable.\n\nYou can set which type of pivot points and their settings you want to use below. The default (with best results in my testing) is the 'Camarilla' pivot points type but feel free to experiment with your own.", group=GROUP_PIVOTS)
+pivot_cross_by_at_least_perc = input.float( 50, "Big Candle to cross Pivot by at least %", step=1, tooltip="This is the minimum percentage by which a Big Candle needs to cross a single Pivot Point in order for this candle to be considered tradeable.", group = GROUP_PIVOTS )
+kind = input.string(title="Type", defval="Camarilla", options=[TRADITIONAL, FIBONACCI, WOODIE, CLASSIC, DEMARK, CAMARILLA], group=GROUP_PIVOTS)
+pivot_time_frame = input.string(title="Pivots Timeframe", defval=AUTO, options=[AUTO, DAILY, WEEKLY, MONTHLY, QUARTERLY, YEARLY, BIYEARLY, TRIYEARLY, QUINQUENNIALLY, DECENNIALLY], group=GROUP_PIVOTS)
+look_back = input.int(title="Number of Pivots Back", defval=25, minval=1, maxval=5000, group=GROUP_PIVOTS)
+is_daily_based = input.bool(title="Use Daily-based Values", defval=true, tooltip="When this option is unchecked, Pivot Points will use intraday data while calculating on intraday charts. If Extended Hours are displayed on the chart, they will be taken into account during the pivot level calculation. If intraday OHLC values are different from daily-based values (normal for stocks), the pivot levels will also differ.", group=GROUP_PIVOTS)
+show_labels = input.bool(title="Show Labels", defval=true, group=GROUP_PIVOTS)
+show_prices = input.bool(title="Show Prices", defval=true, group=GROUP_PIVOTS)
+position_labels = input.string("Left", "Labels Position", options=["Left", "Right"], group=GROUP_PIVOTS)
+line_width = input.int(title="Line Width", defval=1, minval=1, maxval=100, group=GROUP_PIVOTS)
+i_use_crsi = input.bool( false, "Open Trades by cRSI", group = GROUP_CRSI_OPTIONS )
+i_show_crsi = input.bool( false, "Show cRSI Pivots", group = GROUP_CRSI_OPTIONS )
+i_i_len   = input( 15, "cRSI EMA period", group = GROUP_CRSI_OPTIONS )
+i_src     = input.source( close, 'cRSI Source',  group = GROUP_CRSI_OPTIONS )
+i_use_htf_mesa = input.bool( false, "Trade by HTF Adaptive MESA MA", group = GROUP_HTF_MESA_MA )
+i_show_htf_mesa = input.bool( false, "Show HFT Adaptive MESA MA", group = GROUP_HTF_MESA_MA )
+_tf = input.timeframe( 'D', "HTF Adaptive MESA MA Resolution", group = GROUP_HTF_MESA_MA )
+var DEF_COLOR = #FB8C00
+var arr_time = array.new_int()
+var p = array.new_float()
+p_color = input.color(DEF_COLOR, "P[U+200F]  [U+200F]  [U+200F]", inline="P", group=GROUP_PIVOTS)
+p_show = input.bool(true, "", inline="P", group=GROUP_PIVOTS)
+var r1 = array.new_float()
+var s1 = array.new_float()
+s1_color = input.color(DEF_COLOR, "S1", inline="S1/R1" , group=GROUP_PIVOTS)
+s1_show = input.bool(true, "", inline="S1/R1", group=GROUP_PIVOTS)
+r1_color = input.color(DEF_COLOR, "[U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]R1", inline="S1/R1", group=GROUP_PIVOTS)
+r1_show = input.bool(true, "", inline="S1/R1", group=GROUP_PIVOTS)
+var r2 = array.new_float()
+var s2 = array.new_float()
+s2_color = input.color(DEF_COLOR, "S2", inline="S2/R2", group=GROUP_PIVOTS)
+s2_show = input.bool(true, "", inline="S2/R2", group=GROUP_PIVOTS)
+r2_color = input.color(DEF_COLOR, "[U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]R2", inline="S2/R2", group=GROUP_PIVOTS)
+r2_show = input.bool(true, "", inline="S2/R2", group=GROUP_PIVOTS)
+var r3 = array.new_float()
+var s3 = array.new_float()
+s3_color = input.color(DEF_COLOR, "S3", inline="S3/R3", group=GROUP_PIVOTS)
+s3_show = input.bool(true, "", inline="S3/R3", group=GROUP_PIVOTS)
+r3_color = input.color(DEF_COLOR, "[U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]R3", inline="S3/R3", group=GROUP_PIVOTS)
+r3_show = input.bool(true, "", inline="S3/R3", group=GROUP_PIVOTS)
+var r4 = array.new_float()
+var s4 = array.new_float()
+s4_color = input.color(DEF_COLOR, "S4", inline="S4/R4", group=GROUP_PIVOTS)
+s4_show = input.bool(true, "", inline="S4/R4", group=GROUP_PIVOTS)
+r4_color = input.color(DEF_COLOR, "[U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]R4", inline="S4/R4", group=GROUP_PIVOTS)
+r4_show = input.bool(true, "", inline="S4/R4", group=GROUP_PIVOTS)
+var r5 = array.new_float()
+var s5 = array.new_float()
+s5_color = input.color(DEF_COLOR, "S5", inline="S5/R5", group=GROUP_PIVOTS)
+s5_show = input.bool(true, "", inline="S5/R5", group=GROUP_PIVOTS)
+r5_color = input.color(DEF_COLOR, "[U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]R5", inline="S5/R5", group=GROUP_PIVOTS)
+r5_show = input.bool(true, "", inline="S5/R5", group=GROUP_PIVOTS)
+i_use_time_limited_backtesting = input.bool( false, "Use Time-Limited Backtesting", group = "Time-Limit BackTests (0 = disable)" )
+startDay = input.int(0, "Start Day", minval = 0, maxval = 31, group = "Time-Limit BackTests (0 = disable)")
+startMonth = input.int(0, "Start Month", minval = 0, maxval = 12, group = "Time-Limit BackTests (0 = disable)")
+startYear = input.int(0, "Start Year", minval = 0, maxval = 2100, group = "Time-Limit BackTests (0 = disable)")
+endDay = input.int(0, "End Day", minval = 0, maxval = 31, group = "Time-Limit BackTests (0 = disable)")
+endMonth = input.int(0, "End Month", minval = 0, maxval = 12, group = "Time-Limit BackTests (0 = disable)")
+endYear = input.int(0, "End Year", minval = 0, maxval = 2100, group = "Time-Limit BackTests (0 = disable)")
+inDateRange = true
+// Look if the close time of the current bar falls inside the date range
+if i_use_time_limited_backtesting and startDay != 0 and startMonth != 0 and startYear != 0 and endDay != 0 and endMonth != 0 and endYear != 0
+    inDateRange := ( time >= timestamp( syminfo.timezone, startYear, startMonth, startDay, 0, 0 ) ) and ( time < timestamp( syminfo.timezone, endYear, endMonth, endDay, 0, 0 ) )
+var exit_price = 0.0
+var sl_price = 0.0
+var cRSI_high_extreme_found = 0.0
+var cRSI_high_extreme_valid = true
+var cRSI_low_extreme_found = 0.0
+var cRSI_low_extreme_valid = true
+var last_cRSI_extreme = ""
+var cRSI_trend_direction = ""
+var mesa_ma_trend_direction = ""
+var last_big_candle_retrace_level = 0.0
+var last_big_candle_type = ""
+var last_big_candle_high = 0.0
+var last_big_candle_low = 0.0
+var last_big_candle_open = 0.0
+var last_big_candle_close = 0.0
+var last_big_candle_pivots_closed = array.new_float( 11 )
+if array.size( last_big_candle_pivots_closed ) == 0
+    array.fill( last_big_candle_pivots_closed, 0.0, 0, 10 )
+// PIVOTS CODE
+pivotX_open = float(na)
+pivotX_open := nz(pivotX_open[1], open)
+pivotX_high = float(na)
+pivotX_high := nz(pivotX_high[1], high)
+pivotX_low = float(na)
+pivotX_low := nz(pivotX_low[1], low)
+pivotX_prev_open = float(na)
+pivotX_prev_open := nz(pivotX_prev_open[1])
+pivotX_prev_high = float(na)
+pivotX_prev_high := nz(pivotX_prev_high[1])
+pivotX_prev_low = float(na)
+pivotX_prev_low := nz(pivotX_prev_low[1])
+pivotX_prev_close = float(na)
+pivotX_prev_close := nz(pivotX_prev_close[1])
+get_pivot_resolution() =>
+    resolution = "M"
+    if pivot_time_frame == AUTO
+        if timeframe.isintraday
+            resolution := timeframe.multiplier <= 15 ? "D" : "W"
+        else if timeframe.isweekly or timeframe.ismonthly
+            resolution := "12M"
+    else if pivot_time_frame == DAILY
+        resolution := "D"
+    else if pivot_time_frame == WEEKLY
+        resolution := "W"
+    else if pivot_time_frame == MONTHLY
+        resolution := "M"
+    else if pivot_time_frame == QUARTERLY
+        resolution := "3M"
+    else if pivot_time_frame == YEARLY or pivot_time_frame == BIYEARLY or pivot_time_frame == TRIYEARLY or pivot_time_frame == QUINQUENNIALLY or pivot_time_frame == DECENNIALLY
+        resolution := "12M"
+    resolution
+var lines = array.new_line()
+var labels = array.new_label()
+draw_line(i, pivot, col) =>
+    if array.size(arr_time) > 1
+        array.push(lines, line.new(array.get(arr_time, i), array.get(pivot, i), array.get(arr_time, i + 1), array.get(pivot, i), color=col, xloc=xloc.bar_time, width=line_width))
+draw_label(i, y, txt, txt_color) =>
+    if (show_labels or show_prices) and not na(y)
+        display_text = (show_labels ? txt : "") + (show_prices ? str.format(" ({0})", math.round_to_mintick(y)) : "")
+        label_style = position_labels == "Left" ? label.style_label_right : label.style_label_left
+        x = position_labels == "Left" ? array.get(arr_time, i) : array.get(arr_time, i + 1)
+        array.push(labels, label.new(x = x, y=y, text=display_text, textcolor=txt_color, style=label_style, color=#00000000, xloc=xloc.bar_time))
+traditional() =>
+    pivotX_Median = (pivotX_prev_high + pivotX_prev_low + pivotX_prev_close) / 3
+    array.push(p, pivotX_Median)
+    array.push(r1, pivotX_Median * 2 - pivotX_prev_low)
+    array.push(s1, pivotX_Median * 2 - pivotX_prev_high)
+    array.push(r2, pivotX_Median + 1 * (pivotX_prev_high - pivotX_prev_low))
+    array.push(s2, pivotX_Median - 1 * (pivotX_prev_high - pivotX_prev_low))
+    array.push(r3, pivotX_Median * 2 + (pivotX_prev_high - 2 * pivotX_prev_low))
+    array.push(s3, pivotX_Median * 2 - (2 * pivotX_prev_high - pivotX_prev_low))
+    array.push(r4, pivotX_Median * 3 + (pivotX_prev_high - 3 * pivotX_prev_low))
+    array.push(s4, pivotX_Median * 3 - (3 * pivotX_prev_high - pivotX_prev_low))
+    array.push(r5, pivotX_Median * 4 + (pivotX_prev_high - 4 * pivotX_prev_low))
+    array.push(s5, pivotX_Median * 4 - (4 * pivotX_prev_high - pivotX_prev_low))
+fibonacci() =>
+    pivotX_Median = (pivotX_prev_high + pivotX_prev_low + pivotX_prev_close) / 3
+    pivot_range = pivotX_prev_high - pivotX_prev_low
+    array.push(p, pivotX_Median)
+    array.push(r1, pivotX_Median + 0.382 * pivot_range)
+    array.push(s1, pivotX_Median - 0.382 * pivot_range)
+    array.push(r2, pivotX_Median + 0.618 * pivot_range)
+    array.push(s2, pivotX_Median - 0.618 * pivot_range)
+    array.push(r3, pivotX_Median + 1 * pivot_range)
+    array.push(s3, pivotX_Median - 1 * pivot_range)
+woodie() =>
+    pivotX_Woodie_Median = (pivotX_prev_high + pivotX_prev_low + pivotX_open * 2)/4
+    pivot_range = pivotX_prev_high - pivotX_prev_low
+    array.push(p, pivotX_Woodie_Median)
+    array.push(r1, pivotX_Woodie_Median * 2 - pivotX_prev_low)
+    array.push(s1, pivotX_Woodie_Median * 2 - pivotX_prev_high)
+    array.push(r2, pivotX_Woodie_Median + 1 * pivot_range)
+    array.push(s2, pivotX_Woodie_Median - 1 * pivot_range)
+    pivot_point_r3 = pivotX_prev_high + 2 * (pivotX_Woodie_Median - pivotX_prev_low)
+    pivot_point_s3 = pivotX_prev_low - 2 * (pivotX_prev_high - pivotX_Woodie_Median)
+    array.push(r3, pivot_point_r3)
+    array.push(s3, pivot_point_s3)
+    array.push(r4, pivot_point_r3 + pivot_range)
+    array.push(s4, pivot_point_s3 - pivot_range)
+classic() =>
+    pivotX_Median = (pivotX_prev_high + pivotX_prev_low + pivotX_prev_close)/3
+    pivot_range = pivotX_prev_high - pivotX_prev_low
+    array.push(p, pivotX_Median)
+    array.push(r1, pivotX_Median * 2 - pivotX_prev_low)
+    array.push(s1, pivotX_Median * 2 - pivotX_prev_high)
+    array.push(r2, pivotX_Median + 1 * pivot_range)
+    array.push(s2, pivotX_Median - 1 * pivot_range)
+    array.push(r3, pivotX_Median + 2 * pivot_range)
+    array.push(s3, pivotX_Median - 2 * pivot_range)
+    array.push(r4, pivotX_Median + 3 * pivot_range)
+    array.push(s4, pivotX_Median - 3 * pivot_range)
+demark() =>
+    pivotX_Demark_X = pivotX_prev_high + pivotX_prev_low * 2 + pivotX_prev_close
+    if pivotX_prev_close == pivotX_prev_open
+        pivotX_Demark_X := pivotX_prev_high + pivotX_prev_low + pivotX_prev_close * 2
+    if pivotX_prev_close > pivotX_prev_open
+        pivotX_Demark_X := pivotX_prev_high * 2 + pivotX_prev_low + pivotX_prev_close
+    array.push(p, pivotX_Demark_X / 4)
+    array.push(r1, pivotX_Demark_X / 2 - pivotX_prev_low)
+    array.push(s1, pivotX_Demark_X / 2 - pivotX_prev_high)
+camarilla() =>
+    pivotX_Median = (pivotX_prev_high + pivotX_prev_low + pivotX_prev_close) / 3
+    pivot_range = pivotX_prev_high - pivotX_prev_low
+    array.push(p, pivotX_Median)
+    array.push(r1, pivotX_prev_close + pivot_range * 1.1 / 12.0)
+    array.push(s1, pivotX_prev_close - pivot_range * 1.1 / 12.0)
+    array.push(r2, pivotX_prev_close + pivot_range * 1.1 / 6.0)
+    array.push(s2, pivotX_prev_close - pivot_range * 1.1 / 6.0)
+    array.push(r3, pivotX_prev_close + pivot_range * 1.1 / 4.0)
+    array.push(s3, pivotX_prev_close - pivot_range * 1.1 / 4.0)
+    array.push(r4, pivotX_prev_close + pivot_range * 1.1 / 2.0)
+    array.push(s4, pivotX_prev_close - pivot_range * 1.1 / 2.0)
+    r5_val = pivotX_prev_high / pivotX_prev_low * pivotX_prev_close
+    array.push(r5, r5_val)
+    array.push(s5, 2 * pivotX_prev_close - r5_val)
+calc_pivot() =>
+    if kind == TRADITIONAL
+        traditional()
+    else if kind == FIBONACCI
+        fibonacci()
+    else if kind == WOODIE
+        woodie()
+    else if kind == CLASSIC
+        classic()
+    else if kind == DEMARK
+        demark()
+    else if kind == CAMARILLA
+        camarilla()
+resolution = get_pivot_resolution()
+SIMPLE_DIVISOR = -1
+custom_years_divisor = switch pivot_time_frame
+    BIYEARLY => 2
+    TRIYEARLY => 3
+    QUINQUENNIALLY => 5
+    DECENNIALLY => 10
+    => SIMPLE_DIVISOR
+calc_high(prev, curr) =>
+    if na(prev) or na(curr)
+        nz(prev, nz(curr, na))
+    else
+        math.max(prev, curr)
+    
+calc_low(prev, curr) =>
+    if not na(prev) and not na(curr)
+        math.min(prev, curr)
+    else
+        nz(prev, nz(curr, na))
+calc_OHLC_for_pivot(custom_years_divisor) =>
+    if custom_years_divisor == SIMPLE_DIVISOR 
+        [open, high, low, close, open[1], high[1], low[1], close[1], time[1], time_close]
+    else
+        var prev_sec_open = float(na)
+        var prev_sec_high = float(na)
+        var prev_sec_low = float(na)
+        var prev_sec_close = float(na)
+        var prev_sec_time = int(na)
+        var curr_sec_open = float(na)
+        var curr_sec_high = float(na)
+        var curr_sec_low = float(na)
+        var curr_sec_close = float(na)
+        if year(time_close) % custom_years_divisor == 0
+            curr_sec_open := open
+            curr_sec_high := high
+            curr_sec_low := low
+            curr_sec_close := close
+            prev_sec_high := high[1]
+            prev_sec_low := low[1]
+            prev_sec_close := close[1]
+            prev_sec_time := time[1]
+            for i = 2 to custom_years_divisor
+                prev_sec_open :=  nz(open[i], prev_sec_open)
+                prev_sec_high := calc_high(prev_sec_high, high[i])
+                prev_sec_low := calc_low(prev_sec_low, low[i])
+                prev_sec_time := nz(time[i], prev_sec_time)
+        [curr_sec_open, curr_sec_high, curr_sec_low, curr_sec_close, prev_sec_open, prev_sec_high, prev_sec_low, prev_sec_close, prev_sec_time, time_close]
+[sec_open, sec_high, sec_low, sec_close, prev_sec_open, prev_sec_high, prev_sec_low, prev_sec_close, prev_sec_time, sec_time] = request.security(syminfo.tickerid, resolution, calc_OHLC_for_pivot(custom_years_divisor), lookahead = barmerge.lookahead_on)
+sec_open_gaps_on = request.security(syminfo.tickerid, resolution, open, gaps = barmerge.gaps_on, lookahead = barmerge.lookahead_on)
+is_change_years = custom_years_divisor > 0 and ta.change(time(resolution)) and year(time_close) % custom_years_divisor == 0
+var is_change = false
+var uses_current_bar = timeframe.isintraday and kind == WOODIE
+var change_time = int(na)
+is_time_change = (ta.change(time(resolution)) and custom_years_divisor == SIMPLE_DIVISOR) or is_change_years
+if is_time_change
+    change_time := time
+var start_time = time
+var was_last_premarket = false
+var start_calculate_in_premarket = false
+is_last_premarket = barstate.islast and session.ispremarket and time_close > sec_time and not was_last_premarket
+if is_last_premarket
+    was_last_premarket := true
+    start_calculate_in_premarket := true
+if session.ismarket
+    was_last_premarket := false
+    
+without_time_change = barstate.islast and array.size(arr_time) == 0
+is_can_calc_pivot = (not uses_current_bar and is_time_change and session.ismarket) or (ta.change(sec_open) and not start_calculate_in_premarket) or is_last_premarket or (uses_current_bar and not na(sec_open_gaps_on)) or without_time_change
+enough_bars_for_calculate = prev_sec_time >= start_time or is_daily_based
+if is_can_calc_pivot and enough_bars_for_calculate 
+    if array.size(arr_time) == 0 and is_daily_based
+        pivotX_prev_open := prev_sec_open[1]
+        pivotX_prev_high := prev_sec_high[1]
+        pivotX_prev_low := prev_sec_low[1]
+        pivotX_prev_close := prev_sec_close[1]
+        pivotX_open := sec_open[1]
+        pivotX_high := sec_high[1]
+        pivotX_low := sec_low[1]
+        array.push(arr_time, start_time)
+        calc_pivot()
+    
+    if is_daily_based
+        if is_last_premarket
+            pivotX_prev_open := sec_open
+            pivotX_prev_high := sec_high
+            pivotX_prev_low := sec_low
+            pivotX_prev_close := sec_close
+            pivotX_open := open
+            pivotX_high := high
+            pivotX_low := low
+        else
+            pivotX_prev_open := prev_sec_open
+            pivotX_prev_high := prev_sec_high
+            pivotX_prev_low := prev_sec_low
+            pivotX_prev_close := prev_sec_close
+            pivotX_open := sec_open
+            pivotX_high := sec_high
+            pivotX_low := sec_low
+    else
+        pivotX_prev_high := pivotX_high
+        pivotX_prev_low := pivotX_low
+        pivotX_prev_open := pivotX_open
+        pivotX_prev_close := close[1]
+        pivotX_open := open
+        pivotX_high := high
+        pivotX_low := low
+    if barstate.islast and not is_change and array.size(arr_time) > 0 and not without_time_change
+        array.set(arr_time, array.size(arr_time) - 1, change_time)
+    else if without_time_change
+        array.push(arr_time, start_time)
+    else
+        array.push(arr_time, nz(change_time, time))
+    calc_pivot()
+    if array.size(arr_time) > look_back
+        if array.size(arr_time) > 0
+            array.shift(arr_time)
+        if array.size(p) > 0 and p_show
+            array.shift(p)
+        if array.size(r1) > 0 and r1_show
+            array.shift(r1)
+        if array.size(s1) > 0 and s1_show
+            array.shift(s1)
+        if array.size(r2) > 0 and r2_show
+            array.shift(r2)
+        if array.size(s2) > 0 and s2_show
+            array.shift(s2)
+        if array.size(r3) > 0 and r3_show
+            array.shift(r3)
+        if array.size(s3) > 0 and s3_show
+            array.shift(s3)
+        if array.size(r4) > 0 and r4_show
+            array.shift(r4)
+        if array.size(s4) > 0 and s4_show
+            array.shift(s4)
+        if array.size(r5) > 0 and r5_show
+            array.shift(r5)
+        if array.size(s5) > 0 and s5_show
+            array.shift(s5)
+    is_change := true
+else if not is_daily_based
+    pivotX_high := math.max(pivotX_high, high)
+    pivotX_low := math.min(pivotX_low, low)
+if barstate.islast and not is_daily_based and array.size(arr_time) == 0 
+    runtime.error("Not enough intraday data to calculate Pivot Points. Lower the Pivots Timeframe or turn on the 'Use Daily-based Values' option in the indicator settings.")
+if barstate.islast and array.size(arr_time) > 0 and is_change
+    is_change := false
+    if custom_years_divisor > 0
+        last_pivot_time = array.get(arr_time, array.size(arr_time) - 1)
+        pivot_timeframe = str.tostring(12 * custom_years_divisor) + "M"
+        estimate_pivot_time = last_pivot_time + timeframe.in_seconds(pivot_timeframe) * 1000
+        array.push(arr_time, estimate_pivot_time)
+    else
+        array.push(arr_time, time_close(resolution))
+    for i = 0 to array.size(lines) - 1
+        if array.size(lines) > 0
+            line.delete(array.shift(lines))
+        if array.size(labels) > 0
+            label.delete(array.shift(labels))
+    for i = 0 to array.size(arr_time) - 2
+        if array.size(p) > 0 and p_show
+            draw_line(i, p, p_color)
+            draw_label(i, array.get(p, i), "P", p_color)
+        if array.size(r1) > 0 and r1_show
+            draw_line(i, r1, r1_color)
+            draw_label(i, array.get(r1, i), "R1", r1_color)
+        if array.size(s1) > 0 and s1_show
+            draw_line(i, s1, s1_color)
+            draw_label(i, array.get(s1, i), "S1", s1_color)
+        if array.size(r2) > 0 and r2_show
+            draw_line(i, r2, r2_color)
+            draw_label(i, array.get(r2, i), "R2", r2_color)
+        if array.size(s2) > 0 and s2_show
+            draw_line(i, s2, s2_color)
+            draw_label(i, array.get(s2, i), "S2", s2_color)
+        if array.size(r3) > 0 and r3_show
+            draw_line(i, r3, r3_color)
+            draw_label(i, array.get(r3, i), "R3", r3_color)
+        if array.size(s3) > 0 and s3_show
+            draw_line(i, s3, s3_color)
+            draw_label(i, array.get(s3, i), "S3", s3_color)
+        if array.size(r4) > 0 and r4_show
+            draw_line(i, r4, r4_color)
+            draw_label(i, array.get(r4, i), "R4", r4_color)
+        if array.size(s4) > 0 and s4_show
+            draw_line(i, s4, s4_color)
+            draw_label(i, array.get(s4, i), "S4", s4_color)
+        if array.size(r5) > 0 and r5_show
+            draw_line(i, r5, r5_color)
+            draw_label(i, array.get(r5, i), "R5", r5_color)
+        if array.size(s5) > 0 and s5_show
+            draw_line(i, s5, s5_color)
+            draw_label(i, array.get(s5, i), "S5", s5_color)
+//------------------------------------------------------------------------------
+// cRSI indicator code
+//------------------------------------------------------------------------------
+crsi       = 0.0
+vibration  = 10
+torque     = 0.618 / (vibration + 1)
+phasingLag = (vibration - 1) / 0.618
+rsi        = ta.rsi(i_src, i_i_len)
+crsi      := torque * (2 * rsi - rsi[phasingLag]) + (1 - torque) * nz(crsi[1])
+float osc = crsi
+float ph = ta.highestbars(high, i_i_len) == 0 ? osc : na
+float pl = ta.lowestbars(low,   i_i_len) == 0 ? osc : na
+var int dir = 0
+dir := ph and na(pl) ? 1 : pl and na(ph) ? -1 : dir
+var max_array_size = 10
+var arr_zz         = array.new_float(0)
+older_zz           = array.copy(arr_zz)
+dirchanged         = ta.change(dir)
+add_to_zigzag(_id, float value, int bindex) =>
+    array.unshift(_id, bindex)
+    array.unshift(_id, value)
+    if array.size(_id) > max_array_size
+        array.pop(_id)
+        array.pop(_id)
+update_zigzag(_id, float value, int bindex, int dir) =>
+    if array.size(_id) == 0
+        add_to_zigzag(_id, value, bindex)
+    else
+        if dir == 1 and value > array.get(_id, 0) or dir == -1 and value < array.get(_id, 0)
+            array.set(_id, 0, value)
+            array.set(_id, 1, bindex)
+        0.
+if ph or pl
+    if dirchanged
+        add_to_zigzag(arr_zz, dir == 1 ? ph : pl, bar_index)
+    else
+        update_zigzag(arr_zz, dir == 1 ? ph : pl, bar_index, dir)
+if array.size(arr_zz) >= 6
+    // Variables
+    var label label_zz = na
+    // Bools for or
+    bool bool_or_1 = array.get(arr_zz, 0) != array.get(older_zz, 0)
+    bool bool_or_2 = array.get(arr_zz, 1) != array.get(older_zz, 1)
+    
+    // Bools for and
+    bool bool_n_1 = array.get(arr_zz, 2) == array.get(older_zz, 2)
+    bool bool_n_2 = array.get(arr_zz, 3) == array.get(older_zz, 3)
+    
+    // Bools for more than and less than
+    bool bool_0_mt_4 = array.get(arr_zz, 0) > array.get(arr_zz, 4)
+    bool bool_0_lt_4 = array.get(arr_zz, 0) < array.get(arr_zz, 4)
+    
+    if bool_or_1 or bool_or_2
+        if bool_n_1 and bool_n_2
+            label.delete(label_zz)
+        str_label = dir == 1 ?   bool_0_mt_4 ? '▼'     : '▼' :
+                                 bool_0_lt_4 ? '▲'     : '▲'
+        col_label = dir == 1 ?   bool_0_mt_4 ? color.red  : color.teal :
+                                 bool_0_lt_4 ? color.teal : color.red
+        if i_show_crsi
+            label_zz := label.new(bar_index, high, text = str_label, color = color.new(color.blue, 100), textcolor = col_label, style=dir == 1 ? label.style_label_down : label.style_label_up )
+        if dir == 1
+            cRSI_high_extreme_found := close
+            cRSI_low_extreme_found := 0.0
+            last_cRSI_extreme := "high"
+        else
+            cRSI_low_extreme_found := close
+            cRSI_high_extreme_found := 0.0
+            last_cRSI_extreme := "low"
+if last_cRSI_extreme == "high" and cRSI_high_extreme_found > 0.0
+    cRSI_trend_direction := "sell"
+if last_cRSI_extreme == "low" and cRSI_low_extreme_found > 0.0
+    cRSI_trend_direction := "buy"
+//------------------------------------------------------------------------------
+// MESA adaptive moving average indicator code
+//------------------------------------------------------------------------------
+tf1 = _tf == '0' ? timeframe.period : _tf
+fast = 0.25
+slow = 0.05
+//Returns scalar difference between current timeframe and requested
+ResolutionToMin(tf)=>
+    mins = tf=="1M" ? 43830 : tf=="1W" ?   10080: tf=="1D" ?   1440 :tf=="240"?   240 :tf=="180"?   180 :tf=="120"?   120 :tf=="60"?    60  :tf=="45"?    45  :tf=="30"?    30  :tf=="15"?    15  :tf=="5"?     5   :tf=="3"?     3   :tf=="1"?     1   :   -1
+    mins
+chart_res = ResolutionToMin(timeframe.period)
+if(timeframe.isdwm)
+    chart_res := ResolutionToMin(str.tostring(timeframe.multiplier) + timeframe.period)
+req_res = ResolutionToMin(_tf)
+scale = req_res==-1 or chart_res==-1 or chart_res>req_res ? 1 : chart_res/req_res
+    
+    
+//MESA Moving Average`
+//Args: src - the series to perform MAMA calculations on
+//      fast - limit to the fast moving average calc (default 0.5)
+//      slow - limit to the slow moving average calc (default 0.05)
+//      hide - for usage with multiple MESA plots. set to True to return [na,na]
+//##############################################################################
+getMESA(src_in, fast, slow, show) =>
+    Price = src_in
+    FastLimit = fast
+    SlowLimit = slow
+    MAMA = src_in
+    FAMA = src_in
+    PI = 3.14159
+    Smooth = 0.0
+    Detrender = 0.0
+    I1 = 0.0
+    Q1 = 0.0
+    jI = 0.0
+    jQ = 0.0
+    I2 = 0.0
+    Q2 = 0.0
+    Re = 0.0
+    Im = 0.0
+    Period = 0.0
+    SmoothPeriod = 0.0
+    Phase = 0.0
+    DeltaPhase = 0.0
+    alpha = 0.0
+    if(na(Price))
+        MAMA := MAMA[1]
+        FAMA := FAMA[1]
+        Smooth := Smooth[1]
+        Detrender := Detrender[1]
+        I1 := I1[1]
+        Q1 := Q1[1]
+        I2 := I2[1]
+        Q2 := Q2[1]
+        Re := Re[1]
+        Im := Im[1]
+        Period := Period[1]
+        SmoothPeriod := SmoothPeriod[1]
+        Phase := Phase[1]
+        
+    if(bar_index > 5 and show and not na(Price))
+        Smooth := (4 * Price + 3 * Price[1] + 2 * Price[2] + Price[3]) / 10
+        Detrender := (0.0962 * Smooth + 0.5769 * Smooth[2] - 0.5769 * Smooth[4] - 0.0962 * Smooth[6]) * 
+           (0.075 * Period[1] + 0.54)
+        //Get the Inphase & Quadtrature Components
+        Q1 := (0.0962 * Detrender + 0.5769 * Detrender[2] - 0.5769 * Detrender[4] - 
+           0.0962 * Detrender[6]) * (0.075 * Period[1] + 0.54)
+        I1 := Detrender[3]
+        //Advance phase angle by 90 deg
+        jI := (0.0962 * I1 + 0.5769 * I1[2] - 0.5769 * I1[4] - 0.0962 * I1[6]) * 
+           (0.075 * Period[1] + 0.54)
+        jQ := (0.0962 * Q1 + 0.5769 * Q1[2] - 0.5769 * Q1[4] - 0.0962 * Q1[6]) * 
+           (0.075 * Period[1] + 0.54)
+        //Phasor addition for 3-bar averaging 
+        I2 := I1 - jQ
+        Q2 := Q1 + jI
+        //Smooth the I and Q components before applying the discriminator 
+        I2 := 0.2 * I2 + 0.8 * I2[1]
+        Q2 := 0.2 * Q2 + 0.8 * Q2[1]
+        //Homodyne Discriminator 
+        Re := I2 * I2[1] + Q2 * Q2[1]
+        Im := I2 * Q2[1] - Q2 * I2[1]
+        Re := 0.2 * Re + 0.8 * Re[1]
+        Im := 0.2 * Im + 0.8 * Im[1]
+        if Im != 0 and Re != 0
+            Period := 2 * PI / math.atan(Im / Re)
+        Period := Period > 1.5 * Period[1] ? 1.5 * Period[1] : Period
+        Period := Period > 50 ? 50 : Period
+        Period := Period < 0.67 * Period[1] ? 0.67 * Period[1] : Period
+        Period := Period < 6 ? 6 : Period
+        Period := 0.2 * Period + 0.8 * Period[1]
+        SmoothPeriod := 0.33 * Period + 0.67 * SmoothPeriod[1]
+        if I1 != 0
+            Phase := 180 / PI * math.atan(Q1 / I1)
+        DeltaPhase := Phase[1] - Phase
+        if DeltaPhase < 1
+            DeltaPhase := 1
+        alpha := FastLimit / DeltaPhase
+        alpha := alpha < SlowLimit ? SlowLimit : alpha
+        alpha := alpha > FastLimit ? FastLimit : alpha
+        MAMA := alpha * Price + (1 - alpha) * MAMA[1]
+        FAMA := 0.5 * alpha * MAMA + (1 - 0.5 * alpha) * FAMA[1]
+    if(not show)
+        MAMA := na
+        FAMA := na
+    [MAMA, FAMA]
+[M_1, F_1] = getMESA(close, fast*scale, slow*scale, true)
+//Simple function to grab the color of the fill given a Mama / Fama tuple
+//Args : mama - the Mesa adaptive moving average
+//       fama - the follower moving average (generated by prior)
+//##############################################################################
+fillColor(mama, fama, show) =>
+    color_1 = color.new(color.white, 100)
+    ret = show ? mama > fama ? color.red : color.blue : color_1
+    ret
+//##############################################################################
+p_m_1 = plot(M_1, "MAMA on HTF Adaptive MESA", i_show_htf_mesa ? color.maroon : na, 2)
+p_f_1 = plot(F_1, "FAMA on HTF Adaptive MESA", i_show_htf_mesa ? color.navy : na, 2)
+fill_1 = fillColor(M_1, F_1, i_show_htf_mesa)
+fill(p_m_1, p_f_1, fill_1, "Fill1")
+if mesa_ma_trend_direction == "" or ta.cross( M_1, F_1 )
+    if M_1 > F_1
+        mesa_ma_trend_direction := "up"
+    else
+        mesa_ma_trend_direction := "down"
+// CANDLES CODE
+// checks SL price to be at the highest/lowest point for current Big Candle's trend end
+calculate_sl() =>
+    new_sl = sl_price
+    current_bar_trend = ( close > open ? "up" : "down" )
+    if sl_ends_with_trend and max_sl_percent == 0
+        bar_index_counter = 0
+        //label.new(bar_index - bar_index_counter, low - 150, "time: " + str.tostring( math.ceil( pivots_history_check_mins * 60 / timeframe.in_seconds( timeframe.period ) ) ) + " / high: " + str.tostring( pivot_high ) + " / " + str.tostring( pivot_low ) )
+    
+        while bar_index_counter < 5000
+            if open[ bar_index_counter ] == last_big_candle_open and close[ bar_index_counter ] == last_big_candle_close and high[ bar_index_counter ] == last_big_candle_high and low[ bar_index_counter ] == last_big_candle_low
+                break
+            else
+                bar_index_counter := bar_index_counter + 1
+    
+            if ( current_bar_trend == "up" and low[ bar_index_counter ] < new_sl )
+                new_sl := low[ bar_index_counter ]
+            else if ( current_bar_trend == "down" and high[ bar_index_counter ] > new_sl )
+                new_sl := high[ bar_index_counter ]
+    // extend SL, if needed
+    if new_sl != sl_price and extend_sl_by > 0
+        if current_bar_trend == "up"
+            new_sl := new_sl - ( ( extend_sl_by / 100 ) * new_sl )
+        else
+            new_sl := new_sl + ( ( extend_sl_by / 100 ) * new_sl )
+    new_sl
+// calculates TP by going back through previous bars until an opposite one is found
+calculate_tp() =>
+    current_bar_trend = ( close > open ? "up" : "down" )
+    float tp_found = 0.0
+    bool first_opposite_found = false
+    bool start_counting = false // don't start counting before we actually reach the original candle
+    bar_index_counter = 1
+    //label.new(bar_index - bar_index_counter, low - 150, "time: " + str.tostring( math.ceil( pivots_history_check_mins * 60 / timeframe.in_seconds( timeframe.period ) ) ) + " / high: " + str.tostring( pivot_high ) + " / " + str.tostring( pivot_low ) )
+    while tp_found == 0.0 and bar_index_counter < 5000
+        // check if we've found the last big candle from which to start the count
+        if not( start_counting )
+            if open[ bar_index_counter ] == last_big_candle_open and close[ bar_index_counter ] == last_big_candle_close and high[ bar_index_counter ] == last_big_candle_high and low[ bar_index_counter ] == last_big_candle_low
+                start_counting := true
+            else
+                bar_index_counter := bar_index_counter + 1
+        // if we've not reached the candle to start counting from, don't do anything yet
+        if not( start_counting )
+            continue
+        //label.new(bar_index - bar_index_counter, low - 150, "tp / " + str.tostring( current_bar_trend ) + " / " + ( close[bar_index_counter] > open[bar_index_counter] ? "up" : "down" ) )
+        if ( not( first_opposite_found ) and ( ( current_bar_trend == "up" and close[ bar_index_counter ] < open[ bar_index_counter ] ) or ( current_bar_trend == "down" and open[ bar_index_counter ] < close[ bar_index_counter ] ) ) )
+            first_opposite_found := true
+        if first_opposite_found and ( ( current_bar_trend == "up" and close[ bar_index_counter ] > open[ bar_index_counter ] ) or ( current_bar_trend == "down" and open[ bar_index_counter ] > close[ bar_index_counter ] ) )
+            //label.new(bar_index - bar_index_counter, low - 250, "found" )
+            tp_found := ( current_bar_trend == "up" ? high[ bar_index_counter - 1 ] : low[ bar_index_counter - 1 ] )
+            // check if we need to extend the TP
+            if extend_tp_by > 0
+                // calculate how much to add to our TP
+                if current_bar_trend == "up"
+                    tp_found := high[ bar_index_counter - 1 ] + ( ( extend_tp_by / 100 ) * high[ bar_index_counter - 1 ] )
+                else
+                    tp_found := low[ bar_index_counter - 1 ] - ( ( extend_tp_by / 100 ) * low[ bar_index_counter - 1 ] )
+            //label.new(bar_index - bar_index_counter, low - 200, "found: " + str.tostring( tp_found ) )
+        bar_index_counter := bar_index_counter + 1
+    tp_found
+// BIG CANDLES CODE
+prev_candle_size = percentage ? close[1] * size / 100 : size
+prev_up_candle = close[1] > open[1] and high[1] - low[1] >= prev_candle_size
+prev_down_candle = close[1] < open[1] and high[1] - low[1] >= prev_candle_size
+plotshape( prev_up_candle, "Up Candle", style = shape.triangleup, color = color.green, location = location.belowbar, size = size.tiny, offset = -1)
+plotshape( prev_down_candle, "Down Candle", style = shape.triangledown, color = color.red, location = location.abovebar, size = size.tiny, offset = -1)
+candle_size = percentage ? close * size / 100 : size
+//label.new(bar_index, high, "size / " + str.tostring( prev_candle_size ) + " / "  + str.tostring( candle_size ) )
+//if prev_up_candle or prev_down_candle
+//    label.new(bar_index, high, "found, " + ( prev_up_candle ? "up" : "down" ) + ", tp " + str.tostring( exit_price ) + " / sl " + str.tostring( sl_price ) )
+// helper function since ta.cross() don't seem to work correctly with historical values and Pivot Points code
+has_crossed( candle_type, candle_high, candle_low, level ) =>
+    ( candle_type == "up" and candle_low < level and candle_high > level ) or ( candle_type == "down" and candle_high > level and candle_low < level )
+// if we found out that the previous candle is a big candle, store its type and the retracement point and also calculate SL level in case we'll open a trade for it
+if ( prev_up_candle or prev_down_candle ) and exit_price == 0.0
+    has_required_prev_bars = true
+    // check whether we have at least the predefined amount of bars going with the trend of the Big Candle
+    if require_previous_same_bars > 0
+        for i = 2 to 2 + require_previous_same_bars
+            if prev_up_candle and open[ i ] > close[ i ]
+                has_required_prev_bars := false
+                break
+            if prev_down_candle and close[ i ] > open[ i ]
+                has_required_prev_bars := false
+                break
+    if has_required_prev_bars
+        last_big_candle_type := ( prev_up_candle ? "up" : "down" )
+        last_big_candle_high := high[1]
+        last_big_candle_low := low[1]
+        last_big_candle_open := open[1]
+        last_big_candle_close := close[1]
+    
+        retrace_value = ( ( high[1] - low[1] ) / 100 ) * min_retracement
+        if last_big_candle_type == "up"
+            last_big_candle_retrace_level := high[1] - retrace_value
+            if extend_sl_by == 0
+                sl_price := high[1]
+            else
+                sl_price := high[1] + ( ( extend_sl_by / 100 ) * high[1] )
+    
+            // check if the SL price is not beyond our max SL price
+            if max_sl_percent > 0
+                sl_price := close[1] - ( ( max_sl_percent / 100 ) * close[1] )
+        else
+            last_big_candle_retrace_level := low[1] + retrace_value
+            if extend_sl_by == 0
+                sl_price := low[1]
+            else
+                sl_price := low[1] - ( ( extend_sl_by / 100 ) * low[1] )
+            
+            // check if the SL price is not beyond our max SL price
+            if max_sl_percent > 0
+                sl_price := close[1] + ( ( max_sl_percent / 100 ) * close[1] )
+    
+        // store which pivot levels did our candle cross
+        if array.size(s5) > 0
+            if has_crossed( last_big_candle_type, high[1], low[1], array.get(s5, array.size(s5) - 1 ) )
+                array.set( last_big_candle_pivots_closed, 0, array.get(s5, array.size(s5) - 1 ) )
+            else
+                array.set( last_big_candle_pivots_closed, 0, 0.0 )
+        else
+            array.set( last_big_candle_pivots_closed, 0, 0.0 )
+    
+        if array.size(s4) > 0
+            if has_crossed( last_big_candle_type, high[1], low[1], array.get(s4, array.size(s4) - 1 ) )
+                array.set( last_big_candle_pivots_closed, 1, array.get(s4, array.size(s4) - 1 ) )
+            else
+                array.set( last_big_candle_pivots_closed, 1, 0.0 )
+        else
+            array.set( last_big_candle_pivots_closed, 1, 0.0 )
+    
+        if array.size(s3) > 0
+            if has_crossed( last_big_candle_type, high[1], low[1], array.get(s3, array.size(s3) - 1 ) )
+                array.set( last_big_candle_pivots_closed, 2, array.get(s3, array.size(s3) - 1 ) )
+            else
+                array.set( last_big_candle_pivots_closed, 2, 0.0 )
+        else
+            array.set( last_big_candle_pivots_closed, 2, 0.0 )
+    
+        if array.size(s2) > 0
+            if has_crossed( last_big_candle_type, high[1], low[1], array.get(s2, array.size(s2) - 1 ) )
+                array.set( last_big_candle_pivots_closed, 3, array.get(s2, array.size(s2) - 1 ) )
+            else
+                array.set( last_big_candle_pivots_closed, 3, 0.0 )
+        else
+            array.set( last_big_candle_pivots_closed, 3, 0.0 )
+    
+        if array.size(s1) > 0
+            if has_crossed( last_big_candle_type, high[1], low[1], array.get(s1, array.size(s1) - 1 ) )
+                array.set( last_big_candle_pivots_closed, 4, array.get(s1, array.size(s1) - 1 ) )
+            else
+                array.set( last_big_candle_pivots_closed, 4, 0.0 )
+        else
+            array.set( last_big_candle_pivots_closed, 4, 0.0 )
+    
+        if array.size(p) > 0
+            if has_crossed( last_big_candle_type, high[1], low[1], array.get(p, array.size(p) - 1 ) )
+                array.set( last_big_candle_pivots_closed, 5, array.get(p, array.size(p) - 1 ) )
+            else
+                array.set( last_big_candle_pivots_closed, 5, 0.0 )
+        else
+            array.set( last_big_candle_pivots_closed, 5, 0.0 )
+    
+        if array.size(r1) > 0
+            if has_crossed( last_big_candle_type, high[1], low[1], array.get(r1, array.size(r1) - 1 ) )
+                array.set( last_big_candle_pivots_closed, 6, array.get(r1, array.size(r1) - 1 ) )
+            else
+                array.set( last_big_candle_pivots_closed, 6, 0.0 )
+        else
+            array.set( last_big_candle_pivots_closed, 6, 0.0 )
+    
+        if array.size(r2) > 0
+            if has_crossed( last_big_candle_type, high[1], low[1], array.get(r2, array.size(r2) - 1 ) )
+                array.set( last_big_candle_pivots_closed, 7, array.get(r2, array.size(r2) - 1 ) )
+            else
+                array.set( last_big_candle_pivots_closed, 7, 0.0 )
+        else
+            array.set( last_big_candle_pivots_closed, 7, 0.0 )
+    
+        if array.size(r3) > 0
+            if has_crossed( last_big_candle_type, high[1], low[1], array.get(r3, array.size(r3) - 1 ) )
+                array.set( last_big_candle_pivots_closed, 8, array.get(r3, array.size(r3) - 1 ) )
+            else
+                array.set( last_big_candle_pivots_closed, 8, 0.0 )
+        else
+            array.set( last_big_candle_pivots_closed, 8, 0.0 )
+    
+        if array.size(r4) > 0
+            if has_crossed( last_big_candle_type, high[1], low[1], array.get(r4, array.size(r4) - 1 ) )
+                array.set( last_big_candle_pivots_closed, 9, array.get(r4, array.size(r4) - 1 ) )
+            else
+                array.set( last_big_candle_pivots_closed, 9, 0.0 )
+        else
+            array.set( last_big_candle_pivots_closed, 9, 0.0 )
+    
+        if array.size(r5) > 0
+            if has_crossed( last_big_candle_type, high[1], low[1], array.get(r5, array.size(r5) - 1 ) )
+                array.set( last_big_candle_pivots_closed, 10, array.get(r5, array.size(r5) - 1 ) )
+            else
+                array.set( last_big_candle_pivots_closed, 10, 0.0 )
+        else
+            array.set( last_big_candle_pivots_closed, 10, 0.0 )
+        //label.new(bar_index, low - 100, "found / " + ( prev_up_candle ? "prev up" : "prev down" ) + " / "  + str.tostring( retrace_value ) + " / " + str.tostring( last_big_candle_retrace_level ) )
+        //label.new(bar_index, low - 100, "found / " + ( prev_up_candle ? "prev up" : "prev down" ) + " / "  + str.tostring( last_big_candle_retrace_level ) )
+//if prev_up_candle or prev_down_candle
+//    label.new(bar_index, high + 150, "found (2), " + ( prev_up_candle ? "up" : "down" ) + ", tp " + str.tostring( exit_price ) + " / sl " + str.tostring( sl_price ) )
+// close current trade if we reached our TP
+//label.new(bar_index, high + 150, str.tostring( strategy.opentrades ) + " / " + strategy.opentrades.entry_id( strategy.opentrades - 1 ) + " / " + str.tostring( close ) + " / " + str.tostring( exit_price ) )
+if strategy.opentrades > 0 and ( ( strategy.opentrades.entry_id( strategy.opentrades - 1 ) == "Buy" and close >= exit_price ) or ( strategy.opentrades.entry_id( strategy.opentrades - 1 ) == "Sell" and close <= exit_price ) )
+    strategy.close( strategy.opentrades.entry_id( strategy.opentrades - 1 ), comment = "TP Reached" )
+    exit_price := 0.0
+    sl_price := 0.0
+// close trade is a stop loss was reached
+if strategy.opentrades > 0 and ( ( strategy.opentrades.entry_id( strategy.opentrades - 1 ) == "Buy" and close < sl_price ) or ( strategy.opentrades.entry_id( strategy.opentrades - 1 ) == "Sell" and close > sl_price ) )
+    strategy.close( strategy.opentrades.entry_id( strategy.opentrades - 1 ), comment = "closed by SL" )
+    exit_price := 0.0
+    sl_price := 0.0
+//label.new(bar_index, high, "info / " + last_big_candle_type + " / " + str.tostring( last_big_candle_retrace_level ) + " / ex: " + str.tostring( exit_price ) + " / sl: " + str.tostring( sl_price ) )
+// if we have previously stored big candle values, check if our current candle doesn't retrace to the stored position
+if last_big_candle_type != "" and exit_price == 0.0 and sl_price > 0.0
+    retraces = ( last_big_candle_type == "up" ? close < last_big_candle_retrace_level : close > last_big_candle_retrace_level )
+    //label.new(bar_index, high, "info / " + last_big_candle_type + " / " + str.tostring( last_big_candle_retrace_level ) )
+    //label.new(bar_index, high, "info / " + last_big_candle_type + " / " + str.tostring( retraces ) + " / " + str.tostring( last_big_candle_retrace_level ) + " / "  + str.tostring( close ) )
+    // current candle retraces the given percentage, open a trade
+    if retraces and inDateRange// and ( strategy.opentrades == 0 or strategy.opentrades.entry_id( strategy.opentrades - 1 ) != ( last_big_candle_type == "up" ? "Sell" : "Buy" ) )
+        //label.new(bar_index, high, "go / " + last_big_candle_type + " / " + str.tostring( retraces ) + " / " + str.tostring( last_big_candle_retrace_level ) + " / "  + str.tostring( close ) + " / sl: "  + str.tostring( sl_price ) )
+        // check whether the last candle crossed at least 2 pivots
+        has_valid_pivot_cross = false 
+        pivots_crossed = 0
+        float pivot_crossed_value = na
+        for i = 0 to array.size( last_big_candle_pivots_closed ) - 1
+            if array.get( last_big_candle_pivots_closed, i ) > 0
+                pivots_crossed := pivots_crossed + 1
+                if na( pivot_crossed_value )
+                    pivot_crossed_value := array.get( last_big_candle_pivots_closed, i )
+                if ( last_big_candle_type == "down" and array.get( last_big_candle_pivots_closed, i ) < pivot_crossed_value ) or ( last_big_candle_type == "up" and array.get( last_big_candle_pivots_closed, i ) > pivot_crossed_value )
+                    pivot_crossed_value := array.get( last_big_candle_pivots_closed, i )
+        //label.new(bar_index, high + 150, "crossed " + str.tostring( pivots_crossed ) + " " + last_big_candle_type )
+        if pivots_crossed > 1
+            has_valid_pivot_cross := true
+        else if pivots_crossed > 0
+            // the last big candle crossed at least a single pivot level,
+            // check whether the cross was at least by the predefined number of % or more of the candle itself
+            pivot_position = ( ( last_big_candle_type == "up" ? ( pivot_crossed_value - last_big_candle_low ) : ( last_big_candle_high - pivot_crossed_value ) ) / ( last_big_candle_high - last_big_candle_low ) ) * 100
+            //label.new(bar_index, high, str.tostring( last_big_candle_type ) + " / " + str.tostring( last_big_candle_high ) + " / " + str.tostring( last_big_candle_low ) + " / " + str.tostring( pivot_crossed_value ) + " / " + str.tostring( pivot_position ) )
+            if pivot_position >= pivot_cross_by_at_least_perc
+                has_valid_pivot_cross := true
+        if last_big_candle_type == "up"
+            exit_price := calculate_tp()
+            sl_price := calculate_sl()
+            //pivot_position
+            if has_valid_pivot_cross and exit_price > 0.0 and exit_price < close and ( not( i_use_crsi ) or cRSI_trend_direction == "sell" ) and ( not i_use_htf_mesa or mesa_ma_trend_direction == "down" )
+                strategy.entry( "Sell", strategy.short, comment = "Sell (tp " + str.tostring( exit_price ) + " / sl " + str.tostring( sl_price ) + ")" )
+                //label.new(bar_index, high, str.tostring( last_bar_index ) + " / " + str.tostring( exit_price ) )
+                //strategy.exit( "Sell", stop = sl_price, comment = "closed by SL / tp " + str.tostring( exit_price ) + " / sl " + str.tostring( sl_price ) + " / dir " + last_trade_direction )
+            else
+                exit_price := 0.0
+        else
+            exit_price := calculate_tp()
+            sl_price := calculate_sl()
+            //label.new(bar_index, high + 150, "going " + str.tostring( exit_price ) )
+            if has_valid_pivot_cross and exit_price > 0.0 and exit_price > close and ( not( i_use_crsi ) or cRSI_trend_direction == "buy" ) and ( not i_use_htf_mesa or mesa_ma_trend_direction == "up" )
+                strategy.entry( "Buy", strategy.long, comment = "Buy (tp " + str.tostring( exit_price ) + " / sl " + str.tostring( sl_price ) + ")" )
+                //label.new(bar_index, high, str.tostring( last_bar_index ) + " / " + str.tostring( exit_price ) )
+                //strategy.exit( "Buy", stop = sl_price, comment = "closed by SL / tp " + str.tostring( exit_price ) + " / sl " + str.tostring( sl_price ) + " / dir " + last_trade_direction )
+            else
+                exit_price := 0.0
+// Exit open market position when date range ends
+if (not inDateRange)
+    strategy.close_all()
+Expand (1014 lines)

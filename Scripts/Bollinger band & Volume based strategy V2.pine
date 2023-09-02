@@ -1,0 +1,275 @@
+Script Name: Bollinger band & Volume based strategy V2
+Author: Ayden_C
+Description: this script is upgraded version of previous one the major change is deleted script which find a highest price after entry the last of strategy is same.
+If current volume is above daily average volume, and three bollinger band`s Standard Deviation, 1 and 1.5 and 2 if the current lowest price is bigger then 1 stdev and current closed is bigger then 1.5 stdev and the...
+PineScript code:
+
+Pine Script™ strategy
+Bollinger band & Volume based strategy V2
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © KAIST291
+//@version=4
+initial_capital=1000
+strategy("prototype", overlay=true,default_qty_type=strategy.cash,default_qty_value=500,commission_type=strategy.commission.percent,commission_value=0.04)
+Periods = input(title="ATR Period", type=input.integer, defval=10)//sefval원래값이10이였음(이평선 일)
+src1 = input(hl2, title="Source")
+Multiplier = input(title="ATR Multiplier", type=input.float, step=0.1, defval=3.0)
+changeATR= input(title="Change ATR Calculation Method ?", type=input.bool, defval=true)
+showsignals = input(title="Show Buy/Sell Signals ?", type=input.bool, defval=true)
+highlighting = input(title="Highlighter On/Off ?", type=input.bool, defval=true)
+atr2 = sma(tr, Periods)
+atr= changeATR ? atr(Periods) : atr2
+up=src1-(Multiplier*atr)
+up1 = nz(up[1],up)
+up := close[1] > up1 ? max(up,up1) : up
+dn=src1+(Multiplier*atr)
+dn1 = nz(dn[1], dn)
+dn := close[1] < dn1 ? min(dn, dn1) : dn
+trend = 1
+trend := nz(trend[1], trend)
+trend := trend == -1 and close > dn1 ? 1 : trend == 1 and close < up1 ? -1 : trend
+upPlot = plot(trend == 1 ? up : na, title="Up Trend", style=plot.style_linebr, linewidth=2, color=color.green)
+buySignal = trend == 1 and trend[1] == -1
+plotshape(buySignal ? up : na, title="UpTrend Begins", location=location.absolute, style=shape.circle, size=size.tiny, color=color.green, transp=0)
+plotshape(buySignal and showsignals ? up : na, title="Buy", text="Buy", location=location.absolute, style=shape.labelup, size=size.tiny, color=color.green, textcolor=color.white, transp=0)
+dnPlot = plot(trend == 1 ? na : dn, title="Down Trend", style=plot.style_linebr, linewidth=2, color=color.red)
+sellSignal = trend == -1 and trend[1] == 1
+plotshape(sellSignal ? dn : na, title="DownTrend Begins", location=location.absolute, style=shape.circle, size=size.tiny, color=color.red, transp=0)
+plotshape(sellSignal and showsignals ? dn : na, title="Sell", text="Sell", location=location.absolute, style=shape.labeldown, size=size.tiny, color=color.red, textcolor=color.white, transp=0)
+length1=input(1)
+length3=input(3)
+length7=input(7)
+length9=input(9)
+length14=input(14)
+length20=input(20)
+length60=input(60)
+length120=input(120)
+ma1= sma(close,length1)
+ma3= sma(close,length3)
+ma7= sma(close,length7)
+ma9= sma(close,length9)
+ma14=sma(close,length14)
+ma20=sma(close,length20)
+ma60=sma(close,length60)
+ma120=sma(close,length120)
+rsi=rsi(close,14)
+// BUYING VOLUME AND SELLING VOLUME //
+BV = iff( (high==low), 0, volume*(close-low)/(high-low))
+SV = iff( (high==low), 0, volume*(high-close)/(high-low))
+vol = iff(volume > 0, volume, 1)
+dailyLength = input(title = "Daily MA length", type = input.integer, defval = 50, minval = 1, maxval = 100)
+weeklyLength = input(title = "Weekly MA length", type = input.integer, defval = 10, minval = 1, maxval = 100)
+//-----------------------------------------------------------
+Davgvol = sma(volume, dailyLength)
+Wavgvol = sma(volume, weeklyLength)
+//-----------------------------------------------------------
+length = input(20, minval=1)
+src = input(close, title="Source")
+mult = input(2.0, minval=0.001, maxval=50, title="StdDev")
+mult2= input(1.5, minval=0.001, maxval=50, title="exp")
+mult3= input(1.0, minval=0.001, maxval=50, title="exp1")
+mult4= input(2.5, minval=0.001, maxval=50, title="exp2")
+basis = sma(src, length)
+dev = mult * stdev(src, length)
+upper = basis + dev
+lower = basis - dev
+dev2= mult2 * stdev(src, length)
+Supper= basis + dev2
+Slower= basis - dev2
+dev3= mult3 * stdev(src, length)
+upper1= basis + dev3
+lower1= basis - dev3
+dev4= mult4 * stdev(src, length)
+upper2=basis + dev4
+lower2=basis - dev4
+offset = input(0, "Offset", type = input.integer, minval = -500, maxval = 500)
+plot(basis, "Basis", color=#FF6D00, offset = offset)
+p1 = plot(upper, "Upper", color=#2962FF, offset = offset)
+p2 = plot(lower, "Lower", color=#2962FF, offset = offset)
+fill(p1, p2, title = "Background", color=color.rgb(33, 150, 243, 95))
+//----------------------------------------------------
+exit=(close-strategy.position_avg_price / strategy.position_avg_price*100)
+bull=( BV>SV and BV>Davgvol)
+bull2=(BV>SV and BV>Davgvol)
+bux =(close>Supper and close>Slower and volume<Davgvol)
+bear=(SV>BV and SV>Davgvol)
+con=(BV>Wavgvol and rsi>80)
+imInATrade = strategy.position_size != 0
+highestPriceAfterEntry = valuewhen(imInATrade, high, 0)
+//////////////////////////////////////////////////////////////////////////////////
+sec=((open[1]-close[1])/(high[1]-low[1]))
+wgt=1-sec
+longcondition = (low+wgt)<(open)
+shortcondition= (low+wgt)>(open)
+// STRATEGY LONG //
+if (bull and open>upper1 and open>Supper and open>upper and (trend == 1 ? up : na) and longcondition)
+    strategy.entry("Long",strategy.long)
+    
+//////////////////////////////////////////////////////////////////////////////////
+if (strategy.openprofit>5)
+    strategy.close("Long")
+else if (rsi>80 and strategy.position_avg_price*1.004<close)
+    strategy.close("Long")
+else if (close < strategy.position_avg_price*0.91)
+    strategy.close("Long")
+else if (open>upper and strategy.position_avg_price*1.004<close)
+    strategy.close("Long")
+//////////////////////////////////////////////////////////////////////////////////
+if (strategy.position_size>0 and (trend == 1 ? na : dn))
+    strategy.close("Long")
+//////////////////////////////////////////////////////////////////////////////////
+if (low<ma20 and low<lower1 and close<Slower and crossunder(ma60,ma120)and bear)
+    strategy.entry("Short",strategy.short)
+else if (ma3<ma9 and ma9<ma20 and ma20<ma60 and bear and (trend == 1 ? na : dn) and high<ma20 and close<lower1 and high<Slower and rsi>30)
+    strategy.entry("Short",strategy.short)
+    
+    
+if (strategy.openprofit>10)
+    strategy.close("Short")
+else if (rsi<20 and close<strategy.position_avg_price*0.996)
+    strategy.close("Short")
+else if (high<lower and close<strategy.position_avg_price*0.996)
+    strategy.close("Short")
+else if (strategy.openprofit < strategy.position_avg_price*0.92-close)
+    strategy.close("Short")
+else if (strategy.position_size<0 and (trend == 1 ? up : na))
+    strategy.close("Short")
+else if (open<lower and close<strategy.position_avg_price*0.996)
+    strategy.close("Short")
+Expand (135 lines)

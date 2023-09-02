@@ -1,0 +1,303 @@
+Script Name: Strategy- Range Breakout
+Author: pradipandsuvra
+Description: What? 
+
+In the price action, levels have a significant role to play. Based on the price moving above/below the levels - the underlying instrument shows some price-action in the direction of breakout/breakdown.
+
+There are plenty of ways level can be determined. Levels are the decision point to take a trade or not.  But  if we make the level derivation complex, then...
+PineScript code:
+
+Pine Script™ strategy
+Strategy: Range Breakout
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+// @version=5
+// Open-Range-Breakout strategy
+// No license. Free and Open Source.    
+strategy('Strategy: ORB', shorttitle="ORB", overlay=true , currency=currency.NONE, initial_capital=100000)
+// Inputs
+period = input.int(defval=15, title="TimeRange", tooltip="The range in minutes (default: 15m)")
+sessionInput = input.session(defval="0915-0930", title="Time Range", group="ORB settings", tooltip='What is the timeperiod (default 9:15AM to 9:30AM, exchange timezone')
+hide = input.bool(defval = false, title="Hide ORB Range", group="ORB setting", tooltip = 'Hide the ORB range drawing')
+// SL Related
+slAtrLen = input.int(defval=14, title="ATR Period for placing SL", group="StopLoss settings")
+showSLLines = input.bool(defval=false, title="Show SL lines in chart", tooltip="Show SL lines also as dotted lines in chart. Note: chart may look untidy.", group="StopLoss settings")
+// Further Filtering
+ignoreMementumVolume = input.bool(defval=false, title="Ignore Momentum & Volume", tooltip="Ignore Momentum & Volume to find out trades", group="Strengh Settings")
+rsiLen = input.int(defval=14, title="Momentum Period", group="Strengh Settings", tooltip = 'To determine the momentum, RSI period is set default to 100')
+rsiBullish = input.int(defval=50, step=1, title="Bullish Momentum", group="Strengh Settings", tooltip = 'Bullish Momentum, default set to RSI as 50')
+rsiBearish = input.int(defval=50, step=1, title="Bearish Momentum", group="Strengh Settings", tooltip = 'Bearish Momentum, default set to RSI as 50')
+volAvg = input.int(defval=20, step=1, title="Volume Average Period", group="Strengh Settings", tooltip = 'To calculate average volume, how many historical bars are considered. Default: 20.')
+volThreshold = input.float(defval=1, step=0.1, title="Volume Strengh", group="Strengh Settings", tooltip = 'Multiplier: How big the current bar volume compared to average of last 20')
+trendPeriod = input.int(defval=200, step=1, title="Trend Period", group="Trend Settings", tooltip = 'To calculate trend, what period is considered. Default: 200.')
+hideTrend = input.bool(defval = false, title="Hide the trend line", group="Trend Settings", tooltip = 'Hide the trend')
+hidePDHCL = input.bool(defval = false, title="Hide the PDHCL (prev day High Close Low range) & VWAP", tooltip = 'Hide the Previous Day High, Close, Low lines, including VWAP')
+hideTable = input.bool(defval = false, title="Hide the Summary Table", tooltip = 'Hide the summary table.')
+// Trade related
+rrRatio = input.float(title='Risk:Reward', step=0.1, defval=2.0, group="Trade settings")
+endOfDay = input.int(defval=1500, title="Close all trades, default is 3:00 PM, 1500 hours (integer)", group="Trade settings")
+mktAlwaysOn = input.bool(defval=true, title="Markets that never closed (Crypto, Forex, Commodity)", tooltip="Some markers never closes. For those cases, make this checked.", group="Trade settings")
+lotSize = input.int(title='Lot Size', step=1, defval=1, group="Trade settings")
+// Util method
+is_newbar(res) => 
+    timeframe.change(time(res)) != 0
+annotatePlots(txt, val, hide) => 
+    if (not hide)
+        var l1 = label.new(bar_index, hidePDHCL ? na : val, txt, style=label.style_label_left, size = size.tiny, textcolor = color.white, tooltip = txt)
+        label.set_xy(l1, bar_index, hidePDHCL ? na : val)
+// print table
+printTable(txt) =>
+    var table t = table.new(position.bottom_right, 1, 1)
+    table.cell(t, 0, 0, txt, text_halign = text.align_left, bgcolor = color.lime)
+    
+// globals
+t = time(timeframe.period, sessionInput + ":1234567") // everyday
+in_session = not na(t)
+is_first = in_session and not in_session[1]
+is_end_session = in_session[1] and not in_session
+green(open, close) => close > open ? true : false
+red(open, close) => close < open ? true : false
+var float orb_high = na
+var float orb_low = na
+if is_first
+    orb_high := high
+    orb_low := low
+else
+    orb_high := orb_high[1]
+    orb_low := orb_low[1]
+if high > orb_high and in_session
+    orb_high := high
+if low < orb_low and in_session
+    orb_low := low
+plot(hide ? na : orb_high, style=plot.style_line, color=orb_high[1] != orb_high ? na : color.green, title="ORB High", linewidth=2)
+annotatePlots('ORB-H', orb_high, hide)
+plot(hide ? na : orb_low, style=plot.style_line, color=orb_low[1] != orb_low ? na : color.red, title="ORB Low", linewidth=2)
+annotatePlots('ORB-L', orb_low, hide)
+// PDHCL (Previous Day High Close Low)
+[dh,dl,dc] = request.security(syminfo.ticker, "D", [high[1],low[1], close[1]], lookahead=barmerge.lookahead_on)
+plot(hidePDHCL ? na : dh, title="Prev High",  color=color.red,  linewidth=2, trackprice=true, show_last = 1)
+annotatePlots('PDH', dh, hidePDHCL)
+plot(hidePDHCL ? na : dl, title="Prev Low",  color=color.green,  linewidth=2, trackprice=true, show_last = 1)
+annotatePlots('PDL', dl, hidePDHCL)
+plot(hidePDHCL ? na : dc, title="Prev Close",  color=color.black,  linewidth=2, trackprice=true, show_last = 1)
+annotatePlots('PDC', dc, hidePDHCL)
+plot(hidePDHCL ? na : ta.vwap(close), title="VWAP",  color=color.fuchsia,  linewidth=2, trackprice=true, show_last = 1)
+annotatePlots('VWAP', ta.vwap(close), hidePDHCL)
+// For SL calculation
+atr = ta.atr(slAtrLen)  
+highestHigh = ta.highest(high, 7)
+lowestLow = ta.lowest(low, 7)
+longStop = showSLLines ? lowestLow - (atr * 1) : na
+shortStop = showSLLines ? highestHigh + (atr * 1) : na
+plot(longStop, title="Buy SL", color=color.green, style=plot.style_cross)
+plot(shortStop, title="Sell SL", color=color.red, style=plot.style_cross)
+annotatePlots('SL-Long', longStop, showSLLines)
+annotatePlots('SL-Short', shortStop, showSLLines)
+// Momentum: rsi
+rsi = ta.rsi(close, rsiLen)
+// trend: EMA200
+ema = ta.ema(close, trendPeriod)
+plot(hideTrend ? na : ema, "EMA Trend", color=close > ema ? color.green : color.red, linewidth = 1)
+annotatePlots('Trendline', ema, hideTrend)
+// Volume-Weighed Moving Average calculation
+vwmaAvg = ta.vwma(close, volAvg)
+vwma_latest = volume
+// plotshape((barstate.isconfirmed and (vwma_latest > (vwmaAvg * volThreshold))), title='VolumeData', text='', location=location.abovebar, style=shape.diamond, color=color.gray, textcolor=color.gray, size=size.tiny)
+// Trade signals
+longCond = barstate.isconfirmed and (ta.crossover(close, orb_high) or ta.crossover(close, dh)) and green(open, close) and (ignoreMementumVolume ? true : rsi > rsiBullish and (vwma_latest > (vwmaAvg * volThreshold)))
+shortCond = barstate.isconfirmed and (ta.crossunder(close, orb_low) or ta.crossunder(close, dl)) and red(open, close) and (ignoreMementumVolume ? true : rsi < rsiBearish and (vwma_latest > (vwmaAvg * volThreshold)))
+plotshape(longCond, title='Breakout', text='BO', location=location.belowbar, style=shape.triangleup, color=color.green, textcolor=color.green)
+plotshape(shortCond, title='Breakout', text='BD', location=location.abovebar, style=shape.triangledown, color=color.red, textcolor=color.red)
+// Trade execute
+h = hour(time('1'), syminfo.timezone)
+m = minute(time('1'), syminfo.timezone)
+hourVal = h * 100 + m
+totalTrades = strategy.opentrades + strategy.closedtrades
+if (mktAlwaysOn or (hourVal < endOfDay))
+    // Entry
+    var float sl = na
+    var float target = na
+    if (longCond)
+        strategy.entry("enter long", strategy.long, lotSize, limit=na, stop=na, comment="Enter Long")
+        sl := longStop
+        target := close + ((close - longStop) * rrRatio)
+        alert('Buy:' + syminfo.ticker + ' ,SL:' + str.tostring(math.floor(sl)) + ', Target:' + str.tostring(target), alert.freq_once_per_bar)
+    if (shortCond)
+        strategy.entry("enter short", strategy.short, lotSize, limit=na, stop=na, comment="Enter Short")
+        sl := shortStop
+        target := close - ((shortStop - close) * rrRatio)
+        alert('Sell:' + syminfo.ticker + ' ,SL:' + str.tostring(math.floor(sl)) + ', Target:' + str.tostring(target), alert.freq_once_per_bar)
+    // Exit: target or SL
+    if ((close >= target) or (close <= sl))
+        strategy.close("enter long", comment=close < sl ? "Long SL hit" : "Long target hit")
+    if ((close <= target) or (close >= sl))
+        strategy.close("enter short", comment=close > sl ? "Short SL hit" : "Short target hit")
+else if (not mktAlwaysOn)
+    // Close all open position at the end if Day
+    strategy.close_all(comment = "Close all entries at end of day.")
+// Plotting table
+if (not hideTable and is_end_session)
+    message =  syminfo.ticker + " :\n\nORB Upper: " + str.tostring(math.round(orb_high)) + "\nORB Lower: " + str.tostring(math.round(orb_low)) + "\nPDH: " + str.tostring(math.round(dh)) + "\nPDC: " + str.tostring(math.round(dc)) + "\nPDL: " + str.tostring(math.round(dl)) + "\nVWAP: " + str.tostring(math.round(ta.vwap(close)))   
+    printTable(message)
+    alert(message, alert.freq_once_per_bar_close)
+Expand (161 lines)

@@ -1,0 +1,96 @@
+Script Name: RSI Trend Crypto
+Author: FieryTrading
+Description: Dear community,
+
+Today I want to present you one of my favorite and simple trading bots: The RSI Trend.
+This bot is based on the RSI, which normally is used as a trend reversal indicator. However, here it’s used as a trend finding indicator, often with great success. This bot making long-only trades, which is quite successful in bull-markets like the one we’re...
+PineScript code:
+
+Pine Script™ strategy
+RSI Trend Crypto
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © FieryTrading
+//@version=4
+strategy("RSI Trend Crypto", overlay=false, pyramiding=1, commission_value=0.2, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+// Input
+UseEmergency = input(false, "Use Emergency Exit?")
+RSIlong = input(35, "RSI Long Cross")
+RSIclose = input(75, "RSI Close Position")
+Emergencyclose = input(10, "RSI Emergency Close Position")
+// RSI
+rsi = rsi(close, 14)
+// Conditions
+long = crossover(rsi, RSIlong)
+longclose = crossunder(rsi, RSIclose)
+emergency = crossunder(rsi, Emergencyclose)
+// Plots
+plot(rsi, color=color.white, linewidth=2)
+plot(RSIlong, color=color.green)
+plot(RSIclose, color=color.red)
+// Alert messages 
+// When using a bot remember to use "{{strategy.order.alert_message}}" in your alert
+// You can edit the alert message freely to suit your needs
+LongAlert = 'RSI Long Cross: LONG'
+CloseAlert = 'RSI Close Position'
+EmergencyAlert = 'RSI Emergency Close'
+// Strategy
+if long
+    strategy.entry("Long", strategy.long, alert_message=LongAlert)
+if longclose
+    strategy.close("Long", alert_message=CloseAlert)
+if emergency and UseEmergency==true
+    strategy.close("Long", alert_message=EmergencyAlert)
+Expand (52 lines)

@@ -1,0 +1,224 @@
+Script Name: Arch1tect's New Toy (Strategy Tester Version)
+Author: Tutorial05
+Description: Description: 
+The version of  Arch1tect's New Toy  indicator with Strategy Tester added.
+
+This indicator tries to predict market trends by simply utilising 2 moving averages crossovers.
+
+ How it works: 
+ 
+ Buy signals are triggered when the faster MA crosses over the slower MA from the downside to the upside.
+ Sell signals are triggered when the faster MA crosses...
+PineScript code:
+
+Pine Script™ strategy
+Arch1tect's New Toy (Strategy Tester Version)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+//@version=4
+// © sehweijun
+//study( title="Arch1tect's New Toy", shorttitle="Arch1tect's New Toy", overlay=true, resolution="")
+strategy( title="Arch1tect's New Toy (Strategy Tester Version)", shorttitle="Arch1tect's New Toy (Strategy Tester Version)", overlay=true, initial_capital = 100000, commission_value=0.07, commission_type=strategy.commission.cash_per_contract)
+maTypeChoice = input( "EMA", title="MA Type", options=["EMA", "WMA", "SMA"] )
+maSrc = input( close, title="MA Source" )
+maLen1 = input( 15, minval=1, title="MA Length" )
+maLen2 = input( 95, minval=1, title="MA Length" )
+maValue1 = if ( maTypeChoice == "EMA" )
+    ema( maSrc, maLen1 )
+else if ( maTypeChoice == "WMA" )
+    wma( maSrc, maLen1 )
+else if ( maTypeChoice == "SMA" )
+    sma( maSrc, maLen1 )
+else
+    0
+    
+maValue2 = if ( maTypeChoice == "EMA" )
+    ema( maSrc, maLen2 )
+else if ( maTypeChoice == "WMA" )
+    wma( maSrc, maLen2 )
+else if ( maTypeChoice == "SMA" )
+    sma( maSrc, maLen2 )
+else
+    0
+buySignal = crossover( maValue1, maValue2 )
+sellSignal = crossunder( maValue1, maValue2 )
+mainMAColour = ( maValue1 > maValue2 ) ? color.green : color.red 
+plot( maValue1, title="Arch1tect's New Toy", color=mainMAColour, offset=0, linewidth=4 )
+//plot( maValue2, title="Arch1tect's Filter", color=color.black, offset=0, linewidth=2 )
+var color buyCandleColour = #00ff0a
+var color sellCandleColour = #ff1100
+barcolor( buySignal ? buyCandleColour : sellSignal ? sellCandleColour : na, title="Signal Bar Colour" )
+bgcolor( color=buySignal ? buyCandleColour : sellSignal ? sellCandleColour : na, transp=85, title="Signal Background Colour")
+alertcondition( buySignal or sellSignal, title="Signal change!", message="Signal change!")
+alertcondition( buySignal, title="Buy signal!", message="Buy signal!")
+alertcondition( sellSignal, title="Sell signal!", message="Sell signal!")
+// Strategy Tester
+stratTesterOn    = input( title="Strategy Tester [ON/OFF]", group="Strategy Tester", type=input.bool, defval=true)
+entryTime        = input( "2200-1200", title = "Daily trading time session (in Exchange GMT)", group="Strategy Tester", type = input.session )
+startTime        = input( "2200-2201", title = "Start Time", group="Strategy Tester", type = input.session )
+maxDailyLoss     = input( 2500, title = "Max daily loss", group="Strategy Tester", type = input.integer )
+maxTotalDrawdown = input( 12000, title = "Max daily loss", group="Strategy Tester", type = input.integer )
+contractSize     = input( 250, title = "Contract size", group="Strategy Tester", type = input.integer )
+tradeOnStartSess = input( title="First trade on session start [ON/OFF]", group="Strategy Tester", type=input.bool, defval=true)
+fixedTPSL        = input( title="Fixed TP/SL PIPS [ON/OFF]", group="Strategy Tester", type=input.bool, defval=false)
+fixedTPValue     = input ( 1000.00, minval=0.01, type=input.float, title="TP", group="Strategy Tester" )
+fixedSLValue     = input ( 1000.00, minval=0.01, type=input.float, title="SL", group="Strategy Tester" )
+fromDay          = input(defval = 1,    title = "From Day", group="Date Range", type = input.integer, minval = 1, maxval = 31)
+fromMonth        = input(defval = 1,    title = "From Month", group="Date Range", type = input.integer, minval = 1, maxval = 12)
+fromYear         = input(defval = 2020, title = "From Year", group="Date Range", type = input.integer, minval = 1970)
+thruDay          = input(defval = 1,    title = "Thru Day", group="Date Range", type = input.integer, minval = 1, maxval = 31)
+thruMonth        = input(defval = 1,    title = "Thru Month", group="Date Range", type = input.integer, minval = 1, maxval = 12)
+thruYear         = input(defval = 2112, title = "Thru Year", group="Date Range", type = input.integer, minval = 1970)
+start     = timestamp(fromYear, fromMonth, fromDay, 00, 00)        // backtest start window
+finish    = timestamp(thruYear, thruMonth, thruDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+strategy.risk.max_intraday_loss( maxDailyLoss, strategy.cash )
+strategy.risk.max_drawdown( maxTotalDrawdown, strategy.cash )
+isTime(_position) =>
+    range = time( timeframe.period, _position + ':1234567' )
+bgcolor( color=isTime( entryTime ) and stratTesterOn and window() ? color.yellow : na, title="Daily trading time session (in Exchange GMT)", transp=75 )
+if ( stratTesterOn and window() )
+    if ( buySignal and isTime( entryTime ) )
+        if ( not fixedTPSL )
+            strategy.close_all()
+            strategy.entry( "Buy", strategy.long, contractSize )
+        
+        if ( fixedTPSL and strategy.position_size == 0 )
+            strategy.entry( "Buy", strategy.long, contractSize )
+            strategy.exit( "TP/SL", "Buy", loss=fixedSLValue, profit=fixedTPValue )
+        
+    if ( sellSignal and isTime( entryTime ))
+        if ( not fixedTPSL )
+            strategy.close_all()
+            strategy.entry( "Sell", strategy.short, contractSize )
+        
+        if ( fixedTPSL and strategy.position_size == 0  )
+            strategy.entry( "Sell", strategy.short, contractSize )
+            strategy.exit( "TP/SL", "Sell", loss=fixedSLValue, profit=fixedTPValue )
+    
+    if ( isTime( startTime ) and tradeOnStartSess and strategy.position_size == 0 )
+        if ( maValue1 > maValue2 )
+            strategy.entry( "Buy", strategy.long, contractSize )
+            
+            if ( fixedTPSL )
+                strategy.exit( "TP/SL", "Buy", loss=fixedSLValue, profit=fixedTPValue )
+        else
+            strategy.entry( "Sell", strategy.short, contractSize ) 
+            
+            if ( fixedTPSL )
+                strategy.exit( "TP/SL", "Sell", loss=fixedSLValue, profit=fixedTPValue )
+    
+    strategy.close_all( when=not isTime( entryTime ) )
+plot( strategy.equity )
+Expand (112 lines)

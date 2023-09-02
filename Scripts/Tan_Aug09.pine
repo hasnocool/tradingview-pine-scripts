@@ -1,0 +1,159 @@
+Script Name: Tan_Aug09
+Author: Daniel_dao
+Description: Crypto pairs: ETH/USDT
+Time-frame: D1
+Based on Heikin Ashi Candle and Exponential Moving Average Indicators
+Crypto pick: 5D
+Stock pick: 8D
+Best work in strong trend.
+Recommend using with trend line .
+PineScript code:
+
+Pine Script™ strategy
+Tan_Aug09
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+//@version=4
+strategy("Crypto_Auguz09", overlay=true)
+// Input
+source = input(close, title ="Source")
+time_frame = input("5D", "ema_days")
+ema_time = input(34,"ema",input.integer, options = [8,13,21,34,55,89])
+// Time test input
+FromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+FromDay   = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+FromYear  = input(defval = 2018, title = "From Year", minval = 2017)
+ToMonth   = input(defval = 1, title = "To Month", minval = 1, maxval = 12)
+ToDay     = input(defval = 1, title = "To Day", minval = 1, maxval = 31)
+ToYear    = input(defval = 9999, title = "To Year", minval = 2017)
+// === FUNCTION EXAMPLE ===
+start     = timestamp(FromYear, FromMonth, FromDay, 00, 00)  // backtest start window
+finish    = timestamp(ToYear, ToMonth, ToDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false // create function "within window of time"
+// Indicators
+ha = heikinashi(tickerid(syminfo.prefix,syminfo.ticker,session.regular))
+ha_open = security(ha,time_frame,open)
+ha_high = security(ha,time_frame,high)
+ha_low = security(ha,time_frame,low)
+ha_close = security(ha,time_frame,close)
+ha_ohlc4 = (ha_open + ha_high + ha_low + ha_close)/4
+// EMA of heikenashi
+ema_heik = ema(ha_ohlc4,ema_time)
+// Allow exit from long position only
+strategy.risk.allow_entry_in(strategy.direction.long)
+// BUY SIGNALS
+// Buy order ohlc4 crossover ema34
+if (crossover(ohlc4, ema_heik))
+    strategy.entry("L_ema", long=true, qty=1, oca_name="ema", oca_type=strategy.oca.cancel, comment="L_ema")
+else
+    strategy.cancel(id="L_ema")
+// Buy order ohlc4 crossover ha_ohlc4
+if (crossover(ohlc4, ha_ohlc4))
+    strategy.entry("L_ha", long = true, qty=1, oca_name="ha", oca_type=strategy.oca.cancel, comment="L_ha")
+else
+    strategy.cancel(id="L_ha")
+// SELL SIGNALS
+// Sell order close crossunder ema34 
+if (crossunder(ohlc4, ema_heik))
+    strategy.entry("S_ema",false, qty=1, oca_name="ema",  comment="S_ema")
+else
+    strategy.cancel(id="S_ema")
+// Sell order close crossunder ha_ohlc4
+if (crossunder(ohlc4, ha_ohlc4))
+    strategy.entry("S_ha",false, qty=1, oca_name="ha", comment="S_ha")
+else
+    strategy.cancel(id="S_ha")
+//plot(strategy.equity, title="equity", color=red, linewidth=2, style=areabr)
+// Plot EMA Ribbon
+// leadMAColor = change(ema08)>=0 and ema08>ema34 ? lime : change(ema08)<0 and ema08>ema34 ? maroon : change(ema08)<=0 and ema08<ema34 ? red : change(ema08)>=0 and ema08<ema34 ? green : gray
+// maColor(ema, maRef) => change(ema)>=0 and ema08>maRef ? lime : change(ema)<0 and ema08>maRef ? maroon : change(ema)<=0 and ema08<maRef ? red : change(ema)>=0 and ema08<maRef ? green : gray
+// plot( ema08, color=leadMAColor, style=line, title="EMA08", linewidth=1)
+// plot( ema13, color=maColor(ema13,ema34), style=line, title="EMA13", linewidth=1)
+// plot( ema21, color=maColor(ema21,ema34), style=line, title="EMA21", linewidth=1)
+// plot( ema34, color=color(purple,50), style=line, title="EMA34", linewidth=3)
+plot (ohlc4, color = color.white, transp=50, style=plot.style_line, title = "ohlc4", linewidth=5)
+plot (ha_ohlc4, color = color.blue, transp=50, style=plot.style_line, title = "ha_ohlc4", linewidth=5)
+plot (ema_heik, color = color.purple, transp=50, style=plot.style_line, title = "ema", linewidth = 3)
+Expand (83 lines)

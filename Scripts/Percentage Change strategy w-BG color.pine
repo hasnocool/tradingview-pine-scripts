@@ -1,0 +1,131 @@
+Script Name: Percentage Change strategy w-BG color
+Author: BlitzTrade8
+Description: The Percentage Change Method has historically been very effectively used by analysts on very long time horizons and very extreme percentage changes, for example a -6% or more drop in any index doesn't happen very often but it has very large implications and that much selling pressure typically leads to more selling at least for a while as a consequence of it....
+PineScript code:
+
+Pine Script™ strategy
+Percentage Change strategy w/BG color
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+//@version=4
+// created by Oliver
+strategy("Percentage Change strategy w/BG color", overlay=true, scale=scale.none, precision=2)
+x = input(5, title = 'x candles difference', minval = 1)
+trueChange1 = (close - close[x]) / close[x] * 100
+percentChangePos = input(0.4, title="Percent Change")
+//if (percentChange > trueChange) then Signal  
+plotChar1 = if percentChangePos > trueChange1
+    false
+else
+    true
+plotchar(series=plotChar1, char='🥶', color=color.green, location=location.top, size = size.tiny )
+trueChange2 = (close - close[x]) / close[x] * 100
+percentChangeNeg = input(-0.4, title="Percent Change")
+plotChar2 = if percentChangeNeg < trueChange2
+    false
+else
+    true
+plotchar(series=plotChar2, char='🥵', color=color.red, location=location.top, size = size.tiny)
+//------------------------------------------------------------------------
+UpColor() => percentChangePos < trueChange1
+DownColor() => percentChangeNeg > trueChange2
+//Up = percentChangePos < trueChange1
+//Down = percentChangeNeg > trueChange2
+col = percentChangePos < trueChange1 ? color.lime : percentChangeNeg > trueChange2 ? color.red : color.white
+//--------
+condColor = percentChangePos < trueChange1 ? color.new(color.lime,50) : percentChangeNeg > trueChange2 ? color.new(color.red,50) : na
+//c_lineColor = condUp ? color.new(color.green, 97) : condDn ? color.new(color.maroon, 97) : na
+//barcolor(Up ? color.blue : Down ? color.yellow : color.gray, transp=70)
+//Background Highlights
+//bgcolor(condColor, transp=70)
+//---------
+barcolor(UpColor() ? color.lime: DownColor() ? color.red : na)
+bgcolor(UpColor() ? color.lime: DownColor() ? color.red : na)
+//------------------------------------------------------------------------
+buy = percentChangePos < trueChange1
+sell = percentChangeNeg > trueChange2
+//------------------------------------------------------------------------
+/////////////// Alerts /////////////// 
+alertcondition(buy, title='buy', message='Buy')
+alertcondition(sell, title='sell', message='Sell')
+//-------------------------------------------------
+if (buy)
+    strategy.entry("My Long Entry Id", strategy.long)
+if (sell)
+    strategy.entry("My Short Entry Id", strategy.short)
+/////////////////// Plotting //////////////////////// 
+plotshape(buy, title="buy", text="Buy", color=color.green, style=shape.labelup, location=location.belowbar, size=size.small, textcolor=color.white, transp=0)  //plot for buy icon
+plotshape(sell, title="sell", text="Sell", color=color.red, style=shape.labeldown, location=location.abovebar, size=size.small, textcolor=color.white, transp=0)
+Expand (73 lines)

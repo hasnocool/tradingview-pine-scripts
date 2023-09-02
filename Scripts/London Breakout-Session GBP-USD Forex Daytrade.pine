@@ -1,0 +1,268 @@
+Script Name: London Breakout-Session GBP-USD Forex Daytrade
+Author: SoftKill21
+Description: This is a forex strategy suited for day traders, specialized in the london breakout session
+
+
+
+The key elements for this strategy are the specific london time session, together with an exit time(before asian trade/at the end of new york session).
+
+At the same time, as logic elements we only use price action inside like :
+
+For long we have 3 ascending candles, and...
+PineScript code:
+
+Pine Script™ strategy
+London Breakout/Session GBP/USD Forex Daytrade
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+//@version=4
+strategy("time zone", overlay=true, initial_capital=1000)
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2000, title = "From Year", minval = 1970)
+ //monday and session 
+// To Date Inputs
+toDay = input(defval = 31, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 12, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2020, title = "To Year", minval = 1970)
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate
+s = input(title="Session", type=input.session, defval="0400-0500")
+s2 = input(title="eXOT", type=input.session, defval="0300-0900")
+t1 = time(timeframe.period, s)
+t2 = time(timeframe.period, s2)
+c2 = #0000FF
+//bgcolor(t1 ? c2 : na, transp=85)
+UseHAcandles    = input(false, title="Use Heikin Ashi Candles in Algo Calculations")
+//
+// === /INPUTS ===
+// === BASE FUNCTIONS ===
+haClose = UseHAcandles ? security(heikinashi(syminfo.tickerid), timeframe.period, close) : close
+haOpen  = UseHAcandles ? security(heikinashi(syminfo.tickerid), timeframe.period, open) : open
+haHigh  = UseHAcandles ? security(heikinashi(syminfo.tickerid), timeframe.period, high) : high
+haLow   = UseHAcandles ? security(heikinashi(syminfo.tickerid), timeframe.period, low) : low
+isMon() => dayofweek(time('D')) == dayofweek.monday
+isTue() => dayofweek(time('D')) == dayofweek.tuesday
+isWed() => dayofweek(time('D')) == dayofweek.wednesday
+isThu() => dayofweek(time('D')) == dayofweek.thursday
+isFri() => dayofweek(time('D')) == dayofweek.friday
+isSat() => dayofweek(time('D')) == dayofweek.saturday
+isSun() => dayofweek(time('D')) == dayofweek.sunday
+longe = input(true, title="LONG only")
+shorte = input(true, title="SHORT only")
+//sl=input(0.001, title="sl % price movement")
+//accbalance = strategy.initial_capital + strategy.netprofit
+entry = close
+sl = input(0.005, title = "Stop Loss")
+tp = input(0.005, title="Target Price")
+// sldist = entry - sl
+// tgdist = tp - entry 
+// slper = sldist / entry * 100
+// tgper = tgdist / entry * 100
+// rr = tgper / slper
+// size = accbalance * riskper / slper
+balance = strategy.netprofit + strategy.initial_capital //current balance
+floating = strategy.openprofit          //floating profit/loss
+risk = input(1,type=input.float,title="Risk % of equity ")           //risk % per trade
+temp01 = (balance * risk)/100     //Risk in USD
+temp02 = temp01/close*sl      //Risk in lots
+temp03 = temp02*100000      //Convert to contracts
+size = temp03 - temp03%1000 //Normalize to 1000s (Trade size)
+if(size < 1000)
+    size := 1000           //Set min. lot size
+longC =  haClose> haClose[1] and  haClose[1] > haClose[2]  and haClose[2] <  haClose[3] 
+shortC = haClose < haClose[1] and   haClose[1] < haClose[2]  and haClose[2] > haClose[3] 
+luni = input(true, title="Monday")
+marti = input(true, title="Tuesday")
+miercuri = input(true, title="Wednesday")
+joi = input(true, title="Thursday")
+vineri = input(true, title="Friday")
+if(time_cond)
+    if(t1)
+        if(luni==true and dayofweek == dayofweek.monday)
+            if(longC and longe )
+                strategy.entry("long",1)
+            if(shortC and shorte)
+                strategy.entry("short",0)
+                
+        if(marti==true and dayofweek == dayofweek.tuesday)
+            if(longC and longe )
+                strategy.entry("long",1)
+            if(shortC and shorte)
+                strategy.entry("short",0)
+                
+        if(miercuri==true and dayofweek == dayofweek.wednesday)
+            if(longC and longe  )
+                strategy.entry("long",1)
+            if(shortC and shorte)
+                strategy.entry("short",0)
+                
+        if(joi==true  and dayofweek == dayofweek.thursday)
+            if(longC and longe)
+                strategy.entry("long",1)
+            if(shortC and shorte)
+                strategy.entry("short",0)
+                
+        if(vineri==true and  dayofweek == dayofweek.friday)
+            if(longC and longe)
+                strategy.entry("long",1 )
+            if(shortC and shorte)
+                strategy.entry("short",0)  
+//strategy.exit("closelong", "RSI_BB_LONG" , profit = close * 0.01 / syminfo.mintick, loss = close * 0.01 / syminfo.mintick, alert_message = "closelong")
+//strategy.exit("closeshort", "RSI_BB_SHORT" , profit = close * 0.01 / syminfo.mintick, loss = close * 0.01 / syminfo.mintick, alert_message = "closeshort")
+strategy.exit("sl","long", loss = close * sl / syminfo.mintick, profit = close * tp / syminfo.mintick)
+strategy.exit("sl","short", loss=close * sl / syminfo.mintick, profit = close * tp / syminfo.mintick)
+//strategy.close("long")
+//strategy.close("short" )
+//strategy.exit("sl","long", loss = sl)
+//strategy.exit("sl","short", loss= sl)
+if(not t2)
+    strategy.close_all()
+//strategy.risk.max_intraday_filled_orders(2)
+Expand (146 lines)

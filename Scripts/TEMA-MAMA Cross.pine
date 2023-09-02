@@ -1,0 +1,440 @@
+Script Name: TEMA-MAMA Cross
+Author: UnknownUnicorn19826629
+Description: This is a strategy based on the TEMA and Ehler's MAMA moving averages.  Crosses of the fast and slow TEMA are commonly used for entry and exit strategies.  The Ehler's Mesa Adaptive Moving Average is a trend-following price indicator that uses a Hilbert Transform.  Having plotted both TEMA and eMAMA side-by-side for some time, I noticed a pattern where the...
+PineScript code:
+
+Pine Script™ strategy
+TEMA/MAMA Cross
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+//@version=4
+//@author=LasciviousMonk
+//
+//  The trailing stoploss calculations are modified from **Trailing SL Strategy by QuantNomad**
+//  TEMA calculations modified from **TEMA With Alert by BerkSay**
+//  eMAMA modified from **Ehlers MESA Adaptive Moving Average by LazyBear**
+//   3Commas integration:
+//      This strategy includes code to send signals to a 3commas bot.  If you don't want to use it, then you don't need to do anything.
+//      If you'd like to use the strategy to send Long entry and exit signals to 3commas, you need to:
+//          1.  Set up a DCA bot in 3Commas.
+//          2.  Edit this script to add your bot_id and email_token to msgLongEntry and msgLongExit. (Lines 26 & 29)
+//          3.  Add an alert on "order fills".  Select webapi and set it to the 3commas webapi.  Under message, insert this text: {{strategy.order.alert_message}}
+//          4.  You must have "Do TV trades" checked!
+strategy(title="TEMA/MAMA Cross", shorttitle="TMX", overlay = true, 
+  pyramiding = 0, default_qty_type=strategy.percent_of_equity, default_qty_value=100, 
+  initial_capital=5000, calc_on_every_tick=true, calc_on_order_fills=false,
+  commission_type=strategy.commission.percent, commission_value=0.1)
+// ================================== //
+// --------> 3-Commas Keys <--------- //
+// ================================== //
+// Change these entries to match your 3commas bot info:
+msgLongEntry = "{  \"message_type\": \"bot\",  \"bot_id\": 1234567,  \"email_token\": \"1234567-1234-1234-abcd-123456789aa\", 
+     \"delay_seconds\": 1}" // Long Entry
+msgExitLong = "{  \"message_type\": \"bot\",  \"bot_id\": 1234567,  \"email_token\": \"1234567-1234-1234-abcd-123456789aa\",
+     \"delay_seconds\": 0,  \"action\": \"close_at_market_price\"}" // Long Exit 
+// Preset colors 
+colorTransparent = color.new(color.black, 100)
+colorMyGreen = color.new(#66bb6a, 0)
+colorMyRed = color.new(#ef5350, 0)
+sourceGlobal = input(title="Indicator Source", defval=close, type=input.source, group="Global Source")
+showAlerts = input(title="Show alerts?", defval=true, type=input.bool)
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//   TEMA Calculation (Based on TEMA With Alert by BerkSay)                         //
+//////////////////////////////////////////////////////////////////////////////////////////////////
+showTEMA = input(defval=true, title="Show TEMA?", type=input.bool, group="TEMA")
+lengthTEMAfast = input(title="TEMA Fast length", defval=13, minval=1, type=input.integer, group="TEMA", tooltip="Fast TEMA\n\nTry different settings to see what works best for your instrument and timeframe.")
+lengthTEMAslow = input(title="TEMA Slow length", defval=34, minval=1, type=input.integer, group="TEMA", tooltip="Slow TEMA\n\n2-3 times fast TEMA seems to work best but experiment to see what works for your conditions.")
+sourceTEMA = sourceGlobal
+showTEMAfill = input(title="Shade TEMA?", defval=false, type=input.bool, group="TEMA")
+fTEMA(temaSource, temaLength) =>
+    Tema1 = ema(temaSource, temaLength)
+    Tema2 = ema(Tema1, temaLength)
+    Tema3 = ema(Tema2, temaLength)
+    3 * Tema1 - 3 * Tema2 + Tema3
+slowTEMA = fTEMA(sourceTEMA, lengthTEMAslow)
+fastTEMA = fTEMA(sourceTEMA, lengthTEMAfast)
+longTEMA = fastTEMA > slowTEMA
+shortTEMA = slowTEMA > fastTEMA
+colorTEMAslow = color.new(#ff0000,20)
+colorTEMAfast = color.new(#00ff00,20)
+fillTEMA = slowTEMA>fastTEMA ? color.new(colorMyRed, 80) : color.new(colorMyGreen, 80)
+plotTEMAslow = plot(showTEMA ? slowTEMA: na, color=colorTEMAslow, title="TEMA Slow plot", linewidth=2)
+plotTEMAfast = plot(showTEMA ? fastTEMA: na, color=colorTEMAfast, title="TEMA Fast plot", linewidth=2)
+fill(plotTEMAslow,plotTEMAfast, color=showTEMAfill ? fillTEMA : colorTransparent, title="TEMA fill")
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// Ehlers MESA Adaptive Moving Average [LazyBear]                                               //
+//////////////////////////////////////////////////////////////////////////////////////////////////
+showeMAMA = input(defval=true, title="Show Ehlers MESA Adaptive Moving Average", type=input.bool, group="Ehler's MESA Adaptive Moving Average")
+sourceEMAMA = sourceGlobal
+fastlimitEMAMA=input(.8, title="Fast Limit", step=0.1, group="Ehler's MESA Adaptive Moving Average", tooltip="Fast moving average  \n\nValues between 0.5 and 0.8 seem reasonable.\n\nTest it using your instrument and timeframe to see what works best.")
+slowlimitEMAMA=input(.05, title="Slow Limit", step=0.01, group="Ehler's MESA Adaptive Moving Average", tooltip="Slow moving average \n\nOriginal setting is 0.05, but I've experimented with it as high as 0.55 with good results with crypto on 1hr TF.\n\nTest it using your instrument and timeframe to see what works best.")
+showEMAMAfill = input(title="Shade eMAMA?", defval=false, type=input.bool, group="Ehler's MESA Adaptive Moving Average")
+var float p = na
+var float i2 = na
+var float q2 = na
+var float re = na
+var float im = na
+var float spp = na
+var float eMAMA = na
+var float eFAMA = na
+sp = (4*sourceEMAMA + 3*sourceEMAMA[1] + 2*sourceEMAMA[2] + sourceEMAMA[3]) / 10.0
+dt = (.0962*sp + .5769*nz(sp[2]) - .5769*nz(sp[4])- .0962*nz(sp[6]))*(.075*nz(p[1]) + .54)
+q1 = (.0962*dt + .5769*nz(dt[2]) - .5769*nz(dt[4])- .0962*nz(dt[6]))*(.075*nz(p[1]) + .54)
+i1 = nz(dt[3])
+jI = (.0962*i1 + .5769*nz(i1[2]) - .5769*nz(i1[4])- .0962*nz(i1[6]))*(.075*nz(p[1]) + .54)
+jq = (.0962*q1 + .5769*nz(q1[2]) - .5769*nz(q1[4])- .0962*nz(q1[6]))*(.075*nz(p[1]) + .54)
+i2_ = i1 - jq
+q2_ = q1 + jI
+i2 := .2*i2_ + .8*nz(i2[1])
+q2 := .2*q2_ + .8*nz(q2[1])
+re_ = i2*nz(i2[1]) + q2*nz(q2[1])
+im_ = i2*nz(q2[1]) - q2*nz(i2[1])
+re := .2*re_ + .8*nz(re[1])
+im := .2*im_ + .8*nz(im[1])
+p1 = iff(im!=0 and re!=0, 360/atan(im/re), nz(p[1]))
+p2 = iff(p1 > 1.5*nz(p1[1]), 1.5*nz(p1[1]), iff(p1 < 0.67*nz(p1[1]), 0.67*nz(p1[1]), p1))
+p3 = iff(p2<6, 6, iff (p2 > 50, 50, p2))
+p := .2*p3 + .8*nz(p3[1])
+spp := .33*p + .67*nz(spp[1])
+phaseEMAMA = atan(q1 / i1)
+dphase_ = nz(phaseEMAMA[1]) - phaseEMAMA
+dphase = iff(dphase_< 1, 1, dphase_)
+alpha_ = fastlimitEMAMA / dphase
+alpha = iff(alpha_ < slowlimitEMAMA, slowlimitEMAMA, iff(alpha_ > fastlimitEMAMA, fastlimitEMAMA, alpha_))
+eMAMA := alpha*sourceEMAMA + (1 - alpha)*nz(eMAMA[1])
+eFAMA := .5*alpha*eMAMA + (1 - .5*alpha)*nz(eFAMA[1])
+fillEMAMA = eMAMA>eFAMA ? color.new(#ffeb36, 80) : color.new(#f57c00, 80)
+p_eMAMA = plot(showeMAMA ? eMAMA : na, title="Ehler's MAMA", linewidth = 2, style=plot.style_line, color=#ffeb36)
+p_eFAMA = plot(showeMAMA ? eFAMA : na, title="Ehler's FAMA", linewidth = 2, style=plot.style_line, color=#f57c00)
+fill(p_eMAMA, p_eFAMA, color=showEMAMAfill ? fillEMAMA : colorTransparent, title="eMAMA fill")
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//   Trade Options                                                                              //
+//////////////////////////////////////////////////////////////////////////////////////////////////
+doTVtrades = input(title="Enable Tradingview trade entries?", group="Trading Options", defval=true, tooltip="This must be checked to test the strategy, show entry and exits, or use the 3commas signals.")
+// Limit backtesting dates
+useDateRange = input(defval=true, title="Limit backtesting by date", type=input.bool, group="Limit by date", tooltip="Limit window for backtesting.  This allows you to compare different TFs over the same period.")
+startDate = input(title="Start Date (DD/MM/YYYY)", type=input.time,
+     defval=timestamp("1 Jan 2021 1:01 -0400"), group="Limit by date")
+endDate =   input(title="End Date (DD/MM/YYYY)  ", type=input.time,
+     defval=timestamp("31 Dec 2100 19:59 -0400"), group="Limit by date", tooltip="You likely want to leave this far in the future.")
+inDateRange = (time >= startDate) and (time < endDate)
+inDateRange := useDateRange ? inDateRange : 1
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//   Trade Actions                                                                              //
+//////////////////////////////////////////////////////////////////////////////////////////////////
+enTEMAFAMA = input(title="Enter on fastTEMA crossover eFAMA", type=input.bool, defval=true, group="Strategy Options", tooltip="Each entry or exit option is included with OR logic.")
+enTEMATEMA = input(title="Enter on fastTEMA crossover slowTEMA", type=input.bool, defval=true, group="Strategy Options", tooltip="Each entry or exit option is included with OR logic.")
+enMAMAFAMA = input(title="Enter on eMAMA crossover eFAMA", type=input.bool, defval=false, group="Strategy Options", tooltip="Each entry or exit option is included with OR logic.")
+exTEMAFAMA = input(title="Exit on fastTEMA crossunder eFAMA", type=input.bool, defval=true, group="Strategy Options", tooltip="Each entry or exit option is included with OR logic.")
+exTEMATEMA = input(title="Exit on fastTEMA crossunder slowTEMA", type=input.bool, defval=false, group="Strategy Options", tooltip="Each entry or exit option is included with OR logic.")
+exMAMAFAMA = input(title="Exit on eMAMA crossunder eFAMA", type=input.bool, defval=false, group="Strategy Options", tooltip="Each entry or exit option is included with OR logic.")
+barConfirmation = input(title="Wait for bar confirmation before entry", type=input.bool, defval=false, group="Strategy Options", tooltip="May avoid false entries, but could result in delayed entry.  It doesn't seem to make a difference in some of my testing.")
+useSL = input(defval=true, title="Use Trailing Stoploss?", type=input.bool, group="Stoploss", tooltip="You may have better results without SL, but see higher drawdown in the case of pullbacks.\n\nSettings must be determined based on your instrument,timeframe, and risk-management strategy.")
+plotSL = input(defval=true, title="Plot Trailing Stoploss?", type=input.bool, group="Stoploss")
+typeSL = input(defval="Smoothed ATR", title="Type of SL:", options=["Percent", "ATR", "Smoothed ATR"], group="Stoploss", tooltip="Percent=Trailing % below the low\nATR=ATR*Factor below low\nSmoothed ATR=ema of ATR*Factor below low")
+lengthATR = input(defval=7, title="ATR length", type=input.integer, group="Stoploss", inline="ATR")
+lengthATREMA = input(defval=3, title="ATR EMA length", type=input.integer, group="Stoploss", tooltip="EMA length for ATR, used only if SL type is Smoothed ATR")
+SLfactor = input(defval=1.3, title="ATR factor", type=input.float, minval=0.1, step=0.1, inline="ATR", group="Stoploss", tooltip="Multiple of ATR to use for SL")
+percentSL = input(defval=4, title = "Percent SL", type = input.float, minval=0.1, maxval=100, step=0.1, group="Stoploss", tooltip="Percent (0-100)")
+var bool longEntryCondition = na
+var bool longExitCondition = na
+// Entry Conditions
+if enTEMAFAMA and enTEMATEMA and enMAMAFAMA
+    longEntryCondition := crossover(fastTEMA,eFAMA) or crossover(fastTEMA,slowTEMA) or crossover(eMAMA,eFAMA)
+else if enTEMAFAMA and enTEMATEMA
+    longEntryCondition := crossover(fastTEMA,eFAMA) or crossover(fastTEMA,slowTEMA)
+else if enTEMAFAMA and enMAMAFAMA
+    longEntryCondition := crossover(fastTEMA,eFAMA) or crossover(eMAMA,eFAMA)
+else if enTEMATEMA and enMAMAFAMA
+    longEntryCondition := crossover(fastTEMA,slowTEMA) or crossover(eMAMA,eFAMA)
+else if enTEMAFAMA
+    longEntryCondition := crossover(fastTEMA,eFAMA)
+else if enTEMATEMA
+    longEntryCondition := crossover(fastTEMA,slowTEMA)
+else if enMAMAFAMA
+    longEntryCondition := crossover(eMAMA,eFAMA)
+// Exit Conditions
+if exTEMAFAMA and exTEMATEMA and exMAMAFAMA
+    longExitCondition := crossunder(fastTEMA,eFAMA) or crossunder(fastTEMA,slowTEMA) or crossunder(eMAMA,eFAMA)
+else if exTEMAFAMA and exTEMATEMA
+    longExitCondition := crossunder(fastTEMA,eFAMA) or crossunder(fastTEMA,slowTEMA)
+else if exTEMAFAMA and exMAMAFAMA
+    longExitCondition := crossunder(fastTEMA,eFAMA) or crossunder(eMAMA,eFAMA)
+else if exTEMATEMA and exMAMAFAMA
+    longExitCondition := crossunder(fastTEMA,slowTEMA) or crossunder(eMAMA,eFAMA)
+else if exTEMAFAMA
+    longExitCondition := crossunder(fastTEMA,eFAMA)
+else if exTEMATEMA
+    longExitCondition := crossunder(fastTEMA,slowTEMA)
+else if exMAMAFAMA
+    longExitCondition := crossunder(eMAMA,eFAMA)
+//longEntryCondition  = crossover(fastTEMA,eFAMA) or crossover(fastTEMA,slowTEMA) or crossover(eMAMA,eFAMA)
+//longExitCondition = crossunder(fastTEMA,slowTEMA) or crossunder(fastTEMA,slowTEMA) or crossunder(eMAMA,eFAMA)
+// Init Variables
+var float trailingSL = 0.0
+longCondition  = longEntryCondition and inDateRange and (barConfirmation ? barstate.isconfirmed : true) 
+// Stoploss calculations
+SLvalue =  typeSL == "ATR" ? SLfactor * atr(lengthATR) :
+           typeSL == "Smoothed ATR" ? SLfactor * ema(atr(lengthATR), lengthATREMA) :
+           typeSL == "Percent" ? sourceGlobal * percentSL / 100 : na
+     
+trailingSL := longCondition ? low  - SLvalue : 
+               nz(strategy.position_size[1]) >  0 ? max(low  - SLvalue, nz(trailingSL[1])) :  
+               nz(trailingSL[1])
+plot(strategy.position_size > 0 and useSL and plotSL ? trailingSL: na, title="Stop Loss", linewidth = 2, color = color.blue, style=plot.style_linebr)               
+// Long position entry
+if longCondition and strategy.position_size <= 0
+   
+    if doTVtrades
+        strategy.entry("long", strategy.long, comment="enL", alert_message=msgLongEntry) // Insert "{{strategy.order.alert_message}}" into message
+    if showAlerts
+        alert("Long entry", alert.freq_once_per_bar)
+// Long position Exit
+if longExitCondition and strategy.position_size > 0
+    
+    if doTVtrades
+        strategy.close("long", comment="exL", alert_message=msgExitLong)
+    if showAlerts
+        alert("Long Exit", alert.freq_once_per_bar)
+// Stop loss exit
+if useSL and sourceGlobal <= trailingSL and strategy.position_size > 0
+    
+    if doTVtrades
+        strategy.close("long", comment="exL, hit SL@" + tostring(trailingSL, "#.##"), alert_message=msgExitLong)
+    
+    if showAlerts
+        alert("SL triggered", alert.freq_once_per_bar)
+Expand (234 lines)

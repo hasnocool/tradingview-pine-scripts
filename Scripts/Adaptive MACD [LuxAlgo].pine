@@ -1,0 +1,91 @@
+Script Name: Adaptive MACD [LuxAlgo]
+Author: LuxAlgo
+Description: The Adaptive MACD indicator is an adaptive version of the popular Moving Average Convergence Divergence (MACD) oscillator, returning longer-term variations during trending markets and cyclic variations during ranging markets while filtering out noisy variations.
+
+🔶  USAGE 
+
+  
+
+The proposed oscillator contains all the elements within a regular MACD, such as a...
+PineScript code:
+
+Pine Script™ indicator
+Adaptive MACD [LuxAlgo]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+// This work is licensed under a Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) https://creativecommons.org/licenses/by-nc-sa/4.0/
+// © LuxAlgo
+//@version=5
+indicator("Adaptive MACD [LuxAlgo]", "LuxAlgo - Adaptive MACD")
+//------------------------------------------------------------------------------
+//Settings
+//-----------------------------------------------------------------------------{
+length = input.int(20, 'R2 Period', minval = 2)
+fast = input.int(10, minval = 2)
+slow = input.int(20, minval = 2)
+signal = input.int(9, minval = 2)
+//-----------------------------------------------------------------------------}
+//Ultimate MACD
+//-----------------------------------------------------------------------------{
+var macd = 0.
+var lag  = (signal - 1) / 2
+var a1   = 2 / (fast + 1)
+var a2   = 2 / (slow + 1)
+r2 = .5 * math.pow(ta.correlation(close, bar_index, length), 2) + .5
+K = r2 * ((1 - a1) * (1 - a2)) + (1 - r2) * ((1 - a1) / (1 - a2))
+macd := (close - close[1]) * (a1 - a2) + (-a2 - a1 + 2) * nz(macd[1]) - K * nz(macd[2])
+ema = ta.ema(macd, signal)
+hist = macd - ema
+//-----------------------------------------------------------------------------}
+//Plots
+//-----------------------------------------------------------------------------{
+hist_css = hist > 0 and hist > hist[1] ? #5b9cf6 
+  : hist > 0 and hist < hist[1] ? color.new(#5b9cf6, 50)
+  : hist < 0 and hist < hist[1] ? #f77c80
+  : color.new(#f77c80, 50)
+plot(hist, 'Histogram', hist_css, 1, plot.style_columns)
+plot(macd, 'MACD', chart.fg_color)
+plot(ema, 'Signal', #ff5d00)
+//-----------------------------------------------------------------------------}
+Expand (42 lines)

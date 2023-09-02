@@ -1,0 +1,134 @@
+Script Name: Three EMAs Trend-following Strategy (by Coinrule)
+Author: Coinrule
+Description: Trend-following strategies are great because they give you the peace of mind that you're trading in line with the market.  
+
+However, by definition, you're always  following . That means you're always a bit later than your want to be. The main challenges such strategies face are:
+
+ 
+ Confirming that there is a trend
+ Following the trend, hopefully, early enough to...
+PineScript code:
+
+Pine Script™ strategy
+Three EMAs Trend-following Strategy (by Coinrule)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//@version=4
+strategy(shorttitle='Three EMAs Trend-following Strategy',title='Three EMAs Trend-following Strategy (by Coinrule)', overlay=true, initial_capital = 100, process_orders_on_close=true, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type=strategy.commission.percent, commission_value=0.1)
+//Backtest dates
+fromMonth = input(defval = 1,    title = "From Month",      type = input.integer, minval = 1, maxval = 12)
+fromDay   = input(defval = 1,    title = "From Day",        type = input.integer, minval = 1, maxval = 31)
+fromYear  = input(defval = 2020, title = "From Year",       type = input.integer, minval = 1970)
+thruMonth = input(defval = 1,    title = "Thru Month",      type = input.integer, minval = 1, maxval = 12)
+thruDay   = input(defval = 1,    title = "Thru Day",        type = input.integer, minval = 1, maxval = 31)
+thruYear  = input(defval = 2112, title = "Thru Year",       type = input.integer, minval = 1970)
+showDate  = input(defval = true, title = "Show Date Range", type = input.bool)
+start     = timestamp(fromYear, fromMonth, fromDay, 00, 00)        // backtest start window
+finish    = timestamp(thruYear, thruMonth, thruDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+ema_1 = ema(close, input(7))
+ema_2 = ema(close, input(12))
+ema_3 = ema(close, input(21))
+Take_profit= ((input (4))/100)
+longTakeProfit = strategy.position_avg_price * (1 + Take_profit)
+length = input(20, "Length", minval = 2)
+src = input(close, "Source")
+factor = input(3.0, "Multiplier", minval = 0.25, step = 0.25)
+volStop(src, atrlen, atrfactor) =>
+    var max     = src
+    var min     = src
+    var uptrend = true
+    var stop    = 0.0
+    atrM        = nz(atr(atrlen) * atrfactor, tr)
+    max         := max(max, src)
+    min         := min(min, src)
+    stop        := nz(uptrend ? max(stop, max - atrM) : min(stop, min + atrM), src)
+    uptrend     := src - stop >= 0.0
+    if uptrend != nz(uptrend[1], true)
+        max    := src
+        min    := src
+        stop   := uptrend ? max - atrM : min + atrM
+    [stop, uptrend]
+[vStop, uptrend] = volStop(src, length, factor)
+go_long = crossover(close, ema_1) and crossover(close, ema_2) and crossover(close, ema_3)
+closeLong = close > longTakeProfit or crossunder(close, vStop)
+//Entry 
+strategy.entry(id="long", long = true, when = go_long and window())
+//Exit
+strategy.close("long", when = closeLong and window())
+plot(vStop,"Vstop", color.black, linewidth=2)
+plot(ema_1,"EMA Short", color.green, linewidth=1)
+plot(ema_2,"EMA Mid", color.purple, linewidth=1)
+plot(ema_3,"EMA Long", color.red, linewidth=1)
+Expand (71 lines)

@@ -1,0 +1,101 @@
+Script Name: Ichimoku 4H crypto strategy -- LONG ONLY
+Author: csuranto
+Description: This is a LONG ONLY strategy for 4h timeframe of any Cryptocurrency/USD pairs. The strategy opens only 1 position at a time with the following conditions. 
+
+Open Long Position when: 
+1. Closed price above cloud AND
+2. Green cloud ahead AND
+3. Conversion line above Baseline AND
+4. Lagging span above cloud and price action AND
+
+Close trade when:
+1. Lagging span gets...
+PineScript code:
+
+Pine Script™ strategy
+Ichimoku 4H crypto strategy -- LONG ONLY
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+//@version=4
+strategy(title="Ichimoku Cloud", shorttitle="Doubled Ichimoku", overlay=true, initial_capital=1000, default_qty_value=100, default_qty_type=strategy.percent_of_equity)
+conversionPeriods = input(20, minval=1, title="Conversion Line Length")
+basePeriods = input(60, minval=1, title="Base Line Length")
+laggingSpan2Periods = input(120, minval=1, title="Leading Span B Length")
+displacement = input(30, minval=1, title="Displacement")
+Stoploss = input(1, minval=0.1, title="Stoploss (% below cloud)") 
+donchian(len) => avg(lowest(len), highest(len))
+conversionLine = donchian(conversionPeriods)
+baseLine = donchian(basePeriods)
+leadLine1 = avg(conversionLine, baseLine)
+leadLine2 = donchian(laggingSpan2Periods)
+plot(conversionLine, color=#2962FF, title="Conversion Line")
+plot(baseLine, color=#B71C1C, title="Base Line")
+plot(close, offset = -displacement + 1, color=#43A047, title="Lagging Span")
+p1 = plot(leadLine1, offset = displacement - 1, color=#A5D6A7,
+     title="Leading Span A")
+p2 = plot(leadLine2, offset = displacement - 1, color=#EF9A9A,
+     title="Leading Span B")
+fill(p1, p2, color = leadLine1 > leadLine2 ? color.rgb(67, 160, 71, 90) : color.rgb(244, 67, 54, 90))
+bool TKcross = conversionLine > baseLine
+bool aboveCloud = close > leadLine1 and close > leadLine2
+bool greenCloud = leadLine1 > leadLine2
+bool lagLong = close > leadLine1[2*displacement+1] and close > leadLine2[2*displacement+1] and close > close[displacement]
+bool longCondition = false
+bool close_trade = crossover(leadLine1[displacement], close) or crossover (leadLine2[displacement], close) or close < close[displacement] or crossover(baseLine, close)
+var position_count = 0 
+if (TKcross and aboveCloud and greenCloud and lagLong and position_count==0)
+    position_count = 1
+    strategy.entry(id="buy", long=true)
+if (close_trade)
+    strategy.close_all()
+   // strategy.entry(id="sell", long=false)
+    position_count = 0
+    
+//if (longCondition)
+   
+//    strategy.close("long", when=exit_trade)
+//    strategy.exit("exit","long",stop=stop_level,limit=profit_level)
+Expand (44 lines)

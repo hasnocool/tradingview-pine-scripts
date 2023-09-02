@@ -1,0 +1,114 @@
+Script Name: BTC-USD - RSI
+Author: Rawadabdo
+Description: IF RSI (14) reaches 68 ... sell 1 lot size ( with TP 250 points and SL 500 points)
+IF RSI (14) reaches 27 ... buy 1 lot size ( with TP 250points and SL 500 points)
+IF RSI (14) reaches 80 ... sell 1 lot size ( with TP 250 points and SL 500 points)
+IF RSI (14) reaches 18 ... buy 1 lot size ( with TP 250points and SL 500 points)
+PineScript code:
+
+Pine Script™ strategy
+BTC/USD - RSI
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Rawadabdo
+// Ramy's Algorithm
+//@version=5
+strategy("BTC/USD - RSI", overlay=false, initial_capital = 5000)
+// User input
+length = input(title = "Length", defval=14, tooltip="RSI period")
+first_buy_level = input(title = "Buy Level 1", defval=27, tooltip="Level where 1st buy triggers")
+second_buy_level = input(title = "Buy Level 2", defval=18, tooltip="Level where 2nd buy triggers")
+first_sell_level = input(title = "Sell Level 1", defval=68, tooltip="Level where 1st sell triggers")
+second_sell_level = input(title = "Sell Level 2", defval=80, tooltip="Level where 2nd sell triggers")
+takeProfit= input(title="target Pips", defval=2500, tooltip="Fixed pip stop loss distance")
+stopLoss = input(title="Stop Pips", defval=5000, tooltip="Fixed pip stop loss distance")
+lot = input(title = "Lot Size", defval = 1, tooltip="Trading Lot size")
+// Get RSI
+vrsi = ta.rsi(close, length)
+// Entry Conditions
+long1 = (vrsi <= first_buy_level and vrsi>second_buy_level)
+long2 = (vrsi <= second_buy_level)
+short1= (vrsi >= first_sell_level and vrsi<second_sell_level)
+short2= (vrsi >= second_sell_level)
+// Entry Orders
+// Buy Orders
+if (long1 and strategy.position_size == 0)
+    strategy.entry("Long", strategy.long, qty=lot, comment="Buy")
+    if (long2 and  strategy.position_size == 0)
+        strategy.entry("Long", strategy.long, qty=lot, comment="Buy")
+// Short Orders
+if (short1 and strategy.position_size == 0)
+    strategy.entry("Short", strategy.short,qty=lot, comment="Sell")
+    if (short2 and strategy.position_size == 0)
+        strategy.entry("Short", strategy.short,qty=lot, comment="Sell")
+    
+// Exit our trade if our stop loss or take profit is hit
+strategy.exit(id="Long Exit", from_entry="Long",qty = lot, profit=takeProfit, loss=stopLoss)
+strategy.exit(id="Short Exit", from_entry="Short", qty = lot, profit=takeProfit, loss=stopLoss)
+// plot data to the chart
+hline(first_sell_level, "Overbought Zone", color=color.red, linestyle=hline.style_dashed, linewidth = 2)
+hline(second_sell_level, "Overbought Zone", color=color.green, linestyle=hline.style_dashed, linewidth = 2)
+hline(first_buy_level, "Oversold Zone", color=color.red, linestyle=hline.style_dashed, linewidth = 2)
+hline(second_buy_level, "Oversold Zone", color=color.green, linestyle=hline.style_dashed, linewidth = 2)
+plot (vrsi, title = "RSI", color = color.blue, linewidth=2)
+Expand (60 lines)

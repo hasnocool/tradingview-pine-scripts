@@ -1,0 +1,62 @@
+Script Name: meta-capitulation
+Author: serafimovkliment
+Description: Tracks the maximal drawdown from a -25% crash over 200 day period.
+PineScript code:
+
+Pine Script™ strategy
+meta-capitulation
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © serafimovkliment
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © serafimovkliment
+//@version=5
+strategy("7 period sma diff")
+sma_p = 30
+diff = (ta.sma(close, sma_p) - low)/ta.sma(close, sma_p)
+is_oversold = (diff) > 0.25
+val = is_oversold ? 1 : 0
+local_max = 0.0
+for over_days = 1 to 200
+    tmp = val[over_days] * (low - open[over_days-1])/open[over_days-1] * 100
+    if (local_max > tmp)
+        local_max := tmp
+drawdown_if_oversold_yesterday = local_max
+sum = ta.cum(val)
+n = 34
+over_past_2_years = ((sum - sum[n])/n)*100 
+plot(over_past_2_years) 
+plot(val, color = color.red)
+plot(-drawdown_if_oversold_yesterday, color = color.green)
+Expand (31 lines)

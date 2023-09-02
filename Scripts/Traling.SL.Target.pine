@@ -1,0 +1,448 @@
+Script Name: Traling.SL.Target
+Author: Sharad_Gaikwad
+Description: Trailing SL and Target
+
+I have seen few requests in PineScripters telegram group asking questions about implementation of trailing stop-loss (SL) and targets. This script is one of the way to implement the same.
+
+This script is developed based on dark color theme and is best viewed using dark color theme.
+
+How and where can this script be used:
+The script is built...
+PineScript code:
+
+Pine Script™ strategy
+Traling.SL.Target
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Sharad_Gaikwad
+//@version=5
+strategy("Traling.SL.Target", overlay=true, process_orders_on_close = true, max_labels_count = 500)
+// << Parameters section {
+_1 = input.bool(title = "━━━━━━━ ↓ Pivot parameters for trade ↓ ━━━━━━━", defval = false)
+fast_len = input.int(title = 'Fast len', defval = 20)
+slow_len = input.int(title = 'Slow len', defval = 50)
+label_bg_color = input.color(title = 'BG color for ongoing trade SL/Target label', defval=color.white)
+sl_target_method = input.string(title = 'Method to be used for SL/Target trailing', defval='% Based Target and SL', options = ['% Based Target and SL','Fix point Based Target and SL'])
+_2 = input.bool(title = "━━━━━━━ ↓ % Based Target and SL ↓ ━━━━━━━", defval = true)
+initial_profit_percent = input.float(title = 'Inital profit %', defval = 1) / 100
+initial_sl_percent = input.float(title = 'Inital SL %', defval = 1) / 100
+initiate_trailing_percent = input.float(title = 'Initiate trailing %', defval = 0.5, tooltip = 'Initiate trailing of target and SL after change in price in % after taking trade') / 100
+trail_profit_percent = input.float(title = 'Trail profit by %', defval = 0.3) / 100
+trail_sl_percent = input.float(title = 'Trail SL by %', defval = 0.3) / 100
+_3 = input.bool(title = "━━━━━━━ ↓ Fix point Based Target and SL ↓ ━━━━━━━", defval = false)
+initial_profit_points = input.float(title = 'Inital profit target points', defval = 100)
+initial_sl_points = input.float(title = 'Inital SL points', defval = 50)
+initiate_trailing_points = input.float(title = 'Initiate trailing points', defval = 60, tooltip = 'Initiate trailing of target and SL after change in price in points after taking trade')
+trail_profit_points = input.float(title = 'Trail profit by points', defval = 25)
+trail_sl_points = input.float(title = 'Trail SL by %', defval = 30)
+// } Parameters section >>
+// } << Common function {
+tab = table.new(position=position.bottom_right, columns=7, rows=200,frame_color = color.yellow, frame_width = 1)
+msg(int row, int col, string msg_str, clr=color.blue) =>
+    table.cell(table_id=tab, column=col, row=row, text=msg_str, text_color=clr)
+getVal(val) =>
+    ret_val = na(val) ? 0 : val
+t(val) => str.tostring(val, "0.00")
+timeToString(int _t) =>
+         str.tostring(dayofmonth(_t), '00') + '/' + 
+         str.tostring(month(_t), '00') + '/' + 
+         str.tostring(year(_t), '0000') + ' ' + 
+         str.tostring(hour(_t), '00') + ':' + 
+         str.tostring(minute(_t), '00') + ':' + 
+         str.tostring(second(_t), '00')
+    
+// } Common functions>>
+// Variable declarations {
+percent_based = sl_target_method  == '% Based Target and SL' ? true : false
+var initial_long_entry_price = float(na)
+var initial_short_entry_price = float(na)
+var long_target = float(na)
+var long_sl = float(na)
+var short_target = float(na)
+var short_sl = float(na)
+var long_entry_price = float(na)
+var short_entry_price = float(na)
+var initial_long_percent_target = float(na)
+var initial_long_percent_sl = float(na)
+var initial_long_point_target = float(na)
+var initial_long_point_sl = float(na)
+var initial_short_percent_target = float(na)
+var initial_short_percent_sl = float(na)
+var initial_short_point_target = float(na)
+var initial_short_point_sl = float(na)
+var is_long = bool(na)
+var is_short = bool(na)
+var trail_long_iteration = int(na)
+var trail_short_iteration = int(na)
+// }
+// derive important variable values
+// Strategy logic
+fast_ema = ta.ema(close, fast_len)
+slow_ema = ta.ema(close, slow_len)
+plot(fast_ema, color = color.red)
+plot(slow_ema, color = color.green)
+go_long = ta.crossover(fast_ema, slow_ema) and strategy.position_size == 0
+go_short = ta.crossunder(fast_ema, slow_ema) and strategy.position_size == 0
+// barcolor(ph ? color.purple : na, offset = -lb)
+// barcolor(pl ? color.yellow : na, offset = -lb)
+// barcolor(ph ? color.white : na)
+// barcolor(pl ? color.blue : na)
+// //trailing logic for long
+long_trailing_point = percent_based ? (close >= long_entry_price + (long_entry_price * initiate_trailing_percent)) :
+     (close >= long_entry_price + initiate_trailing_points)
+short_trailing_point = percent_based ? (close <= short_entry_price - (short_entry_price * initiate_trailing_percent)) :
+     (close >= short_entry_price - initiate_trailing_points)
+if(is_long and long_trailing_point)
+    // initial_long_percent_target = initial_long_percent_target + (initial_long_percent_target * trail_profit_percent)
+    // initial_long_percent_sl = initial_long_percent_sl - (initial_long_percent_sl * trail_sl_percent)
+    // initial_long_point_target = initial_long_point_target + trail_profit_points
+    // initial_long_point_sl = initial_long_point_sl - trail_sl_points
+    trail_long_iteration :=  trail_long_iteration + 1
+    long_target := percent_based ? (long_target + (long_target * trail_profit_percent)) : 
+         (long_target + trail_profit_points)
+         
+    long_sl := percent_based ? (long_sl + (long_sl * trail_sl_percent)) :
+         (long_sl + trail_sl_points)
+    
+    long_entry_price := percent_based ? (long_entry_price + (long_entry_price * initiate_trailing_percent)) :
+         (long_entry_price + initiate_trailing_points)
+if(is_short and short_trailing_point)
+    // initial_short_percent_target = initial_short_percent_target - (initial_short_percent_target * trail_profit_percent)
+    // initial_short_percent_sl = initial_short_percent_sl + (initial_short_percent_sl * trail_sl_percent)
+    // initial_short_point_target = initial_short_point_target - trail_profit_points
+    // initial_short_point_sl = initial_short_point_sl + trail_sl_points
+    trail_short_iteration :=  trail_short_iteration + 1
+    short_target := percent_based ? (short_target - (short_target * trail_profit_percent)) : 
+         (short_target - trail_profit_points)
+         
+    short_sl := percent_based ? (short_sl - (short_sl * trail_sl_percent)) :
+         (short_sl - trail_sl_points)
+    
+    short_entry_price := percent_based ? (short_entry_price - (short_entry_price * initiate_trailing_percent)) :
+         (short_entry_price - initiate_trailing_points)
+    
+if(go_long)
+    is_long := true
+    is_short := false
+    trail_long_iteration := 0
+    trail_short_iteration := 0
+    initial_long_entry_price := close
+    long_entry_price := close
+    
+    initial_long_percent_target := close + (close * initial_profit_percent)
+    initial_long_percent_sl := close - (close * initial_sl_percent)
+    initial_long_point_target := close + initial_profit_points
+    initial_long_point_sl := close - initial_sl_points
+    
+    long_target := percent_based ? initial_long_percent_target : initial_long_point_target
+    long_sl := percent_based ? initial_long_percent_sl : initial_long_point_sl 
+    
+    strategy.entry(id = 'Long', direction = strategy.long)
+if(go_short)
+    is_long := false
+    is_short := true
+    trail_long_iteration := 0
+    trail_short_iteration := 0
+    initial_short_entry_price := close
+    short_entry_price := close
+    initial_short_percent_target := close - (close * initial_profit_percent)
+    initial_short_percent_sl := close + (close * initial_sl_percent)
+    initial_short_point_target := close - initial_profit_points
+    initial_short_point_sl := close + initial_sl_points
+    short_target := percent_based ? initial_short_percent_target : initial_short_point_target
+    short_sl := percent_based ? initial_short_percent_sl : initial_short_point_sl 
+    
+    strategy.entry(id = 'Short', direction = strategy.short)
+method = percent_based ? '% Based' : 'Fixed Points'
+long_tooltip = 'Long @ ' + timeToString(time) + '\n' +
+     'Method             : ' + method + '\n' +
+     'Initial Trade Price: ' + t(initial_long_entry_price) + '\n' +
+     'Inital Target      : ' + t(long_target) + '\n' + 
+     'Inital SL          : ' + t(long_sl) 
+short_tooltip = 'Short @ ' + timeToString(time) + '\n' +
+     'Method             : ' + method + '\n' +
+     'Initial Trade Price: ' + t(initial_short_entry_price) + '\n' +
+     'Inital Target      : ' + t(short_target) + '\n' + 
+     'Inital SL          : ' + t(short_sl)
+     
+     
+label.new(go_long ? bar_index : na, go_long ? bar_index : na,
+     style = label.style_diamond, yloc = yloc.belowbar, color = color.green, size=size.tiny, tooltip = long_tooltip)
+     
+label.new(go_short ? bar_index : na, go_short ? bar_index : na,
+     style = label.style_diamond, yloc = yloc.abovebar, color = color.red, size=size.tiny, tooltip = short_tooltip)
+ 
+trail_long_tooltip = 'Trail @ ' + timeToString(time) + '\n' +
+     'Iteration no : ' + t(trail_long_iteration) + '\n' +
+     'New Target   : ' + t(long_target) + '\n' +
+     'New SL       : ' + t(long_sl)
+trail_short_tooltip = 'Trail @ ' + timeToString(time) + '\n' +
+     'Iteration no : ' + t(trail_short_iteration) + '\n' +
+     'New Target   : ' + t(short_target) + '\n' +
+     'New SL       : ' + t(short_sl) 
+label.new(is_long and long_trailing_point and strategy.position_size > 0 ? bar_index : na, is_long and long_trailing_point and strategy.position_size > 0 ? bar_index : na,
+      text = str.tostring(trail_long_iteration), style = label.style_circle, textcolor = color.white, yloc = yloc.belowbar, color = color.green, size=size.tiny, tooltip = trail_long_tooltip)
+     
+label.new(is_short and short_trailing_point and strategy.position_size < 0 ? bar_index : na, is_short and short_trailing_point and strategy.position_size < 0 ? bar_index : na,
+     text = str.tostring(trail_short_iteration), style = label.style_circle, textcolor = color.white,  yloc = yloc.abovebar, color = color.red, size=size.tiny, tooltip = trail_short_tooltip)
+     
+strategy.close(id = 'Long', when = close <= long_sl, comment = 'SL')
+strategy.close(id = 'Short', when = close >= short_sl, comment = 'SL')
+strategy.close(id = 'Long', when = close >= long_target, comment = 'Target')
+strategy.close(id = 'Short', when = close <= short_target, comment = 'Target')
+no_of_labels = 1
+label_q(_array, _val) =>
+    array.push(_array, _val)
+    _return = array.shift(_array)
+var target_label = float(na)
+var sl_label = float(na)
+if(strategy.position_size > 0)
+    target_label := long_target
+    sl_label := long_sl
+else if(strategy.position_size < 0)
+    target_label := short_target
+    sl_label := short_sl
+else
+    target_label := float(na)
+    sl_label := float(na)
+var label[] target_array = array.new_label(no_of_labels)
+label.delete(label_q(target_array, label.new(bar_index, target_label, "Target:"+t(target_label), style = label.style_label_down, color = label_bg_color, size=size.small, textcolor = color.green)))
+var label[] sl_array = array.new_label(no_of_labels)
+label.delete(label_q(sl_array, label.new(bar_index, sl_label, "SL:"+t(sl_label), style = label.style_label_up, color = label_bg_color, size=size.small, textcolor = color.red)))
+Expand (236 lines)

@@ -1,0 +1,100 @@
+Script Name: Advanced Bollinger Bands Strategy
+Author: UnknownUnicorn5507594
+Description: Advanced Bollinger Bands Strategy
+
+ Why is it an advanced Bollinger Bands Strategy?  
+ 
+The purpose of Bollinger Bands is to provide a relative definition of high and low prices of a market. By definition, prices are high at the upper band and low at the lower band. This definition can aid in rigorous pattern recognition and is useful in comparing price action to...
+PineScript code:
+
+Pine Script™ strategy
+Advanced Bollinger Bands Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+//@version=4
+//
+strategy("Advanced Bollinger Bands Strategy", overlay=true) 
+//BB Values 
+wall1= input(defval=true,title="===BB Values===",type=input.bool)
+source = input(defval=close,title="BB Source",type=input.source)
+length = input(20,title="BB Length", minval=1)
+mult = input(2.0,title="BB Multiplier",minval=0.001, maxval=50)
+basis = sma(source, length)
+dev = mult * stdev(source, length)
+upper = basis + dev
+lower = basis - dev 
+offset = input(0, " BB Offset", type = input.integer, minval = -500, maxval = 500)
+plot(basis, "Basis", color=#872323, offset = offset)
+p1 = plot(upper, "Upper", color=color.teal, offset = offset)
+p2 = plot(lower, "Lower", color=color.teal, offset = offset)
+fill(p1, p2, title = "Background", color=#198787, transp=95)
+//Moving Average Values 
+wall2= input(defval=true,title="===MA Values===",type=input.bool)
+nfl= input(defval=14,title="Moving Average Period",type=input.integer,minval=1,maxval=100) 
+source1= input(defval=close,title="Moving Average Source",type=input.source)
+noisefilter= sma(source1,nfl)
+plot(noisefilter,style=plot.style_line,linewidth=2,color=color.yellow,title=" Moving Average Filter")
+bgcolor(noisefilter<lower?color.green:noisefilter>upper?color.red:na,title="Moving Average Filter")
+//Strategy Conditions
+wall3= input(defval=true,title="===Strategy Conditions===",type=input.bool)
+bl= input(defval=false,title="Exit at Basis Line?",type=input.bool)
+nflb= input(defval=false,title="Use Moving Average Filter?",type=input.bool)
+//Strategy Condition
+buyEntry = crossover(source, lower)
+sellEntry = crossunder(source, upper) 
+if (nflb?(crossover(source,lower) and noisefilter<lower): crossover(source, lower))
+    strategy.entry("BBandLE", strategy.long, oca_name="BollingerBands", oca_type=strategy.oca.cancel, comment="BBandLE")
+    
+else
+    strategy.cancel(id="BBandLE")
+if (nflb?(crossunder(source,lower) and noisefilter>upper): crossunder(source, lower))
+    strategy.entry("BBandSE", strategy.short, oca_name="BollingerBands", oca_type=strategy.oca.cancel, comment="BBandSE") 
+else
+    strategy.cancel(id="BBandSE")  
+    
+strategy.close_all(when=bl?crossover(source,basis) or crossunder(source,basis):crossover(source,upper) or crossunder(source,lower))
+Expand (45 lines)

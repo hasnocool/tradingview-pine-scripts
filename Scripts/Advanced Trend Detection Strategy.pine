@@ -1,0 +1,402 @@
+Script Name: Advanced Trend Detection Strategy
+Author: Julien_Eche
+Description: The Advanced Trend Detection Strategy is a sophisticated trading algorithm based on the indicator "Percent Levels From Previous Close".
+This strategy is based on calculating the Pearson's correlation coefficient of logarithmic-scale linear regression channels across a range of lengths from 50 to 1000. It then selects the highest value to determine the length for...
+PineScript code:
+
+Pine Script™ strategy
+Advanced Trend Detection Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+// Based on indicator by Julien_Eche named "Advanced Trend Channel Detection (Log Scale)" 
+//https://www.tradingview.com/script/dGyhoTE5-Advanced-Trend-Channel-Detection-Log-Scale/
+// © Julien_Eche
+//@version=5
+strategy("Advanced Trend Detection Strategy", shorttitle="ATD Strategy", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=10)
+lengthInput1 = input.int(50, title="Length 1", minval = 1, maxval = 5000)
+lengthInput2 = input.int(100, title="Length 2", minval = 1, maxval = 5000)
+lengthInput3 = input.int(150, title="Length 3", minval = 1, maxval = 5000)
+lengthInput4 = input.int(200, title="Length 4", minval = 1, maxval = 5000)
+lengthInput5 = input.int(250, title="Length 5", minval = 1, maxval = 5000)
+lengthInput6 = input.int(300, title="Length 6", minval = 1, maxval = 5000)
+lengthInput7 = input.int(350, title="Length 7", minval = 1, maxval = 5000)
+lengthInput8 = input.int(400, title="Length 8", minval = 1, maxval = 5000)
+lengthInput9 = input.int(450, title="Length 9", minval = 1, maxval = 5000)
+lengthInput10 = input.int(500, title="Length 10", minval = 1, maxval = 5000)
+lengthInput11 = input.int(550, title="Length 11", minval = 1, maxval = 5000)
+lengthInput12 = input.int(600, title="Length 12", minval = 1, maxval = 5000)
+lengthInput13 = input.int(650, title="Length 13", minval = 1, maxval = 5000)
+lengthInput14 = input.int(700, title="Length 14", minval = 1, maxval = 5000)
+lengthInput15 = input.int(750, title="Length 15", minval = 1, maxval = 5000)
+lengthInput16 = input.int(800, title="Length 16", minval = 1, maxval = 5000)
+lengthInput17 = input.int(850, title="Length 17", minval = 1, maxval = 5000)
+lengthInput18 = input.int(900, title="Length 18", minval = 1, maxval = 5000)
+lengthInput19 = input.int(950, title="Length 19", minval = 1, maxval = 5000)
+lengthInput20 = input.int(1000, title="Length 20", minval = 1, maxval = 5000)
+sourceInput = input.source(close, title="Source")
+group1 = "Channel Settings"
+useUpperDevInput = input.bool(true, title="Upper Deviation", inline = "Upper Deviation", group = group1)
+upperMultInput = input.float(2.0, title="", inline = "Upper Deviation", group = group1)
+useLowerDevInput = input.bool(true, title="Lower Deviation", inline = "Lower Deviation", group = group1)
+lowerMultInput = input.float(2.0, title="", inline = "Lower Deviation", group = group1)
+group2 = "Display Settings"
+showPearsonInput = input.bool(true, "Show Pearson's R", group = group2)
+extendLeftInput = input.bool(false, "Extend Lines Left", group = group2)
+extendRightInput = input.bool(true, "Extend Lines Right", group = group2)
+extendStyle = switch
+    extendLeftInput and extendRightInput => extend.both
+    extendLeftInput => extend.left
+    extendRightInput => extend.right
+    => extend.none
+group3 = "Color Settings"
+colorUpper = input.color(color.new(color.blue, 85), "", inline = group3, group = group3)
+colorLower = input.color(color.new(color.red, 85), "", inline = group3, group = group3)
+calcSlope(source, length) =>
+    max_bars_back(source, 5000)
+    if not barstate.islast or length <= 1
+        [float(na), float(na), float(na)]
+    else
+        sumX = 0.0
+        sumY = 0.0
+        sumXSqr = 0.0
+        sumXY = 0.0
+        for i = 0 to length - 1 by 1
+            val = math.log(source[i])
+            per = i + 1.0
+            sumX += per
+            sumY += val
+            sumXSqr += per * per
+            sumXY += val * per
+        slope = (length * sumXY - sumX * sumY) / (length * sumXSqr - sumX * sumX)
+        average = sumY / length
+        intercept = average - slope * sumX / length + slope
+        [slope, average, intercept]
+calcDev(source, length, slope, average, intercept) =>
+    upDev = 0.0
+    dnDev = 0.0
+    stdDevAcc = 0.0
+    dsxx = 0.0
+    dsyy = 0.0
+    dsxy = 0.0
+    periods = length - 1
+    daY = intercept + slope * periods / 2
+    val = intercept
+    for j = 0 to periods by 1
+        price = math.log(high[j]) - val
+        if price > upDev
+            upDev := price
+        price := val - math.log(low[j])
+        if price > dnDev
+            dnDev := price
+        price := math.log(source[j])
+        dxt = price - average
+        dyt = val - daY
+        price -= val
+        stdDevAcc += price * price
+        dsxx += dxt * dxt
+        dsyy += dyt * dyt
+        dsxy += dxt * dyt
+        val += slope
+    stdDev = math.sqrt(stdDevAcc / (periods == 0 ? 1 : periods))
+    pearsonR = dsxx == 0 or dsyy == 0 ? 0 : dsxy / math.sqrt(dsxx * dsyy)
+    [stdDev, pearsonR, upDev, dnDev]
+[s1, a1, i1] = calcSlope(sourceInput, lengthInput1)
+[s2, a2, i2] = calcSlope(sourceInput, lengthInput2)
+[s3, a3, i3] = calcSlope(sourceInput, lengthInput3)
+[s4, a4, i4] = calcSlope(sourceInput, lengthInput4)
+[s5, a5, i5] = calcSlope(sourceInput, lengthInput5)
+[s6, a6, i6] = calcSlope(sourceInput, lengthInput6)
+[s7, a7, i7] = calcSlope(sourceInput, lengthInput7)
+[s8, a8, i8] = calcSlope(sourceInput, lengthInput8)
+[s9, a9, i9] = calcSlope(sourceInput, lengthInput9)
+[s10, a10, i10] = calcSlope(sourceInput, lengthInput10)
+[s11, a11, i11] = calcSlope(sourceInput, lengthInput11)
+[s12, a12, i12] = calcSlope(sourceInput, lengthInput12)
+[s13, a13, i13] = calcSlope(sourceInput, lengthInput13)
+[s14, a14, i14] = calcSlope(sourceInput, lengthInput14)
+[s15, a15, i15] = calcSlope(sourceInput, lengthInput15)
+[s16, a16, i16] = calcSlope(sourceInput, lengthInput16)
+[s17, a17, i17] = calcSlope(sourceInput, lengthInput17)
+[s18, a18, i18] = calcSlope(sourceInput, lengthInput18)
+[s19, a19, i19] = calcSlope(sourceInput, lengthInput19)
+[s20, a20, i20] = calcSlope(sourceInput, lengthInput20)
+[stdDev1, pearsonR1, upDev1, dnDev1] = calcDev(sourceInput, lengthInput1, s1, a1, i1)
+[stdDev2, pearsonR2, upDev2, dnDev2] = calcDev(sourceInput, lengthInput2, s2, a2, i2)
+[stdDev3, pearsonR3, upDev3, dnDev3] = calcDev(sourceInput, lengthInput3, s3, a3, i3)
+[stdDev4, pearsonR4, upDev4, dnDev4] = calcDev(sourceInput, lengthInput4, s4, a4, i4)
+[stdDev5, pearsonR5, upDev5, dnDev5] = calcDev(sourceInput, lengthInput5, s5, a5, i5)
+[stdDev6, pearsonR6, upDev6, dnDev6] = calcDev(sourceInput, lengthInput6, s6, a6, i6)
+[stdDev7, pearsonR7, upDev7, dnDev7] = calcDev(sourceInput, lengthInput7, s7, a7, i7)
+[stdDev8, pearsonR8, upDev8, dnDev8] = calcDev(sourceInput, lengthInput8, s8, a8, i8)
+[stdDev9, pearsonR9, upDev9, dnDev9] = calcDev(sourceInput, lengthInput9, s9, a9, i9)
+[stdDev10, pearsonR10, upDev10, dnDev10] = calcDev(sourceInput, lengthInput10, s10, a10, i10)
+[stdDev11, pearsonR11, upDev11, dnDev11] = calcDev(sourceInput, lengthInput11, s11, a11, i11)
+[stdDev12, pearsonR12, upDev12, dnDev12] = calcDev(sourceInput, lengthInput12, s12, a12, i12)
+[stdDev13, pearsonR13, upDev13, dnDev13] = calcDev(sourceInput, lengthInput13, s13, a13, i13)
+[stdDev14, pearsonR14, upDev14, dnDev14] = calcDev(sourceInput, lengthInput14, s14, a14, i14)
+[stdDev15, pearsonR15, upDev15, dnDev15] = calcDev(sourceInput, lengthInput15, s15, a15, i15)
+[stdDev16, pearsonR16, upDev16, dnDev16] = calcDev(sourceInput, lengthInput16, s16, a16, i16)
+[stdDev17, pearsonR17, upDev17, dnDev17] = calcDev(sourceInput, lengthInput17, s17, a17, i17)
+[stdDev18, pearsonR18, upDev18, dnDev18] = calcDev(sourceInput, lengthInput18, s18, a18, i18)
+[stdDev19, pearsonR19, upDev19, dnDev19] = calcDev(sourceInput, lengthInput19, s19, a19, i19)
+[stdDev20, pearsonR20, upDev20, dnDev20] = calcDev(sourceInput, lengthInput20, s20, a20, i20)
+highestPearsonR = math.max(pearsonR1, pearsonR2, pearsonR3, pearsonR4, pearsonR5, pearsonR6, pearsonR7, pearsonR8, pearsonR9, pearsonR10, pearsonR11, pearsonR12, pearsonR13, pearsonR14, pearsonR15, pearsonR16, pearsonR17, pearsonR18, pearsonR19, pearsonR20)
+selectedLength = highestPearsonR == pearsonR1 ? lengthInput1 : (highestPearsonR == pearsonR2 ? lengthInput2 : (highestPearsonR == pearsonR3 ? lengthInput3 : (highestPearsonR == pearsonR4 ? lengthInput4 : (highestPearsonR == pearsonR5 ? lengthInput5 : (highestPearsonR == pearsonR6 ? lengthInput6 : (highestPearsonR == pearsonR7 ? lengthInput7 : (highestPearsonR == pearsonR8 ? lengthInput8 : (highestPearsonR == pearsonR9 ? lengthInput9 : (highestPearsonR == pearsonR10 ? lengthInput10 : (highestPearsonR == pearsonR11 ? lengthInput11 : (highestPearsonR == pearsonR12 ? lengthInput12 : (highestPearsonR == pearsonR13 ? lengthInput13 : (highestPearsonR == pearsonR14 ? lengthInput14 : (highestPearsonR == pearsonR15 ? lengthInput15 : (highestPearsonR == pearsonR16 ? lengthInput16 : (highestPearsonR == pearsonR17 ? lengthInput17 : (highestPearsonR == pearsonR18 ? lengthInput18 : (highestPearsonR == pearsonR19 ? lengthInput19 : lengthInput20))))))))))))))))))
+selectedS = highestPearsonR == pearsonR1 ? s1 : (highestPearsonR == pearsonR2 ? s2 : (highestPearsonR == pearsonR3 ? s3 : (highestPearsonR == pearsonR4 ? s4 : (highestPearsonR == pearsonR5 ? s5 : (highestPearsonR == pearsonR6 ? s6 : (highestPearsonR == pearsonR7 ? s7 : (highestPearsonR == pearsonR8 ? s8 : (highestPearsonR == pearsonR9 ? s9 : (highestPearsonR == pearsonR10 ? s10 : (highestPearsonR == pearsonR11 ? s11 : (highestPearsonR == pearsonR12 ? s12 : (highestPearsonR == pearsonR13 ? s13 : (highestPearsonR == pearsonR14 ? s14 : (highestPearsonR == pearsonR15 ? s15 : (highestPearsonR == pearsonR16 ? s16 : (highestPearsonR == pearsonR17 ? s17 : (highestPearsonR == pearsonR18 ? s18 : (highestPearsonR == pearsonR19 ? s19 : s20))))))))))))))))))
+selectedI = highestPearsonR == pearsonR1 ? i1 : (highestPearsonR == pearsonR2 ? i2 : (highestPearsonR == pearsonR3 ? i3 : (highestPearsonR == pearsonR4 ? i4 : (highestPearsonR == pearsonR5 ? i5 : (highestPearsonR == pearsonR6 ? i6 : (highestPearsonR == pearsonR7 ? i7 : (highestPearsonR == pearsonR8 ? i8 : (highestPearsonR == pearsonR9 ? i9 : (highestPearsonR == pearsonR10 ? i10 : (highestPearsonR == pearsonR11 ? i11 : (highestPearsonR == pearsonR12 ? i12 : (highestPearsonR == pearsonR13 ? i13 : (highestPearsonR == pearsonR14 ? i14 : (highestPearsonR == pearsonR15 ? i15 : (highestPearsonR == pearsonR16 ? i16 : (highestPearsonR == pearsonR17 ? i17 : (highestPearsonR == pearsonR18 ? i18 : (highestPearsonR == pearsonR19 ? i19 : i20))))))))))))))))))
+selectedStdDev = highestPearsonR == pearsonR1 ? stdDev1 : (highestPearsonR == pearsonR2 ? stdDev2 : (highestPearsonR == pearsonR3 ? stdDev3 : (highestPearsonR == pearsonR4 ? stdDev4 : (highestPearsonR == pearsonR5 ? stdDev5 : (highestPearsonR == pearsonR6 ? stdDev6 : (highestPearsonR == pearsonR7 ? stdDev7 : (highestPearsonR == pearsonR8 ? stdDev8 : (highestPearsonR == pearsonR9 ? stdDev9 : (highestPearsonR == pearsonR10 ? stdDev10 : (highestPearsonR == pearsonR11 ? stdDev11 : (highestPearsonR == pearsonR12 ? stdDev12 : (highestPearsonR == pearsonR13 ? stdDev13 : (highestPearsonR == pearsonR14 ? stdDev14 : (highestPearsonR == pearsonR15 ? stdDev15 : (highestPearsonR == pearsonR16 ? stdDev16 : (highestPearsonR == pearsonR17 ? stdDev17 : (highestPearsonR == pearsonR18 ? stdDev18 : (highestPearsonR == pearsonR19 ? stdDev19 : stdDev20))))))))))))))))))
+selectedUpDev = highestPearsonR == pearsonR1 ? upDev1 : (highestPearsonR == pearsonR2 ? upDev2 : (highestPearsonR == pearsonR3 ? upDev3 : (highestPearsonR == pearsonR4 ? upDev4 : (highestPearsonR == pearsonR5 ? upDev5 : (highestPearsonR == pearsonR6 ? upDev6 : (highestPearsonR == pearsonR7 ? upDev7 : (highestPearsonR == pearsonR8 ? upDev8 : (highestPearsonR == pearsonR9 ? upDev9 : (highestPearsonR == pearsonR10 ? upDev10 : (highestPearsonR == pearsonR11 ? upDev11 : (highestPearsonR == pearsonR12 ? upDev12 : (highestPearsonR == pearsonR13 ? upDev13 : (highestPearsonR == pearsonR14 ? upDev14 : (highestPearsonR == pearsonR15 ? upDev15 : (highestPearsonR == pearsonR16 ? upDev16 : (highestPearsonR == pearsonR17 ? upDev17 : (highestPearsonR == pearsonR18 ? upDev18 : (highestPearsonR == pearsonR19 ? upDev19 : upDev20))))))))))))))))))
+selectedDnDev = highestPearsonR == pearsonR1 ? dnDev1 : (highestPearsonR == pearsonR2 ? dnDev2 : (highestPearsonR == pearsonR3 ? dnDev3 : (highestPearsonR == pearsonR4 ? dnDev4 : (highestPearsonR == pearsonR5 ? dnDev5 : (highestPearsonR == pearsonR6 ? dnDev6 : (highestPearsonR == pearsonR7 ? dnDev7 : (highestPearsonR == pearsonR8 ? dnDev8 : (highestPearsonR == pearsonR9 ? dnDev9 : (highestPearsonR == pearsonR10 ? dnDev10 : (highestPearsonR == pearsonR11 ? dnDev11 : (highestPearsonR == pearsonR12 ? dnDev12 : (highestPearsonR == pearsonR13 ? dnDev13 : (highestPearsonR == pearsonR14 ? dnDev14 : (highestPearsonR == pearsonR15 ? dnDev15 : (highestPearsonR == pearsonR16 ? dnDev16 : (highestPearsonR == pearsonR17 ? dnDev17 : (highestPearsonR == pearsonR18 ? dnDev18 : (highestPearsonR == pearsonR19 ? dnDev19 : dnDev20))))))))))))))))))
+smaLength = selectedLength
+smaColor = input.color(color.blue, "SMA Color")
+smaWidth = input.int(1, "SMA Width", minval=1)
+smaStyle = plot.style_line
+smaValue = ta.sma(sourceInput, smaLength)
+//plot(smaValue, color=smaColor, linewidth=smaWidth, style=smaStyle)
+startPrice = math.exp(selectedI + selectedS * (selectedLength - 1))
+endPrice = math.exp(selectedI)
+var line baseLine = na
+if na(baseLine) and not na(startPrice)
+    baseLine := line.new(bar_index - selectedLength + 1, startPrice, bar_index, endPrice, width=1, extend=extendStyle, color=color.new(colorLower, 0))
+else
+    line.set_xy1(baseLine, bar_index - selectedLength + 1, startPrice)
+    line.set_xy2(baseLine, bar_index, endPrice)
+    na
+upperStartPrice = startPrice * math.exp(useUpperDevInput ? upperMultInput * selectedStdDev : selectedUpDev)
+upperEndPrice = endPrice * math.exp(useUpperDevInput ? upperMultInput * selectedStdDev : selectedUpDev)
+var line upper = na
+lowerStartPrice = startPrice / math.exp(useLowerDevInput ? lowerMultInput * selectedStdDev : selectedDnDev)
+lowerEndPrice = endPrice / math.exp(useLowerDevInput ? lowerMultInput * selectedStdDev : selectedDnDev)
+var line lower = na
+if na(upper) and not na(upperStartPrice)
+    upper := line.new(bar_index - selectedLength + 1, upperStartPrice, bar_index, upperEndPrice, width=1, extend=extendStyle, color=color.new(colorUpper, 0))
+else
+    line.set_xy1(upper, bar_index - selectedLength + 1, upperStartPrice)
+    line.set_xy2(upper, bar_index, upperEndPrice)
+    na
+if na(lower) and not na(lowerStartPrice)
+    lower := line.new(bar_index - selectedLength + 1, lowerStartPrice, bar_index, lowerEndPrice, width=1, extend=extendStyle, color=color.new(colorUpper, 0))
+else
+    line.set_xy1(lower, bar_index - selectedLength + 1, lowerStartPrice)
+    line.set_xy2(lower, bar_index, lowerEndPrice)
+    na
+linefill.new(upper, baseLine, color = colorUpper)
+linefill.new(baseLine, lower, color = colorLower)
+// Pearson's R
+var label r = na
+label.delete(r[1])
+if showPearsonInput and not na(highestPearsonR)
+    r := label.new(bar_index - selectedLength + 1, lowerStartPrice, str.tostring(highestPearsonR, "#.###"), color = color.new(color.white, 100), textcolor=color.new(colorUpper, 0), size=size.normal, style=label.style_label_up)
+selectedMA = ta.sma(close, selectedLength/3)
+plot(selectedMA, color=smaColor, linewidth=smaWidth, style=smaStyle)
+if (ta.crossover(close, selectedMA))
+    strategy.entry("Buy", strategy.long)
+if (ta.crossunder(close, selectedMA))
+    strategy.close("Buy")
+Expand (207 lines)

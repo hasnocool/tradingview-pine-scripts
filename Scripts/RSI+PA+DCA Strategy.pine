@@ -1,0 +1,315 @@
+Script Name: RSI+PA+DCA Strategy
+Author: A3Sh
+Description: Dear Tradingview community,
+
+This RSI based trading strategy is created as a training exercise. I am not a professional trader, but a committed hobbyist.  This not a finished trading strategy meant for trading,  but more a combination of different trading ideas I liked to explore deeper. The aim with this exercise was to gain more knowledge and understanding about...
+PineScript code:
+
+Pine Script™ strategy
+RSI+PA+DCA Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//@version=4
+// © A3Sh
+// RSI Strategy that buys the dips, works with Price Averaging and has a Dollar Cost Average option.
+// When the price drops below specified percentages of the price (6 PA layers), new entries are openend to average the price of the assets.
+// Open entries are closed by a specified take profit.
+// Entries can be reopened, after closing and consequently crossing a PA layer again.
+// The idea is to lower the average position price to a point that when the market rises, the current price crosses over the average position price.
+// When the current price crosses the average position size and reaches the specified take profit, all entries are closed at once.
+// In case the market drops significantly, there is an option to activate DCA to lower the average price further.
+// RSI code adapted from the Optimized RSI Buy the Dips strategy, by Coinrule
+// https://www.tradingview.com/script/Pm1WAtyI-Optimized-RSI-Strategy-Buy-The-Dips-by-Coinrule/
+// Pyramiding entries code adapted from Pyramiding Entries on Early Trends startegy, by Coinrule
+// https://www.tradingview.com/script/7NNJ0sXB-Pyramiding-Entries-On-Early-Trends-by-Coinrule/
+// Plot entry layers code adapted from HOWTO Plot Entry Price by vitvlkv
+// https://www.tradingview.com/script/bHTnipgY-HOWTO-Plot-Entry-Price/
+// Buy every week code based on the following question in Stack Overflow
+// https://stackoverflow.com/questions/59870411/in-pine-script-how-can-you-do-something-once-per-day-or-keep-track-if-somethin
+strategy(title = "RSI+PA+DCA", pyramiding = 16, overlay = true, initial_capital = 400, default_qty_type = strategy.percent_of_equity, default_qty_value = 15, commission_type = strategy.commission.percent, commission_value = 0.075, close_entries_rule = "FIFO")
+port = input(15, title = "Portfolio %", type = input.float, step = 0.1, minval = 0.1, maxval = 100)
+q = (strategy.equity / 100 * port) / open
+// Long position entry layers. Percentage from the entry price of the the first long
+PositionInputs = input("++++", title = "+++++ Long Positions VA Layers +++++")
+ps2 = input(2,  title = "2nd Long Entry %", step = 0.1)
+ps3 = input(3,  title = "3rd Long Entry %", step = 0.1)
+ps4 = input(5,  title = "4th Long Entry %", step = 0.1)
+ps5 = input(10, title = "5th Long Entry %", step = 0.1)
+ps6 = input(16, title = "6th Long Entry %", step = 0.1)
+// Calculate Moving Averages
+maInput = input("++++", title = "+++++ Moving Average Filter +++++")
+plotMA = input(title = "Plot Moving Average", defval = false)
+movingaverage_signal = sma(close, input(100))
+plot (plotMA ? movingaverage_signal : na, color = color.green)
+// RSI inputs and calculations
+rsiInput = input( "++++", title = "+++++ RSI Inputs +++++" )
+length =     input( 14 )
+overSold =   input( 30, title = "oversold, entry trigger long position" )
+overBought = input( 70, title = "overbought, has no specific function")
+price = close
+vrsi = rsi(price, length)
+// Long trigger (co)
+co = crossover(vrsi, overSold) and close < movingaverage_signal
+// Take profit
+takeprofit = input("++++", title = "+++++ Take Profit +++++")
+ProfitTarget_Percent     = input(5, title = "Take Profit % (Per Position)")
+ProfitTarget_Percent_All = input(7, title = "Take Profit % (Exit All, above % of price average, white line)")
+// Store values to create and plot the different PA layers
+long1 = valuewhen(co, close, 0)
+long2 = valuewhen(co, close - (close / 100 * ps2), 0)
+long3 = valuewhen(co, close - (close / 100 * ps3), 0)
+long4 = valuewhen(co, close - (close / 100 * ps4), 0)
+long5 = valuewhen(co, close - (close / 100 * ps5), 0)
+long6 = valuewhen(co, close - (close / 100 * ps6), 0)
+eps1 = 0.00
+eps1 := na(eps1[1]) ? na : eps1[1]
+eps2 = 0.00
+eps2 := na(eps2[1]) ? na : eps2[1]
+eps3 = 0.00
+eps3 := na(eps3[1]) ? na : eps3[1]
+eps4 = 0.00
+eps4 := na(eps4[1]) ? na : eps4[1]
+eps5 = 0.00
+eps5 := na(eps5[1]) ? na : eps5[1]
+eps6 = 0.00
+eps6 := na(eps6[1]) ? na : eps6[1]
+plot (strategy.position_size > 0 ? eps1 : na, title = "Long entry 1", style = plot.style_linebr)
+plot (strategy.position_size > 0 ? eps2 : na, title = "Long entry 2", style = plot.style_linebr)
+plot (strategy.position_size > 0 ? eps3 : na, title = "Long entry 3", style = plot.style_linebr)
+plot (strategy.position_size > 0 ? eps4 : na, title = "Long entry 4", style = plot.style_linebr)
+plot (strategy.position_size > 0 ? eps5 : na, title = "Long entry 5", style = plot.style_linebr)
+plot (strategy.position_size > 0 ? eps6 : na, title = "Long entry 6", style = plot.style_linebr)
+// Plot position average price
+plot (strategy.position_avg_price, title = "Average price", style = plot.style_linebr, color = color.white, linewidth = 2)
+// Take profit and exit all on take profit above position average price + plot a red take profit line
+tpv = strategy.position_avg_price + (strategy.position_avg_price / 100 * ProfitTarget_Percent_All)
+plot (tpv, title = "Take Profit All", style = plot.style_linebr, color = color.red, linewidth = 1)
+tpl1 = close < tpv ? eps1 + close * (ProfitTarget_Percent / 100) : tpv
+tpl2 = close < tpv ? eps2 + close * (ProfitTarget_Percent / 100) : tpv
+tpl3 = close < tpv ? eps3 + close * (ProfitTarget_Percent / 100) : tpv
+tpl4 = close < tpv ? eps4 + close * (ProfitTarget_Percent / 100) : tpv
+tpl5 = close < tpv ? eps5 + close * (ProfitTarget_Percent / 100) : tpv
+tpl6 = close < tpv ? eps6 + close * (ProfitTarget_Percent / 100) : tpv
+// Open DCA order once at the start of the week
+dcaWeek = input("++++", title = "+++++ Open DCA order once every week +++++")
+newWeek = change(time("W"))
+dcatime = input(title = "Buy a fixed amount every Monday", defval = false)
+fixedAmount = input(40, title = "Fixed amount currency for DCA orders", step = 0.1)
+dcaq = fixedAmount / open
+plotchar (dcatime ? newWeek : na, "buy at Week start", "▼", location.top, size = size.tiny, color = color.white)
+bgcolor (dcatime and newWeek ? color.white : na, transp = 50)
+// Submit Entry Orders
+if (co and strategy.opentrades == 0)
+    eps1 := long1
+    eps2 := long2
+    eps3 := long3
+    eps4 := long4
+    eps5 := long5
+    eps6 := long6
+    strategy.entry("Long1", strategy.long, q)
+if (strategy.opentrades == 1)
+    strategy.entry("Long2", strategy.long, q, limit = eps2)
+if (strategy.opentrades == 2)
+    strategy.entry("Long3", strategy.long, q, limit = eps3)
+if (strategy.opentrades == 3)
+    strategy.entry("Long4", strategy.long, q, limit = eps4)
+if (strategy.opentrades == 4)
+    strategy.entry("Long5", strategy.long, q, limit = eps5)
+if (strategy.opentrades == 5) 
+    strategy.entry("Long6", strategy.long, q, limit = eps6)
+    
+// Submit Weekly DCA order, only when price is below position average price and when a position is open
+if (dcatime and newWeek and strategy.position_size > 0 and close < strategy.position_avg_price) 
+    strategy.entry("DCA", strategy.long, dcaq)
+// Submit Exit orders
+if (strategy.position_size > 0)
+    strategy.exit(id = "Exit 1", from_entry = "Long1", limit = tpl1)
+    strategy.exit(id = "Exit 2", from_entry = "Long2", limit = tpl2)
+    strategy.exit(id = "Exit 3", from_entry = "Long3", limit = tpl3)
+    strategy.exit(id = "Exit 4", from_entry = "Long4", limit = tpl4)
+    strategy.exit(id = "Exit 5", from_entry = "Long5", limit = tpl5)
+    strategy.exit(id = "Exit 6", from_entry = "Long6", limit = tpl6)
+    strategy.exit(id = "Exit DCA", from_entry = "DCA", limit = tpv)
+ 
+// Make sure that all open limit orders are canceled after exiting all the positions 
+longClose = strategy.position_size[1] > 0 and strategy.position_size == 0 ? 1 : 0   
+if longClose
+    strategy.cancel_all()
+Expand (177 lines)

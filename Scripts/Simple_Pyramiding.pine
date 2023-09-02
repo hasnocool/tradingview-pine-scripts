@@ -1,0 +1,129 @@
+Script Name: Simple_Pyramiding
+Author: A3Sh
+Description: A simple Pyramiding / DCA Strategy. Everyday at a specified time a position is opened. The individual position is closed when a take profit is triggered. Optionally a stop loss can be activated, or the option to close the position at the and of the time frame. You can specify the max amount of open positions. The equity will be divided through the max amount of...
+PineScript code:
+
+Pine Script™ strategy
+Simple_Pyramiding
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © A3Sh
+//@version=5
+strategy("Simple_Pyramiding", overlay=true, pyramiding=99, initial_capital=500, default_qty_type=strategy.percent_of_equity, commission_type=strategy.commission.percent, commission_value=0.075, close_entries_rule='FIFO')
+// Study of a Simple DCA strategy that opens a position every day at a specified time.
+// A position is opened at the start time of the Timeframe.
+// Positions exit individually when the take profit level is triggered.
+// Option to activate Stop Loss and/or Position exit at the end of the Timeframe
+// Backtest Window
+start_time   = input.time(defval=timestamp("01 April 2021 20:00"), group = "Backtest Window", title="Start Time")
+end_time     = input.time(defval=timestamp("01 Aug 2022 20:00"),  group = "Backtest Window", title="End Time")
+window() => time >= start_time and time <= end_time
+// Inputs
+posCount     = input.int    (6,           group = "Risk",         title = "Max Amount of DCA Entries")
+takeProfit   = input.float  (2.5,         group = "Risk",         title = "Take Profit %")
+slSwitch     = input.bool   (true,        group = "Risk",         title = "Activate Stop Loss")
+stopLoss     = input.float  (9,           group = "Risk",         title = "Stop Loss %")
+sessionTime =  input.session("1800-1700", group = "DCA Settings", title = "DCA Order Timeframe", tooltip="Open order at the start/If ativated, close order at the end")
+exitDCA     =  input.bool   (false,       group = "DCA Settings", title = "Exit DCA Entry at end of Timeframe")
+// Order size based on max amount of pyramid orders
+q = (strategy.equity  / posCount) / open
+// Timeframe for opening and closing a DCA order
+// example taken from https://stackoverflow.com/questions/69230164/pinescript-basic-question-open-a-trade-at-a-set-time-each-day
+t       = time("D", sessionTime)
+isStart = na(t[1]) and not na(t) or t[1] < t
+isEnd   = na(t) and not na(t[1]) or t[1] < t
+bgcolor(t ? color.new(color.blue,95) : na, title = " TimeFrame Color")
+// Create DCA Entries
+entry_price = 0.0
+if isStart and window() 
+    for i = 0 to strategy.opentrades
+        if strategy.opentrades == i
+            entry_price := close
+            entry_id = "PE_" + str.tostring(i + 1) 
+            strategy.entry(id = entry_id, direction=strategy.long, limit=entry_price, qty=q)
+        if strategy.opentrades == posCount
+            break
+            
+ 
+//Exit DCA Entries when take profit or stop loss is triggered
+if strategy.opentrades > 0 and window() 
+    for i = 0 to strategy.opentrades 
+        exit_from = "PE_" + str.tostring(i + 1)
+        exit_id = "Exit_" + str.tostring(i + 1)
+        strategy.exit(id= exit_id, from_entry= exit_from, profit = close * takeProfit / 100 / syminfo.mintick, loss = slSwitch ? close * stopLoss /100 / syminfo.mintick :na)
+        
+//Exit DCA Entries at end of DCA Timeframe
+if strategy.opentrades > 0 and exitDCA and isEnd and window() 
+    for i = 0 to strategy.opentrades 
+        exit_from = "PE_" + str.tostring(i + 1)
+        exit_id = "Exit_" + str.tostring(i + 1)
+        strategy.exit(id= exit_id, from_entry= exit_from, stop = close)
+Expand (68 lines)

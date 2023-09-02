@@ -1,0 +1,281 @@
+Script Name: Equity Curve Trading with EMA
+Author: Smollet
+Description: What Is Equity Curve Trading? 
+
+In equity curve trading, traders apply a moving average to the curve. The idea is when the equity curve drops below the moving average, the strategy is put on hold. This is done to stop losses when either the hopes of the plan working start dimming or when the trader knows he cannot afford more losses on a strategy. The trader can...
+PineScript code:
+
+Pine Script™ strategy
+Equity Curve Trading with EMA
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+//@version=5
+strategy('Equity Curve Trade with EMA', overlay=false, format=format.price, precision=2, initial_capital=100000)
+eqlen = input.int(25, "EQ EMA len", group = "New Equity Curve Settings")
+shEQandMA = input.bool(true, "Show Original Equity Curve and MA")
+shEQfilt = input.bool(true, "Show Filtered Equity Curve by MA")
+Periods = input(title='ATR Period', defval=10, group = "SuperTrend Settings")
+src = input(hl2, title='Source', group = "SuperTrend Settings")
+Multiplier = input.float(title='ATR Multiplier', step=0.1, defval=3.0, group = "SuperTrend Settings")
+changeATR = input(title='Change ATR Calculation Method ?', defval=true, group = "SuperTrend Settings")
+//SuperTrend Code
+atr2 = ta.sma(ta.tr, Periods)
+atr = changeATR ? ta.atr(Periods) : atr2
+up = src - Multiplier * atr
+up1 = nz(up[1], up)
+up := close[1] > up1 ? math.max(up, up1) : up
+dn = src + Multiplier * atr
+dn1 = nz(dn[1], dn)
+dn := close[1] < dn1 ? math.min(dn, dn1) : dn
+trend = 1
+trend := nz(trend[1], trend)
+trend := trend == -1 and close > dn1 ? 1 : trend == 1 and close < up1 ? -1 : trend
+// Strategy main code
+buySignal = trend == 1 and trend[1] == -1
+sellSignal = trend == -1 and trend[1] == 1
+if buySignal
+    strategy.entry('Long', strategy.long)
+if sellSignal
+    strategy.entry('Short', strategy.short)
+//Equity Curve calcs
+eq = strategy.netprofit
+ch = ta.change(eq)
+neq = ch != 0 ? eq : na
+mova = ta.ema(neq,eqlen)
+// New Equity Curve
+var float neweq = 0
+var int ttrades = 0
+var int wintrades = 0
+var int losetrades = 0
+switch
+    strategy.netprofit == strategy.netprofit[1]  => na
+    strategy.netprofit < mova and strategy.netprofit[1] > mova  => neweq := neweq + ch
+    strategy.netprofit < mova and strategy.netprofit[1] < mova => na
+    strategy.netprofit > mova and strategy.netprofit[1] > mova => neweq := neweq + ch
+newch = ta.change(neweq)
+switch
+    newch == 0 => na
+    newch > 0 => 
+        wintrades := wintrades +1
+        ttrades := ttrades +1
+    newch < 0 =>
+        losetrades := losetrades +1
+        ttrades := ttrades +1
+//plot(eq, linewidth = 2)
+//plot(mova, color=color.red)
+//plot(neweq, color= color.green, linewidth = 3)
+//Table 
+var testTable = table.new(position = position.top_right, columns = 5, rows = 10, bgcolor = color.green, border_width = 1)
+table.cell(table_id = testTable, column = 0, row = 0, text = "Strategy: ", bgcolor=color.white)     
+table.cell(table_id = testTable, column = 1, row = 0, text = "Original: ", bgcolor=color.white)     
+table.cell(table_id = testTable, column = 2, row = 0, text = "Equity Curve EMA: ", bgcolor=color.white)     
+table.cell(table_id = testTable, column = 0, row = 1, text = "Total Trades: ", bgcolor=color.white)     
+table.cell(table_id = testTable, column = 0, row = 2, text = "Win Trades: ", bgcolor=color.white)     
+table.cell(table_id = testTable, column = 0, row = 3, text = "Lose Trades: ", bgcolor=color.white)     
+table.cell(table_id = testTable, column = 0, row = 4, text = "Win Rate: ", bgcolor=color.white)     
+table.cell(table_id = testTable, column = 0, row = 5, text = "Net Profit: ", bgcolor=color.white)     
+//Equity Curve EMA stat
+table.cell(table_id = testTable, column = 2, row = 1, text = str.tostring(ttrades), bgcolor=color.white)     
+table.cell(table_id = testTable, column = 2, row = 2, text = str.tostring(wintrades), bgcolor=color.white)
+table.cell(table_id = testTable, column = 2, row = 3, text = str.tostring(losetrades), bgcolor=color.white)
+table.cell(table_id = testTable, column = 2, row = 4, text = str.tostring(math.round(100*wintrades/ttrades,2)), bgcolor=color.white)
+table.cell(table_id = testTable, column = 2, row = 5, text = str.tostring(math.round(neweq)), bgcolor=color.white)
+//Original Strategy stat
+table.cell(table_id = testTable, column = 1, row = 1, text = str.tostring(strategy.closedtrades), bgcolor=color.white)     
+table.cell(table_id = testTable, column = 1, row = 2, text = str.tostring(strategy.wintrades), bgcolor=color.white)
+table.cell(table_id = testTable, column = 1, row = 3, text = str.tostring(strategy.losstrades), bgcolor=color.white)
+table.cell(table_id = testTable, column = 1, row = 4, text = str.tostring(math.round(100*strategy.wintrades/strategy.closedtrades,2)), bgcolor=color.white)
+table.cell(table_id = testTable, column = 1, row = 5, text = str.tostring(math.round(strategy.netprofit)), bgcolor=color.white)
+//New Equity curve
+var newcurve = array.new_float(0)
+var int ida = 0
+var bool printEQ = false
+if newch !=0 
+    array.push(newcurve, neweq)
+if bar_index > last_bar_index - array.size(newcurve) - 1 - 20  and array.size(newcurve) > 20 
+    printEQ := true
+else
+    printEQ := false
+plot(printEQ and ida < strategy.closedtrades and shEQfilt ? array.get(newcurve, ida) : na, color=color.green, linewidth = 2)
+if printEQ
+    ida := ida + 1
+if ida >= array.size(newcurve) and printEQ
+    ida := array.size(newcurve) -1
+//Original Equity curve
+var newcurve2 = array.new_float(0)
+var int ida2 = 0
+var bool printEQ2 = false
+if ch !=0 
+    array.push(newcurve2, eq)
+if bar_index > last_bar_index - array.size(newcurve2) - 1 - 20  and array.size(newcurve2) > 20 
+    printEQ2 := true
+else
+    printEQ2 := false
+plot(printEQ2 and ida2 < strategy.closedtrades and shEQandMA  ? array.get(newcurve2, ida2) : na, color=color.blue, linewidth = 2)
+if printEQ2
+    ida2 := ida2 + 1
+if ida2 >= array.size(newcurve2) and printEQ2
+    ida2 := array.size(newcurve2) -1
+//Moving Average Array
+var marray = array.new_float(0)
+if ch
+    array.push(marray, mova)
+plot(printEQ2 and  array.size(marray) > 40 and shEQandMA ? array.get(marray, ida2-1) : na, color=color.red, linewidth = 1)
+hline(0,"0 line", color=color.black, linestyle = hline.style_dotted)
+if (last_bar_index-1) and array.size(newcurve2) > 20 and array.size(newcurve) > 20
+    l = label.new(bar_index+2, array.get(newcurve2, array.size(newcurve2)-1), "Original Equity Curve", color=color.rgb(33, 149, 243, 85), textcolor = color.black, style = label.style_label_left)
+    label.delete(l[1])
+    f = label.new(bar_index+2, array.get(newcurve, array.size(newcurve)-1), "Filtered Equity Curve", color=color.rgb(69, 238, 97, 85), textcolor = color.black, style = label.style_label_left)
+    label.delete(f[1])
+Expand (152 lines)

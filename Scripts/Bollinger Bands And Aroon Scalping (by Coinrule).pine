@@ -1,0 +1,101 @@
+Script Name: Bollinger Bands And Aroon Scalping (by Coinrule)
+Author: Coinrule
+Description: Many technical indicators can be profitable in certain market conditions while failing in others.  No indicator is perfect alone. 
+
+All the best trading strategies involve multiple indicators and leverage the benefit of each of them. The following is an optimised strategy based on Bollinger Bands and the Aroon indicator.
+
+The Bollinger Bands are among the most...
+PineScript code:
+
+Pine Script™ strategy
+Bollinger Bands And Aroon Scalping (by Coinrule)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © relevantLeader16058
+//@version=4
+strategy(shorttitle='Bollinger bands And Aroon Scalping',title='Bollinger bands And Aroon Scalping (by Coinrule)', overlay=true, initial_capital = 1000, process_orders_on_close=true, default_qty_type = strategy.percent_of_equity, default_qty_value = 30, commission_type=strategy.commission.percent, commission_value=0.1)
+//Backtest dates
+fromMonth = input(defval = 1,    title = "From Month",      type = input.integer, minval = 1, maxval = 12)
+fromDay   = input(defval = 1,    title = "From Day",        type = input.integer, minval = 1, maxval = 31)
+fromYear  = input(defval = 2020, title = "From Year",       type = input.integer, minval = 1970)
+thruMonth = input(defval = 1,    title = "Thru Month",      type = input.integer, minval = 1, maxval = 12)
+thruDay   = input(defval = 1,    title = "Thru Day",        type = input.integer, minval = 1, maxval = 31)
+thruYear  = input(defval = 2112, title = "Thru Year",       type = input.integer, minval = 1970)
+showDate  = input(defval = true, title = "Show Date Range", type = input.bool)
+start     = timestamp(fromYear, fromMonth, fromDay, 00, 00)        // backtest start window
+finish    = timestamp(thruYear, thruMonth, thruDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+// BB inputs and calculations
+lengthBB = input(20, minval=1)
+src = input(close, title="Source")
+mult = input(2.0, minval=0.001, maxval=50, title="StdDev")
+basis = sma(src, lengthBB)
+dev = mult * stdev(src, lengthBB)
+upper = basis + dev
+lower = basis - dev
+offset = input(0, "Offset", type = input.integer, minval = -500, maxval = 500)
+lengthAr = input(288, minval=1)
+AroonUP = 100 * (highestbars(high, lengthAr+1) + lengthAr)/lengthAr
+AroonDown = 100 * (lowestbars(low, lengthAr+1) + lengthAr)/lengthAr
+Confirmation = input(90, "Aroon Confirmation")
+Stop = input(70, "Aroon Stop")
+Bullish = crossunder (close, basis)
+Bearish = crossunder (close, upper)
+//Entry 
+strategy.entry(id="long", long = true, when = Bullish and AroonUP > Confirmation and window())
+//Exit
+strategy.close("long", when = Bearish or AroonUP < Stop and window())
+Expand (53 lines)

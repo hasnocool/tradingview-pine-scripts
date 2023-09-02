@@ -1,0 +1,150 @@
+Script Name: Long Term Heat-Volatility - Accumulation-Distribution v1
+Author: spacekadet17
+Description: This is a strategy specifically made for 1D BTC/USD with the aim of capturing cycle tops and bottoms. It's mainly based on two indicators: 21d average of ATR (volatility) and (BTC.price - 180d sma)/BTC.price (heat). The strategy only signals buys or sells after occurrences of high volatility, followed by extremely high or low heat values. It's optimized for...
+PineScript code:
+
+Pine Script™ strategy
+Long Term Heat/Volatility - Accumulation/Distribution v1
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+//@version=5
+strategy("heat/volatility strategy", overlay=true, initial_capital = 1000, pyramiding = 10, default_qty_type = strategy.cash, default_qty_value = 50, max_bars_back = 1000)
+// normalize edilmiş yüksek/düşük (yüzde atr)
+pcAtr = ( ( low[1]>high ? low[1]: high ) / ( low>high[1] ? high[1] : low ) - 1 ) * 100
+// yüzde atr'nin ortalaması
+x_long = 21
+x_short = 7
+avgPcAtrLong = math.sum(pcAtr,x_long)/x_long 
+avgPcAtrShort = math.sum(pcAtr,x_short)/x_short
+// en yüksek atr'lerin oranı
+pcAtrHi = ta.highest( (low[1]>high ? low[1]: high), x_long )
+pcAtrLo = ta.lowest( (low>high[1] ? high[1] : low ), x_long )
+pcAtrhilo = (pcAtrHi / pcAtrLo - 1 ) *100
+kenanIndex = pcAtrhilo / avgPcAtrLong
+pcAtrMax = ta.highest( avgPcAtrLong, x_long )
+pcAtrMin = ta.lowest( avgPcAtrLong, x_long )
+stoAtr = (avgPcAtrLong - pcAtrMin) / (pcAtrMax - pcAtrMin)
+highPrice = ta.highest(high[3], 21)
+lowPrice = ta.lowest(low[3], 21)
+midPrice = (highPrice + lowPrice) / 2
+shortMa = ta.wma(high,30)
+longMa = ta.wma(close,360) 
+slowDiff = shortMa - longMa
+fastDiff = ta.ema(slowDiff,14)
+heat = (close - ta.sma(close,180)) / close
+highClose = ta.highest(close[1],14)
+highOpen = ta.highest(open[1],14)
+lowClose = ta.lowest(close[1],14)
+lowOpen = ta.lowest(open[1],14)
+cond1a = strategy.position_size <= 0
+cond1b = strategy.position_size > 0
+cond2 = ta.highest(avgPcAtrLong, 60) >= 9.5
+cond3 = ta.highest(avgPcAtrLong, 90) >= 12
+cond12 = ta.highest(kenanIndex, 30) >=13.5
+cond13 = ta.highest(kenanIndex, 30) >=13.5
+cond4 = high >= ta.highest(high[1],7)
+cond4b = high >= (highClose/2 + highOpen/2)*1.04 //cond4b olduğu sürece cond4  çok yüksek ihtinalle her zaman true oluyor 
+cond5 = low <= ta.lowest(low[1],7)
+cond5b = low <= (lowClose/2 + lowOpen/2)*0.98
+timeP = time >= timestamp(syminfo.timezone,2012,12,1,0,0)
+if (timeP and cond2 and (cond5b or heat <= -0.7) and (cond5 or heat <= -0.6 ) and heat <= -0.4) 
+    strategy.order("buy", strategy.long, (strategy.equity-strategy.position_size*close)/7/close)
+    
+if (timeP and cond1b and cond3 and (cond4b or heat >=0.7) and (cond4 or heat >= 0.6) and heat >=0.4 and ta.rsi(close,14)>=60)
+    strategy.order("sell",strategy.short, strategy.position_size/4)
+//plot(pcAtr, title = "%ATR", color=color.blue)
+//plot(avgPcAtrLong, title = "avg%ATR", color=color.purple)
+//plot(avgPcAtrShort, title = "avg%ATR", color=color.green)
+//plot(pcAtrMaxMin, title = "MaxMin", color=color.orange)
+//plot(kenanIndex, title = "KenanIndex", color=color.white)
+//plot(stoAtr, title = "Stochastic Atr", color=color.purple)
+//plot(heat, title = "heat", color=color.purple)
+//plot(shortMa, title = "___", color=color.red)
+//plot(longMa, title = "___", color=color.green)
+//plot(slowDiff, title = "___", linewidth = 2, color=color.orange)
+//plot(fastDiff, title = "___", linewidth = 2, color=color.purple)
+//plot(slowDiff-fastDiff, title = "___", linewidth = 2, color=color.red)
+Expand (84 lines)

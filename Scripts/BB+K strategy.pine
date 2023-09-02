@@ -1,0 +1,276 @@
+Script Name: BB+K strategy
+Author: wsk719
+Description: Applying Bollinger Bands and K-bar strategies
+Suitable for long time periods
+Suitable for forex trading, when the forex deviation is too large, the Fed will intervene and thus correct
+
+Strategy: Enter when the price hits the upper or lower BB track and there is a reversal of the strong signal, and exit when it hits the other track and there is a reversal signal.
+PineScript code:
+
+Pine Script™ strategy
+BB+K strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+//@version=4
+strategy("BB策略", overlay=true,pyramiding = 100)
+length = input(20, minval=1)
+src = input(close, title="Source")
+mult = input(2.0, minval=0.001, maxval=50, title="StdDev")
+basis = sma(src, length)
+dev = mult * stdev(src, length)
+upper = basis + dev
+lower = basis - dev
+offset = input(0, "Offset", type = input.integer, minval = -500, maxval = 500)
+plot(basis, "Basis", color=#872323, offset = offset)
+p1 = plot(upper, "Upper", color=color.teal, offset = offset)
+p2 = plot(lower, "Lower", color=color.teal, offset = offset)
+fill(p1, p2, title = "Background", color=#198787, transp=95)
+diff=upper-lower
+//plot(upper*0.9985, "Upper", color=color.white, offset = offset)
+//plot(lower*1.0015, "Lower", color=color.white, offset = offset)
+//Engulfing Candles
+openBarPrevious = open[1]
+closeBarPrevious = close[1]
+openBarCurrent = open
+closeBarCurrent = close
+//If current bar open is less than equal to the previous bar close AND current bar open is less than previous bar open AND current bar close is greater than previous bar open THEN True
+bullishEngulfing = openBarCurrent <= closeBarPrevious and openBarCurrent < openBarPrevious and 
+   closeBarCurrent > openBarPrevious
+//If current bar open is greater than equal to previous bar close AND current bar open is greater than previous bar open AND current bar close is less than previous bar open THEN True
+bearishEngulfing = openBarCurrent >= closeBarPrevious and openBarCurrent > openBarPrevious and 
+   closeBarCurrent < openBarPrevious
+//bullishEngulfing/bearishEngulfing return a value of 1 or 0; if 1 then plot on chart, if 0 then don't plot
+//plotshape(bullishEngulfing, style=shape.triangleup, location=location.belowbar, color=color.green, size=size.tiny)
+//plotshape(bearishEngulfing, style=shape.triangledown, location=location.abovebar, color=color.red, size=size.tiny)
+//alertcondition(bullishEngulfing, title="Bullish Engulfing", message="[CurrencyPair] [TimeFrame], Bullish candle engulfing previous candle")
+//alertcondition(bearishEngulfing, title="Bearish Engulfing", message="[CurrencyPair] [TimeFrame], Bearish candle engulfing previous candle")
+//Long Upper Shadow - Bearish
+C_Len = 14 // ema depth for bodyAvg
+C_ShadowPercent = 5.0 // size of shadows
+C_ShadowEqualsPercent = 100.0
+C_DojiBodyPercent = 5.0
+C_Factor = 2.0 // shows the number of times the shadow dominates the candlestick body
+C_BodyHi = max(close, open)
+C_BodyLo = min(close, open)
+C_Body = C_BodyHi - C_BodyLo
+C_BodyAvg = ema(C_Body, C_Len)
+C_SmallBody = C_Body < C_BodyAvg
+C_LongBody = C_Body > C_BodyAvg
+C_UpShadow = high - C_BodyHi
+C_DnShadow = C_BodyLo - low
+C_HasUpShadow = C_UpShadow > C_ShadowPercent / 100 * C_Body
+C_HasDnShadow = C_DnShadow > C_ShadowPercent / 100 * C_Body
+C_WhiteBody = open < close
+C_BlackBody = open > close
+C_Range = high-low
+C_IsInsideBar = C_BodyHi[1] > C_BodyHi and C_BodyLo[1] < C_BodyLo
+C_BodyMiddle = C_Body / 2 + C_BodyLo
+C_ShadowEquals = C_UpShadow == C_DnShadow or (abs(C_UpShadow - C_DnShadow) / C_DnShadow * 100) < C_ShadowEqualsPercent and (abs(C_DnShadow - C_UpShadow) / C_UpShadow * 100) < C_ShadowEqualsPercent
+C_IsDojiBody = C_Range > 0 and C_Body <= C_Range * C_DojiBodyPercent / 100
+C_Doji = C_IsDojiBody and C_ShadowEquals
+patternLabelPosLow = low - (atr(30) * 0.6)
+patternLabelPosHigh = high + (atr(30) * 0.6)
+C_LongUpperShadowBearishNumberOfCandles = 1
+C_LongShadowPercent = 75.0
+C_LongUpperShadowBearish = C_UpShadow > C_Range/100*C_LongShadowPercent
+//alertcondition(C_LongUpperShadowBearish, title = "Long Upper Shadow", message = "New Long Upper Shadow - Bearish pattern detected.")
+//if C_LongUpperShadowBearish
+//    var ttBearishLongUpperShadow = "Long Upper Shadow\nTo indicate buyer domination of the first part of a session, candlesticks will present with long upper shadows, as well as short lower shadows, consequently raising bidding prices."
+//    label.new(bar_index, patternLabelPosHigh, text="LUS", style=label.style_label_down, color = color.red, textcolor=color.white, tooltip = ttBearishLongUpperShadow)
+//gcolor(highest(C_LongUpperShadowBearish?1:0, C_LongUpperShadowBearishNumberOfCandles)!=0 ? color.red : na, offset=-(C_LongUpperShadowBearishNumberOfCandles-1))
+C_Len1 = 14 // ema depth for bodyAvg
+C_ShadowPercent1 = 5.0 // size of shadows
+C_ShadowEqualsPercent1 = 100.0
+C_DojiBodyPercent1 = 5.0
+C_Factor1 = 2.0 // shows the number of times the shadow dominates the candlestick body
+C_BodyHi1 = max(close, open)
+C_BodyLo1 = min(close, open)
+C_Body1 = C_BodyHi1 - C_BodyLo1
+C_BodyAvg1 = ema(C_Body1, C_Len1)
+C_SmallBody1 = C_Body1 < C_BodyAvg1
+C_LongBody1 = C_Body1 > C_BodyAvg1
+C_UpShadow1 = high - C_BodyHi1
+C_DnShadow1 = C_BodyLo1 - low
+C_HasUpShadow1 = C_UpShadow1 > C_ShadowPercent1 / 100 * C_Body1
+C_HasDnShadow1 = C_DnShadow1 > C_ShadowPercent1 / 100 * C_Body1
+C_WhiteBody1 = open < close
+C_BlackBody1 = open > close
+C_Range1 = high-low
+C_IsInsideBar1 = C_BodyHi1[1] > C_BodyHi1 and C_BodyLo1[1] < C_BodyLo1
+C_BodyMiddle1 = C_Body1 / 2 + C_BodyLo1
+C_ShadowEquals1 = C_UpShadow1 == C_DnShadow1 or (abs(C_UpShadow1 - C_DnShadow1) / C_DnShadow1 * 100) < C_ShadowEqualsPercent1 and (abs(C_DnShadow1 - C_UpShadow1) / C_UpShadow1 * 100) < C_ShadowEqualsPercent1
+C_IsDojiBody1 = C_Range1 > 0 and C_Body1 <= C_Range1 * C_DojiBodyPercent1 / 100
+C_Doji1 = C_IsDojiBody1 and C_ShadowEquals1
+patternLabelPosLow1 = low - (atr(30) * 0.6)
+patternLabelPosHigh1 = high + (atr(30) * 0.6)
+C_LongLowerShadowBullishNumberOfCandles1 = 1
+C_LongLowerShadowPercent1 = 75.0
+C_LongLowerShadowBullish1 = C_DnShadow1 > C_Range1/100*C_LongLowerShadowPercent1
+//alertcondition1(C_LongLowerShadowBullish1, title = "Long Lower Shadow", message = "New Long Lower Shadow - Bullish pattern detected.")
+// Make input options that configure backtest date range
+startDate = input(title="Start Date", type=input.integer,
+     defval=1, minval=1, maxval=31)
+startMonth = input(title="Start Month", type=input.integer,
+     defval=1, minval=1, maxval=12)
+startYear = input(title="Start Year", type=input.integer,
+     defval=2018, minval=1800, maxval=2100)
+endDate = input(title="End Date", type=input.integer,
+     defval=1, minval=1, maxval=31)
+endMonth = input(title="End Month", type=input.integer,
+     defval=11, minval=1, maxval=12)
+endYear = input(title="End Year", type=input.integer,
+     defval=2030, minval=1800, maxval=2100)
+// Look if the close time of the current bar
+// falls inside the date range
+inDateRange = (time >= timestamp(syminfo.timezone, startYear,
+         startMonth, startDate, 0, 0)) and
+     (time < timestamp(syminfo.timezone, endYear, endMonth, endDate, 0, 0))
+     
+//多單
+if ((bullishEngulfing or C_LongLowerShadowBullish1) and inDateRange and cross(low,lower))
+    strategy.entry("L", strategy.long, qty=1000,stop=(low[1]))
+//strategy.close("L",comment = "L exit",when=cross(basis,close),qty_percent=50)
+if crossunder(close,upper*0.9985)
+    strategy.close("L",comment = "L exit",qty_percent=100)
+//空單
+if (((bullishEngulfing == 0) or C_LongUpperShadowBearish) and inDateRange and cross(close,upper))
+    strategy.entry("S", strategy.short,qty= 1000,stop=(high[1]))
+//strategy.close("S",comment = "S exit",when=cross(basis,close),qty_percent=50)
+if crossunder(lower*1.0015,close)
+    strategy.close("S",comment = "S exit",qty_percent=100)
+Expand (136 lines)

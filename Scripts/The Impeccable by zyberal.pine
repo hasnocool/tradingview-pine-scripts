@@ -1,0 +1,159 @@
+Script Name: The Impeccable by zyberal
+Author: zyberal
+Description: This strategy works differently than others, it uses the IchimokuTenkan, Kijun, and Senkou periods to compute a general sense of market trend. Then I used the MACD fast, slow, and smooth with custom inputs to compute a optimum cross for finding macro bottoms and tops for any asset. This strategy doesn't trade on weekends and does not have a set TP (take profit)...
+PineScript code:
+
+Pine Script™ strategy
+The Impeccable by zyberal
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Revazi
+//@version=5
+strategy("The Impeccable by zyberal", overlay = true)
+// Inputs {
+// Strategy variables
+IchimokuTenkanPeriod = input(9)
+IchimokuKijunPeriod = input(190)
+IchimokuSenkouPeriod = input(52)
+MACDMainFast = input(3)
+MACDMainSlow = input(10)
+MACDMainSmooth = input(9)
+ExitAfterBars = input(2)
+ProfitTarget = input(135)
+StopLoss = input(70)
+// Trading Options
+DontTradeOnWeekends = input(true)
+ExitAtEndOfDay = input(true)
+DayExitTimeHour   = input(23)
+DayExitTimeMinute = input(04)
+ExitOnFriday = input(true)
+FridayExitTimeHour   = input(20)
+FridayExitTimeMinute = input(40)
+// }
+// TRADING OPTIONS LOGIC {
+OpenOrdersAllowed = true
+// Dont trade on weekends {
+if DontTradeOnWeekends
+    if dayofweek == dayofweek.saturday or
+       dayofweek == dayofweek.sunday
+        OpenOrdersAllowed := false
+// }
+// Exit on close (end of day) {
+if ExitAtEndOfDay
+    if timeframe.isintraday and
+       time >= timestamp(year(timenow), month(timenow), dayofmonth(timenow), DayExitTimeHour, DayExitTimeMinute)
+        OpenOrdersAllowed := false
+// }
+// Exit on Friday {
+if ExitOnFriday
+    if timeframe.isintraday and
+       time >= timestamp(year(timenow), month(timenow), dayofmonth(timenow), FridayExitTimeHour, FridayExitTimeMinute)
+        OpenOrdersAllowed := false
+// }
+// Rule: Trading signals {
+openW3 = request.security(syminfo.tickerid, "W", open)[3]
+middleDonchian(Length) => math.avg(ta.highest(Length), ta.lowest(Length))
+Tenkan = middleDonchian(IchimokuTenkanPeriod)[2]
+[macdLine, signalLine, _] = ta.macd(close, MACDMainFast, MACDMainSlow, MACDMainSmooth)
+LongEntrySignal = openW3 > Tenkan and ta.crossunder(macdLine, signalLine)[3] //macdLine[3] < signalLine[3]
+ShortEntrySignal = openW3 < Tenkan and ta.crossover(macdLine, signalLine)[3] //macdLine[3] > signalLine[3]
+// }
+// Calculate conditions {
+IsFlat() => strategy.position_size == 0
+IsLong() => strategy.position_size > 0
+IsShort() => strategy.position_size < 0
+longCondition  = OpenOrdersAllowed and not IsLong() and LongEntrySignal
+shortCondition = OpenOrdersAllowed and not IsShort() and ShortEntrySignal
+// }
+// Open positions based on conditions {
+strategy.order(id = "buy", direction = strategy.long, qty = 1, when = longCondition)
+strategy.order(id = "sell", direction = strategy.short, qty = 1, when = shortCondition)
+// }
+Expand (87 lines)

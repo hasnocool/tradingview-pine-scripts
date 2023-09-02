@@ -1,0 +1,82 @@
+Script Name: MACD, RSI, & RVOL Strategy
+Author: BobBarker42069
+Description: This strategy combines the use of MACD (12, 26, 9), RSI (14, 30, 70), and RVOL (14) to create Long Buy and Sell signals. This works well with many different time intervals but was developed with 15-minute intervals in mind. 
+
+Using MACD as a reference, the strategy identifies when the MACD line crosses over (a factor in a buy signal) and under (a factor in a Sell...
+PineScript code:
+
+Pine Script™ strategy
+MACD, RSI, & RVOL Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © BobBarker42069
+//@version=4
+strategy("MACD, RSI, & RVOL Strategy", overlay=true, max_bars_back=5000, 
+ default_qty_type= strategy.cash, calc_on_order_fills=false, calc_on_every_tick=false, 
+ pyramiding=0, default_qty_value=100000, initial_capital=100000)
+strategy.risk.allow_entry_in(strategy.direction.long)
+length = input( 14 )
+overSold = input( 30 )
+overBought = input( 70 )
+price = close
+vrsi = rsi(price, length)
+co = crossover(vrsi, overSold)
+cu = crossunder(vrsi, overBought)
+fastLength = input(12)
+slowlength = input(26)
+MACDLength = input(9)
+MACD = ema(close, fastLength) - ema(close, slowlength)
+aMACD = ema(MACD, MACDLength)
+delta = MACD - aMACD
+RVOLlen = input(14, minval=1, title="RVOL Length")
+av = sma(volume, RVOLlen)
+RVOL = volume / av
+if (not na(vrsi)) 
+    if ((co and crossover(delta, 0)) or (co and crossover(RVOL, 2)) or (crossover(delta, 0) and crossover(RVOL, 2)))
+        strategy.entry("MACD & RSI BUY Long", strategy.long, comment="BUY LONG")
+        
+    if ((cu and crossunder(delta, 0)) or (cu and crossunder(RVOL, 5)) or (crossunder(delta, 0) and crossunder(RVOL, 5)))
+        strategy.entry("MACD & RSI SELL Short", strategy.short, comment="SELL LONG")
+    
+        
+//plot(strategy.equity, title="equity", color=color.red, linewidth=2, style=plot.style_areabr)
+Expand (39 lines)

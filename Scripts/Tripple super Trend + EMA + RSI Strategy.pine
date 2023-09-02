@@ -1,0 +1,327 @@
+Script Name: Tripple super Trend + EMA + RSI Strategy
+Author: TradingStrategyCheck
+Description: Greetings!
+
+Here I show you the Tripple Super Trend Strategy.
+I discovered the strategy on a YouTube channel and tried to transfer it as a strategy into a script.
+
+Tested with the currency pair EUR/USD in the one hour chart.
+Period: beginning of 2020 until today.
+
+The strategy should also work with cryptocurrencies. But then the settings have to be...
+PineScript code:
+
+Pine Script™ strategy
+Tripple super Trend + EMA + RSI Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+//@version=4
+strategy(title="Tripple super Trend Strategy", shorttitle="Triple ST Strat", overlay = true, pyramiding = 0, max_bars_back=5000, calc_on_order_fills = false, commission_type =  strategy.commission.percent, commission_value = 0, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, initial_capital=5000, currency=currency.USD)
+// Time Range
+FromMonth=input(defval=1,title="FromMonth",minval=1,maxval=12)
+FromDay=input(defval=1,title="FromDay",minval=1,maxval=31)
+FromYear=input(defval=2020,title="FromYear",minval=2016)
+ToMonth=input(defval=1,title="ToMonth",minval=1,maxval=12)
+ToDay=input(defval=1,title="ToDay",minval=1,maxval=31)
+ToYear=input(defval=9999,title="ToYear",minval=2017)
+start=timestamp(FromYear,FromMonth,FromDay,00,00)
+finish=timestamp(ToYear,ToMonth,ToDay,23,59)
+window()=>time>=start and time<=finish?true:false
+// STEP 2:
+// See if this bar's time happened on/after start date
+afterStartDate = time >= start and time<=finish?true:false
+//EMA: above EMA for Long
+emasrc = close
+res = input(title="EMA Timeframe", type=input.resolution, defval="15")
+len1 = input(title="EMA Length", type=input.integer, defval=200)
+col1 = color.yellow
+// Calculate EMA
+ema1 = ema(emasrc, len1)
+emaSmooth = security(syminfo.tickerid, res, ema1, barmerge.gaps_on, barmerge.lookahead_off)
+// Draw EMA
+plot(emaSmooth, title="EMA", linewidth=1, color=col1)
+//Stoch RSI: c
+smoothK = input(3, minval=1)
+smoothD = input(3, minval=1)
+lengthRSI = input(14, minval=1)
+lengthStoch = input(14, minval=1)
+src = input(close, title="RSI Source")
+overSold = input( 28 )
+overBought = input( 78 )
+rsi1 = rsi(src, lengthRSI)
+k = sma(stoch(rsi1, rsi1, rsi1, lengthStoch), smoothK)
+d = sma(k, smoothD)
+//Super Trend config
+changeATR = input(title="Change ATR Calculation Method?", type=input.bool, defval=true)
+src1 = input(hl2, title="Source")
+//Super Trend 1
+Periods1 = input(title="ATR Period1", type=input.integer, defval=10)
+Multiplier1 = input(title="ATR Multiplier1", type=input.float, step=0.1, defval=1.0)
+atr2 = sma(tr, Periods1)
+atr= changeATR ? atr(Periods1) : atr2
+up=src1-(Multiplier1*atr)
+up1 = nz(up[1],up)
+up := close[1] > up1 ? max(up,up1) : up
+dn=src1+(Multiplier1*atr)
+dn1 = nz(dn[1], dn)
+dn := close[1] < dn1 ? min(dn, dn1) : dn
+trend = 1
+trend := nz(trend[1], trend)
+trend := trend == -1 and close > dn1 ? 1 : trend == 1 and close < up1 ? -1 : trend
+upPlot = plot(trend == 1 ? up : na, title="Up Trend", linewidth=2, color=color.green)
+dnPlot = plot(trend == 1 ? na : dn, title="Down Trend", style=plot.style_linebr, linewidth=2, color=color.red)
+//Super Trend 2
+Periods2 = input(title="ATR Period2", type=input.integer, defval=11)
+Multiplier2 = input(title="ATR Multiplier2", type=input.float, step=0.1, defval=2.0)
+atr3 = sma(tr, Periods2)
+atr4= changeATR ? atr(Periods2) : atr3
+up2=src1-(Multiplier2*atr4)
+up3 = nz(up2[1],up2)
+up2 := close[1] > up3 ? max(up2,up3) : up2
+dn2=src1+(Multiplier2*atr4)
+dn3 = nz(dn2[1], dn2)
+dn2 := close[1] < dn3 ? min(dn2, dn3) : dn2
+trend1 = 1
+trend1 := nz(trend1[1], trend1)
+trend1 := trend1 == -1 and close > dn3 ? 1 : trend1 == 1 and close < up3 ? -1 : trend1
+upPlot1 = plot(trend1 == 1 ? up2 : na, title="Up Trend 1", linewidth=2, color=color.green)
+dnPlot1 = plot(trend1 == 1 ? na : dn2, title="Down Trend 1", style=plot.style_linebr, linewidth=2, color=color.red)
+//Super Trend 3
+Periods3 = input(title="ATR Period3", type=input.integer, defval=12)
+Multiplier3 = input(title="ATR Multiplier3", type=input.float, step=0.1, defval=3.0)
+atr5 = sma(tr, Periods3)
+atr6= changeATR ? atr(Periods3) : atr5
+up4=src1-(Multiplier3*atr6)
+up5 = nz(up4[1],up4)
+up4 := close[1] > up5 ? max(up4,up5) : up4
+dn4=src1+(Multiplier3*atr6)
+dn5 = nz(dn4[1], dn4)
+dn4 := close[1] < dn5 ? min(dn4, dn5) : dn4
+trend2 = 1
+trend2 := nz(trend2[1], trend2)
+trend2 := trend2 == -1 and close > dn5 ? 1 : trend2 == 1 and close < up5 ? -1 : trend2
+upPlot2 = plot(trend2 == 1 ? up4 : na, title="Up Trend 2", linewidth=2, color=color.green)
+dnPlot2 = plot(trend2 == 1 ? na : dn4, title="Down Trend 2", style=plot.style_linebr, linewidth=2, color=color.red)
+///////////////////////////LONG////////////////////////////////////////////////////////////////////
+trendvalue = (trend1 - close) + (trend - close) + (trend2-close)
+enablelong = input(true, title="Enable long?")
+//Long Signal
+emaconditionlong = close > emaSmooth
+crossup = k[0] > d[0] and k[1] <= d[1]
+oversoldcondition = k < overSold
+overboughtcondition = k > overBought
+//Super Trend Long Condition
+twolinesunderprice = close > trend1 and trend2 or trend and trend1 or trend and trend2
+alllinesunderprice = close > trend and trend1 and trend2
+//strategy buy long
+longcondition1 = (emaconditionlong) and (crossup) and (oversoldcondition) and (alllinesunderprice)
+longcondition2 = (emaconditionlong) and (crossup) and (oversoldcondition) and (twolinesunderprice)
+if (longcondition1) and (afterStartDate) and strategy.opentrades < 1 and (enablelong == true)
+    strategy.entry("long1", strategy.long)
+    
+if (longcondition2) and (afterStartDate) and strategy.opentrades < 1 and (enablelong == true)
+    strategy.entry("long2", strategy.long)
+//////////////////////////////////////SHORT//////////////////////////////////////////////////////////////////////////////////
+enableshort = input(true, title="Enable short?")
+//Short Signal
+emaconditionshort = close < emaSmooth
+crossdown = k[0] < d[0] and k[1] >= d[1]
+//Super Trend Short Condition
+twolinesoverprice = close < trend1 and trend2 or trend and trend1 or trend and trend2
+alllinesoverprice = close < trend and trend1 and trend2
+//strategy buy Short
+shortcondition1 = (emaconditionshort) and (crossdown) and (overboughtcondition) and twolinesoverprice
+shortcondition2 = (emaconditionshort) and (crossdown) and (overboughtcondition) and alllinesoverprice
+if (enableshort == true) and (shortcondition1) and (afterStartDate) and strategy.opentrades < 1
+    strategy.entry("short1", strategy.short)
+if (enableshort == true) and (shortcondition2) and (afterStartDate) and strategy.opentrades < 1
+    strategy.entry("short2", strategy.short)
+//////////////////////////////////////EXIT CONDITION//////////////////////////////////////////////////////////////////////////////////
+bought = strategy.position_size[1] < strategy.position_size
+sold = strategy.position_size[1] > strategy.position_size
+//////LOWEST LOW//////
+//Lowest Low LONG
+profitfactorlong = input(title="ProfitfactorLong", type=input.float, step=0.1, defval=2)
+loLen = input(title="Lowest Low Lookback", type=input.integer,
+  defval=30, minval=2)
+stop_level_long = lowest(low, loLen)
+barsboughtlong = barssince(bought)
+    
+if strategy.position_size>0 and strategy.position_entry_name == "long1" or strategy.position_entry_name == "long2"
+    profit_level_long = strategy.position_avg_price + ((strategy.position_avg_price - stop_level_long[barsboughtlong])*profitfactorlong)
+    strategy.exit(id="TP/ SL", stop=stop_level_long[barsboughtlong], limit=profit_level_long)
+//Lowest Low SHORT
+profitfactorshort = input(title="ProfitfactorShort", type=input.float, step=0.1, defval=1.5)
+highLen = input(title="highest high lookback", type=input.integer,
+  defval=25, minval=2)
+stop_level_short = highest(high, highLen)
+barsboughtshort = barssince(sold)
+if strategy.position_size<0 and strategy.position_entry_name == "short1" or strategy.position_entry_name == "short2"
+    profit_level_short = strategy.position_avg_price - ((stop_level_short[barsboughtshort] - strategy.position_avg_price)*profitfactorshort)
+    strategy.exit(id="TP/ SL", stop=stop_level_short[barsboughtshort], limit=profit_level_short)
+Expand (166 lines)

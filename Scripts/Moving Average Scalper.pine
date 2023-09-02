@@ -1,0 +1,94 @@
+Script Name: Moving Average Scalper
+Author: Coinrule
+Description: The main goal of a scalping strategy is to open and close trades frequently, profiting from small gains and limiting the downside risk.
+
+This strategy, on average, manages to close trades within one day, meaning that you are not exposed to the risk of holding that coin for long. In this way, market conditions affect much less the overall performance of the trading...
+PineScript code:
+
+Pine Script™ strategy
+Moving Average Scalper
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+//@version=4
+strategy(shorttitle='Moving Average Scalper (by Coinrule)',title='Moving Average Scalper', overlay=true, initial_capital = 1000, default_qty_type = strategy.percent_of_equity, default_qty_type = strategy.percent_of_equity, default_qty_value = 30, commission_type=strategy.commission.percent, commission_value=0.1)
+//Backtest dates
+fromMonth = input(defval = 1,    title = "From Month",      type = input.integer, minval = 1, maxval = 12)
+fromDay   = input(defval = 10,    title = "From Day",        type = input.integer, minval = 1, maxval = 31)
+fromYear  = input(defval = 2019, title = "From Year",       type = input.integer, minval = 1970)
+thruMonth = input(defval = 1,    title = "Thru Month",      type = input.integer, minval = 1, maxval = 12)
+thruDay   = input(defval = 1,    title = "Thru Day",        type = input.integer, minval = 1, maxval = 31)
+thruYear  = input(defval = 2112, title = "Thru Year",       type = input.integer, minval = 1970)
+showDate  = input(defval = true, title = "Show Date Range", type = input.bool)
+start     = timestamp(fromYear, fromMonth, fromDay, 00, 00)        // backtest start window
+finish    = timestamp(thruYear, thruMonth, thruDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+//MA inputs and calculations
+movingaverage_signal = sma(close, input(9))
+movingaverage_fast = sma(close, input(50))
+movingaverage_slow = sma(close, input(200))
+movingaverage_mid= sma(close, input(100))
+//Entry 
+bullish = crossover(movingaverage_signal, movingaverage_fast)
+strategy.entry(id="long", long = true, when = bullish and movingaverage_fast < movingaverage_mid and movingaverage_mid < movingaverage_slow and window())
+//Exit
+bearish = crossover(movingaverage_signal, movingaverage_slow)
+Stop_loss= ((input (2))/100)
+Take_profit= ((input (8))/100)
+longStopPrice  = strategy.position_avg_price * (1 - Stop_loss)
+longTakeProfit = strategy.position_avg_price * (1 + Take_profit)
+strategy.close("long", when = bearish)
+// close < longStopPrice or close > longTakeProfit and window())
+//PLOT
+plot(movingaverage_signal, color=color.black, linewidth=2 )
+plot(movingaverage_fast, color=color.orange, linewidth=2)
+plot(movingaverage_slow, color=color.purple, linewidth=2)
+plot(movingaverage_mid, color=color.blue, linewidth=2)
+Expand (49 lines)

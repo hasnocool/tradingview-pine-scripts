@@ -1,0 +1,205 @@
+Script Name: Parabolic SAR Heikin Ashi MTF Candle Scalper
+Author: exlux99
+Description: This is scalper strategy designed around parabolic sar indicator, where as an input candle value it uses the heikinashi from a higher timeframe.
+
+This example has been adapted to SPY/SPX chart
+
+In this case ,we are using a 5 min chart, but the calculations are made on a 15 min heikin ashi chart for the PSAR and then on 5 min chart we plot the results.
+
+At the same...
+PineScript code:
+
+Pine Script™ strategy
+Parabolic SAR Heikin Ashi MTF Candle Scalper
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © exlux99
+//@version=5
+strategy("SAR HA MTF Scalper ", overlay=true)
+timeframe=input.timeframe('15', "Resolution")
+close_mtf = request.security(ticker.heikinashi(syminfo.tickerid), timeframe, close)
+open_mtf = request.security(ticker.heikinashi(syminfo.tickerid), timeframe, open)
+high_mtf = request.security(ticker.heikinashi(syminfo.tickerid), timeframe, high)
+low_mtf = request.security(ticker.heikinashi(syminfo.tickerid), timeframe, low)
+////////////////
+// The same on Pine
+pine_sar(start, inc, max) =>
+    var float result = na
+    var float maxMin = na
+    var float acceleration = na
+    var bool isBelow = na
+    bool isFirstTrendBar = false
+    
+    if bar_index == 1
+        if close_mtf > close_mtf[1]
+            isBelow := true
+            maxMin := high_mtf
+            result := low_mtf[1]
+        else
+            isBelow := false
+            maxMin := low_mtf
+            result := high_mtf[1]
+        isFirstTrendBar := true
+        acceleration := start
+    
+    result := result + acceleration * (maxMin - result)
+    
+    if isBelow
+        if result > low_mtf
+            isFirstTrendBar := true
+            isBelow := false
+            result := math.max(high_mtf, maxMin)
+            maxMin := low_mtf
+            acceleration := start
+    else
+        if result < high_mtf
+            isFirstTrendBar := true
+            isBelow := true
+            result := math.min(low_mtf, maxMin)
+            maxMin := high_mtf
+            acceleration := start
+            
+    if not isFirstTrendBar
+        if isBelow
+            if high_mtf > maxMin
+                maxMin := high_mtf
+                acceleration := math.min(acceleration + inc, max)
+        else
+            if low_mtf < maxMin
+                maxMin := low_mtf
+                acceleration := math.min(acceleration + inc, max)
+    
+    if isBelow
+        result := math.min(result, low_mtf[1])
+        if bar_index > 1
+            result := math.min(result, low_mtf[2])
+        
+    else
+        result := math.max(result, high_mtf[1])
+        if bar_index > 1
+            result := math.max(result, high_mtf[2])
+    
+    result
+////////////////
+start = input.float(0.05, step=0.01)
+increment = input.float(0.02,step=0.01)
+maximum = input.float(0.2, "Max Value",step=0.01)
+out = pine_sar(start,increment,maximum)
+long = close_mtf[1] > out
+short = close_mtf[1] < out
+entry_time = input.session(title='Entry time', defval='0900-1000') 
+exit_time = input.session(title='Exit time', defval='1200-1600') 
+BarInSession(sess) =>
+    not na(time(timeframe.period, sess))
+entry_candle_time = BarInSession(entry_time)
+exit_candle_time = BarInSession(exit_time)
+if(entry_candle_time)
+    strategy.entry("long",strategy.long,when=long)
+    strategy.entry("short",strategy.short,when=short)
+if(exit_candle_time)
+    strategy.close_all()
+Expand (104 lines)

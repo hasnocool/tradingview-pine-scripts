@@ -1,0 +1,60 @@
+Script Name: 韩的指标
+Author: hanxudemon
+Description: 韩的指标
+PineScript code:
+
+Pine Script™ strategy
+韩的指标
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+//@version=4
+strategy("test1","t1",overlay=true, default_qty_type = strategy.percent_of_equity,default_qty_value=100,initial_capital=200, currency=currency.USD)
+//user input
+k_param = input(title = "k length", type = input.integer, defval = 14)
+d_param = input(title = "d length", type = input.integer, defval = 3)
+rsi_param = input(title = "RSI", type = input.integer, defval = 5)
+upper = input(title = "over brought", type = input.integer, defval = 80)
+lower = input(title = "over sold", type = input.integer, defval = 20)
+//calculation
+rsi = rsi(close,rsi_param)
+stochastic = 100*(rsi - lowest(rsi,k_param))/(highest(rsi,k_param)-lowest(rsi,k_param))
+SMA = sma(stochastic,d_param)
+//DRAW
+plot(upper,color = color.blue,linewidth = 2, title ="超买")
+plot(lower,color = color.blue,linewidth = 2, title ="超卖")
+plot(rsi,color = rsi>upper ?color.red:rsi<lower? color.green:color.black, linewidth=2,title ="ris超买超卖")
+plot(stochastic,color = color.purple,title="震荡指数")
+plot(SMA, color = color.orange,title="移动平均")
+//trading
+shortposition = crossover(rsi,upper)
+longposition = crossunder(rsi,lower)
+strategy.entry("卖",false,when =(shortposition))
+strategy.entry("买",true,when = (longposition))
+strategy.exit("止盈",profit = close*0.013/syminfo.mintick)
+Expand (27 lines)

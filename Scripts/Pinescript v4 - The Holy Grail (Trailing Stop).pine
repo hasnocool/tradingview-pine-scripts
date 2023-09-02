@@ -1,0 +1,179 @@
+Script Name: Pinescript v4 - The Holy Grail (Trailing Stop)
+Author: TsangYouJun
+Description: After studying several other scripts, I believe I have found the Holy Grail! (Or perhaps I've just found a bug with Tradingview's Pinescript v4 language) Anyhow, I'm publishing this script in the hope that someone smarter than myself could shed some light on the fact that adding a trailing stop to any strategy seems to make it miraculously...no that's an...
+PineScript code:
+
+Pine Script™ strategy
+Pinescript v4 - The Holy Grail (Trailing Stop)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+//@version=4
+//Time Frame: H1
+strategy("Pin Bar Magic v1", overlay=true)
+// User Input
+usr_risk = input(title="Equity Risk (%)",type=input.integer,minval=1,maxval=100,step=1,defval=3,confirm=false)
+atr_mult = input(title="Stop Loss (x*ATR, Float)",type=input.float,minval=0.1,maxval=100,step=0.1,defval=0.5,confirm=false)
+slPoints = input(title="Stop Loss Trail Points (Pips)",type=input.integer,minval=1,maxval=1000,step=1,defval=1,confirm=false)
+slOffset = input(title="Stop Loss Trail Offset (Pips)",type=input.integer,minval=1,maxval=1000,step=1,defval=1,confirm=false)
+sma_slow = input(title="Slow SMA (Period)",type=input.integer,minval=1,maxval=500,step=1,defval=50,confirm=false)
+ema_medm = input(title="Medm EMA (Period)",type=input.integer,minval=1,maxval=500,step=1,defval=18,confirm=false)
+ema_fast = input(title="Fast EMA (Period)",type=input.integer,minval=1,maxval=500,step=1,defval=6,confirm=false)
+atr_valu = input(title="ATR (Period)",type=input.integer,minval=1,maxval=500,step=1,defval=14,confirm=false)
+ent_canc = input(title="Cancel Entry After X Bars (Period)",type=input.integer,minval=1,maxval=500,step=1,defval=3,confirm=false)
+// Create Indicators
+slowSMA = sma(close, sma_slow)
+medmEMA = ema(close, ema_medm)
+fastEMA = ema(close, ema_fast)
+bullishPinBar = ((close > open) and ((open - low) > 0.66 * (high - low))) or ((close < open) and ((close - low) > 0.66 * (high - low)))
+bearishPinBar = ((close > open) and ((high - close) > 0.66 * (high - low))) or ((close < open) and ((high - open) > 0.66 * (high - low)))
+atr = atr(atr_valu)
+// Specify Trend Conditions
+fanUpTrend = (fastEMA > medmEMA) and (medmEMA > slowSMA)
+fanDnTrend = (fastEMA < medmEMA) and (medmEMA < slowSMA)
+// Specify Piercing Conditions
+bullPierce = ((low < fastEMA) and (open > fastEMA) and (close > fastEMA)) or ((low < medmEMA) and (open > medmEMA) and (close > medmEMA)) or ((low < slowSMA) and (open > slowSMA) and (close > slowSMA))
+bearPierce = ((high > fastEMA) and (open < fastEMA) and (close < fastEMA)) or ((high > medmEMA) and (open < medmEMA) and (close < medmEMA)) or ((high > slowSMA) and (open < slowSMA) and (close < slowSMA))
+    
+// Specify Entry Conditions
+longEntry = fanUpTrend and bullishPinBar and bullPierce
+shortEntry = fanDnTrend and bearishPinBar and bearPierce
+// Long Entry Function
+enterlong() =>
+    risk = usr_risk * 0.01 * strategy.equity
+    stopLoss = low[1] - atr[1] * atr_mult
+    entryPrice = high[1]
+    units = risk / (entryPrice - stopLoss)
+    strategy.entry("long", strategy.long, units, stop=entryPrice)
+    strategy.exit("exit long", from_entry="long", trail_points=slPoints, trail_offset=slOffset)
+    
+// Short Entry Function
+entershort() =>
+    risk = usr_risk * 0.01 * strategy.equity
+    stopLoss = high[1] + atr[1] * atr_mult
+    entryPrice = low[1]
+    units = risk / (stopLoss - entryPrice)
+    strategy.entry("short", strategy.short, units, stop=entryPrice)
+    strategy.exit("exit short", from_entry="short", trail_points=slPoints, trail_offset=slOffset)
+    
+// Execute Long Entry
+if (longEntry)
+    enterlong()
+// Execute Short Entry
+if (shortEntry)
+    entershort() 
+    
+// Cancel the Entry if Bar Time is Exceeded
+strategy.cancel("long", barssince(longEntry) > ent_canc)
+strategy.cancel("short", barssince(shortEntry) > ent_canc)
+// Force Close During Certain Conditions
+strategy.close_all(when = hour==16 and dayofweek==dayofweek.friday, comment = "exit all, market-closed")
+strategy.close_all(when = crossunder(fastEMA, medmEMA), comment = "exit long, re-cross")
+strategy.close_all(when = crossover(fastEMA, medmEMA), comment = "exit short, re-cross")
+// Plot Moving Averages to Chart
+plot(fastEMA, color=color.red)
+plot(medmEMA, color=color.blue)
+plot(slowSMA, color=color.green)
+// Plot Pin Bars to Chart
+plotshape(bullishPinBar, text='Bull PB', style=shape.labeldown, location=location.abovebar, color=color.green, textcolor=color.white, transp=0)
+plotshape(bearishPinBar, text='Bear PB', style=shape.labelup, location=location.belowbar, color=color.red, textcolor=color.white, transp=0)
+// Plot Days of Week
+plotshape(hour==0 and dayofweek==dayofweek.monday, text='Monday', style=shape.labeldown, location=location.abovebar, color=color.black, textcolor=color.white, transp=0)
+plotshape(hour==0 and dayofweek==dayofweek.tuesday, text='Tuesday', style=shape.labeldown, location=location.abovebar, color=color.black, textcolor=color.white, transp=0)
+plotshape(hour==0 and dayofweek==dayofweek.wednesday, text='Wednesday', style=shape.labeldown, location=location.abovebar, color=color.black, textcolor=color.white, transp=0)
+plotshape(hour==0 and dayofweek==dayofweek.thursday, text='Thursday', style=shape.labeldown, location=location.abovebar, color=color.black, textcolor=color.white, transp=0)
+plotshape(hour==0 and dayofweek==dayofweek.friday, text='Friday', style=shape.labeldown, location=location.abovebar, color=color.black, textcolor=color.white, transp=0)
+plotshape(hour==16 and dayofweek==dayofweek.friday, text='Market Closed', style=shape.labeldown, location=location.abovebar, color=color.black, textcolor=color.white, transp=0)
+Expand (94 lines)

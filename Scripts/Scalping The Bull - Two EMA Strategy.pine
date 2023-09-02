@@ -1,0 +1,173 @@
+Script Name: Scalping The Bull - Two EMA Strategy
+Author: TheSocialCryptoClub
+Description: Name:  Scalping The Bull - Two EMA "Gianno-Nano" Strategy  from the Meeting  
+ 
+Category:  Trend Follower 
+ 
+Operating mode: Spot or Future, only long or swing trading 
+ 
+Trades duration:  Multiday   
+ 
+Timeframe:  4H  
+ 
+Suggested usage: Mid-term trading, when the market is in trend and it is showing high volatility.  
+ 
+Entry: When fast EMA crosses over slow...
+PineScript code:
+
+Pine Script™ strategy
+Scalping The Bull - Two EMA Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+// This source code is subject to the terms of the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
+// © TheSocialCryptoClub
+//Analisi fatta su: BTC USDT - TF Daily (con stop loss cross EMA) , NEO USDT - TF 4H (stop loss percentuale)
+//@version=5
+strategy(title             = "STB - Gianno Nano Strategy",
+         overlay           = true,
+         initial_capital   = 10000,
+         default_qty_type  = strategy.percent_of_equity,
+         default_qty_value = 10,
+         commission_type   = strategy.commission.percent,
+         commission_value  = 0.075)
+// Input Declaration
+short_yes          = input.bool(true,  "Active Short", group="Engine Strategy")
+ema_fast           = input.int(10,     "Fast Average Period", group="Engine Strategy")
+ema_slow           = input.int(60,     "Slow Average Period", group="Engine Strategy")
+SL_Long_input  = input.float(3, "SL Long Percent",  step=0.01, group="Take Profit and Stop Loss %") / 100
+SL_Short_input = input.float(5, "SL Short Percent", step=0.01, group="Take Profit and Stop Loss %") / 100
+ema_stop_input     = input.int(112,    "Stop Average Period", group="Stop Loss Cross")
+ema_stop_sl_input  = input.bool(false, "Stop if Close crosses Stop Average", tooltip="If you choose this option, Percent Stop Loss will be disabled",group="Stop Loss Cross" )
+TP_Long_input  = input.float(36, "TP Long Percent",  step=0.01, group="Take Profit and Stop Loss %") / 100
+TP_Short_input = input.float(24, "TP Short Percent", step=0.01, group="Take Profit and Stop Loss %") / 100
+// Variables declarations
+ema10    = ta.ema(close, ema_fast)
+ema60    = ta.ema(close, ema_slow)
+ema_stop = ta.ema(close, ema_stop_input)
+plot(ema10, "EMA 10", color.yellow, 2)
+plot(ema60, "EMA 60", color.aqua, 2)
+plot(ema_stop_sl_input ? ema_stop : na, "EMA Stop", color.red, 2)
+// Entry and Close conditions
+long_cond       = ta.crossover(ema10, ema60)
+short_cond      = ta.crossunder(ema10, ema60) and short_yes
+close_cond      = ta.crossunder(ema10, ema60) and not short_yes
+cond_stop_long  = ta.crossunder(close, ema_stop)
+cond_stop_short = ta.crossover(close, ema_stop)
+// Engine strategy
+if long_cond
+    strategy.entry("EL", strategy.long)
+if short_cond
+    strategy.entry("ES", strategy.short)
+if close_cond               //Close if only LONG
+    strategy.close("EL" )
+// TP e SL
+entry_price_long  = ta.valuewhen(long_cond,  close, 0)
+entry_price_short = ta.valuewhen(short_cond, close, 0)
+SL_long  = SL_Long_input  > 0 ? entry_price_long  * (1 - SL_Long_input)  : 0
+SL_short = SL_Short_input > 0 ? entry_price_short * (1 + SL_Short_input) : 999999
+TP_long  = TP_Long_input  > 0 ? entry_price_long  * (1 + TP_Long_input)  : 999999
+TP_short = TP_Short_input > 0 ? entry_price_short * (1 - TP_Short_input) : 0
+// Close for TP and/or SL trigger
+if (strategy.position_size > 0) and not ema_stop_sl_input 
+    strategy.exit(id="XL STP", stop=SL_long, limit=TP_long)
+if (strategy.position_size < 0) and not ema_stop_sl_input 
+    strategy.exit(id="XS STP", stop=SL_short, limit=TP_short)
+if (strategy.position_size > 0) and ema_stop_sl_input 
+    strategy.exit(id="XL2 STP", limit=TP_long)
+if (strategy.position_size < 0) and ema_stop_sl_input 
+    strategy.exit(id="XS2 STP", limit=TP_short)
+strategy.close("EL", cond_stop_long and ema_stop_sl_input)
+strategy.close("ES", cond_stop_short and ema_stop_sl_input)
+Expand (93 lines)

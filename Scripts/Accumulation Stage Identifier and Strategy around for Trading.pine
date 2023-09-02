@@ -1,0 +1,224 @@
+Script Name: Accumulation Stage Identifier and Strategy around for Trading
+Author: stocktechbot
+Description: In the psychology of trading at any market condition, there are four stage usually occurs on any tickers.
+
+Stage 1 -> Neglect phase or consolidation phase
+
+ 
+
+  It occurs when the company does not produce the expected result and waiting for next result.
+
+  It can extend for days, weeks, months and years. Never give entry at this stage though that blue-chip told to...
+PineScript code:
+
+Pine Script™ strategy
+Accumulation Stage Identifier and Strategy around for Trading
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © stocktechbot
+//@version=5
+strategy("Accumulate", overlay = true)
+lookback = input(defval = 21, title = 'Lookback')
+offset = input.int(title="Offset", defval=0, minval=-500, maxval=500)
+//SMA Tredline
+out = ta.sma(close, 200)
+outf = ta.sma(close, 50)
+outn = ta.sma(close, 90)
+outt = ta.sma(close, 21)
+//sma plot
+plot(out, color=color.blue, title="MA200", offset=offset)
+plot(outf, color=color.maroon, title="MA50", offset=offset)
+plot(outn, color=color.orange, title="MA90", offset=offset)
+plot(outt, color=color.olive, title="MA21", offset=offset)
+//MarketCap Calculation
+//MarketCap = 0.0
+//TSO = request.financial(syminfo.tickerid, "TOTAL_SHARES_OUTSTANDING", "FQ", ignore_invalid_symbol = true)
+//if str.tostring(TSO) != 'na'
+//    if ta.barssince(TSO != TSO[1] and TSO > TSO[1])==0
+//        MarketCap := TSO * close
+//       
+//    if barstate.islast and MarketCap == 0
+//        runtime.error("No MarketCap is provided by the data vendor.")
+//    
+//momlen = 100
+//msrc = MarketCap
+//mom = msrc - msrc[momlen]
+//plotmom = if (mom > mom[1])
+//    true
+//else
+//   false
+//OBV with sma on macd
+obv = ta.cum(math.sign(ta.change(close)) * volume)
+smoothingLength = 5
+smoothingLine = ta.sma(obv,5)
+[macdLine, signalLine, histLine] = ta.macd(ta.pvt, 12, 26, 9)
+sellvolhigh = macdLine < signalLine
+buyvolhigh = macdLine > signalLine
+//Buy Signal
+mafentry =ta.sma(close, 50) > ta.sma(close, 90)
+//matentry = ta.sma(close, 21) > ta.sma(close, 50)
+matwohun = close > ta.sma(close, 200)
+higheshigh = ta.rising(high, 2)
+higheslow = ta.rising(low, 2 )
+twohunraise = ta.rising(out, 2)
+//highvol =  ta.crossover(volume, ta.sma(volume, lookback))
+highvol = ta.rising(volume,2)
+fourlow = ta.lowest(close, lookback)
+fourhig = ta.highest(close, lookback)
+change =  (((fourhig - fourlow) / fourlow) * 100) <= 30
+green = close > open
+allup = false
+lineabove = ta.cross(close, ta.sma(close, input(defval = 21, title = 'Entry Line')))
+if matwohun and mafentry and higheshigh and twohunraise and buyvolhigh
+//if higheshigh and higheslow and highvol
+    allup := true
+plotshape(allup, style=shape.arrowup,location=location.belowbar, color=color.green, title = "Buy Signal")
+barsSinceLastEntry() =>
+    strategy.opentrades > 0 ? bar_index - strategy.opentrades.entry_bar_index(strategy.opentrades - 1) : na
+    
+//Sell Signal
+mafexit =ta.sma(close, 50) < ta.sma(close, 90)
+matexit = ta.sma(close, 21) < ta.sma(close, 50)
+matwohund = close < ta.sma(close, 200)
+linebreak = ta.sma(close, input(defval = 21, title = 'Exit Line')) > close
+lowesthigh = ta.falling(high, 3)
+lowestlow = ta.falling(low, 2 )
+twohunfall = ta.falling(out, 3)
+twentyfall = ta.falling(outt, 2)
+highvole =  ta.crossover(volume, ta.sma(volume, 5))
+//fourlow = ta.lowest(close, lookback)
+//fourhig = ta.highest(close, lookback)
+changed =  (((fourhig - close) / close) * 100) >= 10
+red = close < open
+atr = ta.atr(14)
+//atrsmalen = int(bar_index - strategy.opentrades.entry_bar_index(strategy.opentrades - 1) )
+atrsmalen = barsSinceLastEntry()
+atrsma = false
+atrlen = 5
+if str.tostring(atrsmalen) != 'NaN' and atrsmalen > 0
+    atrlen := atrsmalen
+    
+atrsma := atr > ta.sma(atr,50)
+alldwn = false
+if sellvolhigh and lowestlow and (close < close[1] and close < open)
+//if higheshigh and higheslow and highvol
+    alldwn := true
+plotshape(alldwn, style=shape.arrowdown,location=location.abovebar, color=color.red, title = "Sell Signal")
+longCondition = ta.crossover(ta.sma(close, 14), ta.sma(close, 28))
+if (allup)
+    strategy.entry("My Long Entry Id", strategy.long)
+shortCondition = ta.crossunder(ta.sma(close, 14), ta.sma(close, 28))
+if (alldwn)
+    strategy.entry("My Short Entry Id", strategy.short)
+Expand (111 lines)

@@ -1,0 +1,124 @@
+Script Name: Long only EMA CROSS 8-50-200 Backtest
+Author: Akickmonkey
+Description: Improve EMA CROSS 8/50/200 with adjustable Exit EMA Level, and can open trade only when above EMA200
+PineScript code:
+
+Pine Script™ strategy
+Long only EMA CROSS 8/50/200 Backtest
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+//@version=2
+strategy("Long only EMA CROSS 8/50/200 Backtest", shorttitle="Golden Cross Tri EMA", overlay=true, commission_type=strategy.commission.percent, commission_value=0.1, initial_capital=1000)
+// EMA 8/50/200 Cross TEST
+//strategy start date
+testStartYear = input(2021, "Backtest Start Year")
+testStartMonth = input(1, "Backtest Start Month")
+testStartDay = input(1, "Backtest Start Day")
+testPeriodStart = timestamp(testStartYear,testStartMonth,testStartDay,0,0)
+testStopYear = input(2021, "Backtest Stop Year")
+testStopMonth = input(12, "Backtest Stop Month")
+testStopDay = input(30, "Backtest Stop Day")
+testPeriodStop = timestamp(testStopYear,testStopMonth,testStopDay,0,0)
+// Input
+switch1=input(true, title="Enable Bar Color?")
+switch2=input(true, title="Show 8 EMA")
+switch3=input(true, title="Show 50 EMA")
+switch4=input(true, title="Show 200 EMA")
+switch5=input(false, title="Show profit level EMA")
+bool_Long_EMA200=input(false, title="Long only above EMA200")
+movingaverage_fast = ema(close, input(8))
+movingaverage_slow = ema(close, input(50))
+movingaverage_market_signal = ema(close, input(200))
+movingaverage_profitlvl = ema(close, input(50))
+// Calculation
+bullish_cross = if bool_Long_EMA200 == true
+    crossover(movingaverage_fast, movingaverage_slow) and movingaverage_fast > movingaverage_market_signal and 
+       time >= testPeriodStart and time <= testPeriodStop ? true : false
+else 
+    bullish_cross = crossover(movingaverage_fast, movingaverage_slow) and 
+       time >= testPeriodStart and time <= testPeriodStop ? true : false
+bearish_cross = crossunder(close, movingaverage_profitlvl)
+// Strategy
+if bullish_cross
+    strategy.entry("long", strategy.long)
+strategy.close("long", when = bearish_cross )
+// Colors
+bartrendcolor = close > movingaverage_fast and close > movingaverage_slow and change(movingaverage_slow) > 0 ? green : close < movingaverage_fast and close < movingaverage_slow and change(movingaverage_slow) < 0 ? red : blue
+barcolor(switch1?bartrendcolor:na)
+//test-overlay
+testPeriodBackground = input(title="Timeframe Highlight?", type=bool, defval=true)
+testPeriodBackgroundColor = testPeriodBackground and (time >= testPeriodStart) and (time <= testPeriodStop) ? #FFFFFF : na
+bgcolor(testPeriodBackgroundColor, transp=90)
+// Output
+plot(switch2?movingaverage_fast:na,color = change(movingaverage_fast) > 0 ? green : red,linewidth=2, title="EMA8")
+plot(switch3?movingaverage_slow:na,color = change(movingaverage_slow) > 0 ? green : red,linewidth=2,title="EMA50")
+plot(switch4?movingaverage_market_signal:na,color = change(movingaverage_market_signal) > 0 ? green : red,linewidth=3,title="EMA200")
+plot(switch5?movingaverage_profitlvl:na,color = change(movingaverage_profitlvl) > 0 ? green : red,linewidth=3, title="EMA Profit LVL")
+//
+alertcondition(bullish_cross, title='Golden Cross (bullish)', message='Bullish')
+alertcondition(bearish_cross, title='Death Cross (bearish)', message='Bearish')
+Expand (65 lines)

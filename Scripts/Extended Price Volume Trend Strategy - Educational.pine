@@ -1,0 +1,125 @@
+Script Name: Extended Price Volume Trend Strategy - Educational
+Author: Oracle_Systems
+Description: The Extended Price Volume Trend (EPVT) is a technical indicator that is used to identify potential trend changes and measure the strength of a trend. In this strategy, we combine the EPVT with other indicators to create a trading system that aims to capture trend reversals and momentum shifts.
+
+The EPVT indicator is calculated by taking the cumulative volume and...
+PineScript code:
+
+Pine Script™ strategy
+Extended Price Volume Trend Strategy : Educational
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+//@version=5
+strategy(title="Extended Price Volume Trend", overlay=true,default_qty_type = strategy.percent_of_equity,default_qty_value=100,initial_capital=1000,pyramiding=0,commission_value=0.01)//@version=5
+var cumVol = 0.
+cumVol += nz(volume)
+if barstate.islast and cumVol == 0
+    runtime.error("No volume is provided by the data vendor.")
+src = close
+lenght = input(200,"Trend Lenght")   
+vt = ta.cum(ta.change(src)/src[1]*volume)
+upx = ta.highest(vt,lenght)
+downx = ta.lowest(vt,lenght)
+basex = (upx +downx)/2
+VTX = vt - basex
+VTY = ta.valuewhen(ta.cross(VTX,0),close,0)
+plot(VTY, color=color.black, title="Extended-PVT")
+/////////////////////// STRATEGY ////////////////
+/////////////////////// TAKE PROFIT SECTION ////////////////
+longConditionx = ta.crossover(close,VTY)
+ShortConditionx = ta.crossunder(close,VTY)
+tp1 = input.int(10, minval=1,title = "TP-1")
+tp2 = input.int(20, minval=1,title = "TP-2")
+tp3 = input.int(30, minval=1,title = "TP-3")
+ematp = ta.ema(close,2)
+TPTAKA1S = VTY*(1-tp1/100)
+plot(TPTAKA1S, "SELL-TP1", color=color.red,linewidth = 1)
+TPTAKA2S = VTY*(1-tp2/100)
+plot(TPTAKA2S, "SELL-TP2", color=color.red,linewidth = 1)
+TPTAKA3S = VTY*(1-tp3/100)
+plot(TPTAKA3S, "SELL-TP3", color=color.red,linewidth = 1)
+TPTAKA1B = VTY*(1+tp1/100)
+plot(TPTAKA1B, "BUY-TP1", color=color.red,linewidth = 1)
+TPTAKA2B = VTY*(1+tp2/100)
+plot(TPTAKA2B, "BUY-TP2", color=color.red,linewidth = 1)
+TPTAKA3B = VTY*(1+tp3/100)
+plot(TPTAKA3B, "BUY-TP3", color=color.red,linewidth = 1)
+BUYTP = ta.crossunder(close,VTY) or ta.crossunder(ematp,TPTAKA1B) or ta.crossunder(ematp,TPTAKA2B) or ta.crossunder(ematp,TPTAKA3B) 
+SELLTP = ta.crossover(close,VTY) or ta.crossover(ematp,TPTAKA1S) or ta.crossover(ematp,TPTAKA2S) or ta.crossover(ematp,TPTAKA3S)
+/////////////////////// STRATEGY ////////////////
+// Check for Long Entry
+longCondition = longConditionx==true
+if longCondition
+    strategy.entry('Long', strategy.long, comment = "ENTER-LONG")
+buyclose = ShortConditionx==true or BUYTP==true 
+// Exit condition 
+strategy.close('Long', when=buyclose or BUYTP==true, comment = "EXIT-LONG")
+// Check for Short Entry
+ShortCondition = ShortConditionx==true
+if ShortCondition
+    strategy.entry('Short', strategy.short, comment = "ENTER-SHORT")
+sellclose = longConditionx==true or SELLTP ==true
+// Exit condition 
+strategy.close('Short', when=sellclose or SELLTP==true, comment = "EXIT-SHORT")
+///// END OF STRATEGY ///////////
+Expand (61 lines)

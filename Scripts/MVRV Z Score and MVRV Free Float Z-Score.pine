@@ -1,0 +1,119 @@
+Script Name: MVRV Z Score and MVRV Free Float Z-Score
+Author: Powerscooter
+Description: IMPORTANT:  This script needs as much historic data as possible. Please run it on  INDEX:BTCUSD ,  BNC:BLX  or another chart of sufficient length.
+
+ MVRV 
+The MVRV (Market Value to Realised Value Ratio) simply divides bitcoins market cap by bitcoins realized market cap. This was previously impossible on Tradingview but has now been made possible thanks to...
+PineScript code:
+
+Pine Script™ strategy
+MVRV Z Score and MVRV Free Float Z-Score
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Powerscooter
+//@version=5
+strategy("MVRV Z Score and MVRV Free Float Z-Score",shorttitle = "MVRV Z Score",precision=2,default_qty_type = strategy.cash, default_qty_value = 100, initial_capital = 100)
+//Inputs
+Strategymode = input.bool(false,"Strategy Mode","Switches between indicator and strategy mode.")
+Calculation = input.string("Standard", "Calculation Method",options = ["Standard","Free Float"], tooltip = "The standard calculation uses the market cap while the free float version uses the free float market cap.")
+Source = input.string("Glassnode", "Market Cap Source",options = ["Glassnode","Coinmetrics"])
+Upper = input.float(7.0,"Upper Line",tooltip="Z-Score value above which a sell signal is given, standard is 7.")
+Lower = input.float(0.1,"Lower Line",tooltip="Z-Score value below which a buy signal is given, standard is 0.1.")
+//Query
+MC1 = request.security("GLASSNODE:BTC_MARKETCAP","D",close)
+MC2 = request.security("CRYPTOCAP:BTC","D",close)
+MCF = request.security("COINMETRICS:BTC_MARKETCAPFF","D",close)
+MCR = request.security("COINMETRICS:BTC_MARKETCAPREAL","D",close)
+//Initialize var
+var float MC = 0
+var MCA = array.new<float>()
+var float MVRV = 0
+var float Zscore = 0
+//Calculations
+if Source=="Glassnode"
+    MC := MC1
+else
+    MC := MC2
+array.push(MCA,MC)
+StdDevA = array.stdev(MCA)
+if Calculation=="Standard"
+    MVRV := MC/MCR
+if Calculation=="Free Float"
+    MVRV := MCF/MCR
+if Calculation=="Standard"  
+    Zscore := (MC-MCR)/StdDevA
+if Calculation=="Free Float"  
+    Zscore := (MCF-MCR)/StdDevA
+//Plotting
+MVRVplot = plot(MVRV, "MVRV", color=color.blue,transp=40)
+Zplot = plot(Zscore, "Z-score",color=color.yellow,linewidth = 2)
+UpperLine = Zscore>=Upper?Upper:na
+LowerLine = Zscore<=Lower?Lower:na
+//Lower and UpperLine are undefined when Zscore isn't close to them so they don't affect panel scaling.
+UpperPlot = plot(UpperLine, transp=100, trackprice = true, color=color.red, display=display.all-display.status_line)
+LowerPlot = plot(LowerLine, transp=100, trackprice = true, color=color.green, display=display.all-display.status_line)
+fill(plot1=Zplot,plot2=UpperPlot,color=color.red, transp=30)
+fill(plot1=Zplot,plot2=LowerPlot,color=color.green, transp=30)
+//Order Conditions
+Long = ta.crossunder(Zscore,Lower)
+TakeProfit = ta.crossover(Zscore,Upper)
+//Execution
+if Long and Strategymode
+    strategy.entry("Long",strategy.long)
+if TakeProfit and Strategymode
+    strategy.close("Long")
+Expand (54 lines)

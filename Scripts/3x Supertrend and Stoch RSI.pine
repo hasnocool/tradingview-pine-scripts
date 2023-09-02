@@ -1,0 +1,290 @@
+Script Name: 3x Supertrend and Stoch RSI
+Author: M3RZI
+Description: Based on the strategy if Trade pro "HIGHEST PROFIT Triple Supertrend Trading Strategy Proven 100 Trade Results"
+
+Your entry long signal will show when two of the three supertrend are green and the stochastic rsi cross up and the candle is above the ema
+Your entry short signal will show when two of the three supertrend are red and the stochastic rsi cross down and...
+PineScript code:
+
+Pine Script™ strategy
+3x Supertrend and Stoch RSI
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © M3RZI
+//@version=4
+strategy("3x Supertrend and Stoch RSI", overlay = true, max_bars_back = 1000)
+//INPUTS
+STATRLENGTH1 = input(10, title = "Fast Supertrend ATR Length", type = input.integer, group = "SUPERTREND SETTINGS")
+STATRMULT1 = input(1, title = "Fast Supertrend ATR Multiplier", type = input.float, group = "SUPERTREND SETTINGS")
+STATRLENGTH2 = input(11, title = "Medium Supertrend ATR Length", type = input.integer, group = "SUPERTREND SETTINGS")
+STATRMULT2 = input(2, title = "Medium Supertrend ATR Multiplier", type = input.float, group = "SUPERTREND SETTINGS")
+STATRLENGTH3 = input(12, title = "Slow Supertrend ATR Length", type = input.integer, group = "SUPERTREND SETTINGS")
+STATRMULT3 = input(3, title = "Slow Supertrend ATR Multiplier", type = input.float, group = "SUPERTREND SETTINGS")
+stochK = input(3, title = "K (Stochastic Fast)", type = input.integer, group = "STOCHASTIC RSI SETTINGS")
+stochD = input(3, title = "D (Signal Line)", type = input.integer, group = "STOCHASTIC RSI SETTINGS")
+rsiLength = input(14, title = "RSI Length", type = input.integer, group = "STOCHASTIC RSI SETTINGS")
+stochLength = input(14, title = "Stochastic Length", type = input.integer, group = "STOCHASTIC RSI SETTINGS")
+rsiSource = input(close, title = "RSI Source", type = input.source, group = "STOCHASTIC RSI SETTINGS")
+stochRestrictions = input(false, title = "Restrict crosses to overbought/oversold territory", type = input.bool, group = "STOCHASTIC RSI SETTINGS")
+overboughtLine = input(80, title = "Stochastic  RSI Upper Band", type = input.integer, group = "STOCHASTIC RSI SETTINGS")
+oversoldLine = input(20, title = "Stochastic RSI Lower Band", type = input.integer, group = "STOCHASTIC RSI SETTINGS")
+EMALength  = input(200, title = "EMA Length", type = input.integer, group = "EMA SETTINGS")
+SLStrategy = input("ATR Based", title = "Stop Loss Strategy", options = ["ATR Based"],type = input.string, group = "POSITION EXIT SETTINGS")
+SLATRLength = input(14, title = "Stop Loss ATR Length", type = input.integer, group = "POSITION EXIT SETTINGS")
+SLATRMult = input(2.7, title = "Stop Loss ATR Multiplier", type = input.float, group = "POSITION EXIT SETTINGS")
+TPStrategy = input("ATR Based", title = "Take Profit Strategy", options = ["ATR Based"],type = input.string, group = "POSITION EXIT SETTINGS")
+TPATRLength = input(14, title = "Take Profit ATR Length", type = input.integer, group = "POSITION EXIT SETTINGS")
+TPATRMult = input(1.6, title = "Take Profit ATR Multiplier", type = input.float, group = "POSITION EXIT SETTINGS")
+alertLongCondition = input("", title = "Long Signal", type = input.string, group = "ALERT SETTINGS") 
+alertShortCondition = input("", title = "Short Signal", type = input.string, group = "ALERT SETTINGS")
+alertLongProfit = input("", title = "Long Take Profit", type = input.string, group = "ALERT SETTINGS")  
+alertLongLoss = input("", title = "Long Stop Loss", type = input.string, group = "ALERT SETTINGS") 
+alertShortProfit = input("", title = "Short Take Profit", type = input.string, group = "ALERT SETTINGS") 
+alertShortLoss = input("", title = "Short Stop loss", type = input.string, group = "ALERT SETTINGS") 
+//SUPERTRENDS
+[superTrend1,dir1] = supertrend(STATRMULT1,STATRLENGTH1)
+[superTrend2,dir2] = supertrend(STATRMULT2,STATRLENGTH2)
+[superTrend3,dir3] = supertrend(STATRMULT3,STATRLENGTH3)
+directionST1 = dir1 == 1 and dir1[1] == 1 ? false : dir1 == -1 and dir1[1] == -1 ? true : na
+directionST2 = dir2 == 1 and dir2[1] == 1 ? false : dir2 == -1 and dir2[1] == -1 ? true : na
+directionST3 = dir3 == 1 and dir3[1] == 1 ? false : dir3 == -1 and dir3[1] == -1 ? true : na
+//STOCH RSI
+rsi = rsi(rsiSource, rsiLength)
+k = sma(stoch(rsi, rsi, rsi, stochLength), stochK)
+d = sma(k, stochD)
+//EMA
+ema = ema(close,EMALength)
+//CONDITIONS LONG AND SHORT
+var long = false
+var longCondition = false
+var short = false
+var shortCondition = false
+var drawing = false
+var TP = 0.0
+var SL = 0.0
+var middle = 0.0
+var initial = 0
+stopSize = atr(SLATRLength) * SLATRMult
+profitSize = atr(TPATRLength) * TPATRMult
+longStop = close - stopSize
+longProfit = close + profitSize
+current = close
+shortStop = close + stopSize
+shortProfit = close - profitSize
+barInitial = bar_index
+if  stochRestrictions
+    longCondition := close > ema and ((directionST1 == true and directionST2 == true)  or (directionST2 == true and directionST3 == true)) and crossover(k,d) and k < oversoldLine and not long and not drawing
+    shortCondition := close < ema and ((directionST1 == false and directionST2 == false)  or (directionST2 == false and directionST3 == false)) and crossunder(k,d) and k > overboughtLine and not short and not drawing
+else
+    longCondition := close > ema and ((directionST1 == true and directionST2 == true)  or (directionST2 == true and directionST3 == true)) and crossover(k,d) and not long and not drawing
+    shortCondition := close < ema and ((directionST1 == false and directionST2 == false)  or (directionST2 == false and directionST3 == false)) and crossunder(k,d) and not short and not drawing
+if longCondition
+    long := true
+    short := false
+    drawing := true
+    TP := longProfit
+    middle := current
+    SL := longStop
+    initial := barInitial
+    strategy.entry("Long", strategy.long, 10)
+    strategy.exit("Long exit","Long", limit = TP, stop = SL)
+    alert(alertLongCondition,alert.freq_once_per_bar_close)
+    //label.new(bar_index,low,text = "Long\nTP:"+tostring(TP)+"\nSL:"+tostring(SL)+"\nAbierto:"+tostring(current), yloc = yloc.belowbar, textcolor = color.white, color = color.green, size = size.small,  style = label.style_label_up)
+if shortCondition
+    short := true
+    long := false
+    drawing := true
+    TP := shortProfit
+    middle := current
+    SL := shortStop
+    initial := barInitial
+    strategy.entry("Short", strategy.short, 10)
+    strategy.exit("Short exit","Short",limit = TP , stop = SL)
+    alert(alertShortCondition,alert.freq_once_per_bar_close)
+    //label.new(bar_index,high,text = "Short\nTP:"+tostring(TP)+"\nSL:"+tostring(SL)+"\nAbierto:"+tostring(current), yloc = yloc.abovebar, textcolor = color.white, color = color.red, size = size.small,  style = label.style_label_down)
+if long and (high[1] >= TP or low[1] <= SL)
+    drawing := false
+    long := false
+    if high[1] >= TP
+        label.new(bar_index[int((bar_index - initial)/2)],TP, text = "Win (Long)", textcolor = color.white, color = color.green, size = size.small, style = label.style_label_down)
+        alert(alertLongProfit,alert.freq_once_per_bar_close)
+    else
+        label.new(bar_index[int((bar_index - initial)/2)],SL, text = "Lose (Long)", textcolor = color.white, color = color.red, size = size.small, style = label.style_label_up)
+        alert(alertLongLoss,alert.freq_once_per_bar_close)
+if short and (low[1] <= TP or high[1] >= SL)
+    drawing :=  false
+    short := false
+    if low[1] <= TP
+        label.new(bar_index[int((bar_index - initial)/2)],TP, text = "Win (short)", textcolor = color.white, color = color.green, size = size.small, style = label.style_label_up)
+        alert(alertShortProfit,alert.freq_once_per_bar_close)
+    else
+        label.new(bar_index[int((bar_index - initial)/2)],SL, text = "Lose (short)", textcolor = color.white, color = color.red, size = size.small, style = label.style_label_down)
+        alert(alertShortLoss,alert.freq_once_per_bar_close)
+//DRAWING
+plotshape(longCondition, title = "Long Signal", location=location.belowbar, style=shape.labelup, color=color.green, textcolor=color.white, size=size.small, text="Long")
+plotshape(shortCondition, title = "Short Signal", location=location.abovebar, style=shape.labeldown, color=color.red, textcolor=color.white, size=size.small, text="Short")
+profitLine = plot(drawing and drawing[1] ? TP : na, title = "Take profit", color = color.green, style = plot.style_linebr)
+currentLine =plot(drawing and drawing[1]  ? middle : na, title = "Middle Line", color = color.white, style = plot.style_linebr)
+lossLine = plot(drawing and drawing[1]  ? SL : na, title = "Stop Loss", color = color.red, style = plot.style_linebr)
+fill(currentLine,profitLine, title = "Profit Background" ,color = color.new(color.green,75))
+fill(currentLine,lossLine, title = "Loss Background" ,color = color.new(color.red,75))
+plot(superTrend1, title = "Fast Supertrend", color = dir1 == 1 and dir1[1] == 1 ? color.red : dir1 == -1 and dir1[1] == -1 ? color.green : na)
+plot(superTrend2, title = "Medium Supertrend", color = dir2 == 1 and dir2[1] == 1 ? color.red : dir2 == -1 and dir2[1] == -1 ? color.green : na)
+plot(superTrend3, title = "Slow Supertrend", color = dir3 == 1 and dir3[1] == 1 ? color.red : dir3 == -1 and dir3[1] == -1 ? color.green : na)
+plot(ema, title = "EMA",color = color.yellow)
+//plot(k, color = color.blue)
+//plot(d, color = color.orange)
+//h1 = hline(80)
+//h2 = hline(20)
+//fill(h1,h2, color = color.new(color.purple,60))
+Expand (150 lines)

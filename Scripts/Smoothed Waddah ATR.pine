@@ -1,0 +1,134 @@
+Script Name: Smoothed Waddah ATR
+Author: SnarkyPuppy
+Description: ~~~All Credit to LAZY BEAR for posting the original Script which is an old MT4 indicator.~~~~
+
+ No this system does not repaint... if it does let me know. Either the code is wrong or you are using a repainting chart such as renko candles.  
+
+ *PURPOSE* 
+This Is an "Enhanced or Smoothed" version of the script that captures the heiken-ashi closing price as its main...
+PineScript code:
+
+Pine Script™ strategy
+Smoothed Waddah ATR
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+//@version=5
+///////////Original Script Courtesy of Lazy_Bear.... Absolute Legend\\\\\\\\\\\\\\\
+strategy('SmoothedWaddah', overlay=false, initial_capital=1)
+sensitivity = input(150, title='Sensitivity')
+fastLength = input(20, title='MacD FastEMA Length')
+slowLength = input(40, title='MacD SlowEMA Length')
+channelLength = input(20, title='BB Channel Length')
+mult = input(1.5, title='BB Stdev Multiplier')
+RSI14filter = input(40, title='RSI Value trade filter')
+////////////MacD Calculation of price//////////////////////////////
+calc_macd(source, fastLength, slowLength) =>
+    fastMA = ta.ema(source, fastLength)
+    slowMA = ta.ema(source, slowLength)
+    fastMA - slowMA
+/////////BolingerBand Calculation of Price///////////////////////
+calc_BBUpper(source, length, mult) =>
+    basis = ta.sma(source, length)
+    dev = mult * ta.stdev(source, length)
+    basis + dev
+calc_BBLower(source, length, mult) =>
+    basis = ta.sma(source, length)
+    dev = mult * ta.stdev(source, length)
+    basis - dev
+//////heinkenashi chart call for closing price "smoothing mechanism"\\\\\\\\\\\\\\\\\\\\\\\\\\\
+point = request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, close)
+////////////////////T1 is change in MacD current  candle from previous candle Sensitivy amplifies calculation/////////////////////
+t1 = (calc_macd(point, fastLength, slowLength) - calc_macd(point[1], fastLength, slowLength)) * sensitivity
+//////////////////////T2 is  T1 from two candles prior\\\\\\\\\\\\\\\\\\\\\\\\\\\
+t2 = (calc_macd(point[2], fastLength, slowLength) - calc_macd(point[3], fastLength, slowLength)) * sensitivity
+////////////////E1 is difference in bolinger band upper and lower...E2 is E1 from one candle prior not needed//////////////
+e1 = calc_BBUpper(ohlc4, channelLength, mult) - calc_BBLower(ohlc4, channelLength, mult)
+//e2 = (calc_BBUpper(close[1], channelLength, mult) - calc_BBLower(close[1], channelLength, mult))
+//////signal bar printing.. Up if MacD positive .. Down if MacD negative//////////
+trendUp = t1 >= 0 ? t1 : 0
+trendDown = t1 < 0 ? -1 * t1 : 0
+///////plots difference in macD*Sensitivity, color change if increasing or decreasing. 
+//////color is green/lime if explosion is up \ color is red/orange if explosion is down/////////
+plot(trendUp, style=plot.style_columns, linewidth=1, color=trendUp < trendUp[1] ? color.new(color.lime,45) : color.new(color.green,45), title='UpTrend')
+plot(trendDown, style=plot.style_columns, linewidth=1, color=trendDown < trendDown[1] ? color.new(color.orange,45) : color.new(color.red,45), title='DownTrend')
+plot(e1, style=plot.style_line, linewidth=2, color=color.new(#A0522D, 0), title='ExplosionLine')
+////////////Entry conditions and Concept/////////////////////
+////////////Long Only System. T1 is measuring the distance between MACD EMA's. This is Multiplied
+////////////by the sensitivity so that it can be compared to the difference between BollingerBand. 
+/////////////{this could have been a ratio maybe i will work with that in a different script.} 
+/////////////I found that 135-175 sensitivy allows for values to be compared on most charts.....
+////////////If the (difference between the EMA)*(Sensitivity) is greater than (BB upper line- BB lower line)
+////////////it is considered an explosion in either the downside or the upside.The indicator will print
+///////////a bar higher than the trigger line either green or red (up or down respectively)//////////////////
+longCondition = trendUp > e1 and ta.rsi(close, 14) > RSI14filter
+if longCondition
+    strategy.entry('up', strategy.long)
+strategy.close('up', trendDown > e1)
+Expand (68 lines)

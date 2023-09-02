@@ -1,0 +1,129 @@
+Script Name: MACD+ Strategy [SystemAlpha]
+Author: systemalphatrader
+Description: This is a strategy based on MACD Oscillator . Instead of using just the normal crossovers, we use trend filters, trailing stop loss and take profit targets. This strategy was developed for crypto, forex and stocks on daily timeframe but feel free to experiment on 15 minutes or higher using heikin ashi or normal candles
+
+In this strategy you have a choice...
+PineScript code:
+
+Pine Script™ strategy
+MACD+ Strategy [SystemAlpha]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © systemalphatrader
+//@version=4
+strategy(title="MACD Strategy", shorttitle="MACD Strategy [PUBLIC]", overlay=true, initial_capital=10000, currency='USD', 
+   default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent, commission_value=0.04)
+// == /MAIN INPUT  ==
+/////////////////////////////////////
+//*STRATEGY LOGIC                 *//
+/////////////////////////////////////
+// == MACD ==
+fastLength = input(12, title="Fast Length")
+slowlength = input(26, title="Slow Length")
+MACDLength = input(9, title="MACD Length")
+MACD = ema(close, fastLength) - ema(close, slowlength)
+aMACD = ema(MACD, MACDLength)
+delta = MACD - aMACD
+// Calc breakouts
+buySignal        = crossover(delta, 0)
+shortSignal      = crossunder(delta,0)
+// == /MACD ==
+//////////////////////////
+//* STRATEGY COMPONENT *//
+//////////////////////////
+// === BACKTEST RANGE ===
+From_Year   = input(defval = 2017, title = "BACKTEST: From Year")
+From_Month  = input(defval = 1, title = "BACKTEST: From Month", minval = 1, maxval = 12)
+From_Day    = input(defval = 1, title = "BACKTEST: From Day", minval = 1, maxval = 31)
+To_Year     = input(defval = 9999, title = "BACKTEST: To Year")
+To_Month    = input(defval = 1, title = "BACKTEST: To Month", minval = 1, maxval = 12)
+To_Day      = input(defval = 1, title = "BACKTEST: To Day", minval = 1, maxval = 31)
+Start       = timestamp(From_Year, From_Month, From_Day, 00, 00)  // backtest start window
+Finish      = timestamp(To_Year, To_Month, To_Day, 23, 59)        // backtest finish window
+testPeriod() =>
+    time >= Start and time <= Finish ? true : false
+// === /BACKTEST RANGE ===
+// === STRATEGY ===
+// Make input option to configure trade direction
+tradeDirection = input(title="Trade Direction", defval="Both", options=["Long", "Short", "Both"]) 
+// Translate input into trading conditions
+longOK  = (tradeDirection == "Long") or (tradeDirection == "Both")
+shortOK = (tradeDirection == "Short") or (tradeDirection == "Both")
+// == STRATEGY ENTRIES/EXITS ==
+longCondition = longOK and buySignal and testPeriod()
+shortcondition = shortOK and shortSignal and testPeriod()
+// === STRATEGY - LONG POSITION EXECUTION ===
+if longCondition
+    strategy.entry("Long", strategy.long)
+// === STRATEGY - SHORT POSITION EXECUTION ===
+if shortcondition
+    strategy.entry("Short", strategy.short)
+// === /STRATEGY ===
+//EOF
+Expand (66 lines)

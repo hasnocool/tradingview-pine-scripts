@@ -1,0 +1,718 @@
+Script Name: SPXL Futures Strategy
+Author: timtr4d3
+Description: - Buy/sell signals for SPXL using futures momentum. 
+- For real-time signals at close, use ES1! on 2 minute chart and sign up for real-time cboe mini futures data feed in tradingview. 
+- All buys and sells are at near close of US RTH market at 4pm. 
+- Best to use the script with other breadth signals to decide on trading strategy.
+- Script is compatible with SPY,...
+PineScript code:
+
+Pine Script™ strategy
+SPXL Futures Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+//@version=5
+strategy(title="SPXL Futures Strategy", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100, calc_on_every_tick=true, process_orders_on_close=true, max_labels_count=100, initial_capital=10000)
+enableStrategy = input.bool(title="Enable Strategy", defval=true)
+shortOnSell = input.bool(title="Short on Sell", defval=true)
+strategyStartDate = input.time(title="Strategy Start Date", defval=timestamp("1 Jan 2020 00:00 +0300"))
+strategyEndDate = input.time(title="Strategy End Date", defval=timestamp("01 Jan 2029 00:00 +0300"))
+stratType = input.string(title="Strategy Type", defval="MA Rating", options=["MA Rating", "EMA Trend"])
+esThreshDefault = input.float(title="ES Threshold", defval=-0.25)
+nqThreshDefault = input.float(title="NQ Threshold", defval=-0.25)
+ymThreshDefault = input.float(title="YM Threshold", defval=-0.25)
+rtyThreshDefault = input.float(title="RTY Threshold", defval=-0.25)
+tnThreshDefault = input.float(title="TN Threshold", defval=0)
+mfirsiOverboughtThresh = input.float(title="MFI/RSI Overbought Thrreshold", defval=55)
+overboughtThresh = input.float(title="Overbought Rating Thrreshold", defval=-0.2)
+get_bbr(x, length) => 
+    mult = 2
+    basis = ta.sma(x, length)
+    dev = mult * ta.stdev(x, length)
+    upper = basis + dev
+    lower = basis - dev
+    (x - lower)/(upper - lower)
+// calculate vix and market breadth metrics
+v1 = request.security("VX1!", "D", close)
+v2 = request.security("VX2!", "D", close)
+vix = request.security("VIX", "D", close)
+vxx = request.security("VXX", "D", close)
+vvix = request.security("VVIX", "D", close)
+vix_roll_yield = (v1 - vix) / vix
+vix_shape =  ( v2 - v1 )
+vix_sell = vix_roll_yield <= 0.01
+plotchar(vix_shape * 10, color=color.yellow, title="VIX yield shape", char="", location=location.top)
+plotchar(vix_roll_yield * 100, color=color.orange, title="VIX roll yield", char="", location=location.top)
+vixbbr = get_bbr(vix, input(10, title="vix bbr length"))
+vvixbbr = get_bbr(vvix, input(10, title="vvix bbr length"))
+vxxbbr = get_bbr(vxx, input(20,title="vxx bbr length"))
+mmth = ta.sma(request.security(input("MMOH", "Percent of stocks above 100 dma"), "D", close), input(20, "percent of stocks length"))
+plotchar(mmth, title="Percent of Stocks above 100 dma (SMA)", char="", location=location.top)
+mmthtrend = ( ( mmth[0] - mmth[1] ) + ( mmth[1] - mmth[2] ) + ( mmth[2] - mmth[3] ) ) / 3
+mmthlow = mmthtrend < 0
+plotchar(mmthlow, title="Percent of Stocks above 100 change", char="", location=location.top)
+skew = request.security("SKEW", "D", close)
+plotchar(skew, title="SKEW", char="", location=location.top)
+skewma = ta.sma(skew, input(10, "SKEW MA LENGTH"))
+plotchar(skewma, title="SKEW DMA", char="", location=location.top)
+skewpos = ( ( (skewma - skewma[1]) + (skewma[1] - skewma[2]) + (skewma[2] - skewma[3]) ) / 3) > 0
+plotchar(skewpos, title="SKEW change", char="", location=location.top)
+skbbr = get_bbr(skew, input(29, "skew bbr length"))
+plotchar(skbbr, title="SKEW BBR", char="", location=location.top)
+skewthresh = input(1.1, "skew bbr thresh")
+extremenegativeskew = (skbbr > skewthresh) or (skbbr[1] > skewthresh)
+// Ichimoku Cloud
+donchian(len) => math.avg(ta.lowest(len), ta.highest(len))
+ichimoku_cloud() =>
+    conversionLine = donchian(9)
+    baseLine = donchian(26)
+    leadLine1 = math.avg(conversionLine, baseLine)
+    leadLine2 = donchian(52)
+    [conversionLine, baseLine, leadLine1, leadLine2]
+    
+calcRatingMA(ma, src) => na(ma) or na(src) ? na : (ma == src ? 0 : ( ma < src ? 1 : -1 ))
+calcRating(buy, sell) => buy ? 1 : ( sell ? -1 : 0 )
+calcRatingAll() =>
+    SMA10 = ta.sma(close, 10)
+    SMA20 = ta.sma(close, 20)
+    SMA30 = ta.sma(close, 30)
+    SMA50 = ta.sma(close, 50)
+    SMA100 = ta.sma(close, 100)
+    SMA200 = ta.sma(close, 200)
+    
+    EMA10 = ta.ema(close, 10)
+    EMA20 = ta.ema(close, 20)
+    EMA30 = ta.ema(close, 30)
+    EMA50 = ta.ema(close, 50)
+    EMA100 = ta.ema(close, 100)
+    EMA200 = ta.ema(close, 200)
+    
+    HullMA9 = ta.hma(close, 9)
+    
+    // Volume Weighted Moving Average (VWMA)
+    VWMA = ta.vwma(close, 20)
+    
+    [IC_CLine, IC_BLine, IC_Lead1, IC_Lead2] = ichimoku_cloud()
+    
+    // calculate trading recommendation based on SMA/EMA
+    float ratingMA = 0
+    float ratingMAC = 0
+    
+    float ratingSMA10 = na
+    if not na(SMA10)
+        ratingSMA10 := calcRatingMA(SMA10, close)
+        ratingMA := ratingMA + ratingSMA10
+        ratingMAC := ratingMAC + 1
+    float ratingSMA20 = na
+    if not na(SMA20)
+        ratingSMA20 := calcRatingMA(SMA20, close)
+        ratingMA := ratingMA + ratingSMA20
+        ratingMAC := ratingMAC + 1
+    float ratingSMA30 = na
+    if not na(SMA30)
+        ratingSMA30 := calcRatingMA(SMA30, close)
+        ratingMA := ratingMA + ratingSMA30
+        ratingMAC := ratingMAC + 1
+    float ratingSMA50 = na
+    if not na(SMA50)
+        ratingSMA50 := calcRatingMA(SMA50, close)
+        ratingMA := ratingMA + ratingSMA50
+        ratingMAC := ratingMAC + 1
+    float ratingSMA100 = na
+    if not na(SMA100)
+        ratingSMA100 := calcRatingMA(SMA100, close)
+        ratingMA := ratingMA + ratingSMA100
+        ratingMAC := ratingMAC + 1
+    float ratingSMA200 = na
+    if not na(SMA200)
+        ratingSMA200 := calcRatingMA(SMA200, close)
+        ratingMA := ratingMA + ratingSMA200
+        ratingMAC := ratingMAC + 1
+    float ratingEMA10 = na
+    if not na(EMA10)
+        ratingEMA10 := calcRatingMA(EMA10, close)
+        ratingMA := ratingMA + ratingEMA10
+        ratingMAC := ratingMAC + 1
+    float ratingEMA20 = na
+    if not na(EMA20)
+        ratingEMA20 := calcRatingMA(EMA20, close)
+        ratingMA := ratingMA + ratingEMA20
+        ratingMAC := ratingMAC + 1
+    float ratingEMA30 = na
+    if not na(EMA30)
+        ratingEMA30 := calcRatingMA(EMA30, close)
+        ratingMA := ratingMA + ratingEMA30
+        ratingMAC := ratingMAC + 1
+    float ratingEMA50 = na
+    if not na(EMA50)
+        ratingEMA50 := calcRatingMA(EMA50, close)
+        ratingMA := ratingMA + ratingEMA50
+        ratingMAC := ratingMAC + 1
+    float ratingEMA100 = na
+    if not na(EMA100)
+        ratingEMA100 := calcRatingMA(EMA100, close)
+        ratingMA := ratingMA + ratingEMA100
+        ratingMAC := ratingMAC + 1
+    float ratingEMA200 = na
+    if not na(EMA200)
+        ratingEMA200 := calcRatingMA(EMA200, close)
+        ratingMA := ratingMA + ratingEMA200
+        ratingMAC := ratingMAC + 1
+    float ratingHMA = na
+    if not na(HullMA9)
+        ratingHMA := calcRatingMA(HullMA9, close)
+        ratingMA := ratingMA + ratingHMA
+        ratingMAC := ratingMAC + 1
+    
+    float ratingVWMA = na
+    if not na(VWMA)
+        ratingVWMA := calcRatingMA(VWMA, close)
+        ratingMA := ratingMA + ratingVWMA
+        ratingMAC := ratingMAC + 1
+    
+    float ratingIC = na
+    if not (na(IC_Lead1) or na(IC_Lead2) or na(close) or na(close[1]) or na(IC_BLine) or na(IC_CLine))
+        ratingIC := calcRating(
+         IC_Lead1 > IC_Lead2 and close > IC_Lead1 and close < IC_BLine and close[1] < IC_CLine and close > IC_CLine,
+         IC_Lead2 > IC_Lead1 and close < IC_Lead2 and close > IC_BLine and close[1] > IC_CLine and close < IC_CLine)
+    if not na(ratingIC)
+        ratingMA := ratingMA + ratingIC
+        ratingMAC := ratingMAC + 1
+    
+    ratingMA := ratingMAC > 0 ? ratingMA / ratingMAC : na
+    
+    
+    ratingMA
+calcEMARating() =>
+    ema171 = ta.ema(close, 171)
+    rating = close > ema171
+    rating
+esRating2 = request.security('ES1!', '60', calcEMARating())
+esRating3 = request.security('ES1!', '60', calcRatingAll())
+esRating4 = request.security('ES1!', '120', calcRatingAll())
+esRating5 = request.security('ES1!', '180', calcRatingAll())
+esRating6 = request.security('ES1!', 'D', calcRatingAll())
+nqRating2 = request.security('NQ1!', '60', calcEMARating())
+nqRating3 = request.security('NQ1!', '60', calcRatingAll())
+nqRating4 = request.security('NQ1!', '120', calcRatingAll())
+nqRating5 = request.security('NQ1!', '180', calcRatingAll())
+nqRating6 = request.security('NQ1!', 'D', calcRatingAll())
+ymRating2 = request.security('YM1!', '60', calcEMARating())
+ymRating3 = request.security('YM1!', '60', calcRatingAll())
+ymRating4 = request.security('YM1!', '120', calcRatingAll())
+ymRating5 = request.security('YM1!', '180', calcRatingAll())
+ymRating6 = request.security('YM1!', 'D', calcRatingAll())
+rtyRating2 = request.security('RTY1!', '60', calcEMARating())
+rtyRating3 = request.security('RTY1!', '60', calcRatingAll())
+rtyRating4 = request.security('RTY1!', '120', calcRatingAll())
+rtyRating5 = request.security('RTY1!', '180', calcRatingAll())
+rtyRating6 = request.security('RTY1!', 'D', calcRatingAll())
+tnRating2 = request.security('TN1!', '60', calcEMARating())
+tnRating3 = request.security('TN1!', '60', calcRatingAll())
+tnRating4 = request.security('TN1!', '120', calcRatingAll())
+tnRating5 = request.security('TN1!', '180', calcRatingAll())
+tnRating6 = request.security('TN1!', 'D', calcRatingAll())
+esRating = esRating4
+nqRating = nqRating4
+ymRating = ymRating4
+rtyRating = rtyRating4
+tnRating = tnRating3
+plotchar(esRating, title="ES Rating", char="", location=location.top)
+plotchar(nqRating, title="NQ Rating", char="", location=location.top)
+plotchar(ymRating, title="YM Rating", char="", location=location.top)
+plotchar(rtyRating, title="RTY Rating", char="", location=location.top)
+plotchar(tnRating, title="TN Rating", char="", location=location.top)
+avgRating = (esRating+nqRating+ymRating+rtyRating)/4
+calcTA() =>
+    up = ta.rma(math.max(ta.change(close), 0), 14)
+    down = ta.rma(-math.min(ta.change(close), 0), 14)
+    rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+    mf = ta.mfi(hlc3, 14)
+    [rsi, mf]
+// in daily realtime use yesterdays data until next day (tradingview doesn't seem to handle correctly daily timeframes in realtime)
+curIndex = (timeframe.period == 'D' and (barstate.isrealtime or barstate.islast)) ? 1 : 0
+[rsi, mf] = request.security('ES1!', 'D', calcTA()) 
+[rsiIntraday, mfIntraday] = request.security('ES1!', 'D', calcTA(), lookahead=barmerge.lookahead_on) 
+if timeframe.isintraday
+    rsi := rsiIntraday
+    mf := mfIntraday
+plotchar(rsi[curIndex], title="RSI", char="", location=location.top)
+plotchar(mf[curIndex], title="MFI", char="", location=location.top)
+// adjust threshold in overbought conditions
+esThresh = esThreshDefault
+nqThresh = nqThreshDefault
+ymThresh = ymThreshDefault
+rtyThresh = rtyThreshDefault
+tnThresh = tnThreshDefault
+if mf[curIndex] > mfirsiOverboughtThresh and rsi[curIndex] > mfirsiOverboughtThresh
+    esThresh := overboughtThresh
+    nqThresh := overboughtThresh
+    ymThresh := overboughtThresh
+    rtyThresh := overboughtThresh
+isVixBreadthSell = vix_sell[curIndex] and mmthlow[curIndex] and (vvixbbr[curIndex]  >= 0.90 or vxxbbr[curIndex] >= 0.90) and not extremenegativeskew[curIndex]
+isSell = false
+isBuy = false
+if stratType == 'MA Rating'
+    isSell := (esRating[curIndex] <= esThresh or 
+              nqRating[curIndex] <= nqThresh or 
+              ymRating[curIndex] <= ymThresh or 
+              rtyRating[curIndex] <= rtyThresh or 
+              isVixBreadthSell)
+    isBuy := not isSell and 
+             ((esRating[curIndex+1]>esThresh and esRating[curIndex] > esThresh) or esRating[curIndex]>=0) and 
+             ((nqRating[curIndex+1]>nqThresh and nqRating[curIndex] > nqThresh) or nqRating[curIndex]>=0) and 
+             ((ymRating[curIndex+1]>ymThresh and ymRating[curIndex] > ymThresh) or ymRating[curIndex]>=0) and 
+             ((rtyRating[curIndex+1]>rtyThresh and rtyRating[curIndex] > rtyThresh) or rtyRating[curIndex]>=0) 
+             //and tnRating[curIndex] <= tnThresh 
+else if stratType == 'EMA Trend'
+    isSell := (not esRating2[curIndex] or 
+              not nqRating2[curIndex] or 
+              not ymRating2[curIndex] or 
+              not rtyRating2[curIndex])
+    isBuy := not isSell and 
+             (esRating2[curIndex] and 
+              nqRating2[curIndex] and 
+              ymRating2[curIndex] and 
+              rtyRating2[curIndex]) 
+var table t = table.new(position.bottom_right, 7, 7, border_width=1)
+var table t2 = table.new(position.top_right, 3, 7, border_width=1)
+if barstate.islast
+    table.cell(t2, 1, 0, text='VIX RY', bgcolor=color.black, text_size=size.auto, text_color=#FFFFFF)
+    table.cell(t2, 2, 0, text=str.tostring(vix_roll_yield*100,'#.##')+'%'+ " ("+str.tostring(vix,'#.##')+")", bgcolor=vix_roll_yield<0.01 ? color.red : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t2, 1, 1, text='MMOH TR', bgcolor=color.black, text_size=size.auto, text_color=#FFFFFF)
+    table.cell(t2, 2, 1, text=str.tostring(mmthtrend,'#.##')+ " ("+str.tostring(mmth,'#.##')+")", bgcolor=mmthtrend<0 ? color.red : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t2, 1, 2, text='VVIX BB', bgcolor=color.black, text_size=size.auto, text_color=#FFFFFF)
+    table.cell(t2, 2, 2, text=str.tostring(vvixbbr,'#.##')+ " ("+str.tostring(vvix,'#.##')+")", bgcolor=vvixbbr>=0.9 ? color.red : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t2, 1, 3, text='SKEW BB', bgcolor=color.black, text_size=size.auto, text_color=#FFFFFF)
+    table.cell(t2, 2, 3, text=str.tostring(skbbr,'#.##')+ " ("+str.tostring(skew,'#.##')+")", bgcolor=skbbr>skewthresh ? color.red : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t2, 1, 4, text='MFI/RSI', bgcolor=color.black, text_size=size.auto, text_color=#FFFFFF)
+    table.cell(t2, 2, 4, text=str.tostring(mf,'#')+ " / "+str.tostring(rsi,'#'), bgcolor=mf>50 and rsi>50 ? color.red : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t2, 1, 5, text='SIGNAL', bgcolor=color.black, text_size=size.auto, text_color=#FFFFFF)
+    table.cell(t2, 2, 5, text=(isBuy ? 'LONG' : 'SHORT') + ' (' + str.tostring(esThresh,'#.##') + ')', bgcolor=not isBuy ? color.red : color.green, text_size=size.auto, text_color=#000000)
+    
+    table.cell(t, 1, 1, text='', bgcolor=color.black, text_size=size.auto, text_color=#FFFFFF)
+    table.cell(t, 2, 1, text='D', bgcolor=color.black, text_size=size.auto, text_color=#FFFFFF)
+    table.cell(t, 3, 1, text='3H', bgcolor=color.black, text_size=size.auto, text_color=#FFFFFF)
+    table.cell(t, 4, 1, text='2H', bgcolor=color.black, text_size=size.auto, text_color=#FFFFFF)
+    table.cell(t, 5, 1, text='1H', bgcolor=color.black, text_size=size.auto, text_color=#FFFFFF)
+    table.cell(t, 6, 1, text='TR', bgcolor=color.black, text_size=size.auto, text_color=#FFFFFF)
+    table.cell(t, 1, 2, text='ES', bgcolor=color.black, text_size=size.auto, text_color=#FFFFFF)
+    table.cell(t, 6, 2, text=esRating2 ? 'A' : 'B', width=na, bgcolor=not esRating2 ? color.red : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 5, 2, text=str.tostring(esRating3,'#.##'), width=na, bgcolor=esRating3[0]<=esThresh ? color.red : esRating3[0]<=0 ? color.yellow : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 4, 2, text=str.tostring(esRating4,'#.##'), width=na, bgcolor=esRating4[0]<=esThresh ? color.red : esRating4[0]<=0 ? color.yellow : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 3, 2, text=str.tostring(esRating5,'#.##'), width=na, bgcolor=esRating5[0]<=esThresh ? color.red : esRating5[0]<=0 ? color.yellow : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 2, 2, text=str.tostring(esRating6,'#.##'), width=na, bgcolor=esRating6[0]<=esThresh ? color.red : esRating6[0]<=0 ? color.yellow : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 1, 3, text='NQ', bgcolor=color.black, text_size=size.auto, text_color=#FFFFFF)
+    table.cell(t, 6, 3, text=nqRating2 ? 'A' : 'B', width=na, bgcolor=not nqRating2[0] ? color.red : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 5, 3, text=str.tostring(nqRating3,'#.##'), width=na, bgcolor=nqRating3[0]<=nqThresh ? color.red : nqRating3[0]<=0 ? color.yellow : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 4, 3, text=str.tostring(nqRating4,'#.##'), width=na, bgcolor=nqRating4[0]<=nqThresh ? color.red : nqRating4[0]<=0 ? color.yellow : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 3, 3, text=str.tostring(nqRating5,'#.##'), width=na, bgcolor=nqRating5[0]<=nqThresh ? color.red : nqRating5[0]<=0 ? color.yellow : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 2, 3, text=str.tostring(nqRating6,'#.##'), width=na, bgcolor=nqRating6[0]<=nqThresh ? color.red : nqRating6[0]<=0 ? color.yellow : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 1, 4, text='YM', bgcolor=color.black, text_size=size.auto, text_color=#FFFFFF)
+    table.cell(t, 6, 4, text=ymRating2 ? 'A' : 'B', width=na, bgcolor=not ymRating2[0] ? color.red : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 5, 4, text=str.tostring(ymRating3,'#.##'), width=na, bgcolor=ymRating3[0]<=ymThresh ? color.red : ymRating3[0]<=0 ? color.yellow : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 4, 4, text=str.tostring(ymRating4,'#.##'), width=na, bgcolor=ymRating4[0]<=ymThresh ? color.red : ymRating4[0]<=0 ? color.yellow : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 3, 4, text=str.tostring(ymRating5,'#.##'), width=na, bgcolor=ymRating5[0]<=ymThresh ? color.red : ymRating5[0]<=0 ? color.yellow : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 2, 4, text=str.tostring(ymRating6,'#.##'), width=na, bgcolor=ymRating6[0]<=ymThresh ? color.red : ymRating6[0]<=0 ? color.yellow : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 1, 5, text='RTY', bgcolor=color.black, text_size=size.auto, text_color=#FFFFFF)
+    table.cell(t, 6, 5, text=rtyRating2 ? 'A' : 'B', width=na, bgcolor=not rtyRating2[0] ? color.red : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 5, 5, text=str.tostring(rtyRating3,'#.##'), width=na, bgcolor=rtyRating3[0]<=rtyThresh ? color.red : rtyRating3[0]<=0 ? color.yellow : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 4, 5, text=str.tostring(rtyRating4,'#.##'), width=na, bgcolor=rtyRating4[0]<=rtyThresh ? color.red : rtyRating4[0]<=0 ? color.yellow : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 3, 5, text=str.tostring(rtyRating5,'#.##'), width=na, bgcolor=rtyRating5[0]<=rtyThresh ? color.red : rtyRating5[0]<=0 ? color.yellow : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 2, 5, text=str.tostring(rtyRating6,'#.##'), width=na, bgcolor=rtyRating6[0]<=rtyThresh ? color.red : rtyRating6[0]<=0 ? color.yellow : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 1, 6, text='TN', bgcolor=color.black, text_size=size.auto, text_color=#FFFFFF)
+    table.cell(t, 6, 6, text=tnRating2 ? 'A' : 'B', width=na, bgcolor=not tnRating2[0] ? color.red : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 5, 6, text=str.tostring(tnRating3,'#.##'), width=na, bgcolor=tnRating3[0]>=tnThresh ? color.red : tnRating3[0]>0 ? color.yellow : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 4, 6, text=str.tostring(tnRating4,'#.##'), width=na, bgcolor=tnRating4[0]>=tnThresh ? color.red : tnRating4[0]>0 ? color.yellow : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 3, 6, text=str.tostring(tnRating5,'#.##'), width=na, bgcolor=tnRating5[0]>=tnThresh ? color.red : tnRating5[0]>0 ? color.yellow : color.green, text_size=size.auto, text_color=#000000)
+    table.cell(t, 2, 6, text=str.tostring(tnRating6,'#.##'), width=na, bgcolor=tnRating6[0]>=tnThresh ? color.red : tnRating6[0]>0 ? color.yellow : color.green, text_size=size.auto, text_color=#000000)
+if (timeframe.period == '2')
+    if (hour == 15 and minute == 00) 
+        if (isBuy)
+            label.new(x=bar_index, y= low - 2, xloc=xloc.bar_index, yloc=yloc.price, text='IN', color=color.blue, style=label.style_label_up, textcolor=color.white, size=size.small)
+        if (isSell)
+            label.new(x=bar_index, y= high + 2, xloc=xloc.bar_index, yloc=yloc.price, text='OUT', color=color.red, style=label.style_label_down, textcolor=color.white, size=size.small)
+    //if (hour == 8 and minute == 45)
+    //    alert('Morning Sentiment: ' + (isBuy ? 'IN' : isSell ? 'OUT' : 'n/a') + '\nThreshold: ' + str.tostring(esThresh,'#.##') + '\nES:'+str.tostring(esRating,'#.##') + '\nNQ:' +str.tostring(nqRating,'#.##') + '\nYM:' +str.tostring(ymRating,'#.##') + '\nRTY:' +str.tostring(rtyRating,'#.##') + '\nTN:' +str.tostring(tnRating,'#.##') + '\nMFI:' +str.tostring(mf,'#.##') + '\nRSI:' +str.tostring(rsi,'#.##') + '\nVIX:' +str.tostring(v1,'#.##'), alert.freq_once_per_bar)        
+    if (hour == 14 and minute == 58)
+        alert('EOD Signal: ' + (isBuy ? 'LONG' : isSell ? 'SHORT' : 'n/a') + '\nThreshold: ' + str.tostring(esThresh,'#.##') + '\nES:'+str.tostring(esRating,'#.##') + '\nNQ:' +str.tostring(nqRating,'#.##') + '\nYM:' +str.tostring(ymRating,'#.##') + '\nRTY:' +str.tostring(rtyRating,'#.##') + '\nTN:' +str.tostring(tnRating,'#.##') + '\nMFI:' +str.tostring(mf,'#.##') + '\nRSI:' +str.tostring(rsi,'#.##') + '\nVIX:' +str.tostring(v1,'#.##'), alert.freq_once_per_bar)        
+plot(series=isBuy ? low - 3 : isSell ? high + 3 : low, style=plot.style_circles, color=isBuy ? color.blue : color.red, linewidth=1)
+if (timeframe.period == 'D' and time >= strategyStartDate and time <= strategyEndDate and enableStrategy)
+    strategy.close_all(when=isSell and not shortOnSell)
+    strategy.entry("Short", strategy.short, when=isSell and shortOnSell) 
+    strategy.entry("Long", strategy.long, when=isBuy) 
+if (time > strategyEndDate and enableStrategy)
+    strategy.close_all()
+     
+Expand (372 lines)

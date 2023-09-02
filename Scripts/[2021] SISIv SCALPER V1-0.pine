@@ -1,0 +1,211 @@
+Script Name: [2021] SISIv SCALPER V1-0
+Author: SiSiFX
+Description: script of a scalping crypto strategy
+aim to capture very short reversal on low timeframe
+PineScript code:
+
+Pine Script™ strategy
+[2021] SISIv SCALPER V1/0
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+//@version=5
+strategy('[2021] SISIv SCALPER V1/0', shorttitle='SISI', overlay=true)
+import algomojo/automation/7 as automation
+//
+ATR = ta.atr(14) 
+len = input.int(15, minval=1, title='Length for Main Stochastic')
+smoothK = input.int(3, minval=1, title='SmoothK for Main Stochastic')
+smoothD = input.int(9, minval=1, title='SmoothD for Main Stochastic')
+upLine = input.int(90, minval=50, maxval=90, title='Upper Line Value?')
+lowLine = input.int(10, minval=10, maxval=50, title='Lower Line Value?')
+useCurrentRes = input(true, title='Use Current Chart Resolution?')
+resCustom = input.timeframe(title='Use Different Timeframe? Uncheck Box Above', defval='60')
+toggleBreaks = input(true, title='Show Breaks')
+leftBars = input(15, title='Left Bars ')
+rightBars = input(15, title='Right Bars')
+volumeThresh = input(20, title='Volume Threshold')
+highUsePivot = fixnan(ta.pivothigh(leftBars, rightBars)[1])
+lowUsePivot = fixnan(ta.pivotlow(leftBars, rightBars)[1])
+r1 = plot(highUsePivot, color=ta.change(highUsePivot) ? na : #FF0000, linewidth=3, offset=-(rightBars + 1), title='Resistance')
+s1 = plot(lowUsePivot, color=ta.change(lowUsePivot) ? na : #233dee, linewidth=3, offset=-(rightBars + 1), title='Support')
+stopPer = input(5.0, title='Stop Loss %') / 100
+takePer = input(10.0, title='Take Profit %') / 100
+//Volume %
+short = ta.ema(volume, 5)
+long = ta.ema(volume, 10)
+osc = 100 * (short - long) / long
+// ============================== CALCULATE ATR ==================================
+f_ma(_source, _length, _atrSmoothingMode) =>
+    if _atrSmoothingMode == 'RMA'
+        ta.rma(_source, _length)
+    else
+        if _atrSmoothingMode == 'SMA'
+            ta.sma(_source, _length)
+        else
+            if _atrSmoothingMode == 'EMA'
+                ta.ema(_source, _length)
+            else
+                ta.wma(_source, _length)
+//Resolutioon for MTF
+res = useCurrentRes ? timeframe.period : resCustom
+//Stoch formula
+k = ta.sma(ta.stoch(close, high, low, len), smoothK)
+d = ta.sma(k, smoothD)
+outK = request.security(syminfo.tickerid, res, k)
+outD = request.security(syminfo.tickerid, res, d)
+//definitions for Cross
+aboveLine = outK > upLine ? 1 : 0
+belowLine = outK < lowLine ? 1 : 0
+crossUp = outK[1] < outD[1] and outK[1] < lowLine[1] and outK > outD ? 1 : 0
+crossDn = outK[1] > outD[1] and outK[1] > upLine[1] and outK < outD ? 1 : 0
+//def second indi
+c1 = close[1] < open[1] and close > open
+c2 = close > open[1]
+c3 = ta.lowest(low, 3) < ta.lowest(low, 50)[1] or ta.lowest(low, 3) < ta.lowest(low, 50)[2] or ta.lowest(low, 3) < ta.lowest(low, 50)[3]
+c9 = outK[1] < outD[1] and outK[1] < lowLine[1] and outK > outD ? 1 : 0
+buy = c1 and c2 and c3 and c9 
+//
+c4 = close[1] > open[1] and close < open
+c5 = close < open[1]
+c6 = ta.highest(high, 3) > ta.highest(high, 50)[1] or ta.highest(high, 3) > ta.highest(high, 50)[2] or ta.highest(high, 3) > ta.highest(high, 50)[3]
+c7 = outK[1] > outD[1] and outK[1] > upLine[1] and outK < outD ? 1 : 0
+sell = c4 and c5 and c6 and c7 
+//
+longCondition = c1 and c2 and c3 and c9 
+shortCondition = c4 and c5 and c6 and c7 
+plotshape(buy == 1, text='🚀', style=shape.arrowup, location=location.belowbar, color=color.new(#32CD32, 0), textcolor=color.new(color.white, 0), offset=0, size=size.auto)
+plotshape(sell == 1, text='🔨', style=shape.arrowdown, location=location.abovebar, color=color.new(#FF0000, 0), textcolor=color.new(color.white, 0), offset=0, size=size.auto)
+//
+plotshape(buy == 1, title='Buy Signal', text='BUY', textcolor=color.new(#FFFFFF, 0), style=shape.labelup, size=size.normal, location=location.belowbar, color=color.new(#1B8112, 0))
+plotshape(sell == 1, title='Sell Signal', text='SELL', textcolor=color.new(#FFFFFF, 0), style=shape.labeldown, size=size.normal, location=location.abovebar, color=color.new(#FF5733, 0))
+//
+// ============================== ALERTS ==================================
+//alertcondition(sell == 1, title='Sell', message='Sell')
+//alertcondition(buy ==1, title='Buy', message='Buy')
+longStop = strategy.position_avg_price * (1 - stopPer)
+shortStop = strategy.position_avg_price * (1 + stopPer)
+shortTake = strategy.position_avg_price * (1 - takePer)
+longTake = strategy.position_avg_price * (1 + takePer)
+strategy.entry("buy", strategy.long, when=longCondition)
+strategy.entry("sell", strategy.short, when=shortCondition)
+if strategy.position_size > 0 
+    strategy.exit(id="Close Long", stop=longStop, limit=longTake)
+if strategy.position_size < 0 
+    strategy.exit(id="Close Short", stop=shortStop, limit=shortTake)
+  //alertcondition(longCondition, title='Buy Signal', message="SISIBOT SCALP Buy signal")
+ //alertcondition(Close Long, title='close long', message="SCALP close long")
+// alertcondition(sell, title="Sell Signal" ,message="SISIBOT SCALP Sell signal")
+ //alertcondition(Close Short, title="close short", message="SISIBOT SCALP close short")
+Expand (113 lines)

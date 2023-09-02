@@ -1,0 +1,1434 @@
+Script Name: Pivot Points Support + Resistance Strategy
+Author: UnknownUnicorn36161431
+Description: The WHAT
+=============>
+A strategy based off 3 indicators:
+1) the original TV's "Pivot Points Standard" indicator
+2) Cyclic RSI High Low With Noise Filter indicator (  ) from @RozaniGhani-RG as basis for determining uptrend or downtrend
+3) Mesa Advanced Triggers indicator (  ) from @jordanfung to filter out the best high/low points where to open and close...
+PineScript code:
+
+Pine Script™ strategy
+Pivot Points Support + Resistance Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+540
+541
+542
+543
+544
+545
+546
+547
+548
+549
+550
+551
+552
+553
+554
+555
+556
+557
+558
+559
+560
+561
+562
+563
+564
+565
+566
+567
+568
+569
+570
+571
+572
+573
+574
+575
+576
+577
+578
+579
+580
+581
+582
+583
+584
+585
+586
+587
+588
+589
+590
+591
+592
+593
+594
+595
+596
+597
+598
+599
+600
+601
+602
+603
+604
+605
+606
+607
+608
+609
+610
+611
+612
+613
+614
+615
+616
+617
+618
+619
+620
+621
+622
+623
+624
+625
+626
+627
+628
+629
+630
+631
+632
+633
+634
+635
+636
+637
+638
+639
+640
+641
+642
+643
+644
+645
+646
+647
+648
+649
+650
+651
+652
+653
+654
+655
+656
+657
+658
+659
+660
+661
+662
+663
+664
+665
+666
+667
+668
+669
+670
+671
+672
+673
+674
+675
+676
+677
+678
+679
+680
+681
+682
+683
+684
+685
+686
+687
+688
+689
+690
+691
+692
+693
+694
+695
+696
+697
+698
+699
+700
+701
+702
+703
+704
+705
+706
+707
+708
+709
+710
+711
+712
+713
+714
+715
+716
+717
+718
+719
+720
+721
+722
+723
+724
+725
+726
+727
+728
+729
+730
+731
+732
+733
+734
+735
+736
+737
+738
+739
+740
+741
+742
+743
+744
+745
+746
+747
+748
+749
+750
+751
+752
+753
+754
+755
+756
+//@version=5
+strategy("Pivot Points Support + Resistance Strategy", shorttitle="Pivots SUPP/RES Strategy", overlay=true, process_orders_on_close = true, calc_on_order_fills = true, calc_on_every_tick = true, pyramiding = 0, default_qty_type = strategy.percent_of_equity, default_qty_value = 75, commission_type = strategy.commission.percent, commission_value = 0.04, initial_capital = 100, max_lines_count=500, max_labels_count=500)
+AUTO = "Auto"
+DAILY = "Daily"
+WEEKLY = "Weekly"
+MONTHLY = "Monthly"
+QUARTERLY = "Quarterly"
+YEARLY = "Yearly"
+BIYEARLY = "Biyearly"
+TRIYEARLY = "Triyearly"
+QUINQUENNIALLY = "Quinquennially"
+DECENNIALLY = "Decennially"
+TRADITIONAL = "Traditional"
+FIBONACCI = "Fibonacci"
+WOODIE = "Woodie"
+CLASSIC = "Classic"
+DEMARK = "DM"
+CAMARILLA = "Camarilla"
+show_sl_invalidation_labels = input.bool( true, "Show 'invalidated at SL' Labels", group = "General" )
+show_levels = input.bool( true, "Show Support / Resistance Levels", group = "General" )
+i_use_time_limited_backtesting = input.bool( false, "Use Time-Limited Backtesting", group = "Time-Limit BackTesting (0 = disable)" )
+startDay = input.int(0, "Start Day", minval = 0, maxval = 31, group = "Time-Limit BackTesting (0 = disable)")
+startMonth = input.int(0, "Start Month", minval = 0, maxval = 12, group = "Time-Limit BackTesting (0 = disable)")
+startYear = input.int(0, "Start Year", minval = 0, maxval = 2100, group = "Time-Limit BackTesting (0 = disable)")
+endDay = input.int(0, "End Day", minval = 0, maxval = 31, group = "Time-Limit BackTesting (0 = disable)")
+endMonth = input.int(0, "End Month", minval = 0, maxval = 12, group = "Time-Limit BackTesting (0 = disable)")
+endYear = input.int(0, "End Year", minval = 0, maxval = 2100, group = "Time-Limit BackTesting (0 = disable)")
+tp_level = input.string(title="Level for TP", defval="Level 1", options=["Level 1", "Level 2", "Level 3", "Level 4", "Level 5"], group = "Pivot Options" )
+sl_level = input.string(title="Level for SL", defval="Level 5", options=["Level 1", "Level 2", "Level 3", "Level 4", "Level 5"], group = "Pivot Options" )
+kind = input.string(title="Type", defval="Traditional", options=[TRADITIONAL, FIBONACCI, WOODIE, CLASSIC, DEMARK, CAMARILLA], group = "Pivot Options" )
+pivot_time_frame = input.string(title="Pivots Timeframe", defval=AUTO, options=[AUTO, DAILY, WEEKLY, MONTHLY, QUARTERLY, YEARLY, BIYEARLY, TRIYEARLY, QUINQUENNIALLY, DECENNIALLY], group = "Pivot Options" )
+look_back = input.int(title="Number of Pivots Back", defval=15, minval=1, maxval=5000, group = "Pivot Options" )
+is_daily_based = input.bool(title="Use Daily-based Values", defval=true, tooltip="When this option is unchecked, Pivot Points will use intraday data while calculating on intraday charts. If Extended Hours are displayed on the chart, they will be taken into account during the pivot level calculation. If intraday OHLC values are different from daily-based values (normal for stocks), the pivot levels will also differ.", group = "Pivot Options" )
+show_labels = input.bool(title="Show Labels", defval=true, group="labels", group = "Pivot Options" )
+show_prices = input.bool(title="Show Prices", defval=true, group="labels", group = "Pivot Options" )
+position_labels = input.string("Left", "Labels Position", options=["Left", "Right"], group="labels", group = "Pivot Options" )
+line_width = input.int(title="Line Width", defval=1, minval=1, maxval=100, group="levels", group = "Pivot Options" )
+i_show_crsi = input.bool( false, "Show cRSI Pivots", group = "cRSI Options" )
+i_i_len   = input( 15, "cRSI EMA period", group = "cRSI Options" )
+i_src     = input.source( close, 'cRSI Source',  group = "cRSI Options" )
+i_use_mesa = input.bool( true, "Open trades by MESA Pivots", group = "MESA Pivots Options" )
+i_show_mesa = input.bool( false, "Show MESA Pivots", group = "MESA Pivots Options" )
+offsetNum = input( 0, "MESA offset", group = "MESA Pivots Options")
+pivot_zone_upper = input( 0.4, "MESA pivot zone upper", group = "MESA Pivots Options" )
+pivot_zone_lower = input( -0.4, "MESA pivot zone lower", group = "MESA Pivots Options" )
+var cRSI_high_extreme_found = 0.0
+var cRSI_high_extreme_valid = true
+var cRSI_low_extreme_found = 0.0
+var cRSI_low_extreme_valid = true
+var last_cRSI_extreme = ""
+var cRSI_trend_direction = ""
+var last_trade_ts = time
+inDateRange = true
+over_p = false
+over_s1 = false
+over_s2 = false
+over_s3 = false
+over_s4 = false
+over_s5 = false
+over_r1 = false
+over_r2 = false
+over_r3 = false
+over_r4 = false
+over_r5 = false
+last_p = 0.0
+last_s1 = 0.0
+last_s2 = 0.0
+last_s3 = 0.0
+last_s4 = 0.0
+last_s5 = 0.0
+last_r1 = 0.0
+last_r2 = 0.0
+last_r3 = 0.0
+last_r4 = 0.0
+last_r5 = 0.0
+// Look if the close time of the current bar falls inside the date range
+if i_use_time_limited_backtesting and startDay != 0 and startMonth != 0 and startYear != 0 and endDay != 0 and endMonth != 0 and endYear != 0
+    inDateRange := ( time >= timestamp( syminfo.timezone, startYear, startMonth, startDay, 0, 0 ) ) and ( time < timestamp( syminfo.timezone, endYear, endMonth, endDay, 0, 0 ) )
+//------------------------------------------------------------------------------
+// MESA calculations from the MESA indicator
+//------------------------------------------------------------------------------
+// Basic
+//------------------------------------------------------------------------------
+DomCycle = 15
+RealPart = 0.0
+ImagPart = 0.0
+for J = 0 to DomCycle - 1
+    Weight = (close[J] + close[J] + high[J] + low[J]) * 10000
+    if DomCycle != 0
+        RealPart := RealPart + math.cos(90 * J / DomCycle) * Weight * 2
+        ImagPart := ((ImagPart + math.sin(90 * J / DomCycle) * Weight) + (ImagPart + math.sin(180 * J / DomCycle) * Weight)) / 2
+Phase = ((math.atan(ImagPart / RealPart)) - 0.685) * 100
+//------------------------------------------------------------------------------
+//Pivot
+//------------------------------------------------------------------------------
+ph_mesa = ta.pivothigh(Phase, 1, 1)
+pl_mesa = ta.pivotlow(Phase, 1, 1)
+out_zone = Phase[2] < pivot_zone_lower or Phase[2] > pivot_zone_upper
+plotshape(i_show_mesa and ph_mesa and out_zone ? ph_mesa : na, title = "Pivot High", color=#f23737, style = shape.circle, location = location.abovebar, offset = -1, size = size.tiny)
+plotshape(i_show_mesa and pl_mesa and out_zone ? pl_mesa : na, title = "Pivot Low", color=#169788, style = shape.circle, location = location.belowbar, offset = -1, size = size.tiny)
+//------------------------------------------------------------------------------
+// cRSI indicator code
+//------------------------------------------------------------------------------
+crsi       = 0.0
+vibration  = 10
+torque     = 0.618 / (vibration + 1)
+phasingLag = (vibration - 1) / 0.618
+rsi        = ta.rsi(i_src, i_i_len)
+crsi      := torque * (2 * rsi - rsi[phasingLag]) + (1 - torque) * nz(crsi[1])
+float osc = crsi
+float ph = ta.highestbars(high, i_i_len) == 0 ? osc : na
+float pl = ta.lowestbars(low,   i_i_len) == 0 ? osc : na
+var int dir = 0
+dir := ph and na(pl) ? 1 : pl and na(ph) ? -1 : dir
+var max_array_size = 10
+var arr_zz         = array.new_float(0)
+older_zz           = array.copy(arr_zz)
+dirchanged         = ta.change(dir)
+add_to_zigzag(_id, float value, int bindex) =>
+    array.unshift(_id, bindex)
+    array.unshift(_id, value)
+    if array.size(_id) > max_array_size
+        array.pop(_id)
+        array.pop(_id)
+update_zigzag(_id, float value, int bindex, int dir) =>
+    if array.size(_id) == 0
+        add_to_zigzag(_id, value, bindex)
+    else
+        if dir == 1 and value > array.get(_id, 0) or dir == -1 and value < array.get(_id, 0)
+            array.set(_id, 0, value)
+            array.set(_id, 1, bindex)
+        0.
+if ph or pl
+    if dirchanged
+        add_to_zigzag(arr_zz, dir == 1 ? ph : pl, bar_index)
+    else
+        update_zigzag(arr_zz, dir == 1 ? ph : pl, bar_index, dir)
+if array.size(arr_zz) >= 6
+    // Variables
+    var label label_zz = na
+    // Bools for or
+    bool bool_or_1 = array.get(arr_zz, 0) != array.get(older_zz, 0)
+    bool bool_or_2 = array.get(arr_zz, 1) != array.get(older_zz, 1)
+    
+    // Bools for and
+    bool bool_n_1 = array.get(arr_zz, 2) == array.get(older_zz, 2)
+    bool bool_n_2 = array.get(arr_zz, 3) == array.get(older_zz, 3)
+    
+    // Bools for more than and less than
+    bool bool_0_mt_4 = array.get(arr_zz, 0) > array.get(arr_zz, 4)
+    bool bool_0_lt_4 = array.get(arr_zz, 0) < array.get(arr_zz, 4)
+    
+    if bool_or_1 or bool_or_2
+        if bool_n_1 and bool_n_2
+            label.delete(label_zz)
+        str_label = dir == 1 ?   bool_0_mt_4 ? '▼'     : '◍' :
+                                 bool_0_lt_4 ? '▲'     : '◍'
+        col_label = dir == 1 ?   bool_0_mt_4 ? color.red  : color.teal :
+                                 bool_0_lt_4 ? color.teal : color.red
+        if i_show_crsi
+            label_zz := label.new(bar_index, high, text = str_label, color = color.new(color.blue, 100), textcolor = col_label, style=dir == 1 ? label.style_label_down : label.style_label_up )
+        if dir == 1
+            cRSI_high_extreme_found := close
+            cRSI_low_extreme_found := 0.0
+            last_cRSI_extreme := "high"
+        else
+            cRSI_low_extreme_found := close
+            cRSI_high_extreme_found := 0.0
+            last_cRSI_extreme := "low"
+if last_cRSI_extreme == "high" and cRSI_high_extreme_found > 0.0
+    cRSI_trend_direction := "sell"
+if last_cRSI_extreme == "low" and cRSI_low_extreme_found > 0.0
+    cRSI_trend_direction := "buy"
+var order_prices = array.new_float(3, 0.0) // entry price
+array.push(order_prices, 0.0) // exit price
+array.push(order_prices, 0.0) // stop price
+var order_types = array.new_string(1, "") // order type
+var our_active_orders_count = array.new_int(1, 0)
+var DEF_COLOR = #FB8C00
+var arr_time = array.new_int()
+var p = array.new_float()
+p_color = input.color(DEF_COLOR, "P[U+200F]  [U+200F]  [U+200F]", inline="P", group="levels")
+p_show = input.bool(true, "", inline="P", group="levels")
+var r1 = array.new_float()
+var s1 = array.new_float()
+s1_color = input.color(DEF_COLOR, "S1", inline="S1/R1" , group="levels")
+s1_show = input.bool(true, "", inline="S1/R1", group="levels")
+r1_color = input.color(DEF_COLOR, "[U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]R1", inline="S1/R1", group="levels")
+r1_show = input.bool(true, "", inline="S1/R1", group="levels")
+var r2 = array.new_float()
+var s2 = array.new_float()
+s2_color = input.color(DEF_COLOR, "S2", inline="S2/R2", group="levels")
+s2_show = input.bool(true, "", inline="S2/R2", group="levels")
+r2_color = input.color(DEF_COLOR, "[U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]R2", inline="S2/R2", group="levels")
+r2_show = input.bool(true, "", inline="S2/R2", group="levels")
+var r3 = array.new_float()
+var s3 = array.new_float()
+s3_color = input.color(DEF_COLOR, "S3", inline="S3/R3", group="levels")
+s3_show = input.bool(true, "", inline="S3/R3", group="levels")
+r3_color = input.color(DEF_COLOR, "[U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]R3", inline="S3/R3", group="levels")
+r3_show = input.bool(true, "", inline="S3/R3", group="levels")
+var r4 = array.new_float()
+var s4 = array.new_float()
+s4_color = input.color(DEF_COLOR, "S4", inline="S4/R4", group="levels")
+s4_show = input.bool(true, "", inline="S4/R4", group="levels")
+r4_color = input.color(DEF_COLOR, "[U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]R4", inline="S4/R4", group="levels")
+r4_show = input.bool(true, "", inline="S4/R4", group="levels")
+var r5 = array.new_float()
+var s5 = array.new_float()
+s5_color = input.color(DEF_COLOR, "S5", inline="S5/R5", group="levels")
+s5_show = input.bool(true, "", inline="S5/R5", group="levels")
+r5_color = input.color(DEF_COLOR, "[U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]R5", inline="S5/R5", group="levels")
+r5_show = input.bool(true, "", inline="S5/R5", group="levels")
+pivotX_open = float(na)
+pivotX_open := nz(pivotX_open[1], open)
+pivotX_high = float(na)
+pivotX_high := nz(pivotX_high[1], high)
+pivotX_low = float(na)
+pivotX_low := nz(pivotX_low[1], low)
+pivotX_prev_open = float(na)
+pivotX_prev_open := nz(pivotX_prev_open[1])
+pivotX_prev_high = float(na)
+pivotX_prev_high := nz(pivotX_prev_high[1])
+pivotX_prev_low = float(na)
+pivotX_prev_low := nz(pivotX_prev_low[1])
+pivotX_prev_close = float(na)
+pivotX_prev_close := nz(pivotX_prev_close[1])
+get_pivot_resolution() =>
+    resolution = "M"
+    if pivot_time_frame == AUTO
+        if timeframe.isintraday
+            resolution := timeframe.multiplier <= 15 ? "D" : "W"
+        else if timeframe.isweekly or timeframe.ismonthly
+            resolution := "12M"
+    else if pivot_time_frame == DAILY
+        resolution := "D"
+    else if pivot_time_frame == WEEKLY
+        resolution := "W"
+    else if pivot_time_frame == MONTHLY
+        resolution := "M"
+    else if pivot_time_frame == QUARTERLY
+        resolution := "3M"
+    else if pivot_time_frame == YEARLY or pivot_time_frame == BIYEARLY or pivot_time_frame == TRIYEARLY or pivot_time_frame == QUINQUENNIALLY or pivot_time_frame == DECENNIALLY
+        resolution := "12M"
+    resolution
+var lines = array.new_line()
+var labels = array.new_label()
+draw_line(i, pivot, col) =>
+    if array.size(arr_time) > 1
+        array.push(lines, line.new(array.get(arr_time, i), array.get(pivot, i), array.get(arr_time, i + 1), array.get(pivot, i), color=col, xloc=xloc.bar_time, width=line_width))
+draw_label(i, y, txt, txt_color) =>
+    if show_levels and (show_labels or show_prices) and not na(y)
+        display_text = (show_labels ? txt : "") + (show_prices ? str.format(" ({0})", math.round_to_mintick(y)) : "")
+        label_style = position_labels == "Left" ? label.style_label_right : label.style_label_left
+        x = position_labels == "Left" ? array.get(arr_time, i) : array.get(arr_time, i + 1)
+        array.push(labels, label.new(x = x, y=y, text=display_text, textcolor=txt_color, style=label_style, color=#00000000, xloc=xloc.bar_time))
+traditional() =>
+    pivotX_Median = (pivotX_prev_high + pivotX_prev_low + pivotX_prev_close) / 3
+    array.push(p, pivotX_Median)
+    array.push(r1, pivotX_Median * 2 - pivotX_prev_low)
+    array.push(s1, pivotX_Median * 2 - pivotX_prev_high)
+    array.push(r2, pivotX_Median + 1 * (pivotX_prev_high - pivotX_prev_low))
+    array.push(s2, pivotX_Median - 1 * (pivotX_prev_high - pivotX_prev_low))
+    array.push(r3, pivotX_Median * 2 + (pivotX_prev_high - 2 * pivotX_prev_low))
+    array.push(s3, pivotX_Median * 2 - (2 * pivotX_prev_high - pivotX_prev_low))
+    array.push(r4, pivotX_Median * 3 + (pivotX_prev_high - 3 * pivotX_prev_low))
+    array.push(s4, pivotX_Median * 3 - (3 * pivotX_prev_high - pivotX_prev_low))
+    array.push(r5, pivotX_Median * 4 + (pivotX_prev_high - 4 * pivotX_prev_low))
+    array.push(s5, pivotX_Median * 4 - (4 * pivotX_prev_high - pivotX_prev_low))
+fibonacci() =>
+    pivotX_Median = (pivotX_prev_high + pivotX_prev_low + pivotX_prev_close) / 3
+    pivot_range = pivotX_prev_high - pivotX_prev_low
+    array.push(p, pivotX_Median)
+    array.push(r1, pivotX_Median + 0.382 * pivot_range)
+    array.push(s1, pivotX_Median - 0.382 * pivot_range)
+    array.push(r2, pivotX_Median + 0.618 * pivot_range)
+    array.push(s2, pivotX_Median - 0.618 * pivot_range)
+    array.push(r3, pivotX_Median + 1 * pivot_range)
+    array.push(s3, pivotX_Median - 1 * pivot_range)
+woodie() =>
+    pivotX_Woodie_Median = (pivotX_prev_high + pivotX_prev_low + pivotX_open * 2)/4
+    pivot_range = pivotX_prev_high - pivotX_prev_low
+    array.push(p, pivotX_Woodie_Median)
+    array.push(r1, pivotX_Woodie_Median * 2 - pivotX_prev_low)
+    array.push(s1, pivotX_Woodie_Median * 2 - pivotX_prev_high)
+    array.push(r2, pivotX_Woodie_Median + 1 * pivot_range)
+    array.push(s2, pivotX_Woodie_Median - 1 * pivot_range)
+    pivot_point_r3 = pivotX_prev_high + 2 * (pivotX_Woodie_Median - pivotX_prev_low)
+    pivot_point_s3 = pivotX_prev_low - 2 * (pivotX_prev_high - pivotX_Woodie_Median)
+    array.push(r3, pivot_point_r3)
+    array.push(s3, pivot_point_s3)
+    array.push(r4, pivot_point_r3 + pivot_range)
+    array.push(s4, pivot_point_s3 - pivot_range)
+classic() =>
+    pivotX_Median = (pivotX_prev_high + pivotX_prev_low + pivotX_prev_close)/3
+    pivot_range = pivotX_prev_high - pivotX_prev_low
+    array.push(p, pivotX_Median)
+    array.push(r1, pivotX_Median * 2 - pivotX_prev_low)
+    array.push(s1, pivotX_Median * 2 - pivotX_prev_high)
+    array.push(r2, pivotX_Median + 1 * pivot_range)
+    array.push(s2, pivotX_Median - 1 * pivot_range)
+    array.push(r3, pivotX_Median + 2 * pivot_range)
+    array.push(s3, pivotX_Median - 2 * pivot_range)
+    array.push(r4, pivotX_Median + 3 * pivot_range)
+    array.push(s4, pivotX_Median - 3 * pivot_range)
+demark() =>
+    pivotX_Demark_X = pivotX_prev_high + pivotX_prev_low * 2 + pivotX_prev_close
+    if pivotX_prev_close == pivotX_prev_open
+        pivotX_Demark_X := pivotX_prev_high + pivotX_prev_low + pivotX_prev_close * 2
+    if pivotX_prev_close > pivotX_prev_open
+        pivotX_Demark_X := pivotX_prev_high * 2 + pivotX_prev_low + pivotX_prev_close
+    array.push(p, pivotX_Demark_X / 4)
+    array.push(r1, pivotX_Demark_X / 2 - pivotX_prev_low)
+    array.push(s1, pivotX_Demark_X / 2 - pivotX_prev_high)
+camarilla() =>
+    pivotX_Median = (pivotX_prev_high + pivotX_prev_low + pivotX_prev_close) / 3
+    pivot_range = pivotX_prev_high - pivotX_prev_low
+    array.push(p, pivotX_Median)
+    array.push(r1, pivotX_prev_close + pivot_range * 1.1 / 12.0)
+    array.push(s1, pivotX_prev_close - pivot_range * 1.1 / 12.0)
+    array.push(r2, pivotX_prev_close + pivot_range * 1.1 / 6.0)
+    array.push(s2, pivotX_prev_close - pivot_range * 1.1 / 6.0)
+    array.push(r3, pivotX_prev_close + pivot_range * 1.1 / 4.0)
+    array.push(s3, pivotX_prev_close - pivot_range * 1.1 / 4.0)
+    array.push(r4, pivotX_prev_close + pivot_range * 1.1 / 2.0)
+    array.push(s4, pivotX_prev_close - pivot_range * 1.1 / 2.0)
+    r5_val = pivotX_prev_high / pivotX_prev_low * pivotX_prev_close
+    array.push(r5, r5_val)
+    array.push(s5, 2 * pivotX_prev_close - r5_val)
+calc_pivot() =>
+    if kind == TRADITIONAL
+        traditional()
+    else if kind == FIBONACCI
+        fibonacci()
+    else if kind == WOODIE
+        woodie()
+    else if kind == CLASSIC
+        classic()
+    else if kind == DEMARK
+        demark()
+    else if kind == CAMARILLA
+        camarilla()
+resolution = get_pivot_resolution()
+SIMPLE_DIVISOR = -1
+custom_years_divisor = switch pivot_time_frame
+    BIYEARLY => 2
+    TRIYEARLY => 3
+    QUINQUENNIALLY => 5
+    DECENNIALLY => 10
+    => SIMPLE_DIVISOR
+calc_high(prev, curr) =>
+    if na(prev) or na(curr)
+        nz(prev, nz(curr, na))
+    else
+        math.max(prev, curr)
+    
+calc_low(prev, curr) =>
+    if not na(prev) and not na(curr)
+        math.min(prev, curr)
+    else
+        nz(prev, nz(curr, na))
+calc_OHLC_for_pivot(custom_years_divisor) =>
+    if custom_years_divisor == SIMPLE_DIVISOR 
+        [open, high, low, close, open[1], high[1], low[1], close[1], time[1], time_close]
+    else
+        var prev_sec_open = float(na)
+        var prev_sec_high = float(na)
+        var prev_sec_low = float(na)
+        var prev_sec_close = float(na)
+        var prev_sec_time = int(na)
+        var curr_sec_open = float(na)
+        var curr_sec_high = float(na)
+        var curr_sec_low = float(na)
+        var curr_sec_close = float(na)
+        if year(time_close) % custom_years_divisor == 0
+            curr_sec_open := open
+            curr_sec_high := high
+            curr_sec_low := low
+            curr_sec_close := close
+            prev_sec_high := high[1]
+            prev_sec_low := low[1]
+            prev_sec_close := close[1]
+            prev_sec_time := time[1]
+            for i = 2 to custom_years_divisor
+                prev_sec_open :=  nz(open[i], prev_sec_open)
+                prev_sec_high := calc_high(prev_sec_high, high[i])
+                prev_sec_low := calc_low(prev_sec_low, low[i])
+                prev_sec_time := nz(time[i], prev_sec_time)
+        [curr_sec_open, curr_sec_high, curr_sec_low, curr_sec_close, prev_sec_open, prev_sec_high, prev_sec_low, prev_sec_close, prev_sec_time, time_close]
+[sec_open, sec_high, sec_low, sec_close, prev_sec_open, prev_sec_high, prev_sec_low, prev_sec_close, prev_sec_time, sec_time] = request.security(syminfo.tickerid, resolution, calc_OHLC_for_pivot(custom_years_divisor), lookahead = barmerge.lookahead_on)
+sec_open_gaps_on = request.security(syminfo.tickerid, resolution, open, gaps = barmerge.gaps_on, lookahead = barmerge.lookahead_on)
+is_change_years = custom_years_divisor > 0 and ta.change(time(resolution)) and year(time_close) % custom_years_divisor == 0
+var is_change = false
+var uses_current_bar = timeframe.isintraday and kind == WOODIE
+var change_time = int(na)
+is_time_change = (ta.change(time(resolution)) and custom_years_divisor == SIMPLE_DIVISOR) or is_change_years
+if is_time_change
+    change_time := time
+var start_time = time
+var was_last_premarket = false
+var start_calculate_in_premarket = false
+is_last_premarket = barstate.islast and session.ispremarket and time_close > sec_time and not was_last_premarket
+if is_last_premarket
+    was_last_premarket := true
+    start_calculate_in_premarket := true
+if session.ismarket
+    was_last_premarket := false
+    
+without_time_change = barstate.islast and array.size(arr_time) == 0
+is_can_calc_pivot = (not uses_current_bar and is_time_change and session.ismarket) or (ta.change(sec_open) and not start_calculate_in_premarket) or is_last_premarket or (uses_current_bar and not na(sec_open_gaps_on)) or without_time_change
+enough_bars_for_calculate = prev_sec_time >= start_time or is_daily_based
+if is_can_calc_pivot and enough_bars_for_calculate 
+    if array.size(arr_time) == 0 and is_daily_based
+        pivotX_prev_open := prev_sec_open[1]
+        pivotX_prev_high := prev_sec_high[1]
+        pivotX_prev_low := prev_sec_low[1]
+        pivotX_prev_close := prev_sec_close[1]
+        pivotX_open := sec_open[1]
+        pivotX_high := sec_high[1]
+        pivotX_low := sec_low[1]
+        array.push(arr_time, start_time)
+        calc_pivot()
+    
+    if is_daily_based
+        if is_last_premarket
+            pivotX_prev_open := sec_open
+            pivotX_prev_high := sec_high
+            pivotX_prev_low := sec_low
+            pivotX_prev_close := sec_close
+            pivotX_open := open
+            pivotX_high := high
+            pivotX_low := low
+        else
+            pivotX_prev_open := prev_sec_open
+            pivotX_prev_high := prev_sec_high
+            pivotX_prev_low := prev_sec_low
+            pivotX_prev_close := prev_sec_close
+            pivotX_open := sec_open
+            pivotX_high := sec_high
+            pivotX_low := sec_low
+    else
+        pivotX_prev_high := pivotX_high
+        pivotX_prev_low := pivotX_low
+        pivotX_prev_open := pivotX_open
+        pivotX_prev_close := close[1]
+        pivotX_open := open
+        pivotX_high := high
+        pivotX_low := low
+    if barstate.islast and not is_change and array.size(arr_time) > 0 and not without_time_change
+        array.set(arr_time, array.size(arr_time) - 1, change_time)
+    else if without_time_change
+        array.push(arr_time, start_time)
+    else
+        array.push(arr_time, nz(change_time, time))
+    calc_pivot()
+    if array.size(arr_time) > look_back
+        if array.size(arr_time) > 0
+            array.shift(arr_time)
+        if array.size(p) > 0 and p_show
+            array.shift(p)
+        if array.size(r1) > 0 and r1_show
+            array.shift(r1)
+        if array.size(s1) > 0 and s1_show
+            array.shift(s1)
+        if array.size(r2) > 0 and r2_show
+            array.shift(r2)
+        if array.size(s2) > 0 and s2_show
+            array.shift(s2)
+        if array.size(r3) > 0 and r3_show
+            array.shift(r3)
+        if array.size(s3) > 0 and s3_show
+            array.shift(s3)
+        if array.size(r4) > 0 and r4_show
+            array.shift(r4)
+        if array.size(s4) > 0 and s4_show
+            array.shift(s4)
+        if array.size(r5) > 0 and r5_show
+            array.shift(r5)
+        if array.size(s5) > 0 and s5_show
+            array.shift(s5)
+    is_change := true
+else if not is_daily_based
+    pivotX_high := math.max(pivotX_high, high)
+    pivotX_low := math.min(pivotX_low, low)
+if barstate.islast and not is_daily_based and array.size(arr_time) == 0 
+    runtime.error("Not enough intraday data to calculate Pivot Points. Lower the Pivots Timeframe or turn on the 'Use Daily-based Values' option in the indicator settings.")
+if array.size(arr_time) > 0
+    //label.new(bar_index, high, text = "close " + str.tostring(close) + ",p " + str.tostring( array.get( p, array.size(p) - 1 ) ) + ",s2 " + str.tostring( array.get( s2, array.size(s2) - 1 ) ) + ",s1x " + str.tostring(ta.cross( array.get(s1, array.size(s1) - 1 ), close )), color = color.white, textcolor = color.black )
+    if array.size(p) > 0
+        last_p := array.get(p, array.size(p) - 1 )
+        if ta.cross( array.get(p, array.size(p) - 1 ), close )
+            over_p := true
+    if array.size(s1) > 0
+        last_s1 := array.get(s1, array.size(s1) - 1 )
+        if ta.cross( array.get(s1, array.size(s1) - 1 ), close )
+            over_s1 := true
+    if array.size(s2) > 0
+        last_s2 := array.get(s2, array.size(s2) - 1 )
+        if ta.cross( array.get(s2, array.size(s2) - 1 ), close )
+            over_s2 := true
+    if array.size(s3) > 0
+        last_s3 := array.get(s3, array.size(s3) - 1 )
+        if ta.cross( array.get(s3, array.size(s3) - 1 ), close )
+            over_s3 := true
+    if array.size(s4) > 0
+        last_s4 := array.get(s4, array.size(s4) - 1 )
+        if ta.cross( array.get(s4, array.size(s4) - 1 ), close )
+            over_s4 := true
+    if array.size(s5) > 0
+        last_s5 := array.get(s5, array.size(s5) - 1 )
+        if ta.cross( array.get(s5, array.size(s5) - 1 ), close )
+            over_s5 := true
+    if array.size(r1) > 0
+        last_r1 := array.get(r1, array.size(r1) - 1 )
+        if ta.cross( array.get(r1, array.size(r1) - 1 ), close )
+            over_r1 := true
+    if array.size(r2) > 0
+        last_r2 := array.get(r2, array.size(r2) - 1 )
+        if ta.cross( array.get(r2, array.size(r2) - 1 ), close )
+            over_r2 := true
+    if array.size(r3) > 0
+        last_r3 := array.get(r3, array.size(r3) - 1 )
+        if ta.cross( array.get(r3, array.size(r3) - 1 ), close )
+            over_r3 := true
+    if array.size(r4) > 0
+        last_r4 := array.get(r4, array.size(r1) - 1 )
+        if ta.cross( array.get(r4, array.size(r4) - 1 ), close )
+            over_r4 := true
+    if array.size(r5) > 0
+        last_r5 := array.get(r5, array.size(r5) - 1 )
+        if ta.cross( array.get(r5, array.size(r5) - 1 ), close )
+            over_r5 := true
+if barstate.islast and array.size(arr_time) > 0 and is_change
+    is_change := false
+    if custom_years_divisor > 0
+        last_pivot_time = array.get(arr_time, array.size(arr_time) - 1)
+        pivot_timeframe = str.tostring(12 * custom_years_divisor) + "M"
+        estimate_pivot_time = last_pivot_time + timeframe.in_seconds(pivot_timeframe) * 1000
+        array.push(arr_time, estimate_pivot_time)
+    else
+        array.push(arr_time, time_close(resolution))
+    for i = 0 to array.size(lines) - 1
+        if array.size(lines) > 0
+            line.delete(array.shift(lines))
+        if array.size(labels) > 0
+            label.delete(array.shift(labels))
+    for i = 0 to array.size(arr_time) - 2
+        if array.size(p) > 0 and p_show and show_levels
+            draw_line(i, p, p_color)
+            draw_label(i, array.get(p, i), "P", p_color)
+        if array.size(r1) > 0 and r1_show and show_levels
+            draw_line(i, r1, r1_color)
+            draw_label(i, array.get(r1, i), "R1", r1_color)
+        if array.size(s1) > 0 and s1_show and show_levels
+            draw_line(i, s1, s1_color)
+            draw_label(i, array.get(s1, i), "S1", s1_color)
+        if array.size(r2) > 0 and r2_show and show_levels
+            draw_line(i, r2, r2_color)
+            draw_label(i, array.get(r2, i), "R2", r2_color)
+        if array.size(s2) > 0 and s2_show and show_levels
+            draw_line(i, s2, s2_color)
+            draw_label(i, array.get(s2, i), "S2", s2_color)
+        if array.size(r3) > 0 and r3_show and show_levels
+            draw_line(i, r3, r3_color)
+            draw_label(i, array.get(r3, i), "R3", r3_color)
+        if array.size(s3) > 0 and s3_show and show_levels
+            draw_line(i, s3, s3_color)
+            draw_label(i, array.get(s3, i), "S3", s3_color)
+        if array.size(r4) > 0 and r4_show and show_levels
+            draw_line(i, r4, r4_color)
+            draw_label(i, array.get(r4, i), "R4", r4_color)
+        if array.size(s4) > 0 and s4_show and show_levels
+            draw_line(i, s4, s4_color)
+            draw_label(i, array.get(s4, i), "S4", s4_color)
+        if array.size(r5) > 0 and r5_show and show_levels
+            draw_line(i, r5, r5_color)
+            draw_label(i, array.get(r5, i), "R5", r5_color)
+        if array.size(s5) > 0 and s5_show and show_levels
+            draw_line(i, s5, s5_color)
+            draw_label(i, array.get(s5, i), "S5", s5_color)
+// check if we should be checking for an entry
+if strategy.opentrades == 0 and over_p
+    tradeType = cRSI_trend_direction == "buy" ? "Buy" : "Sell"
+    target_real = -1.0
+    sl_real = -1.0
+    // determine target
+    if tradeType == "Buy"
+        target_real := switch tp_level
+            "Level 1" => last_r1 > 0.0 ? last_r1 : na
+            "Level 2" => last_r2 > 0.0 ? last_r2 : last_r1 > 0.0 ? last_r1 : na
+            "Level 3" => last_r3 > 0.0 ? last_r3 : last_r2 > 0.0 ? last_r2 : last_r1 > 0.0 ? last_r1 : na
+            "Level 4" => last_r4 > 0.0 ? last_r4 : last_r3 > 0.0 ? last_r3 : last_r2 > 0.0 ? last_r2 : last_r1 > 0.0 ? last_r1 : na
+            "Level 5" => last_r5 > 0.0 ? last_r5 : last_r4 > 0.0 ? last_r4 : last_r3 > 0.0 ? last_r3 : last_r2 > 0.0 ? last_r2 : last_r1 > 0.0 ? last_r1 : na
+    else
+        target_real := switch tp_level
+            "Level 1" => last_s1 > 0.0 ? last_s1 : na
+            "Level 2" => last_s2 > 0.0 ? last_s2 : last_s1 > 0.0 ? last_s1 : na
+            "Level 3" => last_s3 > 0.0 ? last_s3 : last_s2 > 0.0 ? last_s2 : last_s1 > 0.0 ? last_s1 : na
+            "Level 4" => last_s4 > 0.0 ? last_s4 : last_s3 > 0.0 ? last_s3 : last_s2 > 0.0 ? last_s2 : last_s1 > 0.0 ? last_s1 : na
+            "Level 5" => last_s5 > 0.0 ? last_s5 : last_s4 > 0.0 ? last_s4 : last_s3 > 0.0 ? last_s3 : last_s2 > 0.0 ? last_s2 : last_s1 > 0.0 ? last_s1 : na
+    // determine SL
+    if tradeType == "Buy"
+        sl_real := switch sl_level
+            "Level 1" => last_s1 > 0.0 ? last_s1 : na
+            "Level 2" => last_s2 > 0.0 ? last_s2 : last_s1 > 0.0 ? last_s1 : na
+            "Level 3" => last_s3 > 0.0 ? last_s3 : last_s2 > 0.0 ? last_s2 : last_s1 > 0.0 ? last_s1 : na
+            "Level 4" => last_s4 > 0.0 ? last_s4 : last_s3 > 0.0 ? last_s3 : last_s2 > 0.0 ? last_s2 : last_s1 > 0.0 ? last_s1 : na
+            "Level 5" => last_s5 > 0.0 ? last_s5 : last_s4 > 0.0 ? last_s4 : last_s3 > 0.0 ? last_s3 : last_s2 > 0.0 ? last_s2 : last_s1 > 0.0 ? last_s1 : na
+    else
+        sl_real := switch sl_level
+            "Level 1" => last_r1 > 0.0 ? last_r1 : na
+            "Level 2" => last_r2 > 0.0 ? last_r2 : last_r1 > 0.0 ? last_r1 : na
+            "Level 3" => last_r3 > 0.0 ? last_r3 : last_r2 > 0.0 ? last_r2 : last_r1 > 0.0 ? last_r1 : na
+            "Level 4" => last_r4 > 0.0 ? last_r4 : last_r3 > 0.0 ? last_r3 : last_r2 > 0.0 ? last_r2 : last_r1 > 0.0 ? last_r1 : na
+            "Level 5" => last_r5 > 0.0 ? last_r5 : last_r4 > 0.0 ? last_r4 : last_r3 > 0.0 ? last_r3 : last_r2 > 0.0 ? last_r2 : last_r1 > 0.0 ? last_r1 : na
+    // check if we have all required data
+    if last_p > 0.0 and target_real > -1.0 and sl_real > -1.0
+        // entry price, set to the new P level
+        array.set(order_prices, 0, last_p)
+        array.set(order_prices, 1, target_real)
+        array.set(order_prices, 2, sl_real)
+        array.set(order_types, 0, tradeType)
+        array.set( our_active_orders_count, 0, 0 )
+// broker section
+trade_type = array.get(order_types, 0)
+entry_price = array.get(order_prices, 0)
+exit_price = array.get(order_prices, 1)
+stop_price = array.get(order_prices, 2)
+// close trades when price reaches our target
+exit_bool = array.get( our_active_orders_count, 0 ) > 0 and (trade_type == "Buy" ? close >= exit_price : close <= exit_price )
+//label.new(bar_index, high, trade_type + ", " + str.tostring( close ) + " / " + str.tostring( exit_price ) )
+if exit_price > 0 and strategy.opentrades > 0 and exit_bool
+    strategy.close( trade_type, comment = trade_type + " TP reached" )
+    array.set(order_prices, 0, 0.0)
+    array.set(order_prices, 1, 0.0)
+    array.set(order_prices, 2, 0.0)
+    array.set(order_types, 0, "")
+    array.set( our_active_orders_count, 0, 0 )
+// open trades when the price reached our entry
+entry_bool = array.get( our_active_orders_count, 0 ) == 0 and (trade_type == "Buy" ? close <= entry_price : close >= entry_price )
+if entry_price > 0 and ( strategy.opentrades == 0 or strategy.opentrades.entry_id( strategy.opentrades - 1 ) != trade_type ) and entry_bool
+    // check if we're also using MESA to wait for a better entry
+    // first check that we've not beyond our SL...
+    if i_use_mesa and (trade_type == "Buy" ? close <= stop_price : close >= stop_price )
+        // SL reached, invalidate this trade and mark it on chart
+        array.set(order_prices, 0, 0.0)
+        array.set(order_prices, 1, 0.0)
+        array.set(order_prices, 2, 0.0)
+        array.set(order_types, 0, "")
+        array.set( our_active_orders_count, 0, 0 )
+        if inDateRange and show_sl_invalidation_labels
+            label.new(bar_index, high, trade_type + " invalidated at SL", color = color.white, textcolor = color.black )
+    // now check that we have a better entry through MESa
+    if ( inDateRange and ( ( time - last_trade_ts ) / 1000 >= ( 60 * 30 ) ) and ( not i_use_mesa or ( trade_type == "Buy" and ( ( ph_mesa and out_zone ) ? ph_mesa : na ) ) or ( trade_type == "Sell" and ( ( pl_mesa and out_zone ) ? pl_mesa : na ) ) ) )
+        strategy.entry( trade_type, trade_type == "Buy" ? strategy.long : strategy.short )
+        strategy.exit( trade_type, stop = stop_price, comment = "closed by SL" )
+        array.set( our_active_orders_count, 0, 1 )
+        if trade_type == "Buy"
+            cRSI_low_extreme_found := 0.0
+        else
+            cRSI_high_extreme_found := 0.0
+// Exit open market position when date range ends
+if (not inDateRange)
+    strategy.close_all()
+Expand (756 lines)

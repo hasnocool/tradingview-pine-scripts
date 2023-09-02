@@ -1,0 +1,175 @@
+Script Name: PB Trend Scalper
+Author: PatrickGwynBuckley
+Description: A moving average strategy using a long period RMA and a short period EMA. It has a trailing stop loss based on the previous higher high or lower low.  It also has a no trade band surrounding the RMA whose thickness can be changed.
+
+Check out the settings to see what elements values can be changed.
+
+The strategy is set to use the whole balance on each trade...
+PineScript code:
+
+Pine Script™ strategy
+PB Trend Scalper
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © PatrickGwynBuckley
+//@version=5
+//var initialCapital = strategy.equity
+strategy("PB Trend Scalper", "PB Trend Scalper", overlay = true)
+shortma = input.int(55, title="quick ma's")
+longma = input.int(100, title="long ma's")
+ema55h = ta.ema(high, shortma)
+ema55l = ta.ema(low, shortma)
+ema200h = ta.rma(high, longma)
+ema200l = ta.rma(low, longma)
+stock = ta.stoch(close, high, low, 14)
+lev = input.int(3, title="leverage")
+hhVal = input.int(170, title="Highest high period")
+llVal = input.int(170, title="Lowest low period")
+hh = ta.highest(high, hhVal)
+ll = ta.lowest(low, llVal)
+//plot(stock)
+plot(hh, color=color.new(color.green, 50))
+plot(ll, color=color.new(color.red, 50))
+var float downtrade = 0
+p = input.float(3.0, title="no trade zone")
+l = 3
+emadistlong = ema200h + ((ema200h/100)*p)
+emadistshort = ema200l - ((ema200h/100)*p)
+plot(ema55h)
+plot(ema55l)
+ntl = plot(emadistlong, color=color.new(color.red, 10))
+nts = plot(emadistshort, color=color.new(color.red, 10))
+fill(ntl, nts, color=color.new(color.red, 90))
+//position size
+EntryPrice = close
+//positionValue = initialCapital
+positionSize = (strategy.equity*lev) / EntryPrice
+//plot(strategy.equity)
+//standard short
+if ema55h < ema200l and close[2] < ema55l and close[1] > ema55l and high[1] < ema55h and close < ema55h and ema55h < emadistshort and strategy.opentrades == 0// and stock > 85 
+    strategy.entry("short", strategy.short, qty=positionSize, comment="short")
+    downtrade := 1
+//reset count    
+if (ta.crossunder(ema55h, ema200l)) and downtrade == 1
+    downtrade := 0
+//standard long    
+if ema55l > ema200h and close[2] > ema55h and close[1] < ema55h and low[1] > ema55l and close > ema55l and ema55l > emadistlong and strategy.opentrades <= 1// and stock < 15 
+    strategy.entry("long", strategy.long, qty=positionSize, comment="long")
+    downtrade := 0
+//RESET COUNT ON MA CROSS
+if (ta.crossover(ema55l, ema200h)) and downtrade == 0
+    downtrade := 1
+    
+longclose2 = low < ll[1] or low < emadistshort //close < open and open<open[1] and open[2] < open[3] and open[3] < emadistshort//close < ta.lowest(low, 20)//
+shortclose2 = high > hh[1] or high>emadistlong//close > open and open>open[1] and open[2]>open[3] and open[3] > emadistlong//high > emadistlong//close > ta.highest(high, 20)//
+sl = 3.5
+tp = input.float(6.9, title="take profit %")
+tp2 = 10
+strategy.exit("long exit", "long", profit = (strategy.position_avg_price*(tp)))//, loss = (strategy.position_avg_price*(sl)))
+strategy.close("long", when = longclose2, comment = "long exit")
+//strategy.close("long", when = (downtrade == 1), comment = "long exit")
+//strategy.exit("long exit", "long2", profit = (strategy.position_avg_price*(tp2)))//, loss = (strategy.position_avg_price*(sl)))
+//strategy.close ("long2", when = longclose2, comment = "long exit")
+//strategy.close("long", when = (downtrade == 1), comment = "long exit")
+strategy.exit("short exit", "short", profit = (strategy.position_avg_price*(tp)))//, loss = (strategy.position_avg_price*(sl)))//, loss = 300)
+strategy.close("short", when = shortclose2, comment = "short exit")
+//strategy.close("short", when = (downtrade == 0), comment = "short exit")
+//strategy.exit("short exit", "short2", profit = (strategy.position_avg_price*(tp2)))//, loss = (strategy.position_avg_price*(sl)))
+//strategy.close ("short2", when = shortclose2, comment = "short exit")
+//strategy.close("short2", when = (downtrade == 0), comment = "short exit")
+//if (strategy.exit("long exit", "long"))
+    //downtrade := 1
+//else 
+   // downtrade := 0
+Expand (91 lines)

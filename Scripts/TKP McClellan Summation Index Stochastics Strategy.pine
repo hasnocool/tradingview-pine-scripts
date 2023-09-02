@@ -1,0 +1,124 @@
+Script Name: TKP McClellan Summation Index Stochastics Strategy
+Author: RolandoSantos
+Description: This strategy uses NYSE McClellan summation Index as an input for Stochastics to produce Buy/Sell signals. Buy signal is produced when Stochastics K Line Closes over 50, and Sell signal when closes under 50. 
+
+Info on McClellan Summation Index: www.investopedia.com
+
+Info on Stochastics: www.investopedia.com
+
+
+Simple yet effective strategy, let me know if you have...
+PineScript code:
+
+Pine Script™ strategy
+TKP McClellan Summation Index Stochastics Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+//@version=4
+//Calculate McClellan Summation Index 
+strategy(title = "McClellan Summation Index STOCHASTICS", shorttitle="$NYSI STOCHASTICS STRAT", overlay=false, default_qty_type=strategy.cash, default_qty_value=10000, initial_capital=10000)
+sym(s) => security(s, "", close)
+difference2 = sym("ADVN") - sym("DECN")
+advnema19 = ema(difference2, 19)
+advnema39 = ema(difference2, 39)
+osci = advnema19-advnema39
+maout = cum(osci)
+///Calculate Stochastics using McClellan Summation Index as input
+Tips = input(00, title="Standard settings for Stochastics is 14,3,3... Double each value for settings of 28,6,6 for a Slow version of this strategy, this gives less trade but higher win % and Win/Loss Ratio")
+periodK = input(14, title="K", minval=1)
+periodD = input(3, title="D", minval=1)
+smoothK = input(3, title="Smooth", minval=1)
+k = sma(stoch(maout, maout, maout, periodK), smoothK)
+d = sma(k, periodD)
+//Plot Stochastics
+plot(k, title="%K", color=#2196f3,linewidth=2 )
+plot(d, title="%D", color=color.white, linewidth=2)
+h0 = hline(80, "Upper Band", color=#606060)
+h1 = hline(20, "Lower Band", color=#606060)
+h2 = hline(50, "Lower Band", color=#606060)
+fill(h2, h0, color=#00bcd4, transp=80, title="Upper Background")
+fill(h1, h2, color=#e91e63, transp=80, title="Lower Background")
+//Input for Crossover threshold
+buyselllevel = input(50, title="Buy/Sell threshold")
+///Buy-Sell conditions
+bull = crossover(k,buyselllevel)
+bear = crossunder(k,buyselllevel)
+/// Start date
+startDate = input(title="Start Date", defval=1, minval=1, maxval=31)
+startMonth = input(title="Start Month", defval=1, minval=1, maxval=12)
+startYear = input(title="Start Year", defval=1970, minval=1800, maxval=2100)
+// See if this bar's time happened on/after start date
+afterStartDate = (time >= timestamp(syminfo.timezone, startYear, startMonth, startDate, 0, 0))
+///Entries and Exits//
+strategy.entry(id = "Long", long = true, when = (bull and afterStartDate), comment = "LE")
+strategy.close_all(when = (bear and afterStartDate), comment="close")
+    
+    
+    
+    
+    
+    
+    
+    
+    
+Expand (61 lines)

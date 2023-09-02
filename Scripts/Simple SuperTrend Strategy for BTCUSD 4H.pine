@@ -1,0 +1,410 @@
+Script Name: Simple SuperTrend Strategy for BTCUSD 4H
+Author: StrategiesForEveryone
+Description: Hello guys!, If you are a swing trader and you are looking for a simple trend strategy, you should check this one. Based in the supertrend indicator, this strategy will help you to catch big movements in BTCUSD 4H and avoid losses as much as possible in consolidated situations of the market 
+
+ This strategy was designed for BTCUSD in 4H timeframe 
+ Backtesting...
+PineScript code:
+
+Pine Script™ strategy
+Simple SuperTrend Strategy for BTCUSD 4H
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// Developed by © StrategiesForEveryone
+//@version=5
+strategy("SuperTrend Strategy with Rsi filter for BTCUSD 4H", overlay=true, process_orders_on_close = true, initial_capital = 100, default_qty_type = strategy.cash, precision = 2, slippage = 0, commission_value = 0.03, backtest_fill_limits_assumption = 0)
+// ------ Inputs for calculating position --------
+initial_actual_capital = input.float(defval=100, title = "Enter initial/current capital", group = "Calculate position")
+risk_c = input.float(2.5, '% account risk per trade', step=1, group = "Calculate position", tooltip = "Percentage of total account to risk per trade. The USD value that should be used to risk the inserted percentage of the account. Appears green in the upper left corner")
+// ------ Date filter (obtained from ZenAndTheArtOfTrading) ---------
+initial_date = input.time(title="Initial date", defval=timestamp("10 Feb 2014 13:30 +0000"), group="Time filter", tooltip="Enter the start date and time of the strategy")
+final_date   = input.time(title="Final date", defval=timestamp("01 Jan 2030 19:30 +0000"), group="Time filter", tooltip="Enter the end date and time of the strategy")
+dateFilter(int st, int et) => time >= st and time <= et
+colorDate = input.bool(defval=false, title="Date background", tooltip = "Add color to the period of time of the strategy tester")
+bgcolor(colorDate and dateFilter(initial_date, final_date) ? color.new(color.blue, transp=90) : na)
+// --------------- Rsi filter------------------
+overbought = input.int(70, title='Over bought line rsi', minval=50, maxval=100, group = "Rsi", inline = "b")
+oversold = input.int(30, title='Over sold line rsi', minval=0, maxval=50, group = "Rsi", inline = "b")
+periods = input.int(6, title='Rsi Length', minval=1, maxval=200, group = "Rsi", inline = "b")
+rsi_filter = ta.rsi(close, periods)
+show_rsi = input.bool(defval = false, title = "Show Rsi ?", group = "Appearance")
+plot(show_rsi ? rsi_filter : na, title = "Rsi", color = color.rgb(255, 255, 255), linewidth = 2, display = display.all - display.status_line)
+hline(show_rsi ? overbought : na, color=color.rgb(0, 132, 255))
+hline(show_rsi ? oversold : na, color=color.rgb(0, 132, 255))
+// ------------ Super Trend ----------
+atrPeriod = input(9, "ATR Length SuperTrend")
+factor = input.float(2.5, "Factor SuperTrend", step = 0.05)
+[supertrend, direction] = ta.supertrend(factor, atrPeriod)
+show_supertrend = input.bool(defval = false, title="Show supertrend ?", group = "Appearance")
+bodyMiddle = plot(show_supertrend ? ((open + close) / 2) : na, display=display.none)
+upTrend = plot(show_supertrend and direction < 0 ? supertrend : na, "Up Trend", color = color.green, style=plot.style_linebr, display = display.all - display.status_line)
+downTrend = plot(show_supertrend and direction > 0 ? supertrend : na, "Down Trend", color = color.red, style=plot.style_linebr, display = display.all - display.status_line)
+fill(bodyMiddle, upTrend, color.new(color.green, 95), fillgaps=false, title = "Supertrend background")
+fill(bodyMiddle, downTrend, color.new(color.red, 95), fillgaps=false, title = "Supertrend background")
+up_trend_plot = direction < 0
+down_trend_plot = direction > 0
+// ---------- Atr stop loss (obtained from garethyeo)
+long_rsi_plot = ta.crossover(rsi_filter, oversold) and up_trend_plot
+short_rsi_plot = ta.crossunder(rsi_filter, overbought) and down_trend_plot
+long_supertrend_plot=ta.crossover(close, supertrend)
+short_supertrend_plot=ta.crossunder(close, supertrend)
+source_atr = input(close, title='Source', group = "Atr stop loss", inline = "A")
+length_atr = input.int(14, minval=1, title='Period', group = "Atr stop loss" , inline = "A")
+multiplier = input.float(1.5, minval=0.1, step=0.1, title='Atr multiplier', group = "Atr stop loss", inline = "A", tooltip = "Defines the stop loss distance based on the Atr stop loss indicator")
+shortStopLoss = source_atr + ta.atr(length_atr) * multiplier
+longStopLoss = source_atr - ta.atr(length_atr) * multiplier
+show_stoploss = input.bool(defval=true, title="Draw stop loss ?", group = "Appearance", tooltip = "Activate to display stop loss price. It appears as a white point on the chart")
+// --------- Stop loss based in last swing high/low --------
+high_bars = input.int(defval = 10, title = "Highest price bars: ", group = "Swing highs/lows stop losses")
+low_bars = input.int(defval = 10, title = "Lowest price bars: ", group = "Swing highs/lows stop losses")
+stop_high = ta.highest(high, high_bars)
+stop_low = ta.lowest(low, low_bars)
+// --------- Stop loss source selection ---------------
+stoploss_type = input.string(defval = "Atr stop loss", title = "Stop loss source", group = "Risk management for trades", options = ["Atr stop loss","Swing high/low"], tooltip = "Change this for getting stop loss based in Atr stop loss indicator or last swing high/low")
+if stoploss_type == "Atr stop loss"
+    shortStopLoss := source_atr + ta.atr(length_atr) * multiplier
+    longStopLoss := source_atr - ta.atr(length_atr) * multiplier
+if stoploss_type == "Swing high/low"
+    shortStopLoss := stop_high
+    longStopLoss := stop_low
+// Ploting stop losses
+plot(show_stoploss and long_supertrend_plot or show_stoploss and long_rsi_plot ? longStopLoss : na, color=color.rgb(255, 255, 255), style = plot.style_circles, linewidth = 2, display = display.all - display.price_scale)
+plot(show_stoploss and short_supertrend_plot or show_stoploss and short_rsi_plot ? shortStopLoss : na, color=color.rgb(255, 255, 255), style = plot.style_circles, linewidth = 2, display = display.all - display.price_scale)
+// ------------- Money management --------------
+strategy_contracts = strategy.equity / close
+distance_sl_atr_long = -1 * (longStopLoss - close) / close
+distance_sl_atr_short = (shortStopLoss - close) / close
+risk = input.float(2.5, '% Account risk per trade for backtesting', step=1, group = "Risk management for trades", tooltip = "Percentage of total account to risk per trade")
+long_amount = strategy_contracts * (risk / 100) / distance_sl_atr_long
+short_amount = strategy_contracts * (risk / 100) / distance_sl_atr_short
+// ---------- Risk management ---------------
+risk_reward_breakeven_long= input.float(title="Risk/reward for breakeven long", defval=0.75, step=0.05, group = "Risk management for trades")
+risk_reward_take_profit_long= input.float(title="Risk/reward for take profit long", defval=0.75, step=0.05, group = "Risk management for trades")
+risk_reward_breakeven_short= input.float(title="Risk/reward for break even short", defval=0.75, step=0.05, group = "Risk management for trades")
+risk_reward_take_profit_short= input.float(title="Risk/reward for take profit short", defval=0.75, step=0.05, group = "Risk management for trades")
+tp_percent=input.float(title="% of trade for first take profit", defval=50, step=5, group = "Risk management for trades", tooltip = "Closing percentage of the current position when the first take profit is reached.")
+// ------------ Trade conditions ---------------
+use_rsi_filter = input.bool(defval=true, title="Use Re-entry filter ?", group = "Re-entry filter", tooltip = "Activate to use filter. This will help you to re enter in a trend move")
+bought = strategy.position_size > 0
+sold = strategy.position_size < 0
+up_trend = direction < 0
+down_trend = direction > 0
+long_rsi_entry = ta.crossover(rsi_filter, oversold) and up_trend and strategy.openprofit[5]>=0 
+short_rsi_entry = ta.crossunder(rsi_filter, overbought) and down_trend and strategy.openprofit[5]>=0
+long_supertrend=ta.crossover(close, supertrend)
+short_supertrend=ta.crossunder(close, supertrend)
+var float sl_long = na
+var float sl_short = na 
+var float be_long = na
+var float be_short = na
+var float tp_long = na
+var float tp_short = na
+if not bought
+    be_long:=na
+    sl_long:=na
+    tp_long:=na
+if not sold
+    be_short
+    sl_short:=na
+    tp_short
+long_positions = input.bool(defval = true, title = "Long positions ?", group = "Positions management")
+short_positions = input.bool(defval = true, title = "Short positions ?", group = "Positions management")
+// ---------- Strategy -----------
+// Long position 
+if not bought and long_supertrend and dateFilter(initial_date, final_date) and long_positions or not bought and long_rsi_entry and dateFilter(initial_date, final_date) and use_rsi_filter and long_positions
+    sl_long:=longStopLoss           
+    long_stoploss_distance = close - longStopLoss
+    be_long := close + long_stoploss_distance * risk_reward_breakeven_long
+    tp_long:=close+(long_stoploss_distance*risk_reward_take_profit_long)
+    strategy.entry('L', strategy.long, long_amount, alert_message = "Long")
+    strategy.exit("Tp", "L", stop=sl_long, limit=tp_long, qty_percent=tp_percent)
+    strategy.exit('Exit', 'L', stop=sl_long)
+if bought and high > be_long
+    sl_long := strategy.position_avg_price
+    strategy.exit("Tp", "L", stop=sl_long, limit=tp_long, qty_percent=tp_percent)
+    strategy.exit('Exit', 'L', stop=sl_long)
+if bought and short_supertrend
+    strategy.close("L", comment="CL")
+// Short position
+if not sold and short_supertrend and dateFilter(initial_date, final_date) and short_positions or not sold and short_rsi_entry and dateFilter(initial_date, final_date) and use_rsi_filter and short_positions
+    sl_short:=shortStopLoss
+    short_stoploss_distance=shortStopLoss - close  
+    be_short:=((short_stoploss_distance*risk_reward_breakeven_short)-close)*-1
+    tp_short:=((short_stoploss_distance*risk_reward_take_profit_short)-close)*-1
+    strategy.entry("S", strategy.short, short_amount, alert_message = "Short")
+    strategy.exit("Tp", "S", stop=sl_short, limit=tp_short, qty_percent=tp_percent)
+    strategy.exit("Exit", "S", stop=sl_short)
+if sold and low < be_short 
+    sl_short:=strategy.position_avg_price
+    strategy.exit("Tp", "S", stop=sl_short, limit=tp_short, qty_percent=tp_percent)
+    strategy.exit("Exit", "S", stop=sl_short)    
+if sold and long_supertrend
+    strategy.close("S", comment="CS") 
+// ---------- Draw positions and signals on chart (strategy as an indicator) -------------
+if high>tp_long
+    tp_long:=na
+if low<tp_short
+    tp_short:=na
+if high>be_long
+    be_long:=na
+if low<be_short
+    be_short:=na
+show_position_on_chart = input.bool(defval=true, title="Draw position on chart ?", group = "Appearance", tooltip = "Activate to graphically display profit, stop loss and break even")
+position_price = plot(show_position_on_chart? strategy.position_avg_price : na, style=plot.style_linebr, color = color.new(#ffffff, 10), linewidth = 1, display = display.all - display.status_line - display.price_scale)
+sl_long_price = plot(show_position_on_chart and bought ? sl_long : na, style = plot.style_linebr, color = color.new(color.red, 10), linewidth = 1, display = display.all - display.status_line - display.price_scale)
+sl_short_price = plot(show_position_on_chart and sold ? sl_short : na, style = plot.style_linebr, color = color.new(color.red, 10), linewidth = 1, display = display.all - display.status_line - display.price_scale)
+tp_long_price = plot(strategy.position_size>0 and show_position_on_chart? tp_long : na, style = plot.style_linebr, color = color.new(#1fc9fd, 10), linewidth = 1, display = display.all - display.status_line - display.price_scale)
+tp_short_price = plot(strategy.position_size<0 and show_position_on_chart? tp_short : na, style = plot.style_linebr, color = color.new(#1fc9fd, 10), linewidth = 1, display = display.all - display.status_line - display.price_scale)
+breakeven_long = plot(strategy.position_size>0 and high<be_long and show_position_on_chart ? be_long : na , style = plot.style_linebr, color = color.new(#00ff40, 60), linewidth = 1, display = display.all - display.status_line - display.price_scale)
+breakeven_short = plot(strategy.position_size<0 and low>be_short and show_position_on_chart ? be_short : na , style = plot.style_linebr, color = color.new(#00ff40, 60), linewidth = 1, display = display.all - display.status_line - display.price_scale)
+show_break_even_on_chart = input.bool(defval=true, title="Draw first take profit/breakeven price on chart ?", group = "Appearance", tooltip = "Activate to display take profit and breakeven price. It appears as a green point in the chart")
+long_stoploss_distance = close - longStopLoss
+short_stoploss_distance=shortStopLoss - close
+be_long_plot = close + long_stoploss_distance * risk_reward_breakeven_long
+be_short_plot =((short_stoploss_distance*risk_reward_breakeven_short)-close)*-1
+plot(show_break_even_on_chart and long_supertrend_plot or show_break_even_on_chart and long_rsi_plot ? be_long_plot : na, color=color.new(#1fc9fd, 10), style = plot.style_circles, linewidth = 2, display = display.all - display.price_scale)
+plot(show_break_even_on_chart and short_supertrend_plot or show_break_even_on_chart and short_rsi_plot ? be_short_plot : na, color=color.new(#1fc9fd, 10), style = plot.style_circles, linewidth = 2, display = display.all - display.price_scale)
+position_profit_long = plot(bought and show_position_on_chart and strategy.openprofit>0 ? close : na, style = plot.style_linebr, color = color.new(#4cd350, 10), linewidth = 1, display = display.all - display.status_line - display.price_scale)
+position_profit_short = plot(sold and show_position_on_chart and strategy.openprofit>0 ? close : na, style = plot.style_linebr, color = color.new(#4cd350, 10), linewidth = 1, display = display.all - display.status_line - display.price_scale)
+fill(plot1 = position_price, plot2 = position_profit_long, color = color.new(color.green,90))
+fill(plot1 = position_price, plot2 = position_profit_short, color = color.new(color.green,90))
+fill(plot1 = position_price, plot2 = sl_long_price, color = color.new(color.red,90))
+fill(plot1 = position_price, plot2 = sl_short_price, color = color.new(color.red,90))
+fill(plot1 = position_price, plot2 = tp_long_price, color = color.new(color.green,90))
+fill(plot1 = position_price, plot2 = tp_short_price, color = color.new(color.green,90))
+show_signals = input.bool(defval=true, title="Draw signals on chart ?", group = "Appearance", tooltip = "Activate to display long, close long, short and close short signals. Green triangle represents long and red triangle represents short")
+plotshape(show_signals ? long_supertrend : na, style = shape.triangleup, location = location.belowbar, color = color.new(color.green,0), size = size.tiny, display = display.all - display.status_line - display.price_scale)
+plotshape(show_signals ? short_supertrend : na, style = shape.triangledown, location = location.abovebar, color = color.new(color.red,0), size = size.tiny, display = display.all - display.status_line - display.price_scale)
+plotshape(show_signals ? long_rsi_entry : na, style = shape.triangleup, location = location.belowbar, color = color.new(color.green,0), size = size.tiny, display = display.all - display.status_line - display.price_scale)
+plotshape(show_signals ? short_supertrend : na, style = shape.triangledown, location = location.abovebar, color = color.new(color.red,0), size = size.tiny, display = display.all - display.status_line - display.price_scale)
+// --------------- Position amount calculator -------------
+leverage_x = input.float(defval = 10, title = "Leverage X", group = "Calculate position")
+contracts_amount_c = initial_actual_capital / close
+distance_sl_long_c = -1 * (longStopLoss - close) / close 
+distance_sl_short_c = (shortStopLoss - close) / close
+long_amount_c = (close * (contracts_amount_c * (risk_c / 100) / distance_sl_long_c))/leverage_x
+short_amount_c = (close * (contracts_amount_c * (risk_c / 100) / distance_sl_short_c))/leverage_x
+plot(long_supertrend or long_rsi_entry ? long_amount_c : na, color = color.rgb(136, 255, 0), display = display.all - display.pane - display.price_scale)
+plot(short_supertrend or short_rsi_entry ? short_amount_c : na, color = color.rgb(136, 255, 0), display = display.all - display.pane - display.price_scale)
+Expand (221 lines)

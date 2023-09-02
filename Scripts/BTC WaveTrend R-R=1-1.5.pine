@@ -1,0 +1,94 @@
+Script Name: BTC WaveTrend R-R=1-1.5
+Author: TrendCrypto2022
+Description: In this strategy, I used Wavetrend indicator (Lazy Bear).
+It is very simple and easy to understanding: Long when Wavetrend1 crossover Wavetrend2 and they are less than a limit value (not buy when price overbought). Stoploss at lowest 3 bar previous. R:R = 1:1,5.
+
+About other shortterm strategies for crypto market, you can view my published strategies.
+PineScript code:
+
+Pine Script™ strategy
+BTC WaveTrend R:R=1:1.5
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// ©TrendCrypto2022
+//@version=5
+strategy("4 - BTC WaveTrend R:R=1:1.5", overlay=true)
+//WaveTrend indicator - author LazyBear
+n1 = input(10, "Channel Length", group = "Set up WaveTrend")
+n2 = input(21, "Average Length", group = "Set up WaveTrend")
+oblv1 = input(60, "Over Bought Lv 1", group = "Set up WaveTrend")
+oblv2 = input(53, "Over Bought Lv 2", group = "Set up WaveTrend")
+oslv1 = input(-60, "Over Sold Lv 1", group = "Set up WaveTrend")
+oslv2 = input(-53, "Over Sold Lv 2", group = "Set up WaveTrend")
+ 
+ap = hlc3 
+esa = ta.ema(ap, n1)
+d = ta.ema(math.abs(ap - esa), n1)
+ci = (ap - esa) / (0.015 * d)
+tci = ta.ema(ci, n2)
+ 
+wt1 = tci
+wt2 = ta.sma(wt1,4)
+//Strategy
+limitwt1 = input(20, "Limit value WT1 to open entry long", group = "Set up risk : reward")
+buy = ta.crossover(wt1, wt2) and wt1 < limitwt1
+if (buy)
+    strategy.entry("Long", strategy.long)
+//Set up risk : reward
+rr = input(1.5, "Risk : Reward", group = "Set up risk : reward")
+var float stoplosslevel  = na
+if buy  and strategy.position_size==0
+    stoplosslevel := math.min(low, low[1], low[2])
+takeprofitlevel = strategy.position_avg_price + rr*(strategy.position_avg_price-stoplosslevel)
+strategy.exit("Long", limit = takeprofitlevel, stop=stoplosslevel, comment="TP/SL")
+//Plot SL and TP
+p1=plot(strategy.position_size > 0 ? stoplosslevel : na, color=color.red, style=plot.style_linebr, title="SL")
+p2=plot(strategy.position_size > 0 ? takeprofitlevel : na, color=color.lime, style=plot.style_linebr, title="TP")
+p3=plot(strategy.position_size > 0 ? strategy.position_avg_price : na, color=color.silver, style=plot.style_linebr, title="Entry")
+fill(p1, p3, color=color.red, transp = 90)
+fill(p2, p3, color=color.green, transp = 90)
+Expand (44 lines)

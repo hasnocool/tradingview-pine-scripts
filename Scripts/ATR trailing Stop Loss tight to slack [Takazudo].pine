@@ -1,0 +1,254 @@
+Script Name: ATR trailing Stop Loss tight to slack [Takazudo]
+Author: Takazudo
+Description: This is a demo of ATR based trailing Stop Loss.
+
+This SL strategy uses 2 types of ATR based SL.
+
+ 
+ tight SL as initial (ATR * 1.5)
+ slack SL as trailing (ATR * 4)
+ 
+
+When any entry singal occurs by the buy/sell conditions, this SL strategy uses the "tight SL" as the initial SL.
+
+Then the SL will chase the price as trailing SL. However, this strategy uses the...
+PineScript code:
+
+Pine Script™ strategy
+ATR trailing Stop Loss tight to slack [Takazudo]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//@version=5
+//@author=Takazudo
+strategy("ATR trailing SL tight to slack [Takazudo]",
+  overlay=true,
+  default_qty_type=strategy.fixed,
+  initial_capital=0,
+  currency=currency.USD)
+posSize = strategy.position_size
+hasNoPos = posSize == 0
+hasLongPos = posSize > 0
+hasShortPos = posSize < 0
+//============================================================================
+// consts, inputs
+//============================================================================
+// colors
+var COLOR_SL_LINE = color.new(#e0f64d, 20)
+var COLOR_SL_LINE_THIN = color.new(#e0f64d, 90)
+var COLOR_ENTRY_BAND = color.new(#43A6F5, 30)
+var COLOR_TRANSPARENT = color.new(#000000, 100)
+// Entry strategy
+_g1 = 'Entry strategy'
+var config_entryBandBars = input.int(defval = 100, title = "Entry band bar count",  minval=1, group=_g1)
+_g2 = 'ATR SL'
+var config_slAtr_length = input.int(24, title = "Trailing stop ATR Length", group=_g2)
+var config_slAtr_multi1 = input.float(1.5, title = "Trailing stop ATR Multiple on tight", step=0.1, group=_g2)
+var config_slAtr_multi2 = input.float(4, title = "Trailing stop ATR Multiple on slack", step=0.1, group=_g2)
+_g3 = 'Backtesting range'
+var config_fromYear  = input.int(defval = 2016, title = "From Year",  minval = 1970, group=_g3)
+var config_fromMonth = input.int(defval = 1,    title = "From Month", minval = 1, maxval = 12, group=_g3)
+var config_fromDay   = input.int(defval = 1,    title = "From Day",   minval = 1, maxval = 31, group=_g3)
+var config_toYear  = input.int(defval = 2021, title = "To Year",  minval = 1970, group=_g3)
+var config_toMonth = input.int(defval = 4,    title = "To Month", minval = 1, maxval = 12, group=_g3)
+var config_toDay   = input.int(defval = 5,    title = "To Day",   minval = 1, maxval = 31, group=_g3)
+//============================================================================
+// Range Edge calculation
+//============================================================================
+f_calcEntryBand_high() =>
+    _highest = math.max(open[3], close[3])
+    for i = 4 to (config_entryBandBars - 1)
+        _highest := math.max(_highest, open[i], close[i])
+    _highest
+f_calcEntryBand_low() =>
+    _lowest = math.min(open[3], close[3])
+    for i = 4 to (config_entryBandBars - 1)
+        _lowest := math.min(_lowest, open[i], close[i])
+    _lowest
+entryBand_high = f_calcEntryBand_high()
+entryBand_low = f_calcEntryBand_low()
+entryBand_height = entryBand_high - entryBand_low
+plot(entryBand_high, color=COLOR_ENTRY_BAND, linewidth=1)
+plot(entryBand_low, color=COLOR_ENTRY_BAND, linewidth=1)
+rangeBreakDetected_long = entryBand_high < close
+rangeBreakDetected_short = entryBand_low > close
+shouldMakeEntryLong = (strategy.position_size == 0) and rangeBreakDetected_long
+shouldMakeEntryShort = (strategy.position_size == 0) and rangeBreakDetected_short
+//============================================================================
+// ATR based stuff
+//============================================================================
+sl_atrHeight_tight = ta.atr(config_slAtr_length) * config_slAtr_multi1
+sl_atrHeight_slack = ta.atr(config_slAtr_length) * config_slAtr_multi2
+sl_tight_bull = math.min(open, close) - sl_atrHeight_tight
+sl_tight_bear = math.max(open, close) + sl_atrHeight_tight
+sl_slack_bull = math.min(open, close) - sl_atrHeight_slack
+sl_slack_bear = math.max(open, close) + sl_atrHeight_slack
+plot(sl_tight_bull, color=COLOR_SL_LINE_THIN, linewidth=1)
+plot(sl_tight_bear, color=COLOR_SL_LINE_THIN, linewidth=1)
+plot(sl_slack_bull, color=COLOR_SL_LINE_THIN, linewidth=1)
+plot(sl_slack_bear, color=COLOR_SL_LINE_THIN, linewidth=1)
+//============================================================================
+// Sl
+//============================================================================
+var trailingSl_long = hl2
+var trailingSl_short = hl2
+trailingSl_long := if hasLongPos
+    math.max(trailingSl_long, sl_slack_bull)
+else
+    sl_tight_bull
+trailingSl_short := if hasShortPos
+    math.min(trailingSl_short, sl_slack_bear)
+else
+    sl_tight_bear
+color_sl_long = hasLongPos ? COLOR_SL_LINE : COLOR_TRANSPARENT
+color_sl_short = hasShortPos ? COLOR_SL_LINE : COLOR_TRANSPARENT
+plot(trailingSl_long, color=color_sl_long, linewidth=2)
+plot(trailingSl_short, color=color_sl_short, linewidth=2)
+//============================================================================
+// make entries
+//============================================================================
+// Calculate start/end date and time condition
+startDate  = timestamp(config_fromYear, config_fromMonth, config_fromDay, 00, 00)
+finishDate = timestamp(config_toYear,   config_toMonth,   config_toDay,   00, 00)
+if (time >= startDate and time <= finishDate)
+    if shouldMakeEntryLong
+        strategy.entry(id="Long", direction=strategy.long, stop=close, qty=1000)
+    if shouldMakeEntryShort
+        strategy.entry(id="Short", direction=strategy.short, stop=close, qty=1000)
+strategy.exit('Long-SL/TP', 'Long', stop=trailingSl_long)
+strategy.exit('Short-SL/TP', 'Short', stop=trailingSl_short)
+Expand (135 lines)

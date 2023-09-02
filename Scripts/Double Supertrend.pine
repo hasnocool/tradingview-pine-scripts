@@ -1,0 +1,349 @@
+Script Name: Double Supertrend
+Author: ThiagoSchmitz
+Description: This strategy is based on a custom indicator that was created based on the Supertrend indicator. At its core, there are always 2 super trend indicators with different factors to reduce market noise (false signals). 
+
+The strategy/indicator has some parameters to improve the signals and filters. 
+
+ TECHNICAL ANALYSIS 
+
+☑ Show Indicators
+This option will...
+PineScript code:
+
+Pine Script™ strategy
+Double Supertrend
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+//@version=5
+strategy("Double Supertrend", overlay=true, currency="USD", default_qty_value=1, process_orders_on_close=true, pyramiding=10)
+//*
+//* Inputs
+//*
+showIndicators = input.bool(true, "Show Indicators", group="Technical Analysis")
+atrPeriod = input(14, "Length", group="Technical Analysis", inline="ATR")
+factor1 = input.float(1.0, "Dev Fast", step = 0.01, group="Technical Analysis", inline="ATR")
+factor2 = input.float(4.0, "Dev Slow", step = 0.01, group="Technical Analysis", inline="ATR")
+exitType = input.string("ATR", "Exit Type", ["Reversals", "ATR", "Fast Supertrend", "Slow Supertrend"], group="Technical Analysis", inline="Exit Type")
+exitLength = input.int(60, "Period", group="Technical Analysis", inline="Exit Type")
+exitMultiplier = input.int(2, "Multiplier", group="Technical Analysis", inline="Exit Type")
+useStrategy = input.bool(true, "Use The Strategy", group="Strategy")
+showLongs = input.bool(true, "Show/Use Long Entries", group="Strategy", inline="Entries")
+showShorts = input.bool(true, "Show/Use Short Entries", group="Strategy", inline="Entries")
+entryAlerts = input.bool(true, "Enable Entry Alerts", group="Strategy", inline="Entries")
+showExitLongs = input.bool(true, "Show/Use Exit Longs", group="Strategy", inline="Exits")
+showExitShorts = input.bool(true, "Show/Use Exit Shorts", group="Strategy", inline="Exits")
+exitAlerts = input.bool(true, "Enable Exit Alerts", group="Strategy", inline="Exits")
+showAddLongs = input.bool(true, "Show/Use Add Longs", group="Strategy", inline="Adds")
+showAddShorts = input.bool(true, "Show/Use Add Shorts", group="Strategy", inline="Adds")
+addAlerts = input.bool(true, "Enable Add Alerts", group="Strategy", inline="Adds")
+dateStart = input.time(timestamp("2021-12-01T10:00:00-03:00"), "Trades Date Start", group="Strategy")
+dateEnd = input.time(timestamp("2022-02-01T10:00:00-03:00"), "Trades Date End", group="Strategy")
+//*
+//* Variables
+//*
+var bool buy = true
+var bool sell = true
+isInsideDateRange = time > dateStart and time < dateEnd
+bodyMiddleValue = (open + close) / 2
+rangeMiddleValue = (high + low) / 2
+//*
+//* TA
+//*
+[supertrend1, direction1] = ta.supertrend(factor1, atrPeriod)
+[supertrend2, direction2] = ta.supertrend(factor2, atrPeriod)
+diffFromTop = ta.highest(exitLength) - (ta.highest(exitLength) - ta.lowest(exitLength/4)) / 2
+diffFromBottom = ta.lowest(exitLength) + (ta.highest(exitLength/4) - ta.lowest(exitLength)) / 2
+condLong = direction1 < 0 and direction2 < 0 and (direction1[1] > 0 or direction2[1] > 0)
+condShort = direction1 > 0 and direction2 > 0 and (direction1[1] < 0 or direction2[1] < 0)
+atr = ta.atr(atrPeriod)
+//*
+//* Functions
+//*
+getATRPrice(type) => close + atr * exitMultiplier * (type == "long" ? 1 : -1)
+//*
+//* Take Profit Calculations
+//*
+var longTakeProfit = getATRPrice("long")
+var shortTakeProfit = getATRPrice("Short")
+if condLong and buy
+    longTakeProfit := getATRPrice("long")
+if condShort and sell
+    shortTakeProfit := getATRPrice("Short")
+//*
+//* Color Gradient
+//*
+colorSignal1 = color.from_gradient(ohlc4, ta.lowest(exitLength/4), ta.highest(exitLength), color.green, color.aqua)
+colorSignal2 = color.from_gradient(ohlc4, ta.lowest(exitLength), ta.highest(exitLength/4), color.red, color.orange)
+//*
+//* Entry Signals
+//*
+plotshape(condLong and buy, "Trend Up", shape.triangleup, location.belowbar, color.lime, 0, "Long", color.lime, false, size.small)
+plotshape(condShort and sell, "Trend Down", shape.triangledown, location.abovebar, color.red, 0, "Short", color.red, false, size.small)
+if useStrategy and isInsideDateRange
+    if condLong and buy and showLongs
+        strategy.entry("Long", strategy.long)
+        if entryAlerts
+            alert("Entry Long", alert.freq_once_per_bar)
+    if condShort and sell and showShorts
+        strategy.entry("Short", strategy.short)
+        if entryAlerts
+            alert("Entry Short", alert.freq_once_per_bar)
+//*
+//* Exit Signals
+//*
+plotshape(ohlc4 <= diffFromTop and ohlc4[1] > diffFromTop[1] and sell and not condShort and showExitLongs, "Exit Trend Up", shape.xcross, location.abovebar, color.aqua, 0, "Exit", color.aqua, false, size.tiny)
+plotshape(ohlc4 >= diffFromBottom and ohlc4[1] < diffFromBottom[1] and buy and not condLong and showExitShorts, "Exit Trend Down", shape.xcross, location.belowbar, color.orange, 0, "Exit", color.orange, false, size.tiny)
+if sell and not condShort and showExitLongs and isInsideDateRange
+    if ohlc4 <= diffFromTop and ohlc4[1] > diffFromTop[1] and exitType == "Reversals"
+        strategy.exit("Exit Long", "Long", stop=low, qty_percent=100)
+        strategy.exit("Exit Add Long", "Add Long", stop=low, qty_percent=100)
+        if exitAlerts
+            alert("Exit Long", alert.freq_once_per_bar)
+    if condLong[1] and exitType == "ATR"
+        strategy.exit("Exit Long", "Long", limit=longTakeProfit, qty_percent=100)
+        strategy.exit("Exit Add Long", "Add Long", limit=longTakeProfit, qty_percent=100)
+        if exitAlerts
+            alert("Exit Long", alert.freq_once_per_bar)
+    if condLong[1] and (exitType == "Fast Supertrend" or exitType == "Slow Supertrend")
+        strategy.exit("Exit Long", "Long", limit=rangeMiddleValue + (rangeMiddleValue - (exitType == "Fast Supertrend" ? supertrend1 : supertrend2)), qty_percent=100)
+        strategy.exit("Exit Add Long", "Add Long", limit=rangeMiddleValue + (rangeMiddleValue - (exitType == "Fast Supertrend" ? supertrend1 : supertrend2)), qty_percent=100)
+        if exitAlerts
+            alert("Exit Long", alert.freq_once_per_bar)
+if buy and not condLong and showExitShorts and isInsideDateRange
+    if ohlc4 >= diffFromBottom and ohlc4[1] < diffFromBottom[1] and exitType == "Reversals"
+        strategy.exit("Exit Short", "Short", stop=high, qty_percent=100)
+        strategy.exit("Exit Add Short", "Add Short", stop=high, qty_percent=100)
+        if exitAlerts
+            alert("Exit Short", alert.freq_once_per_bar)
+    if condShort[1] and exitType == "ATR"
+        strategy.exit("Exit Short", "Short", limit=shortTakeProfit, qty_percent=100)
+        strategy.exit("Exit Add Short", "Add Short", limit=shortTakeProfit, qty_percent=100)
+        if exitAlerts
+            alert("Exit Short", alert.freq_once_per_bar)
+    if condShort[1] and (exitType == "Fast Supertrend" or exitType == "Slow Supertrend")
+        strategy.exit("Exit Short", "Short", limit=rangeMiddleValue - ((exitType == "Fast Supertrend" ? supertrend1 : supertrend2) - rangeMiddleValue), qty_percent=100)
+        strategy.exit("Exit Add Short", "Add Short", limit=rangeMiddleValue - ((exitType == "Fast Supertrend" ? supertrend1 : supertrend2) - rangeMiddleValue), qty_percent=100)
+        if exitAlerts
+            alert("Exit Short", alert.freq_once_per_bar)
+            
+//*
+//* Plots
+//*
+bodyMiddle = plot(bodyMiddleValue, display=display.none)
+upTrend1 = plot(direction1 < 0 ? supertrend1 : na, "Up Trend", color = showIndicators ? colorSignal1 : na, style=plot.style_linebr)
+plot(direction1 < 0 and direction2 < 0 and longTakeProfit > high ? longTakeProfit : na, "Take Profit Up Trend", color = showIndicators ? color.olive : na, style=plot.style_linebr, linewidth=3)
+plot(rangeMiddleValue + (rangeMiddleValue - (exitType == "Fast Supertrend" ? supertrend1 : supertrend2)), "Supertrend Long Take Profit", (exitType == "Fast Supertrend" or exitType == "Slow Supertrend") and direction1 < 0 and direction2 < 0 ? color.new(color.olive, 30) : na, style=plot.style_linebr)
+downTrend1 = plot(direction1 < 0 ? na : supertrend1, "Down Trend", color = showIndicators ? colorSignal2 : na, style=plot.style_linebr)
+upTrend2 = plot(direction2 < 0 ? supertrend2 : na, "Up Trend", color = showIndicators ? colorSignal1 : na, style=plot.style_linebr)
+plot(direction1 >= 0 and direction2 >= 0 and shortTakeProfit < low ? shortTakeProfit : na, "Take Profit Down Trend", color = showIndicators ? color.maroon : na, style=plot.style_linebr, linewidth=3)
+plot(rangeMiddleValue - ((exitType == "Fast Supertrend" ? supertrend1 : supertrend2) - rangeMiddleValue), "Supertrend Short Take Profit", (exitType == "Fast Supertrend" or exitType == "Slow Supertrend") and direction1 >= 0 and direction2 >= 0 ? color.new(color.maroon, 30) : na, style=plot.style_linebr)
+downTrend2 = plot(direction2 < 0 ? na : supertrend2, "Down Trend", color = showIndicators ? colorSignal2 : na, style=plot.style_linebr)
+//*
+//* Fills
+//*
+fill(bodyMiddle, upTrend1, showIndicators ? color.new(colorSignal1, 95) : na, fillgaps=false)
+fill(bodyMiddle, downTrend1, showIndicators ? color.new(colorSignal2, 90) : na, fillgaps=false)
+fill(bodyMiddle, upTrend2, showIndicators ? color.new(colorSignal1, 95) : na, fillgaps=false)
+fill(bodyMiddle, downTrend2, showIndicators ? color.new(colorSignal2, 90) : na, fillgaps=false)
+//*
+//* Reentry
+//*
+plotshape(low < supertrend1 and close > supertrend1 and sell and not (ohlc4 <= diffFromTop and ohlc4[1] > diffFromTop[1]) and showAddLongs, "Add Long", shape.cross, location.belowbar, color.new(color.green, 20), 0, "L", color.new(color.green, 20), false, size.tiny)
+plotshape(high > supertrend1 and close < supertrend1 and buy and not (ohlc4 >= diffFromBottom and ohlc4[1] < diffFromBottom[1]) and showAddShorts, "Add Short", shape.cross, location.abovebar, color.new(color.red, 20), 0, "S", color.new(color.red, 20), false, size.tiny)
+if useStrategy and isInsideDateRange
+    if low < supertrend1 and close > supertrend1 and sell and not (ohlc4 <= diffFromTop and ohlc4[1] > diffFromTop[1]) and showAddLongs
+        strategy.entry("Add Long", strategy.long)
+        if addAlerts
+            alert("Add Long", alert.freq_once_per_bar)
+            
+    if high > supertrend1 and close < supertrend1 and buy and not (ohlc4 >= diffFromBottom and ohlc4[1] < diffFromBottom[1]) and showAddShorts
+        strategy.entry("Add Short", strategy.short)
+        if addAlerts
+            alert("Add Short", alert.freq_once_per_bar)
+//*
+//* One Signal
+//*
+if condLong and buy
+    buy := false
+    sell := true
+    strategy.cancel("Exit Short")
+    strategy.cancel("Exit Add Short")
+if condShort and sell
+    sell := false
+    buy := true
+    strategy.cancel("Exit Long")
+    strategy.cancel("Exit Add Long")
+Expand (174 lines)

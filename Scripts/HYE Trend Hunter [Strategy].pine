@@ -1,0 +1,282 @@
+Script Name: HYE Trend Hunter [Strategy]
+Author: HYE0619
+Description: *** Stratejinin Türkçe ve İngilizce açıklaması aşağıya eklenmiştir.
+
+ HYE Trend Hunter  
+
+In this strategy, two of the most basic data (price and volume) necessary for detecting trends as early as possible and entering the trade on time are used. In this context, the approaches of some classical and new generation indicators using price and volume have been taken...
+PineScript code:
+
+Pine Script™ strategy
+HYE Trend Hunter [Strategy]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+// @version=4
+// Credits
+// "Vwap with period" code which used in this strategy to calculate the leadLine was written by "neolao" active on https://tr.tradingview.com/u/neolao/
+// "TSV" code which used in this strategy was written by "liw0" active on https://www.tradingview.com/u/liw0. The code is corrected by "vitelot" December 2018.
+strategy("HYE Trend Hunter [Strategy]", overlay = true, initial_capital = 1000, default_qty_value = 100, default_qty_type = strategy.percent_of_equity, commission_value = 0.025, pyramiding = 0)
+  
+// Strategy inputs 
+slowtenkansenPeriod = input(9, minval=1, title="Slow Tenkan Sen VWAP Line Length", group = "Tenkansen / Kijunsen")
+slowkijunsenPeriod = input(13, minval=1, title="Slow Kijun Sen VWAP Line Length", group = "Tenkansen / Kijunsen")
+fasttenkansenPeriod = input(3, minval=1, title="Fast Tenkan Sen VWAP Line Length", group = "Tenkansen / Kijunsen")
+fastkijunsenPeriod = input(7, minval=1, title="Fast Kijun Sen VWAP Line Length", group = "Tenkansen / Kijunsen")
+BBlength = input(20, minval=1, title= "Bollinger Band Length", group = "Bollinger Bands")
+BBmult = input(2.0, minval=0.001, maxval=50, title="Bollinger Band StdDev", group = "Bollinger Bands")
+tsvlength  = input(20, minval=1, title="TSV Length", group = "Tıme Segmented Volume")
+tsvemaperiod = input(7, minval=1, title="TSV Ema Length", group = "Tıme Segmented Volume")
+vidyachoice = input(title="Use Vidya to Filter the Trend?", type=input.bool, defval=false, group = "Vıdya Inputs")
+length = input(title="Vidya Length", type=input.integer, defval=20, group = "Vıdya Inputs") 
+src = input(title="Vidya Source", type=input.source, defval= hl2 , group = "Vıdya Inputs")
+// Vidya Calculation 
+getCMO(src, length) =>
+    mom = change(src)
+    upSum = sum(max(mom, 0), length)
+    downSum = sum(-min(mom, 0), length)
+    out = (upSum - downSum) / (upSum + downSum)
+    out
+cmo = abs(getCMO(src, length))
+alpha = 2 / (length + 1)
+vidya = 0.0
+vidya := src * alpha * cmo + nz(vidya[1]) * (1 - alpha * cmo)
+// Make input options that configure backtest date range  
+ 
+startDate = input(title="Start Date", type=input.integer,
+     defval=1, minval=1, maxval=31, group = "Backtest Range")
+startMonth = input(title="Start Month", type=input.integer,
+     defval=1, minval=1, maxval=12, group = "Backtest Range")
+startYear = input(title="Start Year", type=input.integer,
+     defval=2000, minval=1800, maxval=2100, group = "Backtest Range")
+endDate = input(title="End Date", type=input.integer, 
+     defval=31, minval=1, maxval=31, group = "Backtest Range")
+endMonth = input(title="End Month", type=input.integer,
+     defval=12, minval=1, maxval=12, group = "Backtest Range") 
+endYear = input(title="End Year", type=input.integer,
+     defval=2021, minval=1800, maxval=2100, group = "Backtest Range")
+     
+inDateRange = (time >= timestamp(syminfo.timezone, startYear,
+         startMonth, startDate, 0, 0)) and 
+     (time < timestamp(syminfo.timezone, endYear, endMonth, endDate, 0, 0))
+//Slow Tenkan Sen Calculation
+typicalPriceTS = (high + low + close) / 3
+typicalPriceVolumeTS = typicalPriceTS * volume
+cumulativeTypicalPriceVolumeTS = sum(typicalPriceVolumeTS, slowtenkansenPeriod)
+cumulativeVolumeTS = sum(volume, slowtenkansenPeriod)
+slowtenkansenvwapValue = cumulativeTypicalPriceVolumeTS / cumulativeVolumeTS
+//Slow Kijun Sen Calculation
+typicalPriceKS = (high + low + close) / 3
+typicalPriceVolumeKS = typicalPriceKS * volume
+cumulativeTypicalPriceVolumeKS = sum(typicalPriceVolumeKS, slowkijunsenPeriod)
+cumulativeVolumeKS = sum(volume, slowkijunsenPeriod)
+slowkijunsenvwapValue = cumulativeTypicalPriceVolumeKS / cumulativeVolumeKS
+//Fast Tenkan Sen Calculation
+typicalPriceTF = (high + low + close) / 3
+typicalPriceVolumeTF = typicalPriceTF * volume
+cumulativeTypicalPriceVolumeTF = sum(typicalPriceVolumeTF, fasttenkansenPeriod)
+cumulativeVolumeTF = sum(volume, fasttenkansenPeriod)
+fasttenkansenvwapValue = cumulativeTypicalPriceVolumeTF / cumulativeVolumeTF
+//Fast Kijun Sen Calculation
+typicalPriceKF = (high + low + close) / 3
+typicalPriceVolumeKF = typicalPriceKS * volume
+cumulativeTypicalPriceVolumeKF = sum(typicalPriceVolumeKF, fastkijunsenPeriod)
+cumulativeVolumeKF = sum(volume, fastkijunsenPeriod)
+fastkijunsenvwapValue = cumulativeTypicalPriceVolumeKF / cumulativeVolumeKF
+//Slow LeadLine Calculation
+ 
+lowesttenkansen_s = lowest(slowtenkansenvwapValue, slowtenkansenPeriod)
+highesttenkansen_s = highest(slowtenkansenvwapValue, slowtenkansenPeriod)
+lowestkijunsen_s = lowest(slowkijunsenvwapValue, slowkijunsenPeriod)
+highestkijunsen_s = highest(slowkijunsenvwapValue, slowkijunsenPeriod)
+slowtenkansen = avg(lowesttenkansen_s, highesttenkansen_s)
+slowkijunsen = avg(lowestkijunsen_s, highestkijunsen_s)
+slowleadLine = avg(slowtenkansen, slowkijunsen)
+//Fast LeadLine Calculation 
+ 
+lowesttenkansen_f = lowest(fasttenkansenvwapValue, fasttenkansenPeriod)
+highesttenkansen_f = highest(fasttenkansenvwapValue, fasttenkansenPeriod)
+lowestkijunsen_f = lowest(fastkijunsenvwapValue, fastkijunsenPeriod)
+highestkijunsen_f = highest(fastkijunsenvwapValue, fastkijunsenPeriod) 
+fasttenkansen = avg(lowesttenkansen_f, highesttenkansen_f)
+fastkijunsen = avg(lowestkijunsen_f, highestkijunsen_f)
+fastleadLine = avg(fasttenkansen, fastkijunsen)
+// BBleadLine Calculation
+ 
+BBleadLine = avg(fastleadLine, slowleadLine)
+// Bollinger Band Calculation
+ 
+basis = sma(BBleadLine, BBlength)
+dev = BBmult * stdev(BBleadLine, BBlength)
+upper = basis + dev 
+lower = basis - dev 
+// TSV Calculation
+tsv = sum(close>close[1]?volume*(close-close[1]):close<close[1]?volume*(close-close[1]):0,tsvlength)
+tsvema = ema(tsv, tsvemaperiod)
+// Rules for Entry & Exit  
+if(vidyachoice ? fastleadLine > fastleadLine[1] and slowleadLine > slowleadLine[1] and tsv > 0 and tsv > tsvema and close > upper and close > vidya and inDateRange : fastleadLine > fastleadLine[1] and slowleadLine > slowleadLine[1] and tsv > 0 and tsv > tsvema and close > upper and inDateRange)
+    strategy.entry("BUY", strategy.long)
+ 
+if(fastleadLine < fastleadLine[1] and slowleadLine < slowleadLine[1])
+    strategy.close("BUY")
+// Plots 
+plot(vidya, title="VIDYA", linewidth=2, color=color.yellow)
+colorsettingS = input(title="Solid Color Slow Leadline", defval=false, type=input.bool)
+plot(slowleadLine, title = "Slow LeadLine", color = colorsettingS ? color.aqua : slowleadLine > slowleadLine[1] ? color.green : color.red, linewidth=3)
+colorsettingF = input(title="Solid Color Fast Leadline", defval=false, type=input.bool)
+plot(fastleadLine, title = "Fast LeadLine", color = colorsettingF ? color.orange : fastleadLine > fastleadLine[1] ? color.green : color.red, linewidth=3)
+p1 = plot(upper, "Upper BB", color=#2962FF)
+p2 = plot(lower, "Lower BB", color=#2962FF)
+fill(p1, p2, title = "Background", color=color.blue)
+Expand (153 lines)

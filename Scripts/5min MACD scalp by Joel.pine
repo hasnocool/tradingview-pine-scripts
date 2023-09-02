@@ -1,0 +1,405 @@
+Script Name: 5min MACD scalp by Joel
+Author: Zippy111
+Description: This strategy is inspired by a youtuber called Joel on Crypto. He trades this using Ema, MACD indicators and his own experience. For more information, check out his Best Crypto Scalping Strategy for the 5 Min Time Frame video. I have tried to automate this a little.
+
+Long or Short trades are determined with a crossing of the fast Ema over the slow Ema for Long and...
+PineScript code:
+
+Pine Script™ strategy
+5min MACD scalp by Joel
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Zippy111 and inspired by the youtuber Joel on Crypto
+//@version=5
+strategy("5min MACD scalp by Joel (3commas)", shorttitle = "5m MACD scalp", overlay=true, margin_long=100, margin_short=100)
+import ZenAndTheArtOfTrading/ZenLibrary/2 as l_zen
+var g_strategy          = "Strategy"
+i_chkLong               = input.bool(true, title = 'Long', inline ='1', group = g_strategy)
+i_chkShort              = input.bool(true, title = 'Short', inline='1', group= g_strategy)
+i_startTime             = input.time(title='Start Date', defval=timestamp('01 Jan 2020 00:00 +0100'), group=g_strategy, tooltip='Date & time to begin trading from')
+i_endTime               = input.time(title='End Date', defval=timestamp('1 Jan 2099 00:00 +0100'), group=g_strategy, tooltip='Date & time to stop trading')
+i_longProfitPerc        = input.float(title='Long TP (%)', minval=0.0, step=0.1, defval=0.5, inline='2', group= g_strategy) * 0.01
+i_shortProfitPerc       = input.float(title='Short TP (%)', minval=0.0, step=0.1, defval=0.5, inline='3', group= g_strategy) * 0.01
+i_longStopPerc          = input.float(title='Long SL (%)', minval=0.0, step=0.1, defval=0.4, inline='2', group= g_strategy) * 0.01
+i_shortStopPerc         = input.float(title='Short SL (%)', minval=0.0, step=0.1, defval=0.4, inline='3', group= g_strategy) * 0.01
+var g_pause             = "Pause trades"
+i_tradePause            = input.int(title= "For how many bars?", defval=0, minval = 0, group= g_pause, tooltip="Pauses trades for X bars after a closed trade\n0 = OFF")
+i_tradePauseLoss        = input.bool(title= "Only loosing trades", defval = true, inline = "4", group= g_pause)
+i_tradeLossNum          = input.int(title= "| How much?", defval=1, minval = 1, group= g_pause, inline = "4", tooltip="Number of loosing trades in a row")
+var g_ema               = "EMAs trend"
+i_emaOpt                = input.string(title = "Trend type", defval = "Ema cross", options = ["Ema cross", "Ema slow", "Ema fast"], group = g_ema, tooltip = "Ema cross - trend based on ema crosses, eg. fast above slow = long and vice versa,\nEma slow/fast - trend based on whether the close price is above/under selected ema")
+i_emaFast               = input.int(title = "Ema fast lenght", defval = 50, step = 5, group = g_ema)
+i_emaSlow               = input.int(title = "Ema slow lenght", defval = 200, step = 5, group = g_ema)
+i_emaTrendBarsBack      = input.int(title = "Valid cross?", defval = 350, step = 5, tooltip = "How many bars back is the cross still valid?\nWhen some of the Emas is selected as an Trend type then it counts the bars since the close price crossed above the selected ema", group = g_ema)
+var g_macd              = "MACD settings"
+i_macdRes               = input.timeframe(title = "MACD resolution", defval = "", group = g_macd)
+i_macdFastLen           = input.int(title="Fast Length", minval = 1, defval=12, group = g_macd)
+i_macdSlowLen           = input.int(title="Slow Length", minval = 1, defval=26, group = g_macd)
+i_macdSignalLen         = input.int(title="Signal Smoothing",  minval = 1, maxval = 50, defval = 9, group = g_macd)
+var g_hist              = "Histogram peak finder"
+i_histMin               = input.float(title = "Min histogram value", defval = 0.00000, minval = 0.00000, group = g_hist, tooltip = "Minimum for a positive/negative histogram value that is taken into account.\nSet to zero if you want to turn it off.")
+i_histHighestLookback   = input.int(title = "Lookback period", defval = 10, minval = 1, group = g_hist)
+i_useHistChk            = input.bool(false, title = 'Compare with histogram average?', group = g_hist, tooltip = "Highest/Lowest hist bar - Current histogram value must be greater than 100% + X% times the average histogram")
+i_histAvgLookback       = input.int(title = "Avg histogram lenght", defval = 50, minval = 1, step = 5, tooltip = "Length of the histogram average, similar to MA length", group = g_hist)
+i_aboveHist             = input.int(title = "% above avg", defval = 50, minval = 1, step = 5, tooltip = "Histogram positive/value must be above the average * %", group = g_hist) * 0.01 + 1
+var g_rsi               = "RSI filter"
+i_rsiChk                = input.bool(false, "Use RSI Filter", group = g_rsi)
+i_rsiRes                = input.timeframe("", "TimeFrame", group = g_rsi)
+i_rsiLen                = input.int(14, "Lenght", group = g_rsi)
+i_rsiMinLong            = input.float(0.0, "Min for Long", minval = 0.0, maxval = 100.0, step = 0.5, group = g_rsi, inline = "6")
+i_rsiMaxLong            = input.float(70.0, "Max for Long", minval = 0.0, maxval = 100.0, step = 0.5, group = g_rsi, inline = "6")
+i_rsiMinShort           = input.float(30.0, "Min for Short", minval = 0.0, maxval = 100.0, step = 0.5, group = g_rsi, inline = "7")
+i_rsiMaxShort           = input.float(100.0, "Max for Short", minval = 0.0, maxval = 100.0, step = 0.5, group = g_rsi, inline = "7")
+i_rsiDirectChk          = input.bool(false, "RSI direction confirmation", group = g_rsi, tooltip = "Long only if its supported by rising RSI and Short only if its supported by falling RSI\nWorks only if Use RSI is ON")
+i_rsiDirectLen          = input.int(1, "Bars back for direction", minval = 1, group = g_rsi, tooltip = "Lookback period for RSI values")
+var g_additional        = "Pullback filter"
+i_usePullbackChk        = input.bool(false, title = 'Use Pullback filter', group = g_additional, tooltip = "This aims to chatch a possible swing low/high for a better quality position\nFor a long position it checks how many candles were in the opposite direction, so you don't enter the trade when it's been going up for a long time and vice versa")
+i_pullbackCount         = input.int(title="Lookback period", defval=2, minval = 1, group = g_additional)
+i_pullbackBigger        = input.int(title="More than", defval=2, minval = 1, group = g_additional, tooltip = "How many candles should be in the opposite direction?\nCan't be bigger than the lookback period")
+var g_tester            = 'Back tester table'
+i_drawTester            = input.bool(title='Show back tester', defval=true, group=g_tester, tooltip='Turn on/off inbuilt backtester display', inline = "backtester1")
+i_testerPosition        = input.string(title='', defval="Top right", options = ["Top right", "Top left", "Bottom right", "Bottom left"], group=g_tester, tooltip='Position of the backtester table', inline = "backtester1")
+i_rr                    = input.float(title='R:R', defval=1.0, group=g_tester, tooltip='Risk:Reward profile')
+startBalance            = input.float(title='Starting Balance', defval=100.0, group=g_tester, tooltip='Your starting balance for the custom inbuilt tester system')
+riskPerTrade            = input.float(title='Risk Per Trade', defval=1.0, group=g_tester, tooltip='Your desired % risk per trade (as a whole number)')
+var i_3Commas           = '3Commas bot settings'
+i_useComments           = input.bool(false, "Show 3Commas bot comments", group = i_3Commas)
+i_botIDLong             = input(title="Long Bot ID", defval="", group = i_3Commas)
+i_botIDShort            = input(title="Short Bot ID", defval="", group = i_3Commas)
+i_tokenID               = input(title="Email Token", defval="", group = i_3Commas)
+// Get strategy direction and set time
+strategy.risk.allow_entry_in(i_chkLong and i_chkShort ? strategy.direction.all : i_chkLong ? strategy.direction.long : strategy.direction.short)
+c_dateFilter = time >= i_startTime and time <= i_endTime // See if this bar's time happened within date filter
+// Get Ema trend
+c_emaFast = ta.ema(close, i_emaFast)
+c_emaSlow = ta.ema(close, i_emaSlow)
+c_emaCrossBull = ta.crossover(i_emaOpt == "Ema cross" ? c_emaFast : close, i_emaOpt == "Ema fast" ? c_emaFast : c_emaSlow)
+c_emaCrossBear = ta.crossunder(i_emaOpt == "Ema cross" ? c_emaFast : close, i_emaOpt == "Ema fast" ? c_emaFast : c_emaSlow)
+c_emaAbove = (i_emaOpt == "Ema cross" ? c_emaFast >= c_emaSlow : i_emaOpt == "Ema slow" ? close > c_emaSlow : close > c_emaFast)
+c_emaUnder = (i_emaOpt == "Ema cross" ? c_emaFast < c_emaSlow : i_emaOpt == "Ema slow" ? close < c_emaSlow : close < c_emaFast)
+c_crossBarsBackBull = ta.barssince(c_emaCrossBull)
+c_crossBarsBackBear = ta.barssince(c_emaCrossBear)
+// Get MACD histogram
+f_rpSecurity(_symbol, _res, _src) =>
+    request.security(_symbol, _res, _src[barstate.isrealtime ? 1 : 0])
+[_, _, c_hist] = ta.macd(f_rpSecurity("", i_macdRes, close), i_macdFastLen, i_macdSlowLen, i_macdSignalLen)
+c_histBear = math.sum(c_hist > 0 ? (barstate.isrealtime ? c_hist[1] : c_hist[0]) : 0, i_histAvgLookback)
+c_histBull = math.sum(c_hist < 0 ? math.abs(barstate.isrealtime ? c_hist[1] : c_hist[0]) : 0, i_histAvgLookback)
+c_histBearAvg = (c_histBear / math.sum(c_hist > 0 ? 1 : 0, i_histAvgLookback))
+c_histBullAvg = (c_histBull / math.sum(c_hist < 0 ? 1 : 0, i_histAvgLookback))
+c_rsiSrc = f_rpSecurity("", i_rsiRes, close)
+c_rsi = ta.rsi(c_rsiSrc, i_rsiLen)
+// Sub-Condition calculations
+c_histMinLong = math.abs(c_hist) > i_histMin
+c_histMinShort = c_hist > i_histMin 
+c_aboveHistAvgLong = math.abs(c_hist) >= i_aboveHist * c_histBullAvg
+c_aboveHistAvgShort = c_hist >= (i_aboveHist * c_histBearAvg)
+c_histHighest = ta.highestbars(c_hist, i_histHighestLookback) == 0 or ta.highestbars(c_hist, i_histHighestLookback)[1] == 0
+c_histLowest = ta.highestbars(math.abs(c_hist), i_histHighestLookback) == 0 or ta.lowestbars(math.abs(c_hist), i_histHighestLookback)[1] == 0
+c_pullbackCountGreen = l_zen.getPullbackBarCount(i_pullbackCount, 1)
+c_pullbackCountRed = l_zen.getPullbackBarCount(i_pullbackCount, -1)
+c_rsiRising = ta.rising(c_rsi, i_rsiDirectLen)
+c_rsiFalling = ta.falling(c_rsi, i_rsiDirectLen)
+c_sinceLastTrade = ta.barssince(strategy.closedtrades > strategy.closedtrades[1]) 
+c_sinceLastLossTrade = ta.barssince(strategy.losstrades > strategy.losstrades[1])
+var c_countLosstrades = 0
+switch 
+    strategy.losstrades > strategy.losstrades[1] => c_countLosstrades += 1
+    strategy.wintrades > strategy.wintrades[1] => c_countLosstrades := 0
+    c_countLosstrades == i_tradeLossNum and c_sinceLastLossTrade > i_tradePause => c_countLosstrades := 0
+    c_emaCrossBull or c_emaCrossBear => c_countLosstrades := 0
+// Final Long/Short conditions
+c_longCondition = c_dateFilter and
+ (i_tradePauseLoss ? (i_tradePause != 0 ? c_countLosstrades < i_tradeLossNum : true) and (strategy.losstrades != 0 ? c_sinceLastLossTrade >= i_tradePause : true) : (strategy.closedtrades != 0 ? c_sinceLastTrade >= i_tradePause : true)) and
+ (c_emaAbove and (c_crossBarsBackBull <= i_emaTrendBarsBack)) and 
+ (i_rsiChk ? (c_rsi >= i_rsiMinLong and c_rsi <= i_rsiMaxLong and (i_rsiDirectChk ? c_rsiRising : true)) : true) and
+ ((c_hist < 0 and c_histMinLong ? c_histLowest : false) and (i_useHistChk ? c_aboveHistAvgLong : true)) and 
+ (i_usePullbackChk ? (c_pullbackCountRed >= i_pullbackBigger) : true)
+ 
+c_shortCondition = c_dateFilter and
+ (i_tradePauseLoss ? (i_tradePause != 0 ? c_countLosstrades < i_tradeLossNum : true) and (strategy.losstrades != 0 ? c_sinceLastLossTrade >= i_tradePause : true) : (strategy.closedtrades != 0 ? c_sinceLastTrade >= i_tradePause : true)) and
+ (c_emaUnder and (c_crossBarsBackBear <= i_emaTrendBarsBack)) and 
+ (i_rsiChk ? (c_rsi >= i_rsiMinShort and c_rsi <= i_rsiMaxShort and (i_rsiDirectChk ? c_rsiFalling : true)) : true) and
+ ((c_hist >= 0 and c_histMinShort ? c_histHighest : false) and (i_useHistChk ? c_aboveHistAvgShort : true)) and 
+ (i_usePullbackChk ? (c_pullbackCountGreen >= i_pullbackBigger) : true)
+c_longExitPrice = strategy.position_avg_price * (1 + i_longProfitPerc)
+c_shortExitPrice = strategy.position_avg_price * (1 - i_shortProfitPerc)
+c_longStopPrice = strategy.position_avg_price * (1 - i_longStopPerc)
+c_shortStopPrice = strategy.position_avg_price * (1 + i_shortStopPerc)
+if c_longCondition and strategy.opentrades == 0
+    strategy.entry(
+     id = "LONG open",
+     direction = strategy.long,
+     comment = i_useComments ? '{\n  "action": "start_bot_and_start_deal",\n  "message_type": "bot",\n  "bot_id": ' + str.tostring(i_botIDLong) + ',\n  "email_token": "' + str.tostring(i_tokenID) + '",\n  "delay_seconds": 0}' : na)
+strategy.exit(
+ id = "Long close",
+ from_entry = "LONG open",
+ limit = c_longExitPrice,
+ stop = c_longStopPrice,
+ when = strategy.opentrades != 0,
+ comment = i_useComments ? '{\n  "action": "close_at_market_price_all_and_stop_bot",\n  "message_type": "bot",\n  "bot_id": ' + str.tostring(i_botIDLong) + ',\n  "email_token": "' + str.tostring(i_tokenID) + '",\n  "delay_seconds": 0}' : na)
+if c_shortCondition and strategy.opentrades == 0
+    strategy.entry(
+     id = "SHORT open",
+     direction = strategy.short,
+     comment = i_useComments ? '{\n  "action": "start_bot_and_start_deal",\n  "message_type": "bot",\n  "bot_id": ' + str.tostring(i_botIDShort) + ',\n  "email_token": "' + str.tostring(i_tokenID) + '",\n  "delay_seconds": 0}' : na)
+strategy.exit(
+ id = "Short close",
+ from_entry = "SHORT open",
+ limit = c_shortExitPrice,
+ stop = c_shortStopPrice,
+ when = strategy.opentrades != 0,
+ comment = i_useComments ? '{\n  "action": "close_at_market_price_all_and_stop_bot",\n  "message_type": "bot",\n  "bot_id": ' + str.tostring(i_botIDShort) + ',\n  "email_token": "' + str.tostring(i_tokenID) + '",\n  "delay_seconds": 0}' : na)
+// Plotting emas
+plot(c_emaFast, "Ema fast", color = color.new(#4db6ac, 40), linewidth = 2, display = display.none)     
+plot(c_emaSlow, "Ema slow", color = color.new(#f57c00, 40), linewidth = 2, display = display.none)     
+// --- BEGIN TESTER CODE --- //
+// Declare performance tracking variables
+var balance = startBalance
+var maxBalance = 0.0
+var totalWins = 0
+var totalLoss = 0
+// Detect winning trades
+if strategy.wintrades != strategy.wintrades[1]
+    balance := balance + riskPerTrade / 100 * balance * i_rr 
+    totalWins := totalWins + 1
+    if balance > maxBalance
+        maxBalance := balance
+        maxBalance
+// Detect losing trades
+if strategy.losstrades != strategy.losstrades[1]
+    balance := balance - riskPerTrade / 100 * balance
+    totalLoss := totalLoss + 1
+// Prepare stats table
+var table testTable = table.new(i_testerPosition == "Top right" ? position.top_right : i_testerPosition == "Top left" ? position.top_left : i_testerPosition == "Bottom right" ? position.bottom_right :position.bottom_left, 5, 2, border_width=2)
+f_fillCell(_table, _column, _row, _title, _value, _bgcolor, _txtcolor) =>
+    _cellText = _title + '\n' + _value
+    table.cell(_table, _column, _row, _cellText, bgcolor=_bgcolor, text_color=_txtcolor)
+// Draw stats table
+var bgcolor = color.new(color.black, 0)
+if i_drawTester
+    if barstate.islastconfirmedhistory
+        // Update table
+        dollarReturn = balance - startBalance
+        f_fillCell(testTable, 0, 0, 'Total Trades:', str.tostring(strategy.closedtrades), bgcolor, color.white)
+        f_fillCell(testTable, 0, 1, 'Win Rate:', str.tostring(l_zen.truncate(strategy.wintrades / strategy.closedtrades * 100, 2)) + '%', (strategy.wintrades / strategy.closedtrades * 100) >= 50 ? color.green : bgcolor, color.white)
+        f_fillCell(testTable, 1, 0, 'Starting:', '$' + str.tostring(startBalance), bgcolor, color.white)
+        f_fillCell(testTable, 1, 1, 'Ending:', '$' + str.tostring(l_zen.truncate(balance, 2)), balance > startBalance ? color.green : bgcolor, color.white)
+// --- END BACKTESTER CODE --- //
+Expand (216 lines)

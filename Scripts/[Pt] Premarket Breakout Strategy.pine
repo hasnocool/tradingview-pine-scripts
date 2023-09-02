@@ -1,0 +1,342 @@
+Script Name: [Pt] Premarket Breakout Strategy
+Author: PtGambler
+Description: This is a  1 trade per day strategy  for trading SPY or QQQ index. By default, this is designed for 1 min time frame. This was an experimental script that seems to be profitable at the time of publication.
+
+ How it works: 
+Pre-market high and low is defined per trading day between  9:00 to 9:30 EST. 
+Then we looking for the first breakout on either PM high or PM...
+PineScript code:
+
+Pine Script™ strategy
+[Pt] Premarket Breakout Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © PtGambler
+//@version=5
+strategy("[Pt] Premarket Breakout Strategy", shorttitle="PM Break Strategy", overlay=true, pyramiding=1, initial_capital=4000, commission_type=strategy.commission.cash_per_contract, slippage = 3) 
+// ******************** Trade Period **************************************
+startY = input(title='Start Year', defval=2011, group = "Trading window")
+startM = input.int(title='Start Month', defval=1, minval=1, maxval=12, group = "Trading window")
+startD = input.int(title='Start Day', defval=1, minval=1, maxval=31, group = "Trading window")
+finishY = input(title='Finish Year', defval=2050, group = "Trading window")
+finishM = input.int(title='Finish Month', defval=12, minval=1, maxval=12, group = "Trading window")
+finishD = input.int(title='Finish Day', defval=31, minval=1, maxval=31, group = "Trading window")
+timestart = timestamp(startY, startM, startD, 00, 00)
+timefinish = timestamp(finishY, finishM, finishD, 23, 59)
+t1_session = input.session("0945-1545", "Entry Session", group="Sessions") 
+t1 = time(timeframe.period, t1_session)
+window = time >= timestart and time <= timefinish and t1 ? true : false 
+margin_req = input.float(11, title="Margin Requirement / Leverage", step=0.1, group = "Trading Options")
+reinvest = input.bool(defval=false,title="Reinvest profit", group = "Trading Options")
+reinvest_percent = input.float(defval=100, title = "Reinvest percentage", group="Trading Options")
+//-------------------------------------------------------------------------------------
+profit = strategy.netprofit
+trade_amount = math.floor(strategy.initial_capital*margin_req / close) 
+BSLE() =>
+    strategy.opentrades > 0 ? (bar_index - strategy.opentrades.entry_bar_index(strategy.opentrades-1)) : na
+BSLEx() =>
+    strategy.opentrades == 0 ? (bar_index - strategy.closedtrades.exit_bar_index(strategy.closedtrades-1)) : na
+if strategy.netprofit > 0 and reinvest
+    trade_amount := math.floor((strategy.initial_capital+(profit*reinvest_percent*0.01))*margin_req/ close) 
+else
+    trade_amount := math.floor(strategy.initial_capital*margin_req / close) 
+// ***************************************************************************************************** Daily ATR *****************************************************
+atrlen = input.int(14, minval=1, title="ATR period", group = "Daily ATR")
+iPercent = input.float(1.6, minval=0.01, maxval=100, step=0.2, title="% ATR to use for SL / PT", group = "Daily ATR")
+ 
+percentage = iPercent * 0.01
+datr = request.security(syminfo.tickerid, "1D", ta.rma(ta.tr, atrlen))
+datrp = datr * percentage
+atr = ta.rma(ta.tr, atrlen)
+// --------------------------------------------- Pre-market Session HL ------------------------------------====
+pm_session = input.session("0900-0930", "Pre-Market Session", group="Sessions") 
+pm_t = time(timeframe.period, pm_session)
+var pm_h = 0.0
+var pm_l = 9999.9
+if pm_t
+    pm_h := high > pm_h ? high : pm_h
+    pm_l := low < pm_l ? low : pm_l
+pm_range = pm_h - pm_l
+bgcolor(pm_t?color.new(color.white,95):na)
+// ------------------------------------------------ Stochastic RSI --------------------------------------------------------
+string TT_stochLen =    "For 1 min time frame, use default 14." + "\nFor 5 min time frame, use 3."
+smoothK = input.int(3, "K", minval=1, group = "Stochastic RSI")
+smoothD = input.int(3, "D", minval=1, group = "Stochastic RSI")
+lengthRSI = input.int(14, "RSI Length", minval=1, group = "Stochastic RSI", tooltip = TT_stochLen)
+lengthStoch = input.int(14, "Stochastic Length", minval=1, group = "Stochastic RSI", tooltip = TT_stochLen)
+src = input(close, title="RSI Source")
+rsi1 = ta.rsi(src, lengthRSI)
+k = ta.sma(ta.stoch(rsi1, rsi1, rsi1, lengthStoch), smoothK)
+d = ta.sma(k, smoothD)
+// -------------------------------------------------------- RSI MA Cross -----------------------------------------------------
+ma(source, length, type) =>
+    switch type
+        "SMA" => ta.sma(source, length)
+        "Bollinger Bands" => ta.sma(source, length)
+        "EMA" => ta.ema(source, length)
+        "SMMA (RMA)" => ta.rma(source, length)
+        "WMA" => ta.wma(source, length)
+        "VWMA" => ta.vwma(source, length)
+len = input.int(14, minval=1, title="RSI Length", group="RSI Settings")
+len2 = input.int(3, title="Smooth period", group="RSI Settings")
+maType = input.string("SMA", title="MA Type", options=["SMA", "Bollinger Bands", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group="RSI Settings")
+malen = input.int(100, title="MA Length", group="RSI Settings")
+up = ta.rma(math.max(ta.change(src), 0), len)
+down = ta.rma(-math.min(ta.change(src), 0), len)
+rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+rsiSM = ta.sma(rsi,len2)
+rsiMA = ma(rsi, malen, maType)
+rsi_bull = rsiSM > rsiMA and rsi > 50 and rsi > rsiSM
+rsi_bear = rsiSM < rsiMA and rsi < 50 and rsi < rsiSM
+// --------------------------------------------- Define Trend - PM HL breakout -------------------------------------------------------------------
+var trend = 0
+// reset trend at PM
+if pm_t
+    trend := 0
+else
+    trend := trend == 0 ? (close > pm_h ? 1 : close < pm_l ? -1 : 0) : trend
+    
+plot(trend,"Trade direction")
+//---------------------------------------------------------------------------------------------------------------
+stoch_h_limit = input.int(82, "Stochastic K must be above before entry", group="Entry parameters")
+stoch_l_limit = input.int(18, "Stochastic K must be above before entry", group="Entry parameters")
+plot(time(timeframe.period, "0930-1600:23456") or pm_t? pm_h : high, title="PM High", color= time(timeframe.period, "0930-1600:23456") or pm_t? color.blue : color.new(color.black,100), linewidth=2, trackprice = true)
+plot(time(timeframe.period, "0930-1600:23456") or pm_t? pm_l : low, title="PM Low", color= time(timeframe.period, "0930-1600:23456") or pm_t? color.orange : color.new(color.black,100), linewidth=2, trackprice = true)
+// ------------------------------------------------------------ Entry --------------------------------------------
+var traded = false
+L_entry1 = trend == 1 and traded == false and d[1] < stoch_l_limit and ta.crossover(k,d)
+S_entry1 = trend == -1 and traded == false and d[1] > stoch_h_limit and ta.crossunder(k,d)
+if L_entry1 and window
+    strategy.entry("Long", strategy.long,trade_amount)
+    traded := true
+if S_entry1 and window
+    strategy.entry("Short", strategy.short,trade_amount)
+    traded := true
+// ------------------------------------------------------------- SL & PT -------------------------------------------
+RRR = input.float(2.0, "Reward to Risk Ratio", step=0.1, group="Trading Options")
+entry_price = strategy.opentrades.entry_price(0)
+L_SL = entry_price > pm_h ? pm_l - datrp : entry_price - pm_range - datrp
+S_SL = entry_price < pm_l ? pm_h + datrp : entry_price + pm_range + datrp
+L_risk = entry_price - L_SL
+S_risk = S_SL - entry_price
+L_PT = entry_price + L_risk * RRR
+S_PT = entry_price - S_risk * RRR
+p0 = plot(strategy.opentrades.size(0) == 0 ? close : entry_price, "Entry Price", color= strategy.opentrades.size(0) == 0 ? na : color.gray, linewidth=1)
+p1 = plot(strategy.opentrades.size(0) > 0? L_SL : low, "Long SL", color= (t1 or pm_t) and strategy.opentrades.size(0) > 0 and BSLE() > 0? color.red : color.new(color.black,100), linewidth=3)
+p2 = plot(strategy.opentrades.size(0) > 0? L_PT : high, "Long PT", color= (t1 or pm_t) and strategy.opentrades.size(0) > 0 and BSLE() > 0? color.green : color.new(color.black,100), linewidth=3)
+p3 = plot(strategy.opentrades.size(0) < 0? S_SL : high, "Long SL", color= (t1 or pm_t) and strategy.opentrades.size(0) < 0 and BSLE() > 0? color.red : color.new(color.black,100), linewidth=3)
+p4 = plot(strategy.opentrades.size(0) < 0? S_PT : low, "Long PT", color= (t1 or pm_t) and strategy.opentrades.size(0) < 0 and BSLE() > 0? color.green : color.new(color.black,100), linewidth=3)
+fill(p1, p0, color.new(color.red,95))
+fill(p2, p0, color.new(color.green,95))
+fill(p3, p0, color.new(color.red,95))
+fill(p4, p0, color.new(color.green,95))
+// ------------------------------------------ Exit ----------------------------------------------------------
+L_exit1 = d > 80 and strategy.opentrades.profit(0) <=0 and rsi_bear
+S_exit1 = d < 20 and strategy.opentrades.profit(0) <=0 and rsi_bull
+if strategy.opentrades.size(0) > 0
+    strategy.exit("Exit", "Long", limit=L_PT, stop=L_SL)
+    if L_exit1
+        strategy.close("Long", comment="Exit Early")
+if strategy.opentrades.size(0) < 0
+    strategy.exit("Exit", "Short", limit=S_PT, stop=S_SL)
+    if S_exit1
+        strategy.close("Short", comment="Exit Early")    
+if time(timeframe.period, "1555-1600:23456") or time(timeframe.period, "0755-0800:23456")
+    strategy.close_all()
+    traded := false
+    pm_h := 0.0
+    pm_l := 9999.9
+Expand (193 lines)

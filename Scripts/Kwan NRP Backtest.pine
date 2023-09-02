@@ -1,0 +1,109 @@
+Script Name: Kwan NRP Backtest
+Author: HPotter
+Description: To calculate the coordinates in which the kink of the line will cross, 
+the standard Forex instruments are used - Relative Strenght Index, Stochastic and Momentum.
+It is very easy to optimize them for the existing trading strategy: they all have very 
+flexible and easily customizable parameters. Signals to enter the market can be 2 situations:
+    Change of color...
+PineScript code:
+
+Pine Script™ strategy
+Kwan NRP Backtest
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+//@version=4
+////////////////////////////////////////////////////////////
+//  Copyright by HPotter v1.0 27/07/2021
+// To calculate the coordinates in which the kink of the line will cross, 
+//the standard Forex instruments are used - Relative Strenght Index, Stochastic and Momentum.
+//It is very easy to optimize them for the existing trading strategy: they all have very 
+//flexible and easily customizable parameters. Signals to enter the market can be 2 situations:
+//    Change of color of the indicator line from red to blue. At the same time, it is worth entering into the purchase;
+//    Change of color of the indicator line from blue to red. In this case, it is worth entering for sale.
+//The signals are extremely clear and can be used in practice even by beginners. The indicator 
+//itself shows when to make deals: the user only has to accompany them and set the values 
+//of Take Profit and Stop Loss. As a rule, the signal to complete trading is the approach of 
+//the indicator level to the levels of the maximum or minimum of the previous time period.  
+////////////////////////////////////////////////////////////
+strategy(title="Kwan NRP Backtest", shorttitle="KNRP")
+xPrice = open
+Length_Momentum = input(9, minval=1)
+Length_RSI = input(9, minval=1)
+Length_Stoch = input(9, minval = 1)
+Length_NRP = input(2, minval=1)
+reverse = input(false, title="Trade reverse")
+var xKNRP = array.new_float(1,na)
+xMom = close / close[Length_Momentum] * 100
+xRSI = rsi(xPrice, Length_RSI)
+xStoch = stoch(xPrice, high, low, 9)
+if xMom != 0 
+    val=xStoch*xRSI/xMom
+    array.push(xKNRP,val)  
+    nz(na)
+avr = 0.0    
+if array.size(xKNRP) > Length_NRP
+    for i = array.size(xKNRP)-Length_NRP to array.size(xKNRP)-1
+        avr+= array.get(xKNRP, i)
+    nz(na)      
+avr := avr / Length_NRP 
+clr = avr > avr[1] ? color.blue : color.red
+pos = iff(avr > avr[1] , 1,
+       iff(avr < avr[1], -1, 0)) 
+possig = iff(reverse and pos == 1, -1,
+          iff(reverse and pos == -1 , 1, pos))     
+if (possig == 1 ) 
+    strategy.entry("Long", strategy.long)
+if (possig == -1 )
+    strategy.entry("Short", strategy.short)  
+if (possig == 0) 
+    strategy.close_all()
+barcolor(possig == -1 ? #b50404: possig == 1 ? #079605 : #0536b3 )
+plot(avr, color=clr, title="RMI")
+Expand (48 lines)

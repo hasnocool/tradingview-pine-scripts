@@ -1,0 +1,111 @@
+Script Name: Buy Only Strategy with Dynamic Re-Entry and Exit
+Author: tRailvik84
+Description: The strategy aims to create a simple buy-only trading system based on moving average crossovers and the Weekly Commodity Channel Index (CCI) or Weekly Average Directional Index (ADX). It generates buy signals when the fast-moving average crosses above the slow-moving average and when the Weekly CCI and or Weekly ADX meet the specified conditions. 
+The strategy...
+PineScript code:
+
+Pine Script™ strategy
+Buy Only Strategy with Dynamic Re-Entry and Exit
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+//@version=5
+strategy("Buy Only Strategy with Dynamic Re-Entry and Exit", overlay=true)
+// Input Parameters
+fast_length = input(20, title="Fast Moving Average Length")
+slow_length = input(30, title="Slow Moving Average Length")
+third_ma_length = input(100, title="Third Moving Average Length")
+cci_period = input(14, title="CCI Period for Weekly CCI")
+use_cci = input(true, title="Use CCI for Entry")
+use_adx = input(true, title="Use ADX for Entry")
+adx_length = input(14, title="ADX Length")
+adx_threshold = input(25, title="ADX Threshold")
+// Calculate Moving Averages
+fast_ma = ta.sma(close, fast_length)
+slow_ma = ta.sma(close, slow_length)
+third_ma = ta.sma(close, third_ma_length)
+// Weekly Commodity Channel Index (CCI) with user-defined period
+weekly_cci = request.security(syminfo.tickerid, "W", ta.cci(close,  cci_period))
+// Weekly Average Directional Index (ADX)
+dirmov = hlc3
+plus = ta.change(dirmov) > 0 ? ta.change(dirmov) : 0
+minus = ta.change(dirmov) < 0 ? -ta.change(dirmov) : 0
+trur = ta.rma(ta.tr, adx_length)
+plusDI = ta.rma(plus, adx_length) / trur * 100
+minusDI = ta.rma(minus, adx_length) / trur * 100
+sum = plusDI + minusDI
+DX = sum == 0 ? 0 : math.abs(plusDI - minusDI) / sum * 100
+ADX = ta.rma(DX, adx_length)
+// Entry Conditions (Buy Only and Weekly CCI > 100 and/or Weekly ADX > 25)
+cci_condition = use_cci ? (weekly_cci > 100) : false
+adx_condition = use_adx ? (ADX > adx_threshold) : false
+long_condition = ta.crossover(fast_ma, slow_ma) and (cci_condition or adx_condition)
+// Exit Condition and Dynamic Re-Entry
+exit_condition = close < third_ma
+re_entry_condition = close > fast_ma and close > slow_ma and close > third_ma and weekly_cci > 100
+// Entry and Exit Signals
+strategy.entry("Long", strategy.long, when=long_condition)
+strategy.close("Long", when=exit_condition)
+// Dynamic Re-Entry and Exit
+if strategy.position_size == 0 and re_entry_condition
+    strategy.entry("Long", strategy.long)
+if strategy.position_size > 0 and close < third_ma
+    strategy.close("Long")
+// Plot Weekly CCI and ADX for reference
+plot(weekly_cci, title="Weekly CCI", color=color.orange)
+plot(ADX, title="Weekly ADX", color=color.blue)
+Expand (56 lines)

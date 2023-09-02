@@ -1,0 +1,137 @@
+Script Name: RSI Improved strategy
+Author: jimmy30110
+Description: Set a Horizontal Ray at the price that relates highest / lowest RSI .
+It 's more clear to decide when to open long / short position manually.
+
+It's a scalping strategy that works in 15min chart(basically works in most of timeframe , if you don't look it as a scalping strategy), when RSI hits Highest / Lowest value , the strategy will open a Long / Short...
+PineScript code:
+
+Pine Script™ strategy
+RSI Improved strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+//@version=5
+strategy("RSI Improved strategy", overlay=true)
+higherTF1 = input.timeframe('15' , "Resolution", options = ['5', '15', '1H', 'D', 'W', 'M'])
+dailyopen = request.security(syminfo.tickerid, higherTF1, close)
+Reward = input(1600)
+Risk = input(1600)
+length = input( 5 )
+//overSold = input( 30 )
+//overBought = input( 70 )
+EMA = input(200)
+price = close
+vrsi = ta.rsi(price, length)
+RSIlowest =  vrsi[1] > vrsi ? true : false
+RSIhighest = vrsi[1] < vrsi ? true : false
+//ro = ta.crossunder(vrsi, 20)
+//ru = ta.crossover(vrsi, 80)
+//co = ta.crossunder(vrsi, overSold)
+//cu = ta.crossunder(vrsi, overBought)
+plot(ta.ema(close, EMA))
+plot(ta.ema(close, 50), color = color.orange)
+UponEMA = close > ta.ema(close, EMA) ? true : false
+belowEMA = close < ta.ema(close, EMA) ? true : false
+//transfer 'float' to 'int' to 'string'
+r = int(vrsi)
+value = str.tostring(r)
+m = int(strategy.openprofit)
+money = str.tostring(m)
+if (not na(vrsi))
+        //when price stand up on 200ema and rsi is at oversold area, open long position 
+//      if (co and UponEMA)
+  //      strategy.order("Rsi long", strategy.long, 1 , comment = "Rsi long")
+        
+    if(vrsi < 20 and RSIlowest)
+        line1 = line.new(x1=bar_index, y1=dailyopen, x2=bar_index+1, y2=dailyopen, xloc=xloc.bar_index, style=line.style_solid,extend=extend.right, color=color.aqua, width = 2)
+        line.delete(line1[1])  // remove the previous line when new bar appears
+        label1 = label.new(x=bar_index, y=dailyopen,yloc=yloc.belowbar, text = value,textcolor = color.white, color = color.green, style = label.style_label_up)
+        label.delete(label1[1])
+        strategy.order("Rsi long", strategy.long, 1 , comment = "Rsi long")
+        strategy.exit("exit", "Rsi long", profit = Reward, loss = Risk, comment = "Rsi long exit")
+//strategy.close("Rsi short", comment = "Rsi close")
+        
+        
+        if(vrsi > 80 and RSIhighest)
+        line2 = line.new(x1=bar_index, y1=dailyopen, x2=bar_index+1, y2=dailyopen, xloc=xloc.bar_index, style=line.style_solid,extend=extend.right, color = #e65100, width = 2)
+        line.delete(line2[1])  // remove the previous line when new bar appears
+        label2 = label.new(x=bar_index, y=dailyopen,yloc=yloc.abovebar, text = value, textcolor = color.white, color = color.red)            
+        label.delete(label2[1])
+        strategy.order("Rsi short",strategy.short, 1,  comment = "Rsi short ")
+        strategy.exit("exit", "Rsi short", profit = Reward,loss = Risk, comment = "Rsi short exit")
+//      if(UponEMA)
+//        strategy.close("Rsi short", comment = "Rsi short close")
+//plot(strategy.equity, title="equity", color=color.red, linewidth=2, style=plot.style_cross)
+//plotshape(confirmPH, title="Label",offset = 1,text="Bull",style=shape.labeldown,location=location.abovebar,color=color.green,textcolor=color.green)
+//when Rsi reaches overbought, draw a Horizontal Ray to close prices, similarly when it comes to oversold.(accomplished)
+//detects when there is more lower/higher RSI values, adjust horizontal Ray and label to new posistion.(accomplished)
+Expand (70 lines)

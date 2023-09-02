@@ -1,0 +1,215 @@
+Script Name: Tale Indicators Strategy
+Author: ehaarjee
+Description: This script provides strategy from @JackBauer007 of the slowMA and fastMA crossovers to determine entry and exit conditions.
+The default is set to 3EMA and 15EMA crossovers. With entry and exit for Long positions set to high and for Short positions set to low.
+You can enable to run the strategy for a selected time-period to analyse the strategy on your instrument....
+PineScript code:
+
+Pine Script™ strategy
+Tale Indicators Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ehaarjee, ECHKAY, JackBauer007
+//@version=4
+//study(title="Tale_indicators", overlay=true)
+strategy("Tale Indicators Strategy", overlay=true, precision=8, max_bars_back=200, pyramiding=0, initial_capital=20000, commission_type="percent", commission_value=0.1)
+len_fast = input(3, minval=1, title="FAST EMA")
+src_fast = input(close, title="Source for Fast")
+fastMA = ema(src_fast, len_fast)
+plot(fastMA, title="Slow EMA", color=color.orange)
+len_slow = input(15, minval=1, title="SLOW EMA")
+src_slow = input(close, title="Source for Slow")
+slowMA = ema(src_slow, len_slow)
+plot(slowMA, title="Fast EMA", color=color.blue)
+len_fast_exit = input(3, minval=1, title="FAST EMA Exit")
+src_fast_exit = input(close, title="Source for Fast Exit")
+fastMAE = ema(src_fast_exit, len_fast_exit)
+plot(fastMAE, title="Fast EMA Ex", color=color.red)
+src_slow_enter_short = input(low, title="Source for Short Entry")
+slowMASEn = ema(src_slow_enter_short, len_slow)
+src_slow_enter_long = input(high, title="Source for Long Entry")
+slowMALEn = ema(src_slow_enter_long, len_slow)
+src_slow_exit_short = input(high, title="Source for Short Exit")
+slowMASEx = ema(src_slow_exit_short, len_slow)
+src_slow_exit_long = input(low, title="Source for Long Exit")
+slowMALEx = ema(src_slow_exit_long, len_slow)
+enter_long = crossover(fastMA, slowMALEn)
+enter_short = crossunder(fastMA, slowMASEn)
+exit_long = crossunder(fastMAE, slowMALEx)
+exit_short = crossover(fastMAE, slowMASEx)
+out_enter = iff(enter_long == true, 1, iff(enter_short == true, -1, 0))
+plotarrow(out_enter, "Plot Enter Points", colorup=color.green, colordown=color.red, maxheight = 30)
+bull = fastMA > slowMALEn
+bear = fastMA < slowMASEn
+c = bull ? color.green : bear ? color.red  : color.white
+bgcolor(c)
+exit_tuner = input(0.005, title="Exit Tuner to touch slowEMA")
+bull_exit = (low>(fastMAE*(1+exit_tuner))) or exit_long 
+bear_exit = ((fastMAE*(1-exit_tuner))>high) or exit_short 
+bull_r = (bull and ((bull_exit[1]) or (bull_exit[2] and bull_exit[1])) and (low<=fastMAE))
+bear_r = (bear and ((bear_exit[1]) or (bull_exit[2] and bull_exit[1])) and (fastMAE<=high))
+bull_re = (bull and (low<slowMALEn)) and not(enter_long)
+bear_re = (bear and (high>slowMASEn)) and not(enter_short)
+bull_ree = (bull and ((low<slowMALEn) and not(bull_re[1] or enter_long[1]))) 
+bear_ree = (bear and ((high>slowMASEn) and not(bear_re[1] or enter_short[1])))
+bull_reenter =  (bull_r or bull_ree) and not(enter_long)
+bear_reenter =  (bear_r or bear_ree) and not(enter_short)
+plotshape(bull_exit, "Plot Bull Exit", style = shape.arrowdown, color=color.green, size=size.small, text="ExL", location=location.abovebar)
+plotshape(bear_exit, "Plot Bear Exit", style = shape.arrowup, color=color.red, size=size.small, text="ExS", location=location.belowbar)
+plotshape(bull_reenter, "Plot Bull ReEnter", style = shape.arrowup, color=color.green, size=size.small, text="ReL", location=location.belowbar)
+plotshape(bear_reenter, "Plot Bear ReEnter", style = shape.arrowdown, color=color.red, size=size.small, text="ReS", location=location.abovebar)
+run_strategy = input(false, title="Run Strategy")
+// === INPUT BACKTEST RANGE ===
+fromMonth = input(defval = 1,    title = "From Month",      type = input.integer, minval = 1, maxval = 12)
+fromDay   = input(defval = 1,    title = "From Day",        type = input.integer, minval = 1, maxval = 31)
+fromYear  = input(defval = 2020, title = "From Year",       type = input.integer, minval = 2000)
+thruMonth = input(defval = 1,    title = "Thru Month",      type = input.integer, minval = 1, maxval = 12)
+thruDay   = input(defval = 1,    title = "Thru Day",        type = input.integer, minval = 1, maxval = 31)
+thruYear  = input(defval = 2100, title = "Thru Year",       type = input.integer, minval = 2000)
+// === INPUT SHOW PLOT ===
+showDate  = input(defval = true, title = "Show Date Range", type = input.bool)
+// === FUNCTION EXAMPLE ===
+start     = timestamp(fromYear, fromMonth, fromDay, 00, 00)        // backtest start window
+finish    = timestamp(thruYear, thruMonth, thruDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+var long_position_open = false
+var short_position_open = false
+if (enter_long and not(bull_exit) and not(long_position_open))
+    long_position_open := true
+if (bull_reenter and not(long_position_open))  
+    long_position_open := true
+if (bull_exit and long_position_open)
+    long_position_open := false
+    
+if (enter_short and not(bear_exit) and not(short_position_open))
+    short_position_open := true
+if (bear_reenter and not(short_position_open))  
+    short_position_open := true
+if (bear_exit and short_position_open)
+    short_position_open := false
+if(run_strategy)
+    strategy.entry("LO", strategy.long, when=(window() and enter_long and not(bull_exit)), qty=4)
+    strategy.entry("LO", strategy.long, when=(window() and bull_reenter), qty=1)
+    strategy.close("LO", when=(window() and bull_exit))
+    strategy.entry("SO", strategy.short, when=(window() and enter_short and not(bear_exit)), qty=4)
+    strategy.entry("SO", strategy.short, when=(window() and bear_reenter), qty=1)
+    strategy.close("SO", when=(window() and bear_exit))
+Expand (118 lines)

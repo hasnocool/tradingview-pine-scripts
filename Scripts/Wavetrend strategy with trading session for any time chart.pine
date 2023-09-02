@@ -1,0 +1,151 @@
+Script Name: Wavetrend strategy with trading session for any time chart
+Author: SoftKill21
+Description: Hello there
+
+Today I am glad to provide you a strategy based on the wave trend oscillator. If you want to use it as an indicator, just disable long and short to not make any shops.
+
+It works on all time frames.
+
+
+The way it works its like an RSI .
+
+We have overbought and oversold levels, and together with a channel and length we calculate the wave trend.
+
+And then...
+PineScript code:
+
+Pine Script™ strategy
+Wavetrend strategy with trading session for any time chart
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+//@author SoftKill21
+//@version=4
+strategy(title="WaveTrend strat", shorttitle="WaveTrend strategy")
+n1 = input(10, "Channel Length")
+n2 = input(21, "Average Length")
+Overbought = input(70, "Over Bought")
+Oversold = input(-30, "Over Sold ")
+// BACKTESTING RANGE
+ 
+// From Date Inputs
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2001, title = "From Year", minval = 1970)
+ 
+// To Date Inputs
+toDay = input(defval = 1, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 12, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2020, title = "To Year", minval = 1970)
+ 
+// Calculate start/end date and time condition
+DST = 1 //day light saving for usa
+//--- Europe
+London = iff(DST==0,"0000-0900","0100-1000")
+//--- America
+NewYork = iff(DST==0,"0400-1500","0500-1600")
+//--- Pacific
+Sydney = iff(DST==0,"1300-2200","1400-2300")
+//--- Asia
+Tokyo = iff(DST==0,"1500-2400","1600-0100")
+//-- Time In Range
+timeinrange(res, sess) => time(res, sess) != 0
+london = timeinrange(timeframe.period, London)
+newyork = timeinrange(timeframe.period, NewYork)
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate //and (london or newyork)
+ap = hlc3 
+esa = ema(ap, n1)
+d = ema(abs(ap - esa), n1)
+ci = (ap - esa) / (0.015 * d)
+tci = ema(ci, n2)
+ 
+wt1 = tci
+wt2 = sma(wt1,4)
+plot(0, color=color.gray)
+plot(Overbought, color=color.red)
+plot(Oversold, color=color.green)
+plot(wt1, color=color.green)
+longButton = input(title="Long", type=input.bool, defval=true)
+shortButton = input(title="Short", type=input.bool, defval=true)
+if(longButton==true)
+    strategy.entry("long",1,when=crossover(wt1,Oversold) and time_cond)
+    strategy.close("long",when=crossunder(wt1, Overbought))
+    
+if(shortButton==true)
+    strategy.entry("short",0,when=crossunder(wt1, Overbought) and time_cond)
+    strategy.close("short",when=crossover(wt1,Oversold))
+//strategy.close_all(when= not (london or newyork),comment="time")
+if(dayofweek == dayofweek.friday)
+    strategy.close_all(when= timeinrange(timeframe.period, "1300-1400"), comment="friday") 
+Expand (71 lines)

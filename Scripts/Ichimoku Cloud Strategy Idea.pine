@@ -1,0 +1,136 @@
+Script Name: Ichimoku Cloud Strategy Idea
+Author: QuantCT
+Description: This strategy idea uses the famous Ichimoku Cloud (Forward-shifted SMA-9 and SMA-26) and Chiku (52-candle lagged close price) with its default parameters. This strategy is slow and issues few signals. However, this is one of the most performant long-term trend trading strategies. It usually works well on 1D and 4H timeframes and even better on trending...
+PineScript code:
+
+Pine Script™ strategy
+Ichimoku Cloud Strategy Idea
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © QuantCT
+//@version=4
+strategy("Ichimoku Cloud Strategy Idea",
+         shorttitle="Ichimoku", 
+         overlay=true,
+         pyramiding=0,     
+         default_qty_type=strategy.percent_of_equity, 
+         default_qty_value=99, 
+         initial_capital=1000,           
+         commission_type=strategy.commission.percent, 
+         commission_value=0.1)
+// ____ Inputs
+conversion_period = input(9, minval=1, title="Conversion Line Period")
+base_period = input(26, minval=1, title="Base Line Period")
+lagging_span2_period = input(52, minval=1, title="Lagging Span 2 Period")
+displacement = input(26, minval=1, title="Displacement")
+long_only = input(title="Long Only", defval=false)
+slp = input(title="Stop-loss (%)", minval=1.0, maxval=25.0, defval=5.0)
+use_sl = input(title="Use Stop-Loss", defval=false)
+// ____ Logic
+donchian(len) => avg(lowest(len), highest(len))
+conversion_line = donchian(conversion_period)
+base_line = donchian(base_period)
+lead_line1 = avg(conversion_line, base_line)
+lead_line2 = donchian(lagging_span2_period)
+chikou = close
+chikou_free_long = close > high[displacement] and close > max(lead_line1[2 * displacement], lead_line2[2 * displacement])
+enter_long = chikou_free_long and close > max(lead_line1[displacement], lead_line2[displacement])
+exit_long = close < lead_line1[displacement] or close < lead_line2[displacement]
+chikou_free_short = close < low[displacement] and  close < min(lead_line1[2 * displacement], lead_line2[2 * displacement])
+enter_short = chikou_free_short and close < min(lead_line1[displacement], lead_line2[displacement])
+exit_short = close > lead_line1[displacement] or close > lead_line2[displacement]
+strategy.entry("Long", strategy.long, when=enter_long)
+strategy.close("Long", when=exit_long) 
+if (not long_only)
+    strategy.entry("Short", strategy.short, when=enter_short)
+    strategy.close("Short", when=exit_short) 
+// ____ SL
+sl_long = strategy.position_avg_price * (1- (slp/100))
+sl_short = strategy.position_avg_price * (1 + (slp/100))
+if (use_sl)
+    strategy.exit(id="SL", from_entry="Long", stop=sl_long)
+    strategy.exit(id="SL", from_entry="Short", stop=sl_short)
+// ____ Plots
+colors = 
+ enter_long ? #27D600 :
+ enter_short ? #E30202 :
+ color.orange
+ 
+p1 = plot(lead_line1, offset = displacement, color=colors,
+     title="Lead 1")
+p2 = plot(lead_line2, offset = displacement, color=colors,
+     title="Lead 2")
+fill(p1, p2, color = colors)
+plot(chikou, offset = -displacement, color=color.blue)
+Expand (71 lines)

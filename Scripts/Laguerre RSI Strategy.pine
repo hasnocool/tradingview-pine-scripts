@@ -1,0 +1,149 @@
+Script Name: Laguerre RSI Strategy
+Author: UnknownUnicorn36161431
+Description: The WHAT
+=============>
+A strategy based off the Editor's Pick "Laguerre RSI indicator" from @KivancOzbilgic
+
+
+Laguerre RSI is based on John EHLERS' Laguerre Filter to avoid the noise of RSI. As such, it is possible to use it to plot trend changes more precisely - and thus open and close positions at these points.
+
+The HOW
+=============>
+This is a very easy to set...
+PineScript code:
+
+Pine Script™ strategy
+Laguerre RSI Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+//@version=5
+strategy("Laguerre RSI Strategy", shorttitle="Laguerre Strategy", overlay=true, process_orders_on_close = true, calc_on_order_fills = true, calc_on_every_tick = true, pyramiding = 0, default_qty_type = strategy.percent_of_equity, default_qty_value = 75, commission_type = strategy.commission.percent, commission_value = 0.04, initial_capital = 100, max_lines_count=500, max_labels_count=500)
+TIME_LIMIT_BACKTEST_GROUP = "Time-Limit BackTesting (0 = disable)"
+GENERAL_GROUP = "General"
+LAGUERRE_GROUP = "Laguerre Filter Options"
+SLPerc      = input.float( 23, title="[Optional] Stop Loss (%)", minval=0.0, step=0.1, group = GENERAL_GROUP)
+show_line   = input.bool( true, "Show Laguerre Filter Line", group = GENERAL_GROUP )
+colorchange = input.bool(title="Change Line Color", defval=true, group = GENERAL_GROUP )
+src         = input.source(title="Filter Source", defval=hl2, group = LAGUERRE_GROUP )
+alpha       = input.float(title="Alpha", minval=0.1, maxval=1, step=0.1, defval=0.1, group = LAGUERRE_GROUP )
+i_use_time_limited_backtesting = input.bool( false, "Use Time-Limited Backtesting", group = TIME_LIMIT_BACKTEST_GROUP )
+startDay = input.int(0, "Start Day", minval = 0, maxval = 31, group = TIME_LIMIT_BACKTEST_GROUP)
+startMonth = input.int(0, "Start Month", minval = 0, maxval = 12, group = TIME_LIMIT_BACKTEST_GROUP)
+startYear = input.int(0, "Start Year", minval = 0, maxval = 2100, group = TIME_LIMIT_BACKTEST_GROUP)
+endDay = input.int(0, "End Day", minval = 0, maxval = 31, group = TIME_LIMIT_BACKTEST_GROUP)
+endMonth = input.int(0, "End Month", minval = 0, maxval = 12, group = TIME_LIMIT_BACKTEST_GROUP)
+endYear = input.int(0, "End Year", minval = 0, maxval = 2100, group = TIME_LIMIT_BACKTEST_GROUP)
+inDateRange = true
+var last_trade_ts = time
+var last_trade_direction = ""
+var min_trade_gap_minutes = 2
+// Look if the close time of the current bar falls inside the date range
+if i_use_time_limited_backtesting and startDay != 0 and startMonth != 0 and startYear != 0 and endDay != 0 and endMonth != 0 and endYear != 0
+    inDateRange := ( time >= timestamp( syminfo.timezone, startYear, startMonth, startDay, 0, 0 ) ) and ( time < timestamp( syminfo.timezone, endYear, endMonth, endDay, 0, 0 ) )
+//------------------------------------------------------------------------------
+// Laguerre Filter indicator code
+//------------------------------------------------------------------------------
+gamma=1-alpha
+L0 = 0.0
+L0 := (1-gamma) * src + gamma * nz(L0[1])
+L1 = 0.0
+L1 := -gamma * L0 + nz(L0[1]) + gamma * nz(L1[1])
+L2 = 0.0
+L2 := -gamma * L1 + nz(L1[1]) + gamma * nz(L2[1])
+L3 = 0.0
+L3 := -gamma * L2 + nz(L2[1]) + gamma * nz(L3[1])
+LagF = (L0 + 2 * L1 + 2 * L2 + L3) / 6
+Color = colorchange ? (LagF > LagF[1] ? color.green : color.red) : color.yellow
+plot(show_line ? LagF : na, title="LagF", linewidth=2, color=Color)
+// broker section
+if inDateRange and ( ( time - last_trade_ts ) / 1000 >= ( 60 * min_trade_gap_minutes ) )
+    //label.new(bar_index, high, str.tostring( LagF ) + " / " + str.tostring( LagF[1] ) )
+    if LagF > LagF[1] and strategy.opentrades.entry_id( strategy.opentrades - 1 ) != "Long"
+        strategy.entry( "Long", strategy.long )
+        last_trade_ts := time
+        if SLPerc > 0
+            stopPrice = close - ( ( SLPerc / 100 ) * close )
+            strategy.exit( "Long", stop = stopPrice, comment = "closed by SL " + str.tostring(SLPerc) + "%" )
+    else if LagF < LagF[1] and strategy.opentrades.entry_id( strategy.opentrades - 1 ) != "Short"
+        strategy.entry( "Short", strategy.short )
+        last_trade_ts := time
+        if SLPerc > 0
+            stopPrice = close + ( ( SLPerc / 100 ) * close )
+            strategy.exit( "Short", stop = stopPrice, comment = "closed by SL " + str.tostring(SLPerc) + "%" )
+// Exit open market position when date range ends
+if (not inDateRange)
+    strategy.close_all()
+Expand (74 lines)

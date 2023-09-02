@@ -1,0 +1,90 @@
+Script Name: Break even stop loss (- of instrument price)
+Author: osmaras
+Description: Simply proof of concept to place a stop loss a percentage below entry price and move it to break even if the price moves the same percentage above the entre price.
+PineScript code:
+
+Pine Script™ strategy
+Break even stop loss (% of instrument price)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © osmaras
+// based on https://kodify.net/tradingview/orders/percentage-trail/
+//@version=5
+strategy("Break even stop loss (% of instrument price)", overlay=true)
+// Configure trail stop level with input options (optional)
+longTrailPerc = input.float(defval=3.0,step=0.1,title="Trail Long Loss (%)")* 0.01 
+longCondition = ta.crossover(ta.sma(close, 14), ta.sma(close, 28))
+// Determine trail stop loss prices
+longStopPrice = 0.0
+lastEntryPrice = strategy.opentrades.entry_price(strategy.opentrades - 1)
+longStopPrice := if (strategy.position_size > 0 and close > (lastEntryPrice * (1 + longTrailPerc)))
+    stopValue = lastEntryPrice
+    math.max(stopValue, longStopPrice[1])
+else
+    longStopPrice := if (strategy.position_size > 0)
+        stopValue = lastEntryPrice * (1 - longTrailPerc)
+        math.max(stopValue, longStopPrice[1])
+    else
+        0
+// Plot stop loss values for confirmation
+plot(series=(strategy.position_size > 0) ? longStopPrice : na,
+     color=color.fuchsia, style=plot.style_cross,
+     linewidth=2, title="Long Trail Stop")
+// set strategy only long
+strategy.risk.allow_entry_in(strategy.direction.long)
+// Submit entry orders
+if (longCondition)
+    strategy.entry("Long", strategy.long)
+shortCondition = ta.crossunder(ta.sma(close, 14), ta.sma(close, 28))
+if (shortCondition)
+    strategy.close("Long")
+// Submit exit orders for trail stop loss price
+if (strategy.position_size > 0)
+    strategy.exit(id="Stop Loss", stop=longStopPrice)
+Expand (46 lines)

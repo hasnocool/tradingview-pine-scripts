@@ -1,0 +1,136 @@
+Script Name: Tendency EMA + RSI [Alorse]
+Author: alorse
+Description: A very simple and highly effective strategy LONG & SHORT that combines only 2 indicators:
+ 
+  RSI
+  3 Moving Average Exponential (EMA)
+ 
+
+
+LONG Entry conditions are:
+ 
+  EMA 20 cross over EMA 10
+  EMA 10 is above  EMA 100
+ 
+
+LONG Exit conditions are:
+ 
+  RSI greater than 70
+  Or when X number of candles have passed and the trade is in profit. (Check Settings)
+...
+PineScript code:
+
+Pine Script™ strategy
+Tendency EMA + RSI [Alorse]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//@author Alorse
+//@version=5
+strategy(title='Tendency EMA + RSI [Alorse]', shorttitle='Tendece EMA + RSI [Alorse]', overlay=true, pyramiding=0, currency=currency.USD, default_qty_type=strategy.percent_of_equity, initial_capital=1000, default_qty_value=20, commission_type=strategy.commission.percent, commission_value=0.01)
+// Bollinger Bands
+len = input.int(14, minval=1, title='Length', group='RSI')
+src = input.source(close, 'Source', group='RSI')
+rsi = ta.rsi(src, len)
+// Moving Averages
+len_a = input.int(10, minval=1, title='EMA A Length', group='Moving Averages')
+out_a = ta.ema(close, len_a)
+plot(out_a, title='EMA A', color=color.purple)
+len_b = input.int(20, minval=1, title='EMA B Length', group='Moving Averages')
+out_b = ta.ema(close, len_b)
+plot(out_b, title='EMA B', color=color.orange)
+len_c = input.int(100, minval=1, title='EMA C Length', group='Moving Averages')
+out_c = ta.ema(close, len_c)
+plot(out_c, title='EMA B', color=color.green)
+// Strategy Conditions
+stratGroup = 'Strategy'
+showLong = input.bool(true, title='Long entries', group=stratGroup)
+showShort = input.bool(false, title='Short entries', group=stratGroup)
+closeAfterXBars = input.bool(true, title='Close after X # bars', tooltip='If trade is in profit', group=stratGroup)
+xBars = input.int(24, title='# bars')
+entryLong = ta.crossover(out_a, out_b) and out_a > out_c and close > open
+exitLong = rsi > 70
+entryShort = ta.crossunder(out_a, out_b) and out_a < out_c and close < open
+exitShort = rsi < 30
+bought = strategy.opentrades[0] == 1 and strategy.position_size[0] > strategy.position_size[1]
+entry_price = ta.valuewhen(bought, open, 0)
+var int nPastBars = 0
+if strategy.position_size > 0
+    nPastBars := nPastBars + 1
+    nPastBars
+if strategy.position_size == 0
+    nPastBars := 0
+    nPastBars
+if closeAfterXBars
+    exitLong := nPastBars >= xBars and close > entry_price ? true : exitLong
+    exitLong
+    exitShort := nPastBars >= xBars and close < entry_price ? true : exitShort
+    exitShort
+// Long Entry
+strategy.entry('Long', strategy.long, when=entryLong and showLong)
+strategy.close('Long', when=exitLong)
+// Short Entry
+strategy.entry('Short', strategy.short, when=entryShort and showShort)
+strategy.close('Short', when=exitShort)
+Expand (62 lines)

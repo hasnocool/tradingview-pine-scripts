@@ -1,0 +1,249 @@
+Script Name: Technicals Rating Strategy v420
+Author: SeaSide420
+Description: Ichimoku, HMA, RSI, Stoch, CCI, MACD, Technicals Rating Strategy is a trading Bot that looks at these chosen indicators and assigns a value to each, then calculates the result of adding each indicators result value to a overall rating, which is then compared to a user set level. Here seen on Bitcoin, it has the broker fee included in the testing result. If you...
+PineScript code:
+
+Pine Script™ strategy
+Technicals Rating Strategy v420
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+//@version=4
+strategy(title="Ichi HMA RSI Stoch CCI MACD Technicals Rating Strategy",shorttitle="TRSv420",overlay=true,default_qty_type=strategy.percent_of_equity,default_qty_value=50,commission_type=strategy.commission.percent,commission_value=0.05)
+res = input("", title="Indicator Timeframe", type=input.resolution)
+Period = input(defval = 14, title = "Period Length", minval = 2)
+MinSignalStrength= input(title="Minimum Signal Strength", type=input.float, defval=1.1, minval=0.00, maxval=2.00, step=0.1)
+Price = input(defval=open, title="Price Source", type=input.source)
+Use_Only_Buy= input(false, title = "Use ONLY BUY mode",type=input.bool)
+Use_Only_Sell= input(false, title = "Use ONLY SELL mode",type=input.bool)
+Use_ATR_SL_TP= input(true, title = "Use ATR for TP & SL",type=input.bool)
+Use_Ichimoku= input(true, title = "Use Ichimoku",type=input.bool)
+Use_HMA= input(true, title = "Use Hull MA",type=input.bool)
+Use_RSI= input(true, title = "Use RSI",type=input.bool)
+Use_Stoch= input(true, title = "Use Stoch",type=input.bool)
+Use_CCI= input(true, title = "Use CCI",type=input.bool)
+Use_MACD= input(true, title = "Use MacD",type=input.bool)
+// Ichimoku Cloud
+donchian(len) => avg(lowest(len), highest(len))
+ichimoku_cloud() =>
+    conversionLine = donchian(9)
+    baseLine = donchian(26)
+    leadLine1 = avg(conversionLine, baseLine)
+    leadLine2 = donchian(52)
+    [conversionLine, baseLine, leadLine1, leadLine2]
+[IC_CLine, IC_BLine, IC_Lead1, IC_Lead2] = ichimoku_cloud()    
+calcRatingMA(ma, src) => na(ma) or na(src) ? na : (ma == src ? 0 : ( ma < src ? 1 : -1 ))
+calcRating(buy, sell) => buy ? 1 : ( sell ? -1 : 0 )
+calcRatingAll() =>
+    //============== HMA =================
+    HMA10 = hma(Price, Period)
+    HMA20 = hma(Price, 20)
+    HMA30 = hma(Price, 30)
+    HMA50 = hma(Price, 50)
+    HMA100 = hma(Price, 100)
+    HMA200 = hma(Price, 200)
+    // Relative Strength Index, RSI
+    RSI = rsi(Price,14)
+    // Stochastic
+    lengthStoch = 14
+    smoothKStoch = 3
+    smoothDStoch = 3
+    kStoch = sma(stoch(Price, high, low, lengthStoch), smoothKStoch)
+    dStoch = sma(kStoch, smoothDStoch)
+    // Commodity Channel Index, CCI
+    CCI = cci(Price, 20)
+    // Moving Average Convergence/Divergence, MACD
+    [macdMACD, signalMACD, _] = macd(Price, 12, 26, 9)
+    // -------------------------------------------
+    PriceAvg = hma(Price, Period)
+    DownTrend = Price < PriceAvg
+    UpTrend = Price > PriceAvg
+    float ratingMA = 0
+    float ratingMAC = 0
+    if(Use_HMA)
+        if not na(HMA10)
+            ratingMA := ratingMA + calcRatingMA(HMA10, Price)
+            ratingMAC := ratingMAC + 1
+        if not na(HMA20)
+            ratingMA := ratingMA + calcRatingMA(HMA20, Price)
+            ratingMAC := ratingMAC + 1
+        if not na(HMA30)
+            ratingMA := ratingMA + calcRatingMA(HMA30, Price)
+            ratingMAC := ratingMAC + 1
+        if not na(HMA50)
+            ratingMA := ratingMA + calcRatingMA(HMA50, Price)
+            ratingMAC := ratingMAC + 1
+        if not na(HMA100)
+            ratingMA := ratingMA + calcRatingMA(HMA100, Price)
+            ratingMAC := ratingMAC + 1
+        if not na(HMA200)
+            ratingMA := ratingMA + calcRatingMA(HMA200, Price)
+            ratingMAC := ratingMAC + 1
+    if(Use_Ichimoku)
+        float ratingIC = na
+        if not (na(IC_Lead1) or na(IC_Lead2) or na(Price) or na(Price[1]) or na(IC_BLine) or na(IC_CLine))
+            ratingIC := calcRating(
+             IC_Lead1 > IC_Lead2 and Price > IC_Lead1 and Price < IC_BLine and Price[1] < IC_CLine and Price > IC_CLine,
+             IC_Lead2 > IC_Lead1 and Price < IC_Lead2 and Price > IC_BLine and Price[1] > IC_CLine and Price < IC_CLine)
+        if not na(ratingIC)
+            ratingMA := ratingMA + ratingIC
+            ratingMAC := ratingMAC + 1
+    ratingMA := ratingMAC > 0 ? ratingMA / ratingMAC : na
+    float ratingOther = 0
+    float ratingOtherC = 0
+    if(Use_RSI)
+        ratingRSI = RSI
+        if not(na(ratingRSI) or na(ratingRSI[1]))
+            ratingOtherC := ratingOtherC + 1
+            ratingOther := ratingOther + calcRating(ratingRSI < 30 and ratingRSI[1] < ratingRSI, ratingRSI > 70 and ratingRSI[1] > ratingRSI)
+    if(Use_Stoch)
+        if not(na(kStoch) or na(dStoch) or na(kStoch[1]) or na(dStoch[1]))
+            ratingOtherC := ratingOtherC + 1
+            ratingOther := ratingOther + calcRating(kStoch < 20 and dStoch < 20 and kStoch > dStoch and kStoch[1] < dStoch[1], kStoch > 80 and dStoch > 80 and kStoch < dStoch and kStoch[1] > dStoch[1])
+    if(Use_CCI)
+        ratingCCI = CCI
+        if not(na(ratingCCI) or na(ratingCCI[1]))
+            ratingOtherC := ratingOtherC + 1
+            ratingOther := ratingOther + calcRating(ratingCCI < -100 and ratingCCI > ratingCCI[1], ratingCCI > 100 and ratingCCI < ratingCCI[1])
+    if(Use_MACD)
+        if not(na(macdMACD) or na(signalMACD))
+            ratingOtherC := ratingOtherC + 1
+            ratingOther := ratingOther + calcRating(macdMACD > signalMACD, macdMACD < signalMACD)
+    ratingOther := ratingOtherC > 0 ? ratingOther / ratingOtherC : na
+    float ratingTotal = 0
+    float ratingTotalC = 0
+    if not na(ratingMA)
+        ratingTotal := ratingTotal + ratingMA
+        ratingTotalC := ratingTotalC + 1
+        ratingTotal := ratingTotal + ratingOther
+        ratingTotalC := ratingTotalC + 1
+    ratingTotal := ratingTotalC > 0 ? ratingTotal / ratingTotalC : na
+    [ratingTotal, ratingOther, ratingMA, ratingOtherC, ratingMAC]
+[ratingTotal, ratingOther, ratingMA, ratingOtherC, ratingMAC]  = security(syminfo.tickerid, res, calcRatingAll(), lookahead=false)
+tradeSignal = ratingTotal+ratingOther+ratingMA
+dynSLpoints(factor) => factor * atr(14) / syminfo.mintick
+if not (Use_Only_Sell)
+    strategy.entry("long", strategy.long, when = tradeSignal > MinSignalStrength)
+if not (Use_Only_Buy)    
+    strategy.entry("short", strategy.short, when = tradeSignal < -MinSignalStrength)
+if(Use_ATR_SL_TP)
+    strategy.exit("sl/tp", loss = dynSLpoints(3), trail_points = dynSLpoints(5), trail_offset = dynSLpoints(2))
+Expand (120 lines)

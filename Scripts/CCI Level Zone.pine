@@ -1,0 +1,288 @@
+Script Name: CCI Level Zone
+Author: Naruephat
+Description: This strategy uses CCI 1000  as zones Buy sell  if greater than level 100. will be seen as an uptrend If it's lower, it's a downtrend.
+So we will use RSI. To trade in its zones, using the RSI crosses the level line, and when the RSI crosses the level line, it waits to buy with Stochastic.
+PineScript code:
+
+Pine Script™ strategy
+CCI Level Zone
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Naruephat
+//@version=5
+strategy("CCI Level Zone", overlay= false  ,pyramiding = 0,  default_qty_type = strategy.cash,initial_capital = 100, default_qty_value =100 , commission_value=0.1)
+use_sma = input.bool( false ,  'use sma( cci , len ) ' ,inline = 'u' )
+len_sma = input.int( 200 , 'len' ,inline = 'u' )
+GL = '<<<<[ Long ]>>>>>'
+trad_Long = input.bool(true  ,  'Open Trad Long' ,inline = 'T' , group = GL)
+level_CCI_ZON_L = input.int(30 , 'level_CCI_ZON' , step = 10,inline = 'CR', group = GL)
+len_RSI_L = input.int(9 , 'len RSI Long' ,inline = 'CR', group = GL)
+level_RSI_LongB = input.int(54 , 'cross B' ,inline = 'L', group = GL)
+level_RSI_LongS = input.int(28 , 'cross S' ,inline = 'L', group = GL)
+cross_invert_L = input.bool(true , 'invert' , inline  =   'L' , group = GL)
+GS = '<<<<[ Short ]>>>>>'
+trad_Short = input.bool(true ,  'Open Trad Short' ,inline = 'T' , group = GS)
+level_CCI_ZON_S = input.int(-70 , 'level_CCI_ZON' , step = 10,inline = 'CR', group = GS)
+len_RSI_S = input.int(13 , 'len RSI Long',inline = 'CR', group = GS)
+level_RSI_ShortB = input.int(51 , 'cross B' , inline  =   'S' , group = GS)
+level_RSI_ShortS = input.int(39 , 'cross S' , inline  =   'S' , group = GS)
+cross_invert_S = input.bool(false , 'invert' , inline  =   'S' , group = GS)
+/////////////////////////////////////////////////////////[  Set Test Date  ]///////////////////////////////////////////////////////////////////////////////////////////////////// 
+G0 = 'Set Test Date'
+i_dateFilter    = input.bool(false,  "═════ Date Range Filtering ═════" ,group = G0)
+i_fromYear      = input.int(2020,   "From Year ",    minval = 1900 ,inline = 'd1',group = G0)
+i_fromMonth     = input.int(1,      "From Month",   minval = 1, maxval = 12,inline = 'd2',group = G0)
+i_fromDay       = input.int(15,      "From Day ",     minval = 1, maxval = 31,inline = 'd3',group = G0)
+i_toYear        = input.int(2023,   "To Year ",      minval = 1900,inline = 'd1',group = G0)
+i_toMonth       = input.int(12,      "To Month",     minval = 1, maxval = 12,inline = 'd2',group = G0)
+i_toDay         = input.int(31,      "To Day ",       minval = 1, maxval = 31,inline = 'd3',group = G0)
+fromDate        = timestamp(i_fromYear, i_fromMonth, i_fromDay, 00, 00)
+toDate          = time < timestamp(i_toYear, i_toMonth, i_toDay, 23, 59) ? time :  timestamp(i_toYear, i_toMonth, i_toDay, 23, 59)
+// เอา f_tradeDateIsAllowed() ไปใช้
+f_tradeDateIsAllowed() => not i_dateFilter or (time >= fromDate and time <= toDate)
+Win_Loss_Show = input.bool(true,'Show win loss', inline = 's')
+// indicator 
+cci = ta.cci(ohlc4 , 1000)
+sma_CCi = ta.sma(cci,len_sma)
+rsi_Long = ta.rsi(close,len_RSI_L)
+rsi_Short = ta.rsi(close,len_RSI_S)
+sto = ta.stoch(close, high, low, 14)
+// condition zone
+zoneB_Long = cci > level_CCI_ZON_L and ( use_sma ?  cci > sma_CCi : true ) 
+zoneB_Short = cci < level_CCI_ZON_S  and ( use_sma ?  cci < sma_CCi : true )  
+/////////////////////////////////////////////////[ condition Long  ]/////////////////////////////////////////////////
+Con_Long       = false
+Con_close_Long = false
+if cross_invert_L
+    Con_Long        :=  zoneB_Long and ta.crossunder(rsi_Long , level_RSI_LongB)
+    Con_close_Long  := ta.crossover(rsi_Long , level_RSI_LongS)
+else
+    Con_Long        :=  zoneB_Long and ta.crossover(rsi_Long , level_RSI_LongB)
+    Con_close_Long  := ta.crossunder(rsi_Long , level_RSI_LongS)
+    
+// If conditions pass, remember this first. Find the opportunity to open the next order with stoch.
+var con_L_perss = 0
+if Con_Long and con_L_perss == 0
+    con_L_perss := 1
+// clear con_L_perss
+if strategy.position_avg_price != 0 or  Con_close_Long
+    con_L_perss := 0 
+// END Condition Long
+Open_Long = con_L_perss == 1 and ta.crossover(sto ,20)
+/////////////////////////////////////////////////[ condition Short  ]/////////////////////////////////////////////////
+Con_Short       = false
+Con_close_Short = false
+if cross_invert_S
+    Con_Short       := zoneB_Short and  ta.crossover(rsi_Short , level_RSI_ShortB)
+    Con_close_Short :=  ta.crossunder(rsi_Short , level_RSI_ShortS)
+else
+    Con_Short       := zoneB_Short and  ta.crossunder(rsi_Short , level_RSI_ShortB)
+    Con_close_Short :=  ta.crossover(rsi_Short , level_RSI_ShortS)
+// If conditions pass, remember this first. Find the opportunity to open the next order with stoch.
+var con_S_perss = 0
+if Con_Short and con_S_perss == 0
+    con_S_perss := 1
+//  clear con_S_perss
+if strategy.position_avg_price != 0 or  Con_close_Short
+    con_S_perss := 0 
+// END Condition
+Open_Short = con_S_perss == 1 and ta.crossunder(sto, 65)
+///////////////////////////////////////////////////////////////////////////////////////////////[ 
+// this chang Alert message for u
+textAlert_Long          = 'textAlert Long '
+textAlert_close_Long    = 'textAlert Close Long '
+textAlert_Short         = 'textAlert_Short'
+textAlert_Close_Short   = 'textAlert_Close_Short'
+if trad_Long
+    strategy.entry('L' ,strategy.long , when =f_tradeDateIsAllowed()  and  Open_Long , alert_message = textAlert_Long )
+    strategy.close('L' ,when = Con_close_Long , alert_message = textAlert_Long)
+    
+if trad_Short
+    strategy.entry('S', strategy.short,when =f_tradeDateIsAllowed() and  Con_Short , alert_message = textAlert_Short)
+    strategy.close('S' ,when = Con_close_Short , alert_message = textAlert_Close_Short )
+plot(cci , 'line cci', color = zoneB_Short ? color.purple :  zoneB_Long ? color.green : color.new(color.gray, 50))
+plot(use_sma ? sma_CCi : na, 'line hma CCi ', color = zoneB_Short ? color.purple :  zoneB_Long ? color.green : color.new(color.gray, 50))
+hline(350 ,'line level'   , linestyle = hline.style_dotted ,color = color.new(color.green  , 65 ))
+hline(200 ,'line level'   , linestyle = hline.style_dotted ,color = color.new(color.green  , 65 ))
+hline(100 ,'line level'   , linestyle = hline.style_dotted ,color = color.new(color.green  , 65 ))
+hline(0 ,'line level'     , linestyle = hline.style_dotted ,color = color.new(color.white , 50 ))
+hline(-350 ,'line level'  , linestyle = hline.style_dotted ,color = color.new(color.red  ,65 ))
+hline(-200 ,'line level'  , linestyle = hline.style_dotted ,color = color.new(color.red  ,65 ))
+hline(-100 ,'line level'  , linestyle = hline.style_dotted ,color = color.new(color.red  ,65 ))
+/////////////////////////////////////////////////////////[  Plot  ]///////////////////////////////////////////////////////////////////////////////////////////////////// 
+var buy= 0.   
+var sell  = 0. 
+if(ta.change(strategy.position_size) and  strategy.position_size == 0)
+    
+    buy := nz(strategy.closedtrades.entry_price(strategy.closedtrades-1))
+    sell  := nz(strategy.closedtrades.exit_price(strategy.closedtrades-1))
+var buy_SELL = 2
+buy_SELL := strategy.position_size > 0 ? 0 : strategy.position_size < 0 ? 1 : 2
+//plot(buy_SELL[1])
+plotchar(  Win_Loss_Show ? nz(buy_SELL[1]) == 1 and ta.change(strategy.position_size) and  strategy.position_size == 0 and buy > sell : na ,location  = location.top ,color = color.new(color.green, 0), char='☺'  , size  = size.small)     
+plotchar(  Win_Loss_Show ? nz(buy_SELL[1]) == 1 and ta.change(strategy.position_size) and  strategy.position_size == 0 and buy < sell : na ,location  = location.top ,  color = color.new(color.red, 0), char='☹'  , size  = size.tiny)   
+plotchar(  Win_Loss_Show ? nz(buy_SELL[1]) ==0 and ta.change(strategy.position_size) and  strategy.position_size == 0 and buy < sell : na ,location  = location.top ,color = color.new(color.green, 0), char='☺'  , size  = size.small)     
+plotchar(  Win_Loss_Show ? nz(buy_SELL[1]) ==0 and ta.change(strategy.position_size) and  strategy.position_size == 0 and buy > sell : na ,location  = location.top ,  color = color.new(color.red, 0), char='☹'  , size  = size.tiny)   
+Expand (162 lines)

@@ -1,0 +1,139 @@
+Script Name: Oscillating SSL Channel Strategy - 3m & 5m Time Frames
+Author: cache_that_pass
+Description: This script is pretty self-explanatory.  I will suggest trying some different exits to get that win rate above 20% (I'd start with Take Profit and Stop Loss percentages).
+
+Enjoy!
+PineScript code:
+
+Pine Script™ strategy
+Oscillating SSL Channel Strategy - 3m & 5m Time Frames
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+//Copyright, 2022, Cache_that_pass.  You are free to use this script however you see fit and reproduce it in any manner.
+//@version=5
+            //////  Name the strategy between the 2 quotation marks.  Consider setting commission type and value in strategy header to match exchanges rates. //////
+strategy("Oscillating SSL Channel Strategy", "O-SSL Strat", overlay=true, pyramiding=1, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, initial_capital = 100, calc_on_order_fills=true)
+            //////  Inputs and calculations used by script  //////
+period = input(title='Period', defval=25)
+len = input(title='Period', defval=25)
+smaHigh = ta.sma(high, len)
+smaLow = ta.sma(low, len)
+Hlv = int(na)
+Hlv := close > smaHigh ? 1 : close < smaLow ? -1 : Hlv[1]
+sslDown = Hlv < 0 ? smaHigh : smaLow
+sslUp = Hlv < 0 ? smaLow : smaHigh
+            //////  Show me the money  //////
+plot(sslDown, linewidth=2, color=color.new(color.red, 0))
+plot(sslUp, linewidth=2, color=color.new(color.lime, 0))
+            //////  Trade execution logic  //////  
+            
+//pseudo-code//
+        //Go long when high (or maybe close) breaks above the sslUp and volume is 2x or > Volume[1] and sslUp > sslDown
+        //Close the above longs when sslUp crosses under sslDown (or set takeprofit and stop loss exits)
+        //
+        //Go short when low is lower than the sslUp and volume is 2x or > Volume[1] and sslDown > sslUp
+        //Close shorts when sslDown crosses under sslUp
+longCondition1 = (sslUp > sslDown)
+longCondition2 = ta.crossover(high, sslUp)
+//longCondition3 = (volume >= (volume[1]*1.89))
+longCondition = ((longCondition1) and (longCondition2))// and (longCondition3))
+longExit = ta.crossunder(sslUp, sslDown)
+            //////  Bring It  //////
+if (longCondition)
+    strategy.entry("Bring It", strategy.long)
+            //////  Sling It  //////
+if (longExit)
+    strategy.close("Bring It", comment="Sling It")
+shortCondition1 = (sslDown) > (sslUp)
+shortCondition2 = ta.crossunder(low, sslUp)
+//shortCondition3 = (volume >= (volume[1]*1.89))
+shortCondition = ((shortCondition1) and (shortCondition2))// and (shortCondition3))
+shortExit = ta.crossunder(sslDown, sslUp)
+            //////  Bring It  //////
+if (shortCondition)
+    strategy.entry("Bring It", strategy.long)
+            //////  Sling It  //////
+if (shortExit)
+    strategy.close("Bring It", comment="Sling It")
+            //////  Sling It  //////
+if (shortCondition)
+    strategy.entry("Sling It", strategy.short)
+            //////  Bling It  //////
+if (shortExit)
+    strategy.close("Sling It", comment="Bring It")
+Expand (76 lines)

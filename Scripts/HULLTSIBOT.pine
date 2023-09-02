@@ -1,0 +1,88 @@
+Script Name: HULLTSIBOT
+Author: SeaSide420
+Description: Do you like TSI indicator?
+Do you like HMA indicator?
+The all new, HULLTSIBOT indicator!  
+
+About:
+TSI indicator was on a space mission to mine other planets and then the crew stumbled upon a bunch of HMA indicator eggs.  In the darkness of the slime room they found, There was a suddenly a bunch of failing and swearing and machinegun fire muzzle flashes, then all...
+PineScript code:
+
+Pine Script™ strategy
+HULLTSIBOT
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+//@version=4
+strategy(title="TSIHULLBOT", shorttitle="TSICCIHULL", default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+long = input(title="Long Length", type=input.integer, defval=50)
+short = input(title="Short Length", type=input.integer, defval=50)
+signal = input(title="Signal Length", type=input.integer, defval=7)
+price = input(title="Source",type=input.source,defval=open)
+lineupper = input(title="Upper Line", type=input.integer, defval=250)
+linelower = input(title="Lower Line", type=input.integer, defval=-250)
+double_smooth(price, long, short) =>
+    fist_smooth = hma(price, long)
+    hma(fist_smooth, short)
+pc = change(price)
+double_smoothed_pc = double_smooth(pc, long, short)
+double_smoothed_abs_pc = double_smooth(abs(pc), long, short)
+tsi_value = (100 * (double_smoothed_pc / double_smoothed_abs_pc))*5
+tsihmaline=(hma(tsi_value,signal))*5
+clr = tsihmaline < tsi_value ? color.red : color.lime
+clr2 = tsi_value < tsi_value[1] ? color.red : color.lime
+i1=plot(lineupper+3, color=color.black, linewidth=3)
+i2=plot(linelower+3, color=color.black, linewidth=3)
+i3=plot(lineupper, color=clr)
+i4=plot(linelower, color=clr)
+trendv=tsihmaline/5.6
+plot(trendv, linewidth=7,  color=color.black)
+plot(trendv, linewidth=4,  color=color.yellow)
+j1=plot(tsi_value, linewidth=5, color=color.black)
+j2=plot(tsi_value[1], linewidth=5, color=color.black)
+j3=plot(tsi_value, color=clr2)
+j4=plot(tsi_value[1], color=clr2)
+fill(i3,i4,color=clr,transp=90)
+fill(j3,j4,color=clr2,transp=15)
+longCondition = tsihmaline>tsihmaline[1] and price>price[1]
+if (longCondition)
+    strategy.entry("Buy ⤴️", strategy.long)
+shortCondition = tsihmaline<tsihmaline[1] and price<price[1]
+if (shortCondition)
+    strategy.entry("Sell ⤵️", strategy.short)
+Expand (37 lines)

@@ -1,0 +1,158 @@
+Script Name: Momentum Trading Strategy (Weekly Chart)
+Author: amey.tavkar
+Description: The strategy will open position when there is momentum in the stock
+The strategy will ride up your stop loss based on the super trend.
+The strategy will close your operation when the market price crossed the stop loss.
+The strategy will close operation when the line based on the volatility will crossed
+PineScript code:
+
+Pine Script™ strategy
+Momentum Trading Strategy (Weekly Chart)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+//@version=4
+//
+// ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ 
+//  -----------------------------------------------------------------------------
+//  Copyright 2021 Amey Tavkar
+//  Momentum Trading Strategy (Weekly Chart) script may be freely distributed under the MIT license.
+//
+//  Permission is hereby granted, free of charge, 
+//  to any person obtaining a copy of this software and associated documentation files (the "Software"), 
+//  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, 
+//  publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, 
+//  subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
+//  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, 
+//  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
+//  -----------------------------------------------------------------------------
+//
+//  Description
+//  ===========
+//  The strategy will open position when there is momentum in the stock
+//  The strategy will ride up your stop loss based on the super trend.
+//  The strategy will close your operation when the market price crossed the stop loss.
+//  The strategy will close operation when the line based on the volatility will crossed
+//
+//  
+//  -----------------------------------------------------------------------------
+//  Disclaimer:
+//    1. I am not licensed financial advisors or broker dealers. I do not tell you 
+//       when or what to buy or sell. I developed this software which enables you 
+//       execute manual or automated trades multplierFactoriplierFactoriple trades using TradingView. The 
+//       software allows you to set the criteria you want for entering and exiting 
+//       trades.
+//    2. Do not trade with money you cannot afford to lose.
+//    3. I do not guarantee consistent profits or that anyone can make money with no 
+//       effort. And I am not selling the holy grail.
+//    4. Every system can have winning and losing streaks.
+//    5. Money management plays a large role in the results of your trading. For 
+//       example: lot size, account size, broker leverage, and broker margin call 
+//       rules all have an effect on results. Also, your Take Profit and Stop Loss 
+//       settings for individual pair trades and for overall account equity have a 
+//       major impact on results. If you are new to trading and do not understand 
+//       these items, then I recommend you seek education materials to further your
+//       knowledge.
+//
+//    YOU NEED TO FIND AND USE THE TRADING SYSTEM THAT WORKS BEST FOR YOU AND YOUR 
+//    TRADING TOLERANCE.
+//
+//    I HAVE PROVIDED NOTHING MORE THAN A TOOL WITH OPTIONS FOR YOU TO TRADE WITH THIS PROGRAM ON TRADINGVIEW.
+//    
+//    I accept suggestions to improve the script.
+//    If you encounter any problems I will be happy to share with me.
+//  -----------------------------------------------------------------------------
+//
+// ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+strategy("Momentum Trading Strategy (Weekly Chart)", precision = 2, overlay = true, default_qty_type = strategy.percent_of_equity, default_qty_value = 10)
+//Entry
+[fastSupertrend, fastSupertrendDir]  = supertrend(5, 1)
+rsi = rsi(close, 14)
+entry = close > fastSupertrend and rsi > 60
+strategy.entry("Long", strategy.long, when = entry)
+plotshape(entry and strategy.opentrades == 0,color=color.green,text="Buy",location=location.belowbar,style=shape.labelup,textcolor=color.white, size = size.normal)
+plot(fastSupertrendDir == -1 and strategy.opentrades == 1  ? fastSupertrend : na, title="Active Trade", style=plot.style_linebr, linewidth=2, color=color.blue)
+//Exit
+exit = close < fastSupertrend
+strategy.close("Long", when = exit)
+plotshape(exit and strategy.opentrades == 1,color=color.red,text="Sell",style=shape.labeldown,textcolor=color.white, size=size.normal)
+Expand (74 lines)

@@ -1,0 +1,88 @@
+Script Name: Rob Booker Reversal Tabs Strategy
+Author: Powerscooter
+Description: Rob Booker Reversal Tabs Strategy  is an updated version of Rob Bookers Reversal Tab study:  Rob Booker Reversal Tabs 
+
+While the original is a Pinescript study, this version can be switched between strategy and indicator mode.
+Rob Bookers script generates reversal signal based on MACD and Stochastics, it is not a true reversal system, default pyramiding value is...
+PineScript code:
+
+Pine Script™ strategy
+Rob Booker Reversal Tabs Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+//@version=5
+strategy('RB Reversal Tabs Strategy', overlay=true, default_qty_type=strategy.cash, default_qty_value=100, initial_capital=100, pyramiding = 5)
+//Developer: Andrew Palladino
+//Owner: Rob Booker
+//Date Modified: 11/25/2018
+//Updated to Pinescript V5 and transformed into a Strategy by: Powerscooter 11/25/2022
+StrategyMode = input.bool(true,"Strategy Mode")
+macd_fast_period = input(title='MACD Fast Period', defval=12)
+macd_slow_period = input(title='MACD Slow Period', defval=26)
+macd_signal_period = input(title='MACD Signal Period', defval=9)
+stoch_period = input(title='Stochastic RSI Period', defval=70)
+prc_k_period = input(title='%K Period', defval=30)
+prc_d_period = input(title='%D Period', defval=30)
+stoch_ob = input(title='Stochastic Overbought Level', defval=70)
+stoch_os = input(title='Stochastic Oversold Level', defval=30)
+[macd_line, signal_line, hist_line] = ta.macd(close, macd_fast_period, macd_slow_period, macd_signal_period)
+fast_prc_k = 100 * (close - ta.lowest(low, stoch_period)) / (ta.highest(high, stoch_period) - ta.lowest(low, stoch_period))
+fast_prc_d = ta.sma(fast_prc_k, prc_d_period)
+slow_prc_k = ta.sma(fast_prc_k, prc_k_period)
+slow_prc_d = ta.sma(slow_prc_k, prc_d_period)
+full_prc_k = ta.sma(fast_prc_k, prc_k_period)
+full_prc_d = ta.sma(full_prc_k, prc_d_period)
+is_buy_reversal = ta.crossover(macd_line, 0) and full_prc_k < stoch_os
+is_sell_reversal = ta.crossunder(macd_line, 0) and full_prc_k > stoch_ob
+plotshape(is_buy_reversal and not StrategyMode, style=shape.triangleup, color=color.new(color.green, 0), size=size.small, location=location.belowbar)
+plotshape(is_sell_reversal and not StrategyMode, style=shape.triangledown, color=color.new(color.red, 0), size=size.small, location=location.abovebar)
+//Orders
+if is_buy_reversal and StrategyMode
+    strategy.entry("Long",strategy.long)
+if is_sell_reversal and StrategyMode
+    strategy.entry("Short",strategy.short)
+//plot(full_prc_k, color=blue)
+//plot(full_prc_d, color=red)
+//plot(macd_line, color=blue)
+Expand (42 lines)

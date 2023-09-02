@@ -1,0 +1,88 @@
+Script Name: Sonic R & RSI only BTCUSD D1 strategy
+Author: ichimokuK
+Description: Sonic R & RSI only BTCUSD D1 strategy 
+for t.me/beincypto_vn
+
+
+for those who want to create their own strategy
+Use the explanations in the strategy to copy and edit a strategy for yourself
+
+buy when on the chart is buyEMA or buyRSI
+close buy order when on chart is closeEMA or closeRSI
+
+please use coinbase exchange time frame D1
+PineScript code:
+
+Pine Script™ strategy
+Sonic R & RSI only BTCUSD D1 strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+//@version=5
+//chia se cho rieng cong dong t.me/beincypto_vn
+strategy('Sonic R & RSI only BTCUSD D1 strategy', //ten chien luoc
+         shorttitle='sonic R & RSI Strategy', //ten rut gon cua chien luoc
+         overlay=true,//
+         close_entries_rule="FIFO", //thu tu dong lenh la bat ky
+         default_qty_type=strategy.percent_of_equity, //loai so luong mac dinh la ti le phan tram cua von
+         max_bars_back=500, // so luong thanh toi da la 500
+         default_qty_value=100, //so luong vao lenh la 100 %
+         calc_on_order_fills=false, //
+         pyramiding=1,  // kim tu thap, 1 thi moi la thuc
+         commission_type=strategy.commission.percent, // loai phan tram phi giao dich
+         commission_value=0.2, //ti le phan tram phi giao dich
+         process_orders_on_close=true, // tinh toan chien luoc khi dong lenh
+         calc_on_every_tick=false) // sau khi dong nen moi vao lenh
+ema34high = ta.ema(high, 34) // lay ema cao nhat cua 34 thanh nen
+h=plot(ema34high, color=color.new(#A5D6A7, 0)) // hien thi ema cao nhat cua 34 thanh
+ema34low = ta.ema(low, 34) // lay ema thap nhat cua 34 thanh nen
+l=plot(ema34low, color=color.new(#EF9A9A, 0)) // hien thi ema thap nhat cua 34 thanh
+fill(h, l, color = color.green, transp=90) // hien thi may giua ema cao va thap
+rsi = ta.rsi(close, 14) // rsi 14 thanh
+dkienmua1 = close > ema34high and close[2] > ema34high // dieu kien mua 1 khi gia lon hon ema 34 cao nhat va nen truoc do (nen 2) cung lon hon nen ema 34 cao nhat
+if dkienmua1 // neu thoa man dieu kien mua 1
+    strategy.entry('buyEMA', strategy.long) // vao lenh mua trong bieu do hien chu buyEMA
+dkienban1 = close < ema34low and close[2] < ema34low // dieu kien ban 1 khi gia nho hon ema34 nho nhat va nen truoc do cung vay
+if dkienban1 // nen dieu kien 1 thoa man
+    strategy.close('buyEMA',comment='CloseEMA') // dong lenh buyema truoc do, hien thi o bieu do la chu closeEMA
+dkienmua2 = ta.lowest(rsi, 3) < 29  and rsi > rsi[3] and rsi > 30 // dieu kien mua 2 khi gia thap nhat cua rsi 3 thanh gan day nho hon 29 va rsi lon hon rsi cay thu 3 truoc do
+if dkienmua2 // neu dieu kien mua 2 thoa man
+    strategy.entry('buyRSI', strategy.long) // vao lenh mua dat ten la buyRSI
+dkienban2 = ta.highest(rsi, 5) > 70   and rsi < 70 // dieu kien ban 2 khi RSI cao nhat trong 5 cay lon hon 70 va RSI nho hon 70
+if dkienban2 // neu dieu kien 2 thoa man
+    strategy.close('buyRSI',comment='CloseRSI') // dong lenh buySI truoc do, tren bieu do hien thi chu closeRSI
+Expand (36 lines)

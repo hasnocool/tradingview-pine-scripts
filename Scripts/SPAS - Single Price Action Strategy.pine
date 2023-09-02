@@ -1,0 +1,92 @@
+Script Name: SPAS - Single Price Action Strategy
+Author: CesarSchneider
+Description: This strategy is based on a single price action analysis, where volume and price changes will trigger buy and sell orders. This strategy also can be used in combination with alerts to trigger orders in other exchanges or systems.
+
+Best performance is currently achieved using 4H timeframe.
+PineScript code:
+
+Pine Script™ strategy
+SPAS - Single Price Action Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+//@version=4
+strategy("SPAS", overlay=true, pyramiding=5, calc_on_order_fills=true)
+int signal_hh = 0
+int signal_ll = 0
+if close[1] >= open[1] and close[2] >= open[2] and close[3] >= open[3]
+    signal_hh := 1
+if close[1] <= open[1] and close[2] <= open[2] and close[3] <= open[3]
+    signal_ll := 1
+plotchar(signal_hh, char='H', size=size.tiny, location=location.abovebar)
+plotchar(signal_ll, char='L', size=size.tiny, location=location.abovebar)
+int signal_vol = 0
+float max_volume = 0.0
+int vol_length = input(title="Volume length", type=input.integer, defval=3)
+for i = vol_length to 1
+    if volume[i] > max_volume
+        max_volume := volume[i]
+if volume[0] > max_volume
+    signal_vol := 1
+plotchar(signal_vol, char='V', size=size.tiny, location=location.bottom)
+int signal_buy = 0
+int signal_sell = 0
+if signal_hh and signal_vol
+    signal_buy := 1
+    label.new(bar_index, high, "B", color=color.green)
+    strategy.entry("buy", strategy.long, 5)//, when=strategy.position_size <= 0)
+if signal_ll and signal_vol
+    signal_sell := 1
+    label.new(bar_index, low, "S", color=color.red)
+    strategy.entry("sell", strategy.short, 5)//, when=strategy.position_size > 0)
+//plotchar(signal_buy, char='B', color=color.green, size=size.tiny, location=location.abovebar)
+plotarrow(signal_buy, colorup=color.green, colordown=color.orange, transp=0, maxheight=20)
+//plotchar(signal_sell, char='S', color=color.red, size=size.tiny, location=location.abovebar)
+plotarrow(signal_sell * -1, colorup=color.green, colordown=color.orange, transp=0, maxheight=20)
+Expand (48 lines)

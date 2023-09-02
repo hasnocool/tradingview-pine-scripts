@@ -1,0 +1,101 @@
+Script Name: Simple Momentum Strategy Based on SMA, EMA and Volume
+Author: slip_stream
+Description: A simple, non short selling (long positions only, i.e. buy low and sell high) strategy. Strategy makes use of simple SMA, EMA and Volume indicators to attempt to enter the market at the most optimum time (i.e. when momentum and price are moving upwards). Optimum time is defined mainly by picking best timing for price moves higher based on upwards momentum.
+
+This...
+PineScript code:
+
+Pine Script™ strategy
+Simple Momentum Strategy Based on SMA, EMA and Volume
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © slip_stream
+//@version=4
+// Simple strategy for riding the momentum and optimising the timings of truer/longer price moves upwards for an long posistions on a daily basis (can be used, but with less effect
+// on other time frames. Volume settings would have to be adjusted by the user accordingly. (short positions are not used).
+// This strategy has default settings of a short(er) SMA of 10, a long(er) EMA of 20, and Volume trigger of 10 units and above. All these settings can be changed by the user
+// using the GUI settings and not having to change the script.
+// The strategy will only open a long position when there is a clear indication that price momentum is upwards through the SMA moving and remaining above the EMA (mandatory) and price period indicators
+// of either 1) a standard 3 bar movement upwards, 2) a standard but "aggressive" 3 or 4 bar play where the low of the middle resting bars can be equal to or higher than (i.e. not
+// the more standard low of about half) of the opening of the ignition bar. The "aggression" of the 3/4 bar play was done in order to counteract the conservatisme of having a mandatory
+// SMA remaining higher than the EMA (this would have to be changed in the script by the user if they want to optimise to their own specifications. However, be warned, all programmatic
+// settings for the maximum acceptable low of the middle resting bars runs a risk of ignoring good entry points due to the low being minutely e.g. 0.01%, lower than the user defined setting)
+strategy(title = "Simple Momentum Strategy Based on SMA, EMA and Volume", overlay = true, pyramiding = 1, initial_capital = 100000, currency = currency.USD)
+// Obtain inputs
+sma_length = input(defval = 10, minval=1, type = input.integer, title = "SMA (small length)")
+ema_length = input(defval = 20,minval=1, type = input.integer, title = "EMA (large length)")
+volume_trigger = input(defval = 10, title = "Volume Trigger", type = input.integer)
+sma_line = sma(close, sma_length)
+ema_line = ema(close, ema_length)
+// plot SMA and EMA lines with a cross for when they intersect
+plot(sma_line, color = #8b0000, title = "SMA")
+plot(ema_line, color = #e3d024, title = "EMA")
+plot(cross(sma_line, ema_line) ? sma_line : na, style = plot.style_cross, linewidth = 4, color = color.white)
+// Create variables
+// variables to check if trade should be entered
+//three consecutive bar bar moves upwards and volume of at least one bar is more than 10
+enter_trade_3_bar_up = sma_line > ema_line and close[1] >= close [2] and close[3] >= close[4] and close[2] >= close[3] and (volume[1] >= volume_trigger or volume[2] >= volume_trigger or volume[3] >= volume_trigger)
+// aggressive three bar play that ensures the low of the middle bar is equal to or greater than the open of the instigator bar. Volume is not taken into consideration (i.e. aggressive/risky)
+enter_3_bar_play = sma_line > ema_line and close[1] > close[3] and low[2] >= open[3]
+// aggressive four bar play similar to the 3 bar play above
+enter_4_bar_play = sma_line > ema_line and close[1] > close[4] and low[2] >= open[4]
+trade_entry_criteria = enter_trade_3_bar_up or enter_3_bar_play or enter_4_bar_play // has one of the trade entry criterias returned true?
+// exit criteria for the trade: when the sma line goes under the ema line
+trade_exit_criteria = crossunder (sma_line, ema_line)
+if (year >= 2019)
+    strategy.entry(id = "long", long = true, qty = 1, when = trade_entry_criteria)
+    strategy.close(id = "long", when = trade_exit_criteria, qty = 1)
+    // for when you want to brute force close all open positions: strategy.close_all (when = trade_exit_criteria)
+Expand (52 lines)

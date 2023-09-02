@@ -1,0 +1,71 @@
+Script Name: Best Crypto DEMA Strategy Long only
+Author: SoftKill21
+Description: This is a crypto strategy suited for big time frames like 3h+. 
+
+THIS IS A LONG ONLY STRATEGY , SUITED TO BEAT BUY AND HOLD !
+
+It's a very risky strategy because it has no stop loss at all, so be extremely careful with it.
+
+This strategy is made of 2 DEMA  a fast and a slow one.
+
+We have two rules : entry it's when we have a crossunder between the slow DEMA  and...
+PineScript code:
+
+Pine Script™ strategy
+Best Crypto DEMA Strategy Long only
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+//@version=4
+//author SoftKill21
+strategy(title = "Best Crypto DEMA", shorttitle = "Crypto DEMA Trend ",initial_capital=1000, commission_value=0.2, commission_type =strategy.commission.percent, default_qty_value=100 , overlay = true, pyramiding=1, default_qty_type=strategy.percent_of_equity)
+UseHAcandles    = input(true, title="Use Heikin Ashi Candles in Algo Calculations")
+//
+// === /INPUTS ===
+// === BASE FUNCTIONS ===
+haClose = UseHAcandles ? security(heikinashi(syminfo.tickerid), timeframe.period, close) : close
+haOpen  = UseHAcandles ? security(heikinashi(syminfo.tickerid), timeframe.period, open) : open
+haHigh  = UseHAcandles ? security(heikinashi(syminfo.tickerid), timeframe.period, high) : high
+haLow   = UseHAcandles ? security(heikinashi(syminfo.tickerid), timeframe.period, low) : low
+fastPeriod    = input(defval =10, title = "DEMA FAST ", minval = 2)
+slowPeriod = input(defval = 100, title = "DEMA SLOW ", minval = 1)
+res = input("180",title="Resolution", type=input.resolution )
+demaFast =  security(syminfo.tickerid, res, 2 * ema(haClose, fastPeriod) - ema(ema(haClose, fastPeriod), fastPeriod)  )
+demaSlow  = security(syminfo.tickerid,res, 2 * ema(haClose, slowPeriod) - ema(ema(haClose, slowPeriod), slowPeriod)  )
+buy = crossover(demaSlow, demaFast)
+sell = crossunder(demaSlow, demaFast)
+strategy.entry("BUY", strategy.long, when =  sell)
+strategy.close("BUY",when=buy)
+//strategy.entry("SELL", strategy.short, when = buy ) 
+Expand (33 lines)

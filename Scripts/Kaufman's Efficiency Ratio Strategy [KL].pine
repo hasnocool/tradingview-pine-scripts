@@ -1,0 +1,312 @@
+Script Name: Kaufman's Efficiency Ratio Strategy [KL]
+Author: DojiEmoji
+Description: I recently published an indicator called "Kaufman's Efficiency Ratio Indicator". In the description of that script, I hypothesized about how the Efficiency Ratio could be applied to identify bullish moves in instances where price had already gone up steeply, but rests for a while, allowing for entry in expectation that price will continually rise. I decided to...
+PineScript code:
+
+Pine Script™ strategy
+Kaufman's Efficiency Ratio Strategy [KL]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © DojiEmoji (kevinhhl)
+//@version=5
+strategy("[KL] Eff. Ratio Strategy", overlay=true, pyramiding=1, initial_capital=1000000000)
+var string GROUP_ALERT    = "Alerts"
+var string GROUP_SL       = "Stop loss"
+var string GROUP_ORDER    = "Order size"
+var string GROUP_TP       = "Profit taking"
+var string GROUP_HORIZON  = "Time horizon of backtests"
+var string GROUP_ER       = "Main Signal: Kaufman's Eff. Ratio"
+var string ENUM_LONG      = "LONG"
+var string LONG_MSG_ENTER = input.string("Long entered", title="Alert MSG for buying (Long position)", group=GROUP_ALERT)
+var string LONG_MSG_EXIT  = input.string("Long closed", title="Alert MSG for closing (Long position)", group=GROUP_ALERT)
+USE_SHORT       = input(false, title="Enter into short positions", group=GROUP_ALERT)
+ENUM_SHORT      = "SHORT"                                                                    
+SHORT_MSG_ENTER = input.string("Short entered", title="Alert MSG for selling (Short position)")
+SHORT_MSG_EXIT  = input.string("Short covered", title="Alert MSG for covering (Short position)")
+backtest_timeframe_start = input.time(defval=timestamp("01 Apr 2020 13:30 +0000"), title="Backtest Start Time", group=GROUP_HORIZON)
+USE_ENDTIME              = input.bool(false, title="Define backtest end-time", group=GROUP_HORIZON, tooltip="If false, will test up to most recent candle")
+backtest_timeframe_end   = input.time(defval=timestamp("19 Apr 2021 19:30 +0000"), title="Backtest End Time (if checked above)", group=GROUP_HORIZON)
+within_timeframe         = time >= backtest_timeframe_start and (time <= backtest_timeframe_end or not USE_ENDTIME)
+// Kaufman"s efficiency ratio {
+er_lookbackperiod = input.int(10, title="Lookback period", group=GROUP_ER)
+kaufman_ER(src, len) =>
+    total_abs_chng = float(0)  // [B]
+    for i = 1 to len by 1
+        total_abs_chng := total_abs_chng + math.abs(src[i - 1] - src[i])
+        total_abs_chng
+    net_chng = src - src[len]  // [A]
+    er = net_chng / total_abs_chng * 100  // = ([A]/[B]) * 100
+    er
+ER            = kaufman_ER(close, er_lookbackperiod)
+// Removed: Confirmation of ER being low/med/high; through backtesting, noticed it's better to simply use "entry_signal_long = ER > 0"
+// ER_bar        = ta.sma(math.abs(ER), er_lookbackperiod)
+// ER_sigma      = ta.stdev(math.abs(ER), er_lookbackperiod)
+// ER_std_err    = ER_sigma / math.pow(er_lookbackperiod, 0.5)
+// ER_sigma_mult = input.float(1.0, "stdev multiplier", tooltip="For determining low/medium/high ER.", group=GROUP_ER)
+// dynamic_low   = ER_bar - ER_sigma * ER_sigma_mult * ER_std_err
+// dynamic_high  = ER_bar + ER_sigma * ER_sigma_mult * ER_std_err
+// ER_is_low     = math.abs(ER) <= dynamic_low
+// ER_is_mid     = math.abs(ER) > dynamic_low and math.abs(ER) < dynamic_high
+// ER_is_high    = math.abs(ER) >= dynamic_high
+// } end of block: Kaufman"s efficiency ratio
+// Signals for entry
+entry_signal_long = ER > 0
+entry_signal_short = ER < 0 and ta.tr > ta.atr(14) and volume > ta.sma(volume, 5) and USE_SHORT
+// Portfolio mgt
+pcnt_alloc = input.int(5, title="Allocation (%) of portfolio into this security", tooltip="Assume no rebalancing", minval=0, maxval=100, group=GROUP_ORDER) / 100
+// Trailing stop loss ("TSL") {
+tsl_multi                 = input.float(2.0, title="ATR Multiplier for trailing stoploss", group=GROUP_SL)
+SL_buffer                 = ta.atr(input.int(14, title="Length of ATR for trailing stoploss", group=GROUP_SL)) * tsl_multi
+TSL_source_long           = low
+TSL_source_short          = high
+var stop_loss_price_long  = float(0)
+var stop_loss_price_short = float(9999999999)
+var pos_opened_long       = false
+var pos_opened_short      = false
+stop_loss_price_long := pos_opened_long ? math.max(stop_loss_price_long, TSL_source_long - SL_buffer) : TSL_source_long - SL_buffer
+stop_loss_price_short := pos_opened_short ? math.min(stop_loss_price_short, TSL_source_short + SL_buffer) : TSL_source_short + SL_buffer
+// } end of block: Trailing stop loss
+// Profit taking
+var int tp_count_long  = 0 // counts how many levels of profits had been taken during holding period; resets when position size becomes zero
+var int tp_count_short = 0
+var float initial_order_size = 0 // to be divided by 3, then math.floor'ed to determine size of disposal
+FIRST_LVL_PROFIT             = input.float(1, title="First level profit", tooltip="Relative to risk. Example: entry at $10 and inital stop loss at $9. Taking first level profit at 1R means taking profits at $11", group=GROUP_TP)
+SECOND_LVL_PROFIT            = input.float(2, title="Second level profit", tooltip="Relative to risk. Example: entry at $10 and inital stop loss at $9. Taking second level profit at 2R means taking profits at $12", group=GROUP_TP)
+THIRD_LVL_PROFIT             = input.float(3, title="Third level profit", tooltip="Relative to risk. Example: entry at $10 and inital stop loss at $9. Taking third level profit at 3R means taking profits at $13", group=GROUP_TP)
+// MAIN: {
+var float initial_entry_p = float(0)  // initial entry price
+var float risk_amt = float(0)         // initial entry price minus initial stop loss price
+// (1) Taking profits at user defined target levels relative to risked amount (i.e 1R, 2R, 3R)
+if not entry_signal_long
+    if tp_count_long == 0 and close >= strategy.position_avg_price + (FIRST_LVL_PROFIT * risk_amt)
+        strategy.close(ENUM_LONG, comment="TP lvl1", qty=math.floor(initial_order_size / 3))
+        tp_count_long := tp_count_long + 1
+    else if tp_count_long == 1 and close >= strategy.position_avg_price + (SECOND_LVL_PROFIT * risk_amt)
+        strategy.close(ENUM_LONG, comment="TP lvl2", qty=math.floor(initial_order_size / 3))
+        tp_count_long := tp_count_long + 1
+    else if tp_count_long == 2 and close >= strategy.position_avg_price + (THIRD_LVL_PROFIT * risk_amt)
+        strategy.close(ENUM_LONG, comment="TP lvl3", qty=math.floor(initial_order_size / 3))
+        tp_count_long := tp_count_long + 1
+if not entry_signal_short
+    if tp_count_short == 0 and close <= strategy.position_avg_price + (-FIRST_LVL_PROFIT * risk_amt)
+        strategy.close(ENUM_SHORT, comment="TP lvl1", qty=math.floor(initial_order_size / 3))
+        tp_count_short := tp_count_short + 1
+    else if tp_count_short == 1 and close <= strategy.position_avg_price + (-SECOND_LVL_PROFIT * risk_amt)
+        strategy.close(ENUM_SHORT, comment="TP lvl2", qty=math.floor(initial_order_size / 3))
+        tp_count_short := tp_count_short + 1
+    else if tp_count_short == 2 and close <= strategy.position_avg_price + (-THIRD_LVL_PROFIT * risk_amt)
+        strategy.close(ENUM_SHORT, comment="TP lvl3", qty=math.floor(initial_order_size / 3))
+        tp_count_short := tp_count_short + 1
+// (2) States update: pos_opened_long, pos_opened_short
+if pos_opened_long and TSL_source_long <= stop_loss_price_long
+    pos_opened_long := false
+    alert(LONG_MSG_EXIT, alert.freq_once_per_bar)
+    strategy.close(ENUM_LONG, comment=close < strategy.position_avg_price ? "stop loss" : "take profit")
+if pos_opened_short and (TSL_source_short >= stop_loss_price_short)
+    pos_opened_short := false
+    alert(SHORT_MSG_EXIT, alert.freq_once_per_bar)
+    strategy.close(ENUM_SHORT, comment=close > strategy.position_avg_price ? "stop loss" : "take profit")
+// (3) Update the stoploss to latest trailing amt.
+if pos_opened_long
+    strategy.exit(ENUM_LONG, stop=stop_loss_price_long, comment="SL")
+if pos_opened_short
+    strategy.exit(ENUM_SHORT, stop=stop_loss_price_short, comment="SL")
+// (4) INITIAL ENTRY:
+if within_timeframe and entry_signal_long
+    pos_opened_long := true
+    alert(LONG_MSG_ENTER, alert.freq_once_per_bar)
+    initial_order_size := math.floor(pcnt_alloc * strategy.equity / close)
+    strategy.entry(ENUM_LONG, strategy.long, comment="long", qty=initial_order_size)
+    risk_amt := SL_buffer      // for taking profits at 1R, 2R, and 3R
+    initial_entry_p := close    // ""
+if within_timeframe and entry_signal_short
+    pos_opened_short := true
+    alert(SHORT_MSG_ENTER, alert.freq_once_per_bar)        
+    strategy.entry(ENUM_SHORT, strategy.short, comment="short")
+// Plotting: 
+TSL_transp_long = pos_opened_long and within_timeframe ? 0 : 100
+TSL_transp_short = pos_opened_short and within_timeframe ? 0 : 100
+plot(stop_loss_price_long, color=color.new(color.green, TSL_transp_long))
+plot(stop_loss_price_short, color=color.new(color.red, TSL_transp_short))
+// CLEAN UP: Setting variables back to default values once no longer in use
+if ta.change(strategy.position_size) and strategy.position_size == 0
+    risk_amt := float(0)
+    initial_entry_p := float(0)
+    initial_order_size := 0
+    pos_opened_long := false
+    pos_opened_short := false
+if not pos_opened_long
+    stop_loss_price_long := float(0)
+    tp_count_long := 0
+if not pos_opened_short
+    stop_loss_price_short := float(9999999999)
+    tp_count_short := 0
+// } end of MAIN block
+Expand (167 lines)

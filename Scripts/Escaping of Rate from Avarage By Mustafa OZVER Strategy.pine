@@ -1,0 +1,91 @@
+Script Name: Escaping of Rate from Avarage By Mustafa OZVER Strategy
+Author: Mustafaozver
+Description: I simulated the EoRfA indicator with the gold price
+For details about the indicator, visit my profile on tradingview
+
+For Simulation, with default settings, we order
+ if Eorfa > 1 and change(eorfa) < 0
+ sell
+
+ if Eorfa < -1 and change(eorfa) > 0
+ buy
+
+And we got
+
+ - 2.49 % profit
+ - 74 % profittable order from all
+
+ But only this value can not guarantee good...
+PineScript code:
+
+Pine Script™ strategy
+Escaping of Rate from Avarage By Mustafa OZVER Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Mustafaozver
+//@version=4
+strategy("Escaping of Rate from Avarage By Mustafa OZVER", "EoRfA", overlay=false)
+//strategy("Escaping of Rate from Avarage By Mustafa OZVER", "EoRfA", overlay=false)
+src = input(ohlc4,"Source")
+FPrice = wma(src,3)
+len = input(17,"Length")
+stdev = stdev(FPrice,len)
+ema2 = ema(FPrice,len)
+Rate1 = (FPrice - ema2) / stdev
+//bgcolor(color=((stdev/ema)>0.0015)?color.green:#00000000,transp=80)
+colorG = color.lime
+colorR = color.red
+hline(0,linestyle=hline.style_solid,editable=false)
+hline1=hline(1,linestyle=hline.style_dotted,editable=false)
+hlinen1=hline(-1,linestyle=hline.style_dotted,editable=false)
+fill(hline1,hlinen1,color=color.silver,transp=85,editable=true)
+//plot(Rate,color=(Rate>0?colorG:colorR),transp=75,style=plot.style_area,editable=false)
+plot(Rate1,title="ESC1",color=(Rate1>0?colorG:colorR),style=plot.style_line,linewidth=1,editable=true)
+BUYSIGNAL = Rate1 < -1 and change(Rate1) > 0
+SELLSIGNAL = Rate1 > 1 and change(Rate1) < 0
+if (BUYSIGNAL)
+    strategy.order("LONG1",true)
+    //strategy.close("SHORT1")
+if (SELLSIGNAL)
+   // strategy.order("SHORT1",false)
+    strategy.close("LONG1")
+Expand (39 lines)

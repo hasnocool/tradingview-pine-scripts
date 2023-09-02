@@ -1,0 +1,131 @@
+Script Name: Fibonacci candle with Fibonacci ema strategy
+Author: SoftKill21
+Description: For this strategy I am making use of the fibonacci numbers until 10 sequences and I am using them to make an avg candle and an average ema.
+
+With it, I combine multiple price action rules and I set it up to only go long. When we have a short , we exit from the trade.
+
+From the initial tests, it looks like it performs better on big timeframes.
+
+
+If you have any...
+PineScript code:
+
+Pine Script™ strategy
+Fibonacci candle with Fibonacci ema strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © SoftKill21
+//@version=4
+strategy("Fibonacci candle", overlay=true,initial_capital = 1000, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent , commission_value=0.1 )
+//plot of our fibonacci candle
+// Fibonacci 
+// Fn = Fn-1 + Fn-2
+// F10 = 55
+// 0 1 2 3 5 8 13 21 34 55
+avg_close = (close[0] + close[1] + close[2] + close[3] +close[5] + close[8] + close[13]+ close[21] + close[34] + close[55]) / 10
+avg_high = (high[0] + high[1] + high[2] + high[3] +high[5] + high[8] + high[13]+ high[21] + high[34] + high[55]) / 10
+avg_low = (low[0] + low[1] + low[2] + low[3] +low[5] + low[8] + low[13]+ low[21] + low[34] + low[55]) / 10
+avg_open = (open[0] + open[1] + open[2] + open[3] +open[5] + open[8] + open[13]+ open[21] + open[34] + open[55]) / 10
+length_ema_vol=input(12)
+volume_avg =(volume[0] + volume[1] + volume[2] + volume[3] +volume[5] + volume[8] + volume[13]+ volume[21] + volume[34] + volume[55]) / 10
+ema_volume_avg = ema(volume_avg,length_ema_vol)
+// plot(volume_avg,color=color.white)
+// plot(ema_volume_avg)
+longvol = crossover(volume_avg,ema_volume_avg)
+shortvol = crossunder(volume_avg, ema_volume_avg)
+src = avg_close//input(avg_close, title="Source")
+out55 = ema(src, 55)
+out1 = ema(src, 1)
+out2 = ema(src, 2)
+out3 = ema(src, 3)
+out5 = ema(src, 5)
+out8 = ema(src, 8)
+out13 = ema(src, 13)
+out21 = ema(src, 21)
+out34 = ema(src, 34)
+avg_ema = (out55 + out1 + out2 + out3+ out5 + out8 + out13 + out21 + out34)/9
+//plot(avg_ema)
+//plotcandle(avg_open, avg_high, avg_low, avg_close, title='Title', color = avg_open < avg_close ? color.green : color.red, wickcolor=color.white)
+//stochastic    
+periodK = input(9, title="K", minval=1)
+periodD = input(3, title="D", minval=1)
+smoothK = input(3, title="Smooth", minval=1)
+k = sma(stoch(close, high, low, periodK), smoothK)
+d = sma(k, periodD)
+avg_stoch = (k+d)/2
+//plot(avg_stoch)
+stoch_middle=input(40)
+//plot(50)
+//
+long = avg_open < avg_close and avg_close > avg_close[1] and avg_high > avg_high[1] and  avg_close[1] > avg_close[2] and avg_high[1] > avg_high[2] and longvol and avg_stoch>stoch_middle
+short = avg_open > avg_close and avg_close < avg_close[1] and avg_low < avg_low[1] and avg_close[1] < avg_close[2] and avg_low[1] < avg_low[2] and shortvol  and avg_stoch<stoch_middle
+strategy.entry("long",1,when=long and avg_close > avg_ema)
+strategy.close('long',when=short and avg_close < avg_ema)
+Expand (67 lines)

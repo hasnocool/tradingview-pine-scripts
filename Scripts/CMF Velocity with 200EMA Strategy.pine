@@ -1,0 +1,238 @@
+Script Name: CMF Velocity with 200EMA Strategy
+Author: TheSadRhinoInvesting
+Description: This is a demonstration of my new Indicator - CMF Velocity - in a profitable trading strategy.  It is able to take shorts when the close is less than the 200 EMA, and longs when the close is greater than the 200 EMA.
+PineScript code:
+
+Pine Script™ strategy
+CMF Velocity with 200EMA Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+// ***************************************************
+// CMF Velocity with 200 EMA Strategy
+// CMF Velocity Indicator by TheSadRhinoInvesting
+// Author: TheSadRhinoInvesting, v1.0, 2021.05.16
+//                   INITIAL RELEASE
+// ***************************************************
+//@version=4
+strategy("CMF Velocity with 200EMA Strategy")
+// ***************************************************
+//              Strategy & Rules
+// ***************************************************
+// This strategy is a demonstration of my new Indicator: CMF Velocity
+// CMF Velocity: https://www.tradingview.com/script/zsTl96Gd-CMF-Velocity/
+// The strategy works best in a strongly trending market
+// === Indicators ===
+// EMA 
+// @ 200
+// CMF Velocity
+// @ 11, 7
+// ATR
+// @ 10
+// === Rules ===
+// long only 
+// - price above EMA200
+// short only 
+// - price below EMA200
+// Stop Loss = 2x ATR
+// Profit = 2x SL/risk (Profit Ratio x Max Loss)
+// === Entries ===
+// LONG
+// - long entry (Typical): 
+// - CMF Velocity crosses above 0
+// SHORT
+// - short entry (Typical): 
+// - CMF Velocity crosses below 0
+// ***************************************************
+// Backtest Parameters
+// ***************************************************
+testStartYear = input(2021, "Backtest Start Year")
+testStartMonth = input(5, "Backtest Start Month")
+testStartDay = input(2, "Backtest Start Day")
+testStartHour = input(0, "Backtest Start Hour")
+testPeriodStart = timestamp(testStartYear, testStartMonth, testStartDay, testStartHour, 0)
+testEndYear = input(2021, "Backtest End Year")
+testEndMonth = input(5, "Backtest End Month")
+testEndDay = input(16, "Backtest End Day")
+testEndHour = input(0, "Backtest End Hour")
+testPeriodEnd = timestamp(testEndYear, testEndMonth, testEndDay, testEndHour, 0)
+timeBacktesting = testPeriodEnd >= time and time >= testPeriodStart
+direction = input(0, title = "Strategy Direction", type=input.integer, minval=-1, maxval=1)
+strategy.risk.allow_entry_in(direction == 0 ? strategy.direction.all : (direction < 0 ? strategy.direction.short : strategy.direction.long))
+// ***************************************************
+// Inputs
+// ***************************************************
+// Profit/Loss Ratio
+pLRatioMultiplier = input(2, title="Profit/Loss Multiplier", step=0.1, minval=0.1)
+// EMA Period
+emaPeriod = input(200, title="EMA Period", step=1, minval=1)
+// ATR Multiplier
+atrMultiplier = input(2, title="ATR Multiplier", step=0.1, minval=0.1)
+// ATR Period
+atrPeriod = input(10, title="ATR Period", step=1, minval=1)
+// CMF Period
+cmfPeriod = input(11, title="CMF Period", step=1, minval=1)
+// CMF Velocity Period
+cmfVelocityPeriod = input(7, title="CMF Velocity Period", step=1, minval=1)
+// ***************************************************
+// Indicator Functions
+// ***************************************************
+// CMF Function
+cmf(period) =>
+    moneyFlowMultiplier = (((close - low) - (high - close)) / (high - low)) * volume
+    notNaMoneyFlowMultiplier = na(moneyFlowMultiplier) ? 0 : moneyFlowMultiplier
+    moneyFlowAverage = sma(notNaMoneyFlowMultiplier, period)
+    volumeAverage = sma(volume, period)
+    moneyFlowAverage / volumeAverage
+// CMF Velocity Function    
+cmfVelocity(cmf, period) =>
+    difference = change(cmf)
+    sma(difference, period)
+    
+// ***************************************************
+// Indicator Calculation and Plotting
+// ***************************************************
+cmfSeries = cmf(cmfPeriod)
+cmfVelocitySeries = cmfVelocity(cmfSeries, cmfVelocityPeriod)
+atrSeries = atr(atrPeriod)
+triggerEMA = ema(close, emaPeriod)
+plot(triggerEMA)    
+// ***************************************************
+// Strategy Execution
+// ***************************************************
+if (crossover(cmfVelocitySeries, 0.0) and triggerEMA < close and timeBacktesting)
+    stopOffset = atrSeries * atrMultiplier
+    profitOffset = stopOffset * pLRatioMultiplier
+    stopLoss = close - stopOffset
+    takeProfit = close + profitOffset
+    strategy.entry("Long Entry", true)
+    strategy.exit("Exit", "Long Entry", stop=stopLoss, limit=takeProfit)
+    
+if (crossunder(cmfVelocitySeries, 0.0) and triggerEMA > close and timeBacktesting)
+    stopOffset = atrSeries * atrMultiplier
+    profitOffset = stopOffset * pLRatioMultiplier
+    stopLoss = close + stopOffset
+    takeProfit = close - profitOffset
+    strategy.entry("Short Entry", false)
+    strategy.exit("Exit", "Short Entry", stop=stopLoss, limit=takeProfit)
+Expand (122 lines)

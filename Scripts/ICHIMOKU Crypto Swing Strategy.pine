@@ -1,0 +1,181 @@
+Script Name: ICHIMOKU Crypto Swing Strategy
+Author: exlux99
+Description: This is a crypto swing strategy designed for timeframes bigger than 1h.
+
+The main components are 
+ICHOMOKU 
+KDJ
+Average High
+Average Low
+
+
+Rules for entry
+For long: we have the ichimoku crosses between tenkan and baselines, we have a rising kdj line and at the same time we have a increase in the average high
+For short: we have the ichimoku crosses between tenkan...
+PineScript code:
+
+Pine Script™ strategy
+ICHIMOKU Crypto Swing Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © exlux99
+//@version=4
+strategy(title="ICHIMOKU Crypto Swing Strategy", overlay=true, initial_capital = 10000, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent, commission_value=0.05  )
+//
+o = open
+c = close
+src = close 
+price = close 
+uptrendlength = input(4, title="Uptrend Length")
+downtrendlength = input(4, title="Downtrend Length")
+//KDJ// 
+ilong = 9
+isig = 3
+bcwsma(s,l,m) => 
+    _s = s
+    _l = l
+    _m = m
+    _bcwsma = (_m*_s+(_l-_m))
+    _bcwsma
+h = highest(high, ilong)
+l = lowest(low,ilong)
+RSV = 100*((c-l)/(h-l))
+pK = bcwsma(RSV, isig, 1)
+pD = bcwsma(pK, isig, 1)
+pJ = 3 * pK-2 * pD
+KD = avg(pK,pD)
+/// --- TREND --- ///
+avghigh = sma(h, uptrendlength)
+avglow = sma(l, downtrendlength) 
+uptrend = h > avghigh
+downtrend = l < avglow
+//ICHIMOKU BUY & SELL// 
+conversionPeriods = input(9)
+basePeriods = input(26)
+laggingSpan2Periods = input(52)
+displacement = input(26)
+donchian(len) => avg(lowest(len), highest(len))
+resolve(src, default) =>
+    if na(src)
+        default
+    else
+        src
+conversionLine = donchian(conversionPeriods)
+baseLine = donchian(basePeriods)
+leadLine1 = offset(avg(conversionLine, baseLine), displacement)
+leadLine2 = offset(donchian(laggingSpan2Periods), displacement)
+tk_cross_bull = crossover(conversionLine, baseLine)
+tk_cross_bear = crossunder(conversionLine, baseLine)
+cross_y = (conversionLine[1] * (baseLine - baseLine[1]) - baseLine[1] * (conversionLine - conversionLine[1])) / ((baseLine - baseLine[1]) - (conversionLine - conversionLine[1]))
+tk_cross_below_kumo = cross_y <= leadLine2[1] and cross_y <= leadLine1[1] and cross_y <= leadLine2 and cross_y <= leadLine1
+tk_cross_above_kumo = cross_y >= leadLine2[1] and cross_y >= leadLine1[1] and cross_y >= leadLine2 and cross_y >= leadLine1
+tk_cross_inside_kumo = (not tk_cross_below_kumo) and (not tk_cross_above_kumo)
+//
+//BUY & SELL
+buycond = (tk_cross_below_kumo or tk_cross_inside_kumo or tk_cross_above_kumo) and rising(pJ[1],1)  and uptrend
+sellcond = (tk_cross_below_kumo or tk_cross_inside_kumo or tk_cross_above_kumo) and falling(pJ[1],1)  and downtrend
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2020, title = "From Year", minval = 1970)
+ //monday and session 
+// To Date Inputs
+toDay = input(defval = 31, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 12, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2021, title = "To Year", minval = 1970)
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate
+if(time_cond)
+    strategy.entry("long",strategy.long,when= buycond, alert_message="LONG")
+    strategy.entry("short",strategy.short,when=sellcond, alert_message="SHORT")
+Expand (90 lines)

@@ -1,0 +1,111 @@
+Script Name: AMRS_LongOnly_PartTimer
+Author: ThePartTimeNSE
+Description: This Script is created to back-test the data starting 01/01/2000 based on AMRS strategy.
+
+AMRS is long only strategy. It is based on unique calculation around moving averages and 2 year high price.
+
+There are few strategies for moving average crossovers but AMRS strategy is unique compared to other moving averages strategies as it has very specific below mentioned...
+PineScript code:
+
+Pine Script™ strategy
+AMRS_LongOnly_PartTimer
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Part Timer
+//This script accepts from and to date parameter for backtesting. 
+//This script generates white arrow for each buying signal
+//@version=4
+strategy("AMRS_LongOnly_PartTimer", overlay = true)
+//i_endTime = input(defval = timestamp("02 Jun 2021 15:30 +0000"), title = "End Time", type=input.time)
+StartYear=input(defval = 2000, title ="Start Year", type=input.integer)
+StartMonth=input(defval = 01, title ="Start Month", type=input.integer)
+StartDate=input(defval = 01, title ="Start Date", type=input.integer)
+endYear=input(defval = 2021, title ="End Year", type=input.integer)
+endMonth=input(defval = 06, title ="End Month", type=input.integer)
+endDate=input(defval = 03, title ="End Date", type=input.integer)
+ema11=ema(close,11)
+ema13=ema(close,13)
+ema21=ema(close,21)
+afterStartDate = (time >= timestamp(syminfo.timezone,StartYear, StartMonth, StartDate, 0, 0))
+//g=bar_index==1
+//ath()=>
+    //a=0.0
+    //a:=g ? high : high>a[1] ? high:a[1]
+    
+//a = security(syminfo.tickerid, 'M', ath(),lookahead=barmerge.lookahead_on)
+newHigh = (high > highest(high,504)[1])
+//plot down arrows whenever it's a new high
+plotshape(newHigh, style=shape.triangleup, location=location.abovebar, color=color.green, size=size.tiny)
+b=highest(high,504)[1]
+VarChk=((b-ema13)/b)*100
+TrigLow = (low <= ema13) and (low >= ema21) and (VarChk <= 10)
+plotshape(TrigLow, style=shape.triangleup, location=location.belowbar, color=color.white, size=size.tiny)
+ExitPrice=(ema21 - (ema21*0.05))
+DrawPrice=(b - (b*0.20))
+stopprice=0.0
+if (close <= ExitPrice)
+    stopprice := ExitPrice
+if (close <= DrawPrice)
+    stopprice := DrawPrice
+if (TrigLow and afterStartDate)
+    strategy.entry("Long", strategy.long)
+strategy.exit("exit","Long", stop=stopprice)
+//beforeEndDate = (time < i_endTime)
+beforeEndDate = (time >= timestamp(syminfo.timezone,endYear, endMonth, endDate, 0, 0))
+if (beforeEndDate)
+    strategy.close_all()
+Expand (54 lines)

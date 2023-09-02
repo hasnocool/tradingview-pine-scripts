@@ -1,0 +1,192 @@
+Script Name: Classic Long Term Trend Following System
+Author: Robrecht99
+Description: This is a classic  long term  trend following system. 
+
+The breakout period is 50 days instead of 20 and the moving average crossover are 40 and 120. 
+
+The moving averages are also exponential instead of simple. 
+
+The stoploss is 4 ATRs away from the price. 
+
+Recommendations:
+Donchian Channels settings > 50 days
+Moving Averages > 40 and 120, 80 and 140
+
+Important...
+PineScript code:
+
+Pine Script™ strategy
+Classic Long Term Trend Following System
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Robrecht99
+//@version=5
+strategy("Classic Trend Following System", overlay=true, margin_long=0, margin_short=0, pyramiding=1)
+// Backtest Range //
+Start = input.time(defval = timestamp("01 Jan 2017 00:00 +0000"), title = "Backtest Start Date", group = "backtest window")
+Finish = input.time(defval = timestamp("01 Jan 2100 00:00 +0000"), title = "Backtest End Date", group = "backtest window")
+// Moving Averages //
+len1 = input.int(50, minval = 1, title = "Length Fast EMA", group = "Moving Average Inputs")
+len2 = input.int(150, minval = 1, title = "Length Slow EMA", group = "Moving Average Inputs")
+src1 = input(close, title = "Source Fast MA")
+src2 = input(close, title = "Source Slow MA")
+maFast = input.color(color.new(color.red, 0), title = "Color Fast EMA", group = "Moving Average Inputs", inline = "maFast")
+maSlow = input.color(color.new(color.blue, 0), title = "Color Slow EMA", group = "Moving Average Inputs", inline = "maSlow")
+fast = ta.ema(src1, len1)
+slow = ta.ema(src2, len2)
+plot(fast, color = maFast, title = "Fast EMA")
+plot(slow, color = maSlow, title = "Slow EMA")
+// Donchian Channels //
+Length1 = input.int(title = "Length Upper Channel", defval=50, minval=1, group = "Donchian Channels Inputs")
+Length2 = input.int(title = "Length Lower Channel", defval=50, minval=1, group = "Donchian Channels Inputs")
+h1 = ta.highest(high[1], Length1)
+l1 = ta.lowest(low[1], Length2)
+fillColor = input.color(color.new(color.purple, 95), title = "Fill Color", group = "Donchian Channels Inputs")
+upperColor = input.color(color.new(color.orange, 0), title = " Color Upper Channel", group = "Donchian Channels Inputs", inline = "upper")
+lowerColor = input.color(color.new(color.orange, 0), title = " Color Lower Channel", group = "Donchian Channels Inputs", inline = "lower")
+u = plot(h1, "Upper", color = upperColor)
+l = plot(l1, "Lower", color = upperColor)
+fill(u, l, color=fillColor)
+// ATR and Position Size //
+leverage = input.int(title = "Leverage Used", defval = 1, minval = 1, group = "ATR Position Size Inputs")
+pointvalue = input.int(title = "Point Value/ATR Multipliers from Entry", defval = 4, minval = 1, group = "ATR Position Size Inputs")
+length = input.int(title = "ATR Period", defval = 14, minval = 1, group ="ATR Position Size Inputs")
+risk = input(title = "Risk Per Trade", defval = 0.01, group = "ATR Position Size Inputs")
+atr = ta.atr(length)
+amount = (risk * strategy.initial_capital / (pointvalue * atr * leverage))
+// ATR Trailing Stops //
+xATRPeriod = input.int(14, "ATR Period", group = "ATR Trailing Stop Inputs")
+xATRMultiplier = input.float(4, "ATR Multiplier", step = .1, group = "ATR Trailing Stop Inputs")
+xATR = ta.atr(xATRPeriod)
+Stop = xATRMultiplier * xATR
+var xATRTrailingStop = 0.0
+xATRTrailingStop := if close>xATRTrailingStop[1] and close[1] > xATRTrailingStop[1]
+    math.max(xATRTrailingStop[1], close - Stop)
+else if close < xATRTrailingStop[1] and close[1] < xATRTrailingStop[1]
+    math.min(xATRTrailingStop[1], close + Stop)
+else if close > xATRTrailingStop[1]
+    close - Stop 
+else 
+    close+Stop
+var Position = 0.0
+Position := if close[1] < xATRTrailingStop[1] and close > xATRTrailingStop[1]
+    1
+else if close[1] > xATRTrailingStop[1] and close < xATRTrailingStop[1]
+    -1
+else
+    Position[1]
+PlotColor = Position == -1 ? color.orange : Position == 1 ? color.orange : color.orange
+plot(xATRTrailingStop, color=PlotColor, linewidth = input(2, "Line Width", group = "ATR Trailing Stop Inputs"), style = plot.style_circles, title = "ATR Trailing Stop")
+// Buy and Sell Conditions //
+entrycondition1 = ta.crossover(fast, slow)
+entrycondition2 = fast > slow
+sellcondition1 = ta.crossunder(fast, slow)
+sellcondition2 = slow > fast
+// Buy and Sell Signals //
+if (close > h1 and entrycondition2)
+    strategy.entry("long", strategy.long, qty=amount)
+    stoploss = close - atr * xATRMultiplier
+    strategy.exit("exit sl", stop=stoploss, trail_offset=stoploss)
+if (sellcondition1 and sellcondition2)
+    strategy.close(id="long")
+if (close < l1 and sellcondition2)
+    strategy.entry("short", strategy.short, qty=amount)
+    stoploss = close + atr * xATRMultiplier
+    strategy.exit("exit sl", stop=stoploss, trail_offset=stoploss)
+if (entrycondition1 and entrycondition2)
+    strategy.close(id="short")
+Expand (94 lines)

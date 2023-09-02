@@ -1,0 +1,156 @@
+Script Name: adx efi 50 ema channel, trend pullback
+Author: trent777brown
+Description: Hi so this strategy is based off 50 ema channel and the 15 ma crossing it to generate signals. But with my adjusted strategy it's a 10 rma crossing 50 ema channels and a 5 and 9 wma to help see pullbacks. 50 period bollinger bands to gage volatility a0nd help during range markets. The strategy signals are generated when longer period efi is above 0 and shorter...
+PineScript code:
+
+Pine Script™ strategy
+adx efi 50 ema channel, trend pullback
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © trent777brown
+//@version=5
+strategy("adx efi 50 ema channel, trend pullback", overlay=true, margin_long=100, margin_short=100, currency=currency.USD, initial_capital= 100000, close_entries_rule="ANY")
+//bollingerbands
+[basis, upperband, lowerband]= ta.bb(ohlc4, 50, 3) 
+[basis2, upperband2, lowerband2]= ta.bb(ohlc4, 50, 2)
+psar= ta.sar(.1, .1, .09)
+ema50= ta.ema(hlc3, 50) 
+ema50hi= ta.ema(high, 50) 
+ema50lo= ta.ema(low, 50) 
+ema18= ta.wma(hlc3, 15)
+wma9= ta.wma(open, 9) 
+wma5= ta.wma(ohlc4, 5) 
+ema34= ta.rma(hlc3, 10)
+[macdline, signalline, histline]= ta.macd(hlc3, 5, 34, 5) 
+[macdline2, signalline2, histline2]= ta.macd(hlc3, 15,70, 24) 
+[diplus, diminus, adx]= ta.dmi(20, 20) 
+[diplus2, diminus2, adx2]= ta.dmi(12, 12)
+rsi= ta.rsi(hlc3, 14)
+rsisma= ta.sma(rsi, 10) 
+stoch= ta.stoch(close, high, low, 21)
+k= ta.wma(stoch, 3)
+d= ta.wma(k, 3)
+trendline5= ta.wma(hlc3, 300) 
+trendline9= ta.wma(open, 540) 
+trendline18= ta.wma(open, 1080)
+atr=ta.atr(14)
+plot(psar, color=color.red, style=plot.style_circles)
+plot(ema50, color=color.white, linewidth=4) 
+plot(ema50hi, color=color.yellow, linewidth=4)
+plot(ema50lo, color=color.yellow, linewidth=4)
+plot(ema34, color=color.aqua, linewidth=4)
+plot(wma9, color=color.gray, linewidth=4) 
+plot(wma5, color=color.lime, linewidth=4) 
+plot(trendline18, color=color.orange, linewidth=4) 
+plot(upperband, color=color.navy, linewidth=4) 
+plot(lowerband, color=color.navy, linewidth=4)
+plot(upperband2, color=color.navy, linewidth=4)
+plot(lowerband2, color=color.navy, linewidth=4)
+plot(trendline9, color=color.maroon, linewidth=4)
+plot(trendline5, color=color.yellow, linewidth=4)
+efi = ta.rma(ta.change(close) * volume, 15)
+efi2= ta.rma(ta.change(close) * volume, 120)
+buy= efi2 > 0 and efi < 0 and efi[1] < efi  and adx >= 20 and open < ema50hi
+sell= efi2 < 0 and efi > 0 and efi[1] > efi and adx >= 20 and open > ema50lo
+//ell= rsi > 50 and ta.crossunder(wma5, wma9) and psar > high and ema18 <= ema50hi and macdline > 0 and macdline < signalline
+//buy= ta.crossunder(close, ema50) and rsi < 50 and adx2 < adx2[1] and k < 25 and psar > high
+//uy= rsi < 60 and ta.crossover(wma5, wma9)  and psar < low and ema18 >= ema50 and macdline2 > 0 and diplus2 < 30 // and histline2 < 0  
+//buy=  ema18 > ema50 and ta.crossunder(rsi, 45) and open < ema50hi and adx2[3] < adx2 and diplus2 < 25 and macdline < 0  and adx < 10
+//sell= ta.crossover(close, ema50) and rsi > 50 and adx2 < adx2[1] and k > 75 and psar < low
+//ell= ema18 < ema50 and ta.crossover(rsi, 60) and open > ema50lo and diminus2 < 30 and macdline2 < 0 and adx2[2] < adx2 
+//buy sell conditions 1
+//buy= ta.crossover(wma5, ema18) and ema18 > ema50lo and diplus > 22 and diminus < 22 and adx > 15
+//ell= ta.crossover(psar, high) and macdline2 < signalline2 and rsi < rsisma
+//when conditions
+buytrig= ema34 >= ema50lo
+selltrig= ema34 <= ema50hi
+//strategy
+sl= low - atr * 8
+tp= high +  atr * 4
+sellsl= high + atr * 8
+selltp= low - atr * 4
+if(buy)
+    strategy.entry("buy", strategy.long, 5000, when= buytrig)
+    strategy.exit("exit buy", "buy", limit= tp, stop= sl)
+    strategy.close("close", when= ta.crossunder(ema34, ema50lo))
+if(sell)
+    strategy.entry("sell", strategy.short, 5000, when= selltrig)
+    strategy.exit("exit sell", "sell", limit= selltp, stop= sellsl)
+Expand (77 lines)

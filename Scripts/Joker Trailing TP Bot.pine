@@ -1,0 +1,108 @@
+Script Name: Joker Trailing TP Bot
+Author: Mr_Joker_Bot
+Description: Trailing Take Profit is used by the traders to increase their gains when the prices moves in a favorable direction. Let’s have a look at what is Trailing Take Profit and how it works.
+
+What Is a Trailing Take Profit?
+Trailing Take Profit is a term largely used in crypto, whereas you may encounter the term Trailing Stop in traditional trading describing almost the...
+PineScript code:
+
+Pine Script™ strategy
+Joker Trailing TP Bot
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+//@version=5
+strategy(title='Joker Trailing TP Bot', shorttitle='Joker TTP Bot', overlay=true, pyramiding=0, process_orders_on_close=false, close_entries_rule='ANY', calc_on_every_tick=false, calc_on_order_fills=false, commission_type=strategy.commission.percent, commission_value=0.07, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=1000, currency=currency.USD) //, max_labels_count=500)
+fromDate = input.time(timestamp('01 Jan 2021 00:00 UTC'), 'From Date')
+toDate = input.time(timestamp('31 Dec 2121 23:59 UTC'), 'To Date')
+fastMALen = input.int(23, 'Fast SMA Length')
+slowMALen = input.int(50, 'Slow SMA Length')
+longTakeProfitPerc = input.float(0.5, 'Long Take Profit %', minval=0.05, step=0.05) * 0.01
+shortTakeProfitPerc = input.float(0.5, 'Short Take Profit %', minval=0.05, step=0.05) * 0.01
+enableTrailing = input.bool(true, 'Enable Trailing')
+trailingTakeProfitPerc = input.float(0.01, 'Trailing Take Profit %', minval=0.01, maxval=100, step=0.01) * 0.01
+float fastMA = ta.sma(close, fastMALen)
+float slowMA = ta.sma(close, slowMALen)
+bool isWithinPeriod = time >= fromDate and time <= toDate
+bool openLongPosition = isWithinPeriod and ta.crossover(fastMA, slowMA)
+bool openShortPosition = isWithinPeriod and ta.crossunder(fastMA, slowMA)
+bool longIsActive = openLongPosition or strategy.position_size > 0
+bool shortIsActive = openShortPosition or strategy.position_size < 0
+float longTakeProfitPrice = na
+longTakeProfitPrice := if longIsActive
+    if openLongPosition and not (strategy.position_size > 0)
+        close * (1 + longTakeProfitPerc)
+    else
+        nz(longTakeProfitPrice[1], close * (1 + longTakeProfitPerc))
+else
+    na
+float shortTakeProfitPrice = na
+shortTakeProfitPrice := if shortIsActive
+    if openShortPosition and not (strategy.position_size < 0)
+        close * (1 - shortTakeProfitPerc)
+    else
+        nz(shortTakeProfitPrice[1], close * (1 - shortTakeProfitPrice))
+else
+    na
+float longTrailingTakeProfitStepTicks = longTakeProfitPrice * trailingTakeProfitPerc / syminfo.mintick
+float shortTrailingTakeProfitStepTicks = shortTakeProfitPrice * trailingTakeProfitPerc / syminfo.mintick
+strategy.entry(id = 'Long Entry', direction = strategy.long, when = openLongPosition, alert_message = 'Long(' + syminfo.ticker + '): Started')
+strategy.entry(id = 'Short Entry', direction = strategy.short, when = openShortPosition, alert_message = 'Short(' + syminfo.ticker + '): Started')
+strategy.exit(id = 'Long Take Profit', from_entry = 'Long Entry', limit = enableTrailing ? na : longTakeProfitPrice, trail_price = enableTrailing ? longTakeProfitPrice : na, trail_offset = enableTrailing ? longTrailingTakeProfitStepTicks : na, when = longIsActive, alert_message = 'Long(' + syminfo.ticker + '): Take Profit activated')
+strategy.exit(id = 'Short Take Profit', from_entry = 'Short Entry', limit = enableTrailing ? na : shortTakeProfitPrice, trail_price = enableTrailing ? shortTakeProfitPrice : na, trail_offset = enableTrailing ? shortTrailingTakeProfitStepTicks : na, when = shortIsActive, alert_message = 'Short(' + syminfo.ticker + '): Take Profit activated')
+plot(series = fastMA, title='Fast SMA', color = color.blue, linewidth = 1, style = plot.style_line)
+plot(series = slowMA, title='Slow SMA', color = color.orange, linewidth = 1, style = plot.style_line)
+plot(series = longTakeProfitPrice, title='Long Take Profit', color = color.green, linewidth = 1, style = plot.style_cross, offset = 1)
+plot(series = shortTakeProfitPrice, title='Short Take Profit', color = color.red, linewidth = 1, style = plot.style_cross, offset = 1)
+plot(series = strategy.position_avg_price, title='Position', color = color.white, linewidth = 1, style = plot.style_linebr)
+Expand (52 lines)

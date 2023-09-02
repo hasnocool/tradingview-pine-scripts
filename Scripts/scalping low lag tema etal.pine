@@ -1,0 +1,168 @@
+Script Name: scalping low lag tema etal
+Author: capam
+Description: Credit for original idea goes to 1 min forex scalping by mikegoryunov
+
+Changes include several lower lag filters (See line 3 for a list) 
+and values for profit, loss, and trail_points (See lines 48:53)
+
+a, b, & c represent fast, medium, and slow filters. Basic idea is to monitor 
+crossovers of the three filters to determine buy/sells. Exits occur quickly...
+PineScript code:
+
+Pine Script™ strategy
+scalping low lag tema etal
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+//@version=4
+strategy("scalping low lag tema etal", shorttitle="Scalping tema",initial_capital=10000, overlay=true)
+mav = input(title="Moving Average Type", defval="temadelay", options=["nkclose", "ema", "emadelay", "fastema", "tema", "temadelay"])
+lenb = 3
+N = input(8)
+K = input(1.2)
+fracCap = input(1.0)
+in = close + K*mom(close,N)
+source = close
+length = 8
+sigma  = 12.0
+offset = 0.9
+p = 4
+// length = 10
+// sigma  = 6.0
+// offset = 0.85
+tema(src,len) => fastemaOut = 2*ema(src, len) - ema(ema(src, len), len)
+a = 0.0
+b = 0.0
+c = 0.0
+if mav == "nkclose"
+    a := ema(in, 12)
+    b := a[1]
+    c := a[2]
+if mav == "ema"
+    a := ema(close, 12)
+    b := ema(close, 26)
+    c := ema(close, 55)
+if mav == "emadelay"
+    a := ema(close, 12)
+    b := a[1]
+    c := a[2]
+if mav == "fastema"
+    a := ema(in, 12)
+    b := ema(in, 26)
+    c := ema(in, 55)
+if mav == "tema"
+    a := tema(close, 12)
+    b := tema(close, 26)
+    c := tema(close, 55)
+if mav == "temadelay"
+    a := tema(close, 12)
+    b := a[1]
+    c := a[2]
+TP = input(200)
+SL = input(130)
+TS = input(1)
+// TP = input(50)
+// SL = input(110)
+// TS = input(1)
+orderSize = floor((fracCap * strategy.equity) / close)
+long = cross(a, c) and a > b
+short = cross(a, c) and a < b
+plot(a, title="12", color=color.red, linewidth=1)
+plot(b, title="26", color=color.blue, linewidth=1)
+plot(c, title="55", color=color.green, linewidth=1)
+strategy.entry("Long", strategy.long, qty=orderSize,  when=long)
+strategy.entry("Short", strategy.short, qty=orderSize,  when=short)
+// strategy.entry("Long", strategy.long,  100.0, when=long)
+// strategy.entry("Short", strategy.short,  100.0, when=short)
+// strategy.entry("Long", strategy.long, 100.0, when=long)
+// strategy.entry("Short", strategy.short, 100.0, when=short)
+// strategy.entry("Long", strategy.long, 1.0, when=long)
+// strategy.entry("Short", strategy.short, 1.0, when=short)
+TPP = (TP > 0) ? TP : na
+SLP = (SL > 0) ? SL : na
+TSP = (TS > 0) ? TS : na
+// strategy.exit("Close Short", "Short", qty_percent=100, profit=TPP, loss=SLP, trail_points=TSP, when=long)
+// strategy.exit("Close Long", "Long", qty_percent=100, profit=TPP, loss=SLP, trail_points=TSP, when=short)
+// strategy.exit("Close Long", "Long", qty_percent=100, profit=TPP, loss=SLP, trail_points=TSP, when=long[1])
+// strategy.exit("Close Short", "Short", qty_percent=100, profit=TPP, loss=SLP, trail_points=TSP, when=short[1])
+strategy.exit("Close Long", "Long", qty_percent=100, profit=TPP, loss=SLP, trail_points=TSP)
+strategy.exit("Close Short", "Short", qty_percent=100, profit=TPP, loss=SLP, trail_points=TSP)
+Expand (80 lines)

@@ -1,0 +1,279 @@
+Script Name: Strategy #3 HalfTrend (Originally By everget)
+Author: Mhd_Jawish
+Description: This Strategy Based on HalfTrend Indicator(everget) 
+
+Entry Condition : Half Trend Signal
+
+Multi Take Profit Targets Feature with Stop Lose : Fixed Target Percentage or using ATR Multipliers
+
+Can Modify Trading Window For Backtesting
+PineScript code:
+
+Pine Script™ strategy
+Strategy #3 HalfTrend (Originally By everget)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+//@version=5
+strategy("Strategy #3 HalfTrend (Originally By everget)", overlay=true,calc_on_order_fills=true,default_qty_type= strategy.percent_of_equity, default_qty_value=100,commission_type=strategy.commission.percent, commission_value=0.02)
+    
+//Input Targets Settings
+//ATR
+Using_ATR_Multiplier=input.bool(false,"Target Using ATR Multiplier ?",group="Targets Settings")
+ATRlength = input.int(title="ATRLength", defval=14, minval=1 ,group="Targets Settings",inline="ATR")
+ATRsmoothing = input.string(title="Smoothing", defval="RMA", options=["RMA", "SMA", "EMA", "WMA"] ,group="Targets Settings",inline="ATR")
+ATRma_function(source, length) =>
+    switch ATRsmoothing
+        "RMA" => ta.rma(source, length)
+        "SMA" => ta.sma(source, length)
+        "EMA" => ta.ema(source, length)
+        => ta.wma(source, length)
+ATR()=>ATRma_function(ta.tr(true), ATRlength)
+//TP
+TP1Target=input.float(1,"Tp(1) % Or ATR Multiplier",group="Targets Settings" ,inline="TP1")
+TP1Amount=input.float(25,"Tp(1)Amount %",group="Targets Settings" ,inline="TP1")
+TP2Target=input.float(2,"Tp(2) % Or ATR Multiplier",group="Targets Settings" ,inline="TP2")
+TP2Amount=input.float(50,"Tp(2)Amount %",group="Targets Settings" ,inline="TP2")
+TP3Target=input.float(3,"Tp(3) % Or ATR Multiplier",group="Targets Settings" ,inline="TP3")
+TP3Amount=input.float(25,"Tp(3)Amount %",group="Targets Settings" ,inline="TP3")
+StopLose=input.float(4,"StopLose Target",group="Targets Settings" )
+float TP1=na
+float TP2=na
+float TP3=na
+float ST=na
+//Input BackTest Window
+FromDay         = input.int(defval = 1, title = "From  Day", minval = 1,group="BackTest Window",inline="From")
+FromMonth       = input.int(defval = 1, title = "Month", minval = 1,group="BackTest Window",inline="From")
+FromYear        = input.int(defval = 2021, title = "Year",group="BackTest Window",inline="From")
+ToDay           = input.int(defval = 1, title = "To  Day", minval = 1,group="BackTest Window",inline="To")
+ToMonth         = input.int(defval = 12, title = "Month", minval = 1,group="BackTest Window",inline="To")
+ToYear          = input.int(defval = 2200, title = "Year",group="BackTest Window",inline="To")
+backTestPeriod() => (time > timestamp(FromYear, FromMonth, FromDay, 00, 00)) and (time < timestamp(ToYear, ToMonth, ToDay, 23, 59))
+amplitude = input(title="Amplitude", defval=2)
+channelDeviation = input(title="Channel Deviation", defval=2)
+showArrows = input(title="Show Arrows", defval=true)
+showChannels = input(title="Show Channels", defval=true)
+var int trend = 0
+var int nextTrend = 0
+var float maxLowPrice = nz(low[1], low)
+var float minHighPrice = nz(high[1], high)
+var float up = 0.0
+var float down = 0.0
+float atrHigh = 0.0
+float atrLow = 0.0
+float arrowUp = na
+float arrowDown = na
+atr2 = ta.atr(100) / 2
+dev = channelDeviation * atr2
+highPrice = high[math.abs(ta.highestbars(amplitude))]
+lowPrice = low[math.abs(ta.lowestbars(amplitude))]
+highma = ta.sma(high, amplitude)
+lowma = ta.sma(low, amplitude)
+if nextTrend == 1
+    maxLowPrice := math.max(lowPrice, maxLowPrice)
+    if highma < maxLowPrice and close < nz(low[1], low)
+        trend := 1
+        nextTrend := 0
+        minHighPrice := highPrice
+else
+    minHighPrice := math.min(highPrice, minHighPrice)
+    if lowma > minHighPrice and close > nz(high[1], high)
+        trend := 0
+        nextTrend := 1
+        maxLowPrice := lowPrice
+if trend == 0
+    if not na(trend[1]) and trend[1] != 0
+        up := na(down[1]) ? down : down[1]
+        arrowUp := up - atr2
+    else
+        up := na(up[1]) ? maxLowPrice : math.max(maxLowPrice, up[1])
+    atrHigh := up + dev
+    atrLow := up - dev
+else
+    if not na(trend[1]) and trend[1] != 1 
+        down := na(up[1]) ? up : up[1]
+        arrowDown := down + atr2
+    else
+        down := na(down[1]) ? minHighPrice : math.min(minHighPrice, down[1])
+    atrHigh := down + dev
+    atrLow := down - dev
+ht = trend == 0 ? up : down
+var color buyColor = color.blue
+var color sellColor = color.red
+htColor = trend == 0 ? buyColor : sellColor
+htPlot = plot(ht, title="HalfTrend", linewidth=2, color=htColor)
+atrHighPlot = plot(showChannels ? atrHigh : na, title="ATR High", style=plot.style_circles, color=sellColor)
+atrLowPlot = plot(showChannels ? atrLow : na, title="ATR Low", style=plot.style_circles, color=buyColor)
+//fill(htPlot, atrHighPlot, title="ATR High Ribbon", color=sellColor)
+//fill(htPlot, atrLowPlot, title="ATR Low Ribbon", color=buyColor)
+buySignal = not na(arrowUp) and (trend == 0 and trend[1] == 1)
+sellSignal = not na(arrowDown) and (trend == 1 and trend[1] == 0)
+plotshape(showArrows and buySignal ? atrLow : na, title="Arrow Up", style=shape.triangleup, location=location.absolute, size=size.tiny, color=buyColor)
+plotshape(showArrows and sellSignal ? atrHigh : na, title="Arrow Down", style=shape.triangledown, location=location.absolute, size=size.tiny, color=sellColor)
+LongCondition=buySignal and backTestPeriod() and not buySignal[1]
+LongExitCondtion=sellSignal
+strategy.entry("Long", strategy.long, when = LongCondition) // enter long
+strategy.close("Long", when = LongExitCondtion, qty_percent = 100, comment = "Force Exit")
+if(strategy.position_size>0)
+    TP1:=Using_ATR_Multiplier?strategy.position_avg_price+(ATR()*TP1Target):strategy.position_avg_price*(1+(TP1Target/100))
+    TP2:=Using_ATR_Multiplier?strategy.position_avg_price+(ATR()*TP2Target):strategy.position_avg_price*(1+(TP2Target/100))
+    TP3:=Using_ATR_Multiplier?strategy.position_avg_price+(ATR()*TP3Target):strategy.position_avg_price*(1+(TP3Target/100))
+    ST:=Using_ATR_Multiplier?strategy.position_avg_price-(ATR()*StopLose):strategy.position_avg_price*(1-(StopLose/100))
+    strategy.exit("TP1", "Long",qty_percent=TP1Amount, limit = TP1, stop = ST)
+    strategy.exit("TP2", "Long", qty_percent=TP2Amount,limit = TP2, stop = ST)
+    strategy.exit("TP3", "Long", qty_percent=TP3Amount,limit = TP3, stop = ST)
+Expand (156 lines)

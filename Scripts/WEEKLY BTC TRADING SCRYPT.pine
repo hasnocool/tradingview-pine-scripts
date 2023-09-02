@@ -1,0 +1,76 @@
+Script Name: WEEKLY BTC TRADING SCRYPT
+Author: taberandwords
+Description: Weekly BTC Trading Scrypt(WBTS)
+This script is only suggested for cryptocurrencies and weekly buying strategy which is long term.Using it in another markets(e.g forex,stock,e.t.c) is not suggested. The thing makes it different than other strategies we try to understand bull and bear seasons and buying selected crypto currency as using formula if weekly closing...
+PineScript code:
+
+Pine Script™ strategy
+WEEKLY BTC TRADING SCRYPT
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © taberandwords
+//developer: taberandwords
+//author: taberandwords
+//@version=4
+strategy("WEEKLY BTC TRADING SCRYPT","WBTS",overlay=false,default_qty_type=strategy.fixed)
+source=input(defval=close,title="source",group="STRATEGY")
+btc=security('BTCUSDT','1W', source)
+ma=sma(btc,8)
+buy_condition= crossover(btc,ma) 
+sell_condition= crossunder(btc,ma)
+ma_color=input(defval=#FF3232,title="COLOR",group="MA")
+ma_linewidth=input(defval=2,title="LINE WIDTH",group="MA")
+graphic_color=input(defval=#6666FF,title="COLOR",group="GRAPHIC")
+graphic_linewidth=input(defval=2,title="LINE WIDTH",group="GRAPHIC")
+start_date=input(defval=2020,title="YEAR",group="STRATEGY EXECUTION YEAR")
+loss_ratio=input(defval=1,title="LOSS RATIO", group="STRATEGY")
+reward_ratio=input(defval=3,title="REWARD RATIO", group="STRATEGY")
+if(year>=start_date)
+    strategy.entry('BUY',long=true,when=buy_condition,alert_message='Price came to buying value!')
+    if(strategy.long)
+        alert('BTC buy order trigerred!',alert.freq_once_per_bar)
+    strategy.exit(id="SELL",loss=loss_ratio,profit=reward_ratio,when=sell_condition,alert_message='Price came to position closing value!')
+    if(sell_condition)
+        alert('BTC sell order trigerred!',alert.freq_once_per_bar)
+plot(series=source,title="WEEKLY CLOSE",color=graphic_color,linewidth=graphic_linewidth)
+plot(ma,title="SMA8 WEEKLY",color=ma_color,linewidth=ma_linewidth)
+plot(strategy.equity,display=0)
+Expand (38 lines)

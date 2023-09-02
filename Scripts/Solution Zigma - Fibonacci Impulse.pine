@@ -1,0 +1,700 @@
+Script Name: Solution Zigma - Fibonacci Impulse
+Author: ZoomerXeus
+Description: 'Solution Zigma' is strategy for any securities because this strategy use EMA of Fibonacci Level and Plot Like candle easy for analysis trend impulse. This strategy used DMI(ADX) for filter sideway but not greatest indicator, Please use this strategy with Risk Management.
+PineScript code:
+
+Pine Script™ strategy
+Solution Zigma - Fibonacci Impulse
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ZoomerXeus
+//@version=5
+strategy("Solution Zigma", overlay=true, calc_on_every_tick=true)
+import ZoomerXeus/AutoFiboRetrace/2 as autoFibo
+// Input Data
+ord_con_1 = 'Original (Zigma Candle + CE + Subhag)'
+ord_con_2 = 'Original Extra (Zigma Candle with DMI + CE + Subhag)'
+ord_con_3 = 'Original 0 (Zigma + CE)'
+ord_con_4 = 'Original 0 Extra (Zigma with DMI + CE)'
+ord_con_5 = 'Original Combination (Combo since Original to Original 0)'
+fibo_level_source = input.string('0.5', 'Fibonaci Level source', options=['0.786', '0.618', '0.5', '0.382', '0.236'], group="General (Default setting for Binance's BTCUSDTPERP)")
+fibo_level_session = input.timeframe('60', 'Timeframe', options=["W", "D", "240", "60", "30", "15", "5", "1"], group="General (Default setting for Binance's BTCUSDTPERP)")
+fibo_lookback_length = input.int(12, 'Fibonaci lookback Length', minval=1, step=1, group="General (Default setting for Binance's BTCUSDTPERP)")
+isShowCandleMode = input.bool(true, 'Show Candle Mode', group="General (Default setting for Binance's BTCUSDTPERP)")
+//Alex Orekhov (everget)'s Chandelier Exit
+isShowFilterIndicator_ce = input.bool(false, 'Show On Chart', group="Alex Orekhov (everget)'s Chandelier Exit (Filter)")
+ce_length = input.int(1, 'ATR Chandelier Exit Length', minval=1, step=1, group="Alex Orekhov (everget)'s Chandelier Exit (Filter)")
+ce_mult = input.float(3.0, 'ATR Chandelier Exit Multiply', minval=0.1, step=0.1, group="Alex Orekhov (everget)'s Chandelier Exit (Filter)")
+// Subhag + TSD + EWO original by subhagghosh and edit by Pumpith
+isShowFilterIndicator_subh = input.bool(false, 'Show On Chart', group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+fast_length = input(title='Fast Length', defval=3, group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+slow_length = input(title='Slow Length', defval=10, group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+src_sh = input(title='Source', defval=close, group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+res_60 = input('60', title='Higher Time Frame 1', group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+rsi_period = input.int(14, title='RSI period', minval=1, step=1, group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+source = input(close, group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+length = input.int(100, minval=1, group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+offset = input.int(0, minval=0, group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+smoothing = input.int(17, minval=1, group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+mtf_val = input.timeframe('', 'Resolution', group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+p = input.string('Lime', 'Up Color', options=['Red', 'Lime', 'Orange', 'Teal', 'Yellow', 'White', 'Black'], group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+q = input.string('Red', 'Down Color', options=['Red', 'Lime', 'Orange', 'Teal', 'Yellow', 'White', 'Black'], group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+switchColor = input(true, 'Color Regression according to trend?', group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+candleCol = input(false, title='Color candles based on Hull\'s Trend?', group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+visualSwitch = input(true, title='Show as a Band?', group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+thicknesSwitch = input(1, title='Line Thickness', group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+transpSwitch = input.int(40, title='Band Transparency', step=5, group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+n1 = input.int(10, 'Channel Length', group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+n2 = input.int(21, 'Average Length', group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+over_bought_level = input.int(53, 'Over Bought Level', group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+over_sold_level = input.int(-53, 'Over Sold Level', group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+sma1length = input(5, group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+sma2length = input(35, group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+UsePercent = input(title='Show Dif as percent of current Candle', defval=true, group="Subhag + TSD + EWO original by subhagghosh and edit by Pumpith (Filter)")
+conditionType = input.string(ord_con_4, "Open order type", options=[ord_con_1, ord_con_2, ord_con_3, ord_con_4, ord_con_5])
+order_size = input.float(0.001, 'Order Size', minval=0.001, step=0.1, tooltip="order size 1:Price e.g 1:38000(BTCUSDTPERP)", group="Alert Message and order Management")
+leverage_mult = input.int(10, 'Leverage Size', minval=1, step=1, group="Alert Message and order Management")
+close_order_type = input.string('Condition', 'Close Order Option', options=['RR', 'Condition'], group="Alert Message and order Management")
+rrUseAutoSL = input.bool(false, 'Use auto Calculate Stoploss', group="Alert Message and order Management")
+rrAutoSLType = input.string('Zigma Swing H/L', "Open order type", options=['Zigma Swing H/L', 'Candle Swing H/L'], group="Alert Message and order Management")
+rrAutoSLCalLength = input.int(5, 'Auto SL Calculate Length', tooltip="Use for fing Lowest and Highest.", step=1, minval=1, group="Alert Message and order Management")
+SLPer = input.float(1.00, "RR Stoploss percent", minval = 0.1, step=0.1, group="Alert Message and order Management")/100
+rrPer = input.float(2.00, "RR ratio", minval = 0.1, step=0.1, group="Alert Message and order Management")
+msg_open_long = input.string('Open Long', 'Alert Message Long', group="Alert Message and order Management")
+msg_open_short = input.string('Open Short', 'Alert Message Short', group="Alert Message and order Management")
+msg_close_long = input.string('Close Long', 'Alert Message Close Long', group="Alert Message and order Management")
+msg_close_short = input.string('Close Short', 'Alert Message Close Short', group="Alert Message and order Management")
+// -------------------------------------------- Fibonacci Impulse -----------------------------------------------------
+[FL236M, FL382M, FL500M, FL618M, FL786M, FL0,FL236, FL382, FL500, FL618, FL786, FL1000, FL1236, FL1382, FL1500, FL1618, FL1786, FL2] = request.security(syminfo.tickerid, fibo_level_session, autoFibo.original(fibo_lookback_length, low, high), gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+src = switch fibo_level_source
+    '0.618' => FL618
+    '0.786' => FL786
+    '0.5' => FL500
+    '0.382' => FL382
+    '0.236' => FL236
+        
+//src = switch fibo_level_source
+//    '0.618' => FL618
+//    '0.786' => FL786
+//    '0.5' => FL500
+//    '0.382' => FL382
+//    '0.236' => FL236
+// CDC Impulse candle data
+open_p = ta.ema(src, 26)
+close_p = ta.ema(src, 12)
+high_p = ta.highest(close_p, 4)
+low_p = ta.lowest(close_p, 4)
+// ------------------------------ controller -----------------------------------
+// tradingview's DMI
+setDMI () =>
+    float diplus = 0.0
+    float diminus = 0.0
+    float adx = 0.0
+    [diplus_4h, diminus_4h, adx_4h] = request.security(syminfo.tickerid, "240", ta.dmi(14, 14), gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+    [diplus_1h, diminus_1h, adx_1h] = request.security(syminfo.tickerid, "60", ta.dmi(14, 14), gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+    [diplus_15m, diminus_15m, adx_15m] = request.security(syminfo.tickerid, "15", ta.dmi(14, 14), gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+    if fibo_level_session == 'LongTrade(4H)'
+        diplus := diplus_4h
+        diminus := diminus_4h
+        adx := adx_4h
+    else if fibo_level_session == 'MediumTrade(1H)'
+        diplus := diplus_1h
+        diminus := diminus_1h
+        adx := adx_1h
+    else
+        diplus := diplus_15m
+        diminus := diminus_15m
+        adx := adx_15m
+    [diplus, diminus, adx]
+[diplus, diminus, adx] = setDMI()
+// Alex Orekhov (everget)'s Chandelier Exit
+atr = ce_mult * ta.atr(ce_length)
+longStop = ta.highest(ce_length) - atr
+longStopPrev = nz(longStop[1], longStop)
+longStop := close[1] > longStopPrev ? math.max(longStop, longStopPrev) : longStop
+shortStop = ta.lowest(ce_length) + atr
+shortStopPrev = nz(shortStop[1], shortStop)
+shortStop := close[1] < shortStopPrev ? math.min(shortStop, shortStopPrev) : shortStop
+var int dir = 1
+dir := close > shortStopPrev ? 1 : close < longStopPrev ? -1 : dir
+// Subhag + TSD + EWO original by subhagghosh and edit by Pumpith
+/////////////////////////////////////////////////////////////////////
+// Check Trend Strength
+ha_t = syminfo.tickerid
+col_red = #ff0000
+col_green = #00ff00
+TSB = true
+TSS = false
+trend_60 = request.security(ha_t, res_60, (ta.ema(src_sh, fast_length) - ta.ema(src_sh, slow_length)) / src_sh * 100)
+prev_trend_60 = request.security(ha_t, res_60, (ta.ema(src_sh[5], fast_length) - ta.ema(src_sh[5], slow_length)) / src_sh[5] * 100)
+trend_status_60 = trend_60 > prev_trend_60
+///////////////////////////////////////////////////////////////////
+//End of checking stength
+myrsi = ta.rsi(close, rsi_period)
+rsi1 = ta.crossunder(myrsi, 70)
+rsi2 = myrsi > 75
+// Regression Lines
+cc(x) =>
+    x == 'Red' ? color.red : x == 'Lime' ? color.lime : x == 'Orange' ? color.orange : x == 'Teal' ? color.teal : x == 'Yellow' ? color.yellow : x == 'Black' ? color.black : color.white
+data(x) =>
+    ta.ema(request.security(syminfo.tickerid, mtf_val != '' ? mtf_val : timeframe.period, x), smoothing)
+linreg = data(ta.linreg(source, length, offset))
+linreg_p = data(ta.linreg(source, length, offset + 1))
+// Regression End
+//##################################
+// TSD
+//##################################
+//// Indicators
+// Blue Wave
+ap = hlc3
+esa = ta.ema(ap, n1)
+d = ta.ema(math.abs(ap - esa), n1)
+ci = (ap - esa) / (0.015 * d)
+tci = ta.ema(ci, n2)
+wt1 = tci
+wt2 = ta.sma(wt1, 4)
+// MFI
+mfi_upper = math.sum(volume * (ta.change(hlc3) <= 0 ? 0 : hlc3), 58)
+mfi_lower = math.sum(volume * (ta.change(hlc3) >= 0 ? 0 : hlc3), 58)
+_mfi_rsi(mfi_upper, mfi_lower) =>
+    if mfi_lower == 0
+        100
+    if mfi_upper == 0
+        0
+    100.0 - 100.0 / (1.0 + mfi_upper / mfi_lower)
+mf = _mfi_rsi(mfi_upper, mfi_lower)
+mfi = (mf - 50) * 3
+//// Plots
+mfi_color = mfi > 0 ? #4CAF50 : #FF5252
+dot_color = wt1 < wt2 ? #FF0000 : #4CAF50
+//##################################
+// EWO
+//##################################
+//@author Koryu
+//src = input(close, title="source")
+sma_1 = ta.sma(src, sma1length)
+sma_2 = ta.sma(src, sma2length)
+sma_3 = ta.sma(src, sma1length)
+sma_4 = ta.sma(src, sma2length)
+smadif = UsePercent ? (sma_1 - sma_2) / src * 100 : sma_3 - sma_4
+//col=smadif <= 0 ? red : green
+//plot(smadif, color=col, style=histogram, linewidth=2)
+//----------------------------------------------- Plot & Order -----------------------------------------------//
+// fibonacci impulse
+candle_color = open_p < close_p ? color.new(color.green, isShowCandleMode ? 60 : 100) : (open_p > close_p ? color.new(color.red, isShowCandleMode ? 60 : 100) : color.new(color.white, isShowCandleMode ? 60 : 100))
+line_color = open_p < close_p ? color.new(color.green, isShowCandleMode ? 100 : 0) : (open_p > close_p ? color.new(color.red, isShowCandleMode ? 100 : 0) : color.new(color.white, isShowCandleMode ? 100 : 0))
+plotcandle(open_p, high_p, low_p, close_p, "Fibo Level Candle", color=candle_color, wickcolor=candle_color, bordercolor=candle_color)
+//plot(close > open_p ? open_p : na, title='Zigma Bull impulse', style=plot.style_linebr, linewidth=2, color=color.lime)
+//plot(close < open_p ? open_p : na, title='Zigma Bear impulse', style=plot.style_linebr, linewidth=2, color=color.red)
+var color longColor = color.green
+var color shortColor = color.red
+// Sunhag
+hullColor = switchColor ? linreg > linreg[1] ? #00ff00 : #ff0000 : #ff9800
+//PLOT
+Fi1 = plot(isShowFilterIndicator_subh ? linreg : na, title='Regression Line', color=hullColor, linewidth=thicknesSwitch, transp=50)
+Fi2 = plot(visualSwitch and isShowFilterIndicator_subh ? linreg[3] : na, title='RL', color=hullColor, linewidth=thicknesSwitch, transp=50)
+fill(Fi1, Fi2, title='Band Filler', color=hullColor, transp=transpSwitch)
+// CE
+longStopPlot = plot(isShowFilterIndicator_ce ? (dir == 1 ? longStop : na) : na, title='Long Stop', style=plot.style_linebr, linewidth=2, color=color.new(longColor, 0))
+buySignal = dir == 1 and dir[1] == -1
+plotshape(buySignal and isShowFilterIndicator_ce ? longStop : na, title='Long Stop Start', location=location.absolute, style=shape.circle, size=size.tiny, color=color.new(longColor, 0))
+shortStopPlot = plot(isShowFilterIndicator_ce ? (dir == 1 ? na : shortStop) : na, title='Short Stop', style=plot.style_linebr, linewidth=2, color=color.new(shortColor, 0))
+sellSignal = dir == -1 and dir[1] == 1
+plotshape(sellSignal and isShowFilterIndicator_ce ? shortStop : na, title='Short Stop Start', location=location.absolute, style=shape.circle, size=size.tiny, color=color.new(shortColor, 0))
+midPricePlot = plot(ohlc4, title='', style=plot.style_circles, linewidth=0, display=display.none, editable=false)
+//-----------------------------------------------------------------------------------------------------------//
+//----------------------------------------------- order -----------------------------------------------//
+position_avg_price = strategy.position_avg_price
+position_size = strategy.position_size
+//*************************** Indicator Condition *****************************//
+// Fibonacci Impulse
+fibo_impulse_bear_over = ta.crossunder(close, open_p)
+fibo_impulse_bull_over = ta.crossover(close, open_p)
+// DMI
+dmi_Bull = diplus >= 25 and diplus > adx
+dmi_Bear = diminus >= 25 and diminus > adx
+// CE
+ce_bull_rejection = dir == 1 and dir[1] != 1
+ce_bear_rejection = dir != 1 and dir[1] == 1
+ce_bull_controll = dir == 1
+ce_bear_controll = dir != 1
+// subhag
+sh_bull = close > linreg and close > linreg[3]
+sh_bear = close < linreg and close < linreg[3]
+//*************************** END Indicator Condition *****************************//
+//*************** Original ***************//
+LongCondition = fibo_impulse_bull_over and (ce_bull_controll or ce_bull_rejection) and sh_bull and position_size == 0.0
+ShortCondition = fibo_impulse_bear_over and (ce_bear_controll or ce_bear_rejection) and sh_bear and position_size == 0.0
+//***************************************//
+//*************** Original Extra ***************//
+LongCondition_extra = fibo_impulse_bull_over and dmi_Bull and (ce_bull_controll or ce_bull_rejection) and sh_bull and position_size == 0.0
+ShortCondition_extra = fibo_impulse_bear_over and dmi_Bear and (ce_bear_controll or ce_bear_rejection) and sh_bear and position_size == 0.0
+//***************************************//
+//*************** Original 0 ***************//
+LongCondition_std1 = fibo_impulse_bull_over and (ce_bull_controll or ce_bull_rejection) and position_size == 0.0
+ShortCondition_std1 = fibo_impulse_bear_over and (ce_bear_controll or ce_bear_rejection) and position_size == 0.0
+//***************************************//
+//*************** Original 0 Extra ***************//
+LongCondition_std1extra = fibo_impulse_bull_over and dmi_Bull and (ce_bull_controll or ce_bull_rejection) and position_size == 0.0
+ShortCondition_std1extra = fibo_impulse_bear_over and dmi_Bear and (ce_bear_controll or ce_bear_rejection)  and position_size == 0.0
+//***************************************//
+//*************** Original Combination ***************//
+LongCondition_Comb = LongCondition or LongCondition_extra or LongCondition_std1 or LongCondition_std1extra
+ShortCondition_Comb = ShortCondition or ShortCondition_extra or ShortCondition_std1 or ShortCondition_std1extra
+//***************************************//
+// plot Label
+plotshape(conditionType == 'Original (Zigma Candle + CE + Subhag)' ? LongCondition : na, title='Buy Signal Label', text='Buy', location=location.belowbar, style=shape.labelup, size=size.tiny, color=color.lime, textcolor=color.new(color.white, 0))
+plotshape(conditionType == 'Original (Zigma Candle + CE + Subhag)' ? ShortCondition : na, title='Sell Signal Label', text='Sell', location=location.abovebar, style=shape.labeldown, size=size.tiny, color=color.red, textcolor=color.new(color.white, 0))
+plotshape(conditionType == 'Original Extra (Zigma Candle with DMI + CE + Subhag)' ? LongCondition_extra : na, title='Buy Signal Label', text='Buy', location=location.belowbar, style=shape.labelup, size=size.tiny, color=color.lime, textcolor=color.new(color.white, 0))
+plotshape(conditionType == 'Original Extra (Zigma Candle with DMI + CE + Subhag)' ? ShortCondition_extra : na, title='Sell Signal Label', text='Sell', location=location.abovebar, style=shape.labeldown, size=size.tiny, color=color.red, textcolor=color.new(color.white, 0))
+plotshape(conditionType == 'Original 0 (Zigma + CE)' ? LongCondition_std1 : na, title='Buy Signal Label', text='Buy', location=location.belowbar, style=shape.labelup, size=size.tiny, color=color.lime, textcolor=color.new(color.white, 0))
+plotshape(conditionType == 'Original 0 (Zigma + CE)' ? ShortCondition_std1 : na, title='Sell Signal Label', text='Sell', location=location.abovebar, style=shape.labeldown, size=size.tiny, color=color.red, textcolor=color.new(color.white, 0))
+plotshape(conditionType == 'Original 0 Extra (Zigma with DMI + CE)' ? LongCondition_std1extra : na, title='Buy Signal Label', text='Buy', location=location.belowbar, style=shape.labelup, size=size.tiny, color=color.lime, textcolor=color.new(color.white, 0))
+plotshape(conditionType == 'Original 0 Extra (Zigma with DMI + CE)' ? ShortCondition_std1extra : na, title='Sell Signal Label', text='Sell', location=location.abovebar, style=shape.labeldown, size=size.tiny, color=color.red, textcolor=color.new(color.white, 0))
+plotshape(conditionType == 'Original Combination (Combo since Original to Original 0)' ? LongCondition_Comb : na, title='Buy Signal Label', text='Buy', location=location.belowbar, style=shape.labelup, size=size.tiny, color=color.lime, textcolor=color.new(color.white, 0))
+plotshape(conditionType == 'Original Combination (Combo since Original to Original 0)' ? ShortCondition_Comb : na, title='Sell Signal Label', text='Sell', location=location.abovebar, style=shape.labeldown, size=size.tiny, color=color.red, textcolor=color.new(color.white, 0))
+// open order
+if conditionType == 'Original (Zigma Candle + CE + Subhag)'
+    strategy.order('Long', strategy.long, order_size*leverage_mult, when=LongCondition, alert_message=msg_open_long)
+    strategy.order('Short', strategy.short, order_size*leverage_mult, when=ShortCondition, alert_message=msg_open_short)
+else if conditionType == 'Original Extra (Zigma Candle with DMI + CE + Subhag)'
+    strategy.order('Long', strategy.long, order_size*leverage_mult, when=LongCondition_extra, alert_message=msg_open_long)
+    strategy.order('Short', strategy.short, order_size*leverage_mult, when=ShortCondition_extra, alert_message=msg_open_short)
+else if conditionType == 'Original 0 (Zigma + CE)'
+    strategy.order('Long', strategy.long, order_size*leverage_mult, when=LongCondition_std1, alert_message=msg_open_long)
+    strategy.order('Short', strategy.short, order_size*leverage_mult, when=ShortCondition_std1, alert_message=msg_open_short)
+else if conditionType == 'Original 0 Extra (Zigma with DMI + CE)'
+    strategy.order('Long', strategy.long, order_size*leverage_mult, when=LongCondition_std1extra, alert_message=msg_open_long)
+    strategy.order('Short', strategy.short, order_size*leverage_mult, when=ShortCondition_std1extra, alert_message=msg_open_short)
+else if conditionType == 'Original Combination (Combo since Original to Original 0)'
+    strategy.order('Long', strategy.long, order_size*leverage_mult, when=LongCondition_Comb, alert_message=msg_open_long)
+    strategy.order('Short', strategy.short, order_size*leverage_mult, when=ShortCondition_Comb, alert_message=msg_open_short)
+// exit order
+// sltp
+float auto_sl_high = 0.0
+float auto_sl_low = 0.0
+if rrAutoSLType == 'Zigma Swing H/L'
+    auto_sl_high := ta.highest(high_p, rrAutoSLCalLength)
+    auto_sl_low := ta.lowest(low_p, rrAutoSLCalLength)
+else
+    auto_sl_high := ta.highest(high, rrAutoSLCalLength)
+    auto_sl_low := ta.lowest(low, rrAutoSLCalLength)
+float sl_percent_bull = 0.0
+float sl_percent_bear = 0.0
+sl_percent_bull_auto = sl_percent_bull[1] == 0.0 and position_size != 0 ? (position_avg_price - auto_sl_low)/position_avg_price : (position_size != 0 ? sl_percent_bull[1] : 0.0)
+sl_percent_bull_fix = sl_percent_bull[1] == 0.0 and position_size != 0 ? SLPer : 0.0
+sl_percent_bull := rrUseAutoSL ? sl_percent_bull_auto : sl_percent_bull_fix
+stopPriceBull = position_avg_price * (1 - sl_percent_bull)
+takeProfitBull = position_avg_price * (1 + (sl_percent_bull*rrPer))
+sl_percent_bear_auto = sl_percent_bear[1] == 0.0 and position_size != 0 ? (auto_sl_high - position_avg_price) / position_avg_price : (position_size != 0 ? sl_percent_bear[1] : 0.0)
+sl_percent_bear_fix = sl_percent_bear[1] == 0.0 and position_size != 0 ? SLPer : 0.0
+sl_percent_bear := rrUseAutoSL ? sl_percent_bear_auto : sl_percent_bear_fix
+stopPriceBear = position_avg_price * (1 + sl_percent_bear)
+takeProfitBear = position_avg_price * (1 - (sl_percent_bear*rrPer))
+plot(close_order_type == 'RR' ? (position_size < 0 ? stopPriceBear : stopPriceBull) : na, "Short's SL Line", style=plot.style_linebr, color=color.red)
+plot(close_order_type == 'RR' ? (position_size < 0 ? takeProfitBear : takeProfitBull) : na, "Short's TP Line", style=plot.style_linebr, color=color.green)
+// Condition
+closeLongCondition = (ta.crossunder(close, open_p) or close < open_p) and (ce_bear_controll or ce_bear_rejection)
+closeShortCondition = (ta.crossover(close, open_p) or close > open_p) and (ce_bull_controll or ce_bull_rejection)
+// Plot Label
+//plotshape(conditionType == 'Original (Zigma Candle + CE + Subhag)' ? closeLongCondition : na, title='Close Buy Signal Label', text='Close Buy', location=location.belowbar, style=shape.labelup, size=size.tiny, color=color.lime, textcolor=color.new(color.white, 0))
+//plotshape(conditionType == 'Original (Zigma Candle + CE + Subhag)' ? closeLongCondition : na, title='Close Sell Signal Label', text='Close Sell', location=location.abovebar, style=shape.labeldown, size=size.tiny, color=color.red, textcolor=color.new(color.white, 0))
+//
+//plotshape(conditionType == 'Original Extra (Zigma Candle with DMI + CE + Subhag)' ? closeLongCondition : na, title='Close Buy Signal Label', text='Close Buy', location=location.belowbar, style=shape.labelup, size=size.tiny, color=color.lime, textcolor=color.new(color.white, 0))
+//plotshape(conditionType == 'Original Extra (Zigma Candle with DMI + CE + Subhag)' ? closeLongCondition : na, title='Close Sell Signal Label', text='Close Sell', location=location.abovebar, style=shape.labeldown, size=size.tiny, color=color.red, textcolor=color.new(color.white, 0))
+//
+//plotshape(conditionType == 'Standard 1 (Zigma + CE)' ? closeLongCondition : na, title='Close Buy Signal Label', text='Close Buy', location=location.belowbar, style=shape.labelup, size=size.tiny, color=color.lime, textcolor=color.new(color.white, 0))
+//plotshape(conditionType == 'Standard 1 (Zigma + CE)' ? closeLongCondition : na, title='Close Sell Signal Label', text='Close Sell', location=location.abovebar, style=shape.labeldown, size=size.tiny, color=color.red, textcolor=color.new(color.white, 0))
+if conditionType == 'Original (Zigma Candle + CE + Subhag)' or conditionType == 'Original Extra (Zigma Candle with DMI + CE + Subhag)' or conditionType == 'Original 0 (Zigma + CE)' or conditionType == 'Original 0 Extra (Zigma with DMI + CE)' or conditionType == 'Original Combination (Combo since Original to Original 0)'
+    if close_order_type == 'RR'
+        strategy.exit('Exit Long', 'Long', stop=stopPriceBull,limit=takeProfitBull, alert_message=msg_close_long)
+        strategy.exit('Exit Short', 'Short', stop=stopPriceBear,limit=takeProfitBear, alert_message=msg_close_short)
+    else
+        strategy.close('Long', when=closeLongCondition, qty_percent=100, alert_message=msg_close_long)
+        strategy.close('Short', when=closeShortCondition, qty_percent=100, alert_message=msg_close_short)
+    
+// เงื่อนไขการเข้าแบบใหม่ให้ใช้ตัว CE กับ Impulse Candle เป็นตัว trigger แล้วแต่กรณีหากอยู่เหนือ IC ให้ใช้ CE
+Expand (383 lines)

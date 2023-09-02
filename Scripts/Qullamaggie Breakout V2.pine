@@ -1,0 +1,362 @@
+Script Name: Qullamaggie Breakout V2
+Author: millerrh
+Description: After publishing the Qullamaggie Breakout script and seeing that it had some decent results, I wanted to explore it a bit further. There were a few things I didn't like about that methodology that didn't really jive with the way I like to trade.  So what I did was combined the Breakout Trend Follower strategy I had been using for entries with the Qullamaggie...
+PineScript code:
+
+Pine Script™ strategy
+Qullamaggie Breakout V2
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © millerrh
+// The intent of this strategy is to buy breakouts with a tight stop on smaller timeframes in the direction of the longer term trend.
+// Then use a trailing stop of a close below either the 10 MA or 20 MA (user choice) on that larger timeframe as the position 
+// moves in your favor (i.e. whenever position price rises above the MA).
+// Option of using daily ADR as a measure of finding contracting ranges and ensuring a decent risk/reward.
+// (If the difference between the breakout point and your stop level is below a certain % of ATR, it could possibly find those consolidating periods.)
+// V2 - updates code of original Qullamaggie Breakout to optimize and debug it a bit - the goal is to remove some of the whipsaw and poor win rate of the 
+// original by incorporating some of what I learned in the Breakout Trend Follower script.
+//@version=5
+strategy("Qullamaggie Breakout V2", overlay=true, initial_capital=100000, currency='USD', calc_on_every_tick = true,
+   default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent, commission_value=0.1)
+   
+// === BACKTEST RANGE ===
+Start = input.time(defval = timestamp("01 Jan 2019 06:00 +0000"), title = "Backtest Start Date", group = "backtest window and pivot history")
+Finish = input.time(defval = timestamp("01 Jan 2100 00:00 +0000"), title = "Backtest End Date", group = "backtest window and pivot history")
+// Inputs
+showPivotPoints = input.bool(title = "Show Historical Pivot Points?", defval = false, group = "backtest window and pivot history",
+  tooltip = "Toggle this on to see the historical pivot points that were used.  Change the Lookback Periods to adjust the frequency of these points.")
+htf = input.timeframe(defval="D", title="Timeframe of Moving Averages", group = "moving averages",
+  tooltip = "Allows you to set a different time frame for the moving averages and your trailing stop.
+  The default behavior is to identify good tightening setups on a larger timeframe
+  (like daily) and enter the trade on a breakout occuring on a smaller timeframe, using the moving averages of the larger timeframe to trail your stop.")
+maType = input.string(defval="SMA", options=["EMA", "SMA"], title = "Moving Average Type", group = "moving averages")
+ma1Length = input.int(defval = 10, title = "1st Moving Average:    Length", minval = 1, group = "moving averages", inline = "1ma")
+ma1Color = input.color(color.new(color.purple, 60), title = " Color", group = "moving averages", inline = "1ma")
+ma2Length = input.int(defval = 20, title = "2nd Moving Average:    Length", minval = 1, group = "moving averages", inline = "2ma")
+ma2Color = input.color(color.new(color.yellow, 60), title = " Color", group = "moving averages", inline = "2ma")
+ma3Length = input.int(defval = 50, title = "3rd Moving Average:    Length", minval = 1, group = "moving averages", inline = "3ma")
+ma3Color = input.color(color.new(color.white, 60), title = " Color", group = "moving averages", inline = "3ma")
+useMaFilter = input.bool(title = "Use 3rd Moving Average for Filtering?", defval = true, group = "moving averages",
+  tooltip = "Signals will be ignored when price is under this slowest moving average.  The intent is to keep you out of bear periods and only
+             buying when price is showing strength or trading with the longer term trend.")
+trailMaInput = input.string(defval="1st Moving Average", options=["1st Moving Average", "2nd Moving Average"], title = "Trailing Stop", group = "stops",
+  tooltip = "Initial stops after entry follow the range lows.  Once in profit, the trade gets more wiggle room and
+  stops will be trailed when price breaches this moving average.")
+trailMaTF = input.string(defval="Same as Moving Averages", options=["Same as Moving Averages", "Same as Chart"], title = "Trailing Stop Timeframe", group = "stops",
+  tooltip = "Once price breaches the trail stop moving average, the stop will be raised to the low of that candle that breached. You can choose to use the
+  chart timeframe's candles breaching or use the same timeframe the moving averages use. (i.e. if daily, you wait for the daily bar to close before setting
+  your new stop level.)")
+currentColorS = input.color(color.new(color.orange,50), title = "Current Range S/R Colors:    Support", group = "stops", inline = "lineColor")
+currentColorR = input.color(color.new(color.blue,50), title = " Resistance", group = "stops", inline = "lineColor")
+colorStop = input.color(color.new(color.orange,50), title = "Stop Colors:    Initial", group = "stops", inline = "stopColor")
+colorTrail = input.color(color.new(color.blue,50), title = " Moving Average Trailing", group = "stops", inline = "stopColor")
+// Pivot lookback
+lbHigh = 3
+lbLow = 3
+// MA Calculations (can likely move this to a tuple for a single security call!!)
+ma(maType, src, length) =>
+    maType == "EMA" ? ta.ema(src, length) : ta.sma(src, length) //Ternary Operator (if maType equals EMA, then do ema calc, else do sma calc)
+ma1 = request.security(syminfo.tickerid, htf, ma(maType, close, ma1Length), barmerge.gaps_off, barmerge.lookahead_on)
+ma2 = request.security(syminfo.tickerid, htf, ma(maType, close, ma2Length), barmerge.gaps_off, barmerge.lookahead_on)
+ma3 = request.security(syminfo.tickerid, htf, ma(maType, close, ma3Length), barmerge.gaps_off, barmerge.lookahead_on)
+plot(ma1, color=ma1Color, style=plot.style_line, title="MA1", linewidth=2)
+plot(ma2, color=ma2Color, style=plot.style_line, title="MA2", linewidth=2)
+plot(ma3, color=ma3Color, style=plot.style_line, title="MA3", linewidth=2)
+// === USE ADR FOR FILTERING ===
+// The idea here is that you want to buy in a consolodating range for best risk/reward. So here you can compare the current distance between 
+// support/resistance vs. the ADR and make sure you aren't buying at a point that is too extended.
+useAdrFilter = input.bool(title = "Use ADR for Filtering?", defval = false, group = "adr filtering",
+  tooltip = "Signals will be ignored if the distance between support and resistance is larger than a user-defined percentage of ADR (or monthly volatility
+  in the stock screener). This allows the user to ensure they are not buying something that is too extended and instead focus on names that are consolidating more.")
+adrPerc = input.int(defval = 120, title = "% of ADR Value", minval = 1, group = "adr filtering")
+tableLocation = input.string(defval="Bottom", options=["Top", "Bottom"], title = "ADR Table Visibility", group = "adr filtering",
+  tooltip = "Place ADR table on the top of the pane, the bottom of the pane, or off.")
+adrValue = request.security(syminfo.tickerid, "D", ta.sma((high-low)/math.abs(low) * 100, 21), barmerge.gaps_off, barmerge.lookahead_on) // Monthly Volatility in Stock Screener (also ADR)
+adrCompare = (adrPerc * adrValue) / 100
+// === PLOT SWING HIGH/LOW AND MOST RECENT LOW TO USE AS STOP LOSS EXIT POINT ===
+ph = ta.pivothigh(high, lbHigh, lbHigh)
+pl = ta.pivotlow(low, lbLow, lbLow)
+highLevel = ta.valuewhen(ph, high[lbHigh], 0)
+lowLevel = ta.valuewhen(pl, low[lbLow], 0)
+barsSinceHigh = ta.barssince(ph) + lbHigh
+barsSinceLow = ta.barssince(pl) + lbLow
+timeSinceHigh = time[barsSinceHigh]
+timeSinceLow = time[barsSinceLow]
+//Removes color when there is a change to ensure only the levels are shown (i.e. no diagonal lines connecting the levels)
+pvthis = fixnan(ph)
+pvtlos = fixnan(pl)
+hipc = ta.change(pvthis) != 0 ? na : color.new(color.maroon, 0)
+lopc = ta.change(pvtlos) != 0 ? na : color.new(color.green, 0)
+// Display Pivot lines
+plot(showPivotPoints ? pvthis : na, color=hipc, linewidth=1, offset=-lbHigh, title="Top Levels")
+plot(showPivotPoints ? pvthis : na, color=hipc, linewidth=1, offset=0, title="Top Levels 2")
+plot(showPivotPoints ? pvtlos : na, color=lopc, linewidth=1, offset=-lbLow, title="Bottom Levels")
+plot(showPivotPoints ? pvtlos : na, color=lopc, linewidth=1, offset=0, title="Bottom Levels 2")
+// BUY AND SELL CONDITIONS
+buyLevel = ta.valuewhen(ph, high[lbHigh], 0) //Buy level at Swing High
+// Conditions for entry
+stopLevel = float(na) // Define stop level here as "na" so that I can reference it in the ADR calculation before the stopLevel is actually defined.
+buyConditions = (useMaFilter ? buyLevel > ma3 : true) and
+  (useAdrFilter ? (buyLevel - stopLevel[1]) < adrCompare : true) and
+  time > Start and time < Finish
+buySignal = ta.crossover(high, buyLevel) and buyConditions
+// Trailing stop points - when price punctures the moving average, move stop to the low of that candle - Define as function/tuple to only use one security call
+trailMa = trailMaInput == "1st Moving Average" ? ma1 : ma2
+f_getCross() =>
+    maCrossEvent = ta.crossunder(low, trailMa)
+    maCross = ta.valuewhen(maCrossEvent, low, 0)
+    maCrossLevel = fixnan(maCross)
+    maCrossPc = ta.change(maCrossLevel) != 0 ? na : color.new(color.blue, 0) //Removes color when there is a change to ensure only the levels are shown (i.e. no diagonal lines connecting the levels)
+    [maCrossEvent, maCross, maCrossLevel, maCrossPc]
+crossTF = trailMaTF == "Same as Moving Averages" ? htf : ""
+[maCrossEvent, maCross, maCrossLevel, maCrossPc] = request.security(syminfo.tickerid, crossTF, f_getCross(), barmerge.gaps_off, barmerge.lookahead_on)
+plot(showPivotPoints ? maCrossLevel : na, color = maCrossPc, linewidth=1, offset=0, title="Ma Stop Levels")
+// == STOP AND PRICE LEVELS ==
+inPosition = strategy.position_size > 0
+buyLevel := inPosition ? buyLevel[1] : buyLevel
+stopDefine = ta.valuewhen(pl, low[lbLow], 0) //Stop Level at Swing Low
+inProfit = strategy.position_avg_price <= stopDefine[1]
+// stopLevel := inPosition ? stopLevel[1] : stopDefine // Set stop loss based on swing low and leave it there
+stopLevel := inPosition and not inProfit ? stopDefine : inPosition and inProfit ? stopLevel[1] : stopDefine // Trail stop loss until in profit
+trailStopLevel = float(na)
+// trying to figure out a better way for waiting on the trail stop - it can trigger if above the stopLevel even if the MA hadn't been breached since opening the trade
+notInPosition = strategy.position_size == 0
+inPositionBars = ta.barssince(notInPosition)
+maCrossBars = ta.barssince(maCrossEvent)
+trailCross = inPositionBars > maCrossBars
+// trailCross = trailMa > stopLevel
+trailStopLevel := inPosition and trailCross ? maCrossLevel : na
+plot(inPosition ? stopLevel : na, style=plot.style_linebr, color=colorStop, linewidth = 2, title = "Historical Stop Levels", trackprice=false)
+plot(inPosition ? trailStopLevel : na, style=plot.style_linebr, color=colorTrail, linewidth = 2, title = "Historical Trail Stop Levels", trackprice=false)
+// == PLOT SUPPORT/RESISTANCE LINES FOR CURRENT CHART TIMEFRAME ==
+// Use a function to define the lines
+f_line(x1, y1, y2, _color) =>
+    var line id = na
+    line.delete(id)
+    id := line.new(x1, y1, time, y2, xloc.bar_time, extend.right, _color)
+highLine = f_line(timeSinceHigh, highLevel, highLevel, currentColorR)
+lowLine = f_line(timeSinceLow, lowLevel, lowLevel, currentColorS)
+// == ADR TABLE ==
+tablePos = tableLocation == "Top" ? position.top_right : position.bottom_right
+var table adrTable = table.new(tablePos, 2, 1, border_width = 3)
+lightTransp = 90
+avgTransp   = 80
+heavyTransp = 70
+posColor = color.rgb(38, 166, 154)
+negColor = color.rgb(240, 83, 80)
+volColor = color.new(#999999, 0)
+f_fillCellVol(_table, _column, _row, _value) =>
+    _transp = math.abs(_value) > 7 ? heavyTransp : math.abs(_value) > 4 ? avgTransp : lightTransp
+    _cellText = str.tostring(_value, "0.00") + "%\n" + "ADR"
+    table.cell(_table, _column, _row, _cellText, bgcolor = color.new(volColor, _transp), text_color = volColor, width = 6)
+srDistance = (highLevel - lowLevel)/highLevel * 100
+f_fillCellCalc(_table, _column, _row, _value) =>
+    _c_color = _value >= adrCompare ? negColor : posColor
+    _transp = _value >= adrCompare*0.8 and _value <= adrCompare*1.2 ? lightTransp : 
+      _value >= adrCompare*0.5 and _value < adrCompare*0.8 ? avgTransp :
+      _value < adrCompare*0.5 ? heavyTransp :
+      _value > adrCompare*1.2 and _value <= adrCompare*1.5 ? avgTransp :
+      _value > adrCompare*1.5 ? heavyTransp : na
+    _cellText = str.tostring(_value, "0.00") + "%\n" + "Range"
+    table.cell(_table, _column, _row, _cellText, bgcolor = color.new(_c_color, _transp), text_color = _c_color, width = 6)
+if barstate.islast
+    f_fillCellVol(adrTable, 0, 0, adrValue)
+    f_fillCellCalc(adrTable, 1, 0, srDistance)
+    // f_fillCellVol(adrTable, 0, 0, inPositionBars)
+    // f_fillCellCalc(adrTable, 1, 0, maCrossBars)
+// == STRATEGY ENTRY AND EXIT ==
+strategy.entry("Buy", strategy.long, stop = buyLevel, when = buyConditions)
+stop = stopLevel > trailStopLevel ? stopLevel : close[1] > trailStopLevel and close[1] > trailMa ? trailStopLevel : stopLevel
+strategy.exit("Sell", from_entry = "Buy", stop=stop)
+Expand (191 lines)

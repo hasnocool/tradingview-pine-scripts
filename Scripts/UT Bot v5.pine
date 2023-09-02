@@ -1,0 +1,117 @@
+Script Name: UT Bot v5
+Author: SeaSide420
+Description: This is an update by request, on someone elses strategy! well more of an edit, but also update from pine v4 to pine v5.
+ //CREDITS to HPotter for the orginal code. The guy trying to sell this as his own is a scammer lol. 
+//Edited and converted to @version=5 by SeaSide420 for Paperina 
+
+The  UT Bot v5  is  Movinging average (the MA) vs ATR (the ATR is in the form...
+PineScript code:
+
+Pine Script™ strategy
+UT Bot v5
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+//@version=5
+strategy(title='UT Bot v5', overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+//CREDITS to HPotter for the orginal code. The guy trying to sell this as his own is a scammer lol. 
+//Edited and converted to @version=5 by SeaSide420 for Paperina
+// Inputs
+AllowBuy = input(defval=true, title='Allow Buy?')
+AllowSell = input(defval=false, title='Allow Sell?')
+h = input(false, title='Signals from Heikin Ashi Candles')
+//revclose = input(defval=true, title='Close when reverse signal?')
+Price = input(defval=open, title='Price Source (recommended OPEN to avoid repainting)')
+smoothing = input.string(title="Moving Average Type", defval="HMA", options=["SMA", "EMA", "WMA", "HMA"])
+MA_Period = input(2, title='This changes the MAPeriod')
+a = input.float(1, title='This changes the sensitivity',step=0.1)
+c = input(11, title='ATR Period')
+TakeProfit = input.int(defval=50000, title='Take Profit ($)', minval=1)
+StopLoss = input.int(defval=50000, title='Stop Loss ($)', minval=1)
+xATR = ta.atr(c)
+nLoss = a * xATR
+src = h ? request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, Price, lookahead=barmerge.lookahead_off) : Price
+xATRTrailingStop = 0.0
+iff_1 = src > nz(xATRTrailingStop[1], 0) ? src - nLoss : src + nLoss
+iff_2 = src < nz(xATRTrailingStop[1], 0) and src[1] < nz(xATRTrailingStop[1], 0) ? math.min(nz(xATRTrailingStop[1]), src + nLoss) : iff_1
+xATRTrailingStop := src > nz(xATRTrailingStop[1], 0) and src[1] > nz(xATRTrailingStop[1], 0) ? math.max(nz(xATRTrailingStop[1]), src - nLoss) : iff_2
+pos = 0
+iff_3 = src[1] > nz(xATRTrailingStop[1], 0) and src < nz(xATRTrailingStop[1], 0) ? -1 : nz(pos[1], 0)
+pos := src[1] < nz(xATRTrailingStop[1], 0) and src > nz(xATRTrailingStop[1], 0) ? 1 : iff_3
+xcolor = pos == -1 ? color.red : pos == 1 ? color.green : color.blue
+ma_function(src, MA_Period) =>
+    switch smoothing
+        "SMA" => ta.sma(src, MA_Period)
+        "EMA" => ta.ema(src, MA_Period)
+        "WMA" => ta.wma(src, MA_Period)
+        => ta.hma(src, MA_Period)
+thema = ma_function(src, MA_Period)
+above = ta.crossover(thema, xATRTrailingStop)
+below = ta.crossover(xATRTrailingStop, thema)
+buy = src > xATRTrailingStop and above
+sell = src < xATRTrailingStop and below
+barbuy = src > xATRTrailingStop
+barsell = src < xATRTrailingStop
+plot(thema,title="The M.A.",color=color.green,linewidth=2)
+plot(xATRTrailingStop,title="The M.A.",color=color.red,linewidth=2)
+plotshape(buy,  title = "Buy",  text = "Buy",  style = shape.labelup,   location = location.belowbar, color= color.green, textcolor = color.white, size = size.tiny)
+plotshape(sell, title = "Sell", text = "Sell", style = shape.labeldown, location = location.abovebar, color= color.red,   textcolor = color.white, size = size.tiny)
+barcolor(barbuy ? color.green : na)
+barcolor(barsell ? color.red : na)
+strategy.close_all(when=strategy.openprofit>TakeProfit,alert_message="Close- TakeProfit", comment = "TP")
+strategy.close_all(when=strategy.openprofit<StopLoss-(StopLoss*2),alert_message="Close- StopLoss", comment = "SL")
+strategy.close("buy", when =  sell and AllowSell==false , comment = "close buy")
+strategy.close("sell", when =  buy and AllowBuy==false, comment = "close sell")
+strategy.entry("buy", strategy.long, when = buy and AllowBuy)
+strategy.entry("sell", strategy.short, when = sell and AllowSell)
+Expand (52 lines)

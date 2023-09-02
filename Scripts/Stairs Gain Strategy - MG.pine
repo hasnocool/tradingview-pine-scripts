@@ -1,0 +1,144 @@
+Script Name: Stairs Gain Strategy - MG
+Author: trademasterf
+Description: I will explain step by step.
+
+1- The position order filtering option is used to filter out duplicate positions.
+
+2- The reason I use an ATR multiplier is to balance the ATR value that differs in instruments.
+
+3- ATR lower limit and ATR upper limit values ​​are to reduce unnecessary transactions and commission expenses in the horizontal market.
+
+4- Strategy take...
+PineScript code:
+
+Pine Script™ strategy
+Stairs Gain Strategy - MG
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © MGULHANN
+//@version=5
+//İchimoku Leading Span 2 Hesaplaması ve Girişleri
+strategy("Stairs Gain Strategy - MG", overlay=true, margin_long=100, margin_short=100)
+laggingSpan2Periods = input.int(52, minval=1, title="Leading Periot")
+displacement = input.int(1, minval=1, title="Displacement")
+donchian(len) => math.avg(ta.lowest(len), ta.highest(len))
+leadLine2 = donchian(laggingSpan2Periods)
+p2 = plot(leadLine2, offset = displacement - 1, color=#EF9A9A,
+     title="Leading Span B")
+// İşlem Tekrarını Filtrele  
+filtreUygula = input.bool(true,title="Pozisyon Sıra Filtresi Uygula")
+//Kar Al / Zarar Durdur Seviyeleri Girişleri
+zararDurdurmaYuzde = input.float(1.0, title='Zarar Durdurma %', step=0.01) / 100
+karAlmaYuzde = input.float(2.0, title='Kar Alma %', step=0.01) / 100
+//ATR Hesaplaması
+atrCarpani = input.float(0.3, title="ATR Çarpanı", step= 0.01)
+atrDegeri = ta.atr(14) * atrCarpani
+//ATR Değer Girişleri
+atrbuyukdeger = input.float(0.01, title="ATR Üst Limit", step=0.01)
+atrkucukdeger = input.float(0.06, title="ATR Alt Limit", step=0.01)
+//Buy ve Sell Şartları
+buycross =   ta.crossover(close,leadLine2[displacement-1]) ? atrDegeri > atrbuyukdeger : strategy.position_size == 0
+sellcross = ta.crossover(leadLine2[displacement-1],close) ? atrDegeri < atrkucukdeger : strategy.position_size == 0
+//KONTROL
+var sonPozisyonYonu = 0
+//Son kapanan pozisyon long ise degiskenin degerini 1 olarak ata
+if strategy.position_size[1] > 0 and strategy.position_size == 0
+    sonPozisyonYonu := 1
+//Son kapanan pozisyon short ise degiskenin degerini -1 olarak ata
+if strategy.position_size[1] < 0 and strategy.position_size == 0
+    sonPozisyonYonu := -1
+    
+//eger filtre uygulama seçiliyse ve son pozisyon yönü long ise 'longFiltreSonuc' degiskenine false degeri ata ve bir sonraki pozisyonun long olmasını engelle
+longFiltreSonuc = filtreUygula ? sonPozisyonYonu == 1 ? false : true : true
+//eger filtre uygulama seçiliyse ve son pozisyon yönü short ise 'shortFiltreSonuc' degiskenine false degeri ata ve bir sonraki pozisyonun short olmasını engelle
+shortFiltreSonuc = filtreUygula ? sonPozisyonYonu == -1 ? false : true : true
+//LONG GİRİŞ
+strategy.entry("Long", strategy.long, when=buycross and longFiltreSonuc)
+longKarAl = strategy.position_avg_price * (1 + karAlmaYuzde)
+longZararDurdur = strategy.position_avg_price * (1 - zararDurdurmaYuzde)
+strategy.exit("Long Exit","Long",limit=longKarAl, stop=longZararDurdur)
+//SHORT GİRİŞ
+strategy.entry("Short", strategy.short, when=sellcross and shortFiltreSonuc)
+shortKarAl = strategy.position_avg_price * (1 - karAlmaYuzde)
+shortZararDurdur = strategy.position_avg_price * (1 + zararDurdurmaYuzde)
+strategy.exit("Short Exit","Short",limit=shortKarAl, stop=shortZararDurdur)
+//Kar Al ve Zarar Durdur Seviyelerinin Grafikte İşaretlenmesi
+plot(strategy.position_size != 0 ? strategy.position_avg_price : na, color=color.navy, linewidth=2, style=plot.style_linebr, title="İşleme Giriş Seviyesi")
+plot(strategy.position_size > 0 ? longKarAl : na, color=color.green, linewidth=2, style=plot.style_linebr, title="Long Kar Alım Seviyesi")
+plot(strategy.position_size > 0 ? longZararDurdur : na, color=color.red, linewidth=2, style=plot.style_linebr, title="Long Zarar Durdurma Seviyesi")
+plot(strategy.position_size < 0 ? shortKarAl : na, color=color.green, linewidth=2, style=plot.style_linebr, title="Short Kar Alım Seviyesi")
+plot(strategy.position_size < 0 ? shortZararDurdur : na, color=color.red, linewidth=2, style=plot.style_linebr, title="Short Zarar Durdurma Seviyesi")
+//plotshape(buycross,size=size.small,style=shape.labelup,location=location.belowbar,color=color.green,text="Al", offset = displacement-1, textcolor=color.white)
+//plotshape(sellcross,size=size.small,style=shape.labeldown,location=location.abovebar,color=color.red,text="Sat", offset = displacement-1, textcolor=color.white)
+Expand (71 lines)

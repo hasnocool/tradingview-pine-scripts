@@ -1,0 +1,260 @@
+Script Name: Hull MA of RSI Strategy
+Author: inno14
+Description: This simple strategy base on RSI value of Close Price, High Price, Low Price, Median Price and RSI value smoothed by Hull Moving Average.
+1. Optimize parameter on BTC H1 Binance chart
+RSI period: 13
+Hull MA period: 3
+Middle Channel: 55-45
+Overbough / Oversold: 70-30
+2. Setup
+2.1 Long Condition
+- RSI of Close Price crossunder Overbought
+- Close Price lower than...
+PineScript code:
+
+Pine Script™ strategy
+Hull MA of RSI Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+//@version=4
+strategy("Hull MA of RSI Strategy",overlay=false)
+//+++++++++++++++++++++++++++++++
+//++++++++++++ Setup ++++++++++++
+//+++++++++++++++++++++++++++++++
+// RSI 
+rsi1_tt="=== RSI ==="
+rsi1_len=input(13,title="Period",inline="set",group=rsi1_tt)
+//Mid
+mid_tt="=== Mid Channel ==="
+upper=input(55.0,title="Upper",inline="set",group=mid_tt)
+lower=input(45.0,title="Lower",inline="set",group=mid_tt)
+//Over
+over_tt="=== Over ==="
+ovb=input(70.0,title="Overbought",inline="set",group=over_tt)
+ovs=input(30.0,title="Oversold",inline="set",group=over_tt)
+//++++++++++++++++++++++++++++++++++++++++
+//++++++++++++ Hull MA of RSI ++++++++++++
+//++++++++++++++++++++++++++++++++++++++++
+hma_tt="=== Hull MA ==="
+hma_len=input(3,title="Period",inline="set",group=hma_tt)
+rsi_c=hma(rsi(close,rsi1_len),hma_len)
+rsi_h=hma(rsi(high,rsi1_len),hma_len)
+rsi_l=hma(rsi(low,rsi1_len),hma_len)
+rsi_hl2=hma(rsi(hl2,rsi1_len),hma_len)
+//++++++++++++++++++++++++++++++++
+//++++++++++++ Signal ++++++++++++
+//++++++++++++++++++++++++++++++++
+var order_status="None"
+BuySignal=
+       crossunder(rsi_c,ovb)
+       and
+       close<hl2
+       and
+       rsi_hl2>ovb
+       and
+       order_status=="None"
+CloseBuy=
+       order_status[1]=="Long"
+       and
+       (crossover(rsi_c,ovb)
+       or
+       crossunder(rsi_l,upper))
+SellSignal=
+       crossover(rsi_c,ovs)
+       and
+       close>hl2
+       and
+       rsi_hl2<ovs
+       and
+       order_status=="None"
+CloseSell=
+       order_status[1]=="Short"
+       and
+       (crossunder(rsi_c,ovs)
+       or
+       crossover(rsi_h,lower))
+ExitSignal=
+       CloseBuy
+       or
+       CloseSell
+if BuySignal
+    order_status:="Long"
+if SellSignal
+    order_status:="Short"
+if ExitSignal
+    order_status:="None"
+//+++++++++++++++++++++++++++++++++++
+//++++++++++++ Plot Line ++++++++++++
+//+++++++++++++++++++++++++++++++++++
+rsi_c_col=
+       rsi_c>upper?color.new(color.blue,0):
+       rsi_c<lower?color.new(color.blue,0):
+       color.new(color.orange,0)
+rsi_h_col=
+       rsi_h>upper?color.new(color.green,0):
+       rsi_h<lower?color.new(color.green,0):
+       color.new(color.orange,0)
+rsi_l_col=
+       rsi_l>upper?color.new(color.yellow,0):
+       rsi_l<lower?color.new(color.yellow,0):
+       color.new(color.orange,0)
+rsi_hl2_col=
+       rsi_hl2>upper?color.new(color.olive,0):
+       rsi_hl2<lower?color.new(color.olive,0):
+       color.new(color.orange,0)
+plot(rsi_c,title="RSI Close",color=rsi_c_col,linewidth=2)
+plot(rsi_h,title="RSI High",color=rsi_h_col,linewidth=1)
+plot(rsi_l,title="RSI Low",color=rsi_l_col,linewidth=1)
+plot(rsi_hl2,title="RSI HL2",color=rsi_hl2_col,linewidth=1)
+upper_line=hline(upper,title="Upper",color=color.new(color.black,100))
+lower_line=hline(lower,title="Lower",color=color.new(color.black,100))
+fill(upper_line,lower_line,title="Mid Channel",color=color.silver)
+ovb_line=hline(ovb,title="Overbought",color=color.new(color.silver,0),linestyle=hline.style_solid,linewidth=2)
+ovs_line=hline(ovs,title="Oversold",color=color.new(color.silver,0),linestyle=hline.style_solid,linewidth=2)
+//++++++++++++++++++++++++++++++++++++++++++++++++
+//++++++++++++ Plot Analyzing Signals ++++++++++++
+//++++++++++++++++++++++++++++++++++++++++++++++++
+//Color
+buy_col=
+       BuySignal?color.new(color.blue,70):na
+sell_col=
+       SellSignal?color.new(color.red,70):na
+close_buy_col=
+       CloseBuy and order_status[1]=="Long"?color.new(color.yellow,70):na
+close_sell_col=
+       CloseSell and order_status[1]=="Short"?color.new(color.yellow,70):na
+//Background
+bgcolor(close_buy_col, title='Close Buy', offset=0)
+bgcolor(close_sell_col, title='Close Sell', offset=0)
+bgcolor(sell_col, title='Sell', offset=0)
+bgcolor(buy_col, title='Buy', offset=0)
+//++++++++++++++++++++++++++++++++++
+//++++++++++++ Backtest ++++++++++++
+//++++++++++++++++++++++++++++++++++
+strategy.entry("Long",strategy.long,when=BuySignal)
+strategy.close("Long",when=CloseBuy)
+strategy.entry("Short",strategy.short,when=SellSignal)
+strategy.close("Short",when=CloseSell)
+//EOF
+Expand (122 lines)

@@ -1,0 +1,794 @@
+Script Name: Small short for Crypto
+Author: Cherepanov_V
+Description: This is the third modification of VuMAnChu cipher B indicator designed only for short sales. 
+ 
+ The trigger signal is called sommi bearish diamond (according to my due diligence it has the best performance)
+ You can either fix a stop loss value or close position after crossing sma line.
+ Take profit also can be tuned.
+ 
+Keep in mind that short positions are very...
+PineScript code:
+
+Pine Script™ strategy
+Small short for Crypto
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+//@version=4
+strategy(title = 'Small_short', shorttitle = 'Small_short', overlay=true,initial_capital=30,default_qty_type = strategy.cash,default_qty_value =250,commission_type = strategy.commission.percent,commission_value =0.04,currency="EUR")
+// PARAMETERS {
+// WaveTrend
+wtShow = input(true, title = 'Show WaveTrend', type = input.bool)
+wtBuyShow = input(true, title = 'Show Buy dots', type = input.bool)
+wtGoldShow = input(true, title = 'Show Gold dots', type = input.bool)
+wtSellShow = input(true, title = 'Show Sell dots', type = input.bool)
+wtDivShow = input(true, title = 'Show Div. dots', type = input.bool)
+vwapShow = input(true, title = 'Show Fast WT', type = input.bool)
+wtChannelLen = input(9, title = 'WT Channel Length', type = input.integer)
+wtAverageLen = input(12, title = 'WT Average Length', type = input.integer)
+wtMASource = input(hlc3, title = 'WT MA Source', type = input.source)
+wtMALen = input(3, title = 'WT MA Length', type = input.integer)
+// WaveTrend Overbought & Oversold lines
+obLevel = input(53, title = 'WT Overbought Level 1', type = input.integer)
+obLevel2 = input(60, title = 'WT Overbought Level 2', type = input.integer)
+obLevel3 = input(100, title = 'WT Overbought Level 3', type = input.integer)
+osLevel = input(-53, title = 'WT Oversold Level 1', type = input.integer)
+osLevel2 = input(-60, title = 'WT Oversold Level 2', type = input.integer)
+osLevel3 = input(-75, title = 'WT Oversold Level 3', type = input.integer)
+// Divergence WT
+wtShowDiv = input(true, title = 'Show WT Regular Divergences', type = input.bool)
+wtShowHiddenDiv = input(false, title = 'Show WT Hidden Divergences', type = input.bool)
+showHiddenDiv_nl = input(true, title = 'Not apply OB/OS Limits on Hidden Divergences', type = input.bool)
+wtDivOBLevel = input(45, title = 'WT Bearish Divergence min', type = input.integer)
+wtDivOSLevel = input(-65, title = 'WT Bullish Divergence min', type = input.integer)
+// Divergence extra range
+wtDivOBLevel_addshow = input(true, title = 'Show 2nd WT Regular Divergences', type = input.bool)
+wtDivOBLevel_add = input(15, title = 'WT 2nd Bearish Divergence', type = input.integer)
+wtDivOSLevel_add = input(-40, title = 'WT 2nd Bullish Divergence 15 min', type = input.integer)
+// RSI+MFI
+rsiMFIShow = input(true, title = 'Show MFI', type = input.bool)
+rsiMFIperiod = input(60,title = 'MFI Period', type = input.integer)
+rsiMFIMultiplier = input(150, title = 'MFI Area multiplier', type = input.float)
+rsiMFIPosY = input(2.5, title = 'MFI Area Y Pos', type = input.float)
+// RSI
+rsiShow = input(false, title = 'Show RSI', type = input.bool)
+rsiSRC = input(close, title = 'RSI Source', type = input.source)
+rsiLen = input(14, title = 'RSI Length', type = input.integer)
+rsiOversold = input(30, title = 'RSI Oversold', minval = 50, maxval = 100, type = input.integer)
+rsiOverbought = input(60, title = 'RSI Overbought', minval = 0, maxval = 50, type = input.integer)
+// Divergence RSI
+rsiShowDiv = input(false, title = 'Show RSI Regular Divergences', type = input.bool)
+rsiShowHiddenDiv = input(false, title = 'Show RSI Hidden Divergences', type = input.bool)
+rsiDivOBLevel = input(60, title = 'RSI Bearish Divergence min', type = input.integer)
+rsiDivOSLevel = input(30, title = 'RSI Bullish Divergence min', type = input.integer)
+// RSI Stochastic
+stochShow = input(true, title = 'Show Stochastic RSI', type = input.bool)
+stochUseLog = input(true, title=' Use Log?', type = input.bool)
+stochAvg = input(false, title='Use Average of both K & D', type = input.bool)
+stochSRC = input(close, title = 'Stochastic RSI Source', type = input.source)
+stochLen = input(14, title = 'Stochastic RSI Length', type = input.integer)
+stochRsiLen = input(14, title = 'RSI Length ', type = input.integer)
+stochKSmooth = input(3, title = 'Stochastic RSI K Smooth', type = input.integer)
+stochDSmooth = input(3, title = 'Stochastic RSI D Smooth', type = input.integer)
+// Divergence stoch
+stochShowDiv = input(false, title = 'Show Stoch Regular Divergences', type = input.bool)
+stochShowHiddenDiv = input(false, title = 'Show Stoch Hidden Divergences', type = input.bool)
+// Schaff Trend Cycle
+tcLine = input(false, title="Show Schaff TC line", type=input.bool)
+tcSRC = input(close, title = 'Schaff TC Source', type = input.source)
+tclength = input(10, title="Schaff TC", type=input.integer)
+tcfastLength = input(23, title="Schaff TC Fast Lenght", type=input.integer)
+tcslowLength = input(50, title="Schaff TC Slow Length", type=input.integer)
+tcfactor = input(0.5, title="Schaff TC Factor", type=input.float)
+// Sommi Flag
+sommiFlagShow = input(false, title = 'Show Sommi flag', type = input.bool)
+sommiShowVwap = input(false, title = 'Show Sommi F. Wave', type = input.bool)
+sommiVwapTF = input('720', title = 'Sommi F. Wave timeframe', type = input.string)
+sommiVwapBearLevel = input(0, title = 'F. Wave Bear Level (less than)', type = input.integer)
+sommiVwapBullLevel = input(0, title = 'F. Wave Bull Level (more than)', type = input.integer)
+soomiFlagWTBearLevel = input(0, title = 'WT Bear Level (more than)', type = input.integer) 
+soomiFlagWTBullLevel = input(0, title = 'WT Bull Level (less than)', type = input.integer) 
+soomiRSIMFIBearLevel = input(0, title = 'Money flow Bear Level (less than)', type = input.integer) 
+soomiRSIMFIBullLevel = input(0, title = 'Money flow Bull Level (more than)', type = input.integer) 
+// Sommi Diamond
+sommiDiamondShow = input(false, title = 'Show Sommi diamond', type = input.bool)
+sommiHTCRes = input('60', title = 'HTF Candle Res. 1', type = input.string)
+sommiHTCRes2 = input('240', title = 'HTF Candle Res. 2', type = input.string)
+soomiDiamondWTBearLevel = input(0, title = 'WT Bear Level (More than)', type = input.integer)
+soomiDiamondWTBullLevel = input(0, title = 'WT Bull Level (Less than)', type = input.integer)
+// macd Colors
+macdWTColorsShow = input(false, title = 'Show MACD Colors', type = input.bool)
+macdWTColorsTF = input('240', title = 'MACD Colors MACD TF', type = input.string)
+darkMode = input(false, title = 'Dark mode', type = input.bool)
+// Colors
+colorRed = #ff0000
+colorPurple = #e600e6
+colorGreen = #3fff00
+colorOrange = #e2a400
+colorYellow = #ffe500
+colorWhite = #ffffff
+colorPink = #ff00f0
+colorBluelight = #31c0ff
+colorWT1 = #90caf9
+colorWT2 = #0d47a1
+colorWT2_ = #131722
+colormacdWT1a = #4caf58
+colormacdWT1b = #af4c4c
+colormacdWT1c = #7ee57e
+colormacdWT1d = #ff3535
+colormacdWT2a = #305630
+colormacdWT2b = #310101
+colormacdWT2c = #132213
+colormacdWT2d = #770000
+// } PARAMETERS
+// FUNCTIONS {
+  
+// Divergences 
+f_top_fractal(src) => src[4] < src[2] and src[3] < src[2] and src[2] > src[1] and src[2] > src[0]
+f_bot_fractal(src) => src[4] > src[2] and src[3] > src[2] and src[2] < src[1] and src[2] < src[0]
+f_fractalize(src) => f_top_fractal(src) ? 1 : f_bot_fractal(src) ? -1 : 0
+f_findDivs(src, topLimit, botLimit, useLimits) =>
+    fractalTop = f_fractalize(src) > 0 and (useLimits ? src[2] >= topLimit : true) ? src[2] : na
+    fractalBot = f_fractalize(src) < 0 and (useLimits ? src[2] <= botLimit : true) ? src[2] : na
+    highPrev = valuewhen(fractalTop, src[2], 0)[2]
+    highPrice = valuewhen(fractalTop, high[2], 0)[2]
+    lowPrev = valuewhen(fractalBot, src[2], 0)[2]
+    lowPrice = valuewhen(fractalBot, low[2], 0)[2]
+    bearSignal = fractalTop and high[2] > highPrice and src[2] < highPrev
+    bullSignal = fractalBot and low[2] < lowPrice and src[2] > lowPrev
+    bearDivHidden = fractalTop and high[2] < highPrice and src[2] > highPrev
+    bullDivHidden = fractalBot and low[2] > lowPrice and src[2] < lowPrev
+    [fractalTop, fractalBot, lowPrev, bearSignal, bullSignal, bearDivHidden, bullDivHidden]
+        
+// RSI+MFI
+f_rsimfi(_period, _multiplier, _tf) => security(syminfo.tickerid, _tf, sma(((close - open) / (high - low)) * _multiplier, _period) - rsiMFIPosY)
+   
+// WaveTrend
+f_wavetrend(src, chlen, avg, malen, tf) =>
+    tfsrc = security(syminfo.tickerid, tf, src)
+    esa = ema(tfsrc, chlen)
+    de = ema(abs(tfsrc - esa), chlen)
+    ci = (tfsrc - esa) / (0.015 * de)
+    wt1 = security(syminfo.tickerid, tf, ema(ci, avg))
+    wt2 = security(syminfo.tickerid, tf, sma(wt1, malen))
+    wtVwap = wt1 - wt2
+    wtOversold = wt2 <= osLevel
+    wtOverbought = wt2 >= obLevel
+    wtCross = cross(wt1, wt2)
+    wtCrossUp = wt2 - wt1 <= 0
+    wtCrossDown = wt2 - wt1 >= 0
+    wtCrosslast = cross(wt1[2], wt2[2])
+    wtCrossUplast = wt2[2] - wt1[2] <= 0
+    wtCrossDownlast = wt2[2] - wt1[2] >= 0
+    [wt1, wt2, wtOversold, wtOverbought, wtCross, wtCrossUp, wtCrossDown, wtCrosslast, wtCrossUplast, wtCrossDownlast, wtVwap]
+// Schaff Trend Cycle
+f_tc(src, length, fastLength, slowLength) =>
+    ema1 = ema(src, fastLength)
+    ema2 = ema(src, slowLength)
+    macdVal = ema1 - ema2   
+    alpha = lowest(macdVal, length)
+    beta = highest(macdVal, length) - alpha
+    gamma = (macdVal - alpha) / beta * 100
+    gamma := beta > 0 ? gamma : nz(gamma[1])
+    delta = gamma
+    delta := na(delta[1]) ? delta : delta[1] + tcfactor * (gamma - delta[1])
+    epsilon = lowest(delta, length)
+    zeta = highest(delta, length) - epsilon
+    eta = (delta - epsilon) / zeta * 100
+    eta := zeta > 0 ? eta : nz(eta[1])
+    stcReturn = eta
+    stcReturn := na(stcReturn[1]) ? stcReturn : stcReturn[1] + tcfactor * (eta - stcReturn[1])
+    stcReturn
+// Stochastic RSI
+f_stochrsi(_src, _stochlen, _rsilen, _smoothk, _smoothd, _log, _avg) =>
+    src = _log ? log(_src) : _src
+    rsi = rsi(src, _rsilen)
+    kk = sma(stoch(rsi, rsi, rsi, _stochlen), _smoothk)
+    d1 = sma(kk, _smoothd)
+    avg_1 = avg(kk, d1)
+    k = _avg ? avg_1 : kk
+    [k, d1]
+// MACD
+f_macd(src, fastlen, slowlen, sigsmooth, tf) =>
+    fast_ma = security(syminfo.tickerid, tf, ema(src, fastlen))
+    slow_ma = security(syminfo.tickerid, tf, ema(src, slowlen))
+    macd = fast_ma - slow_ma,
+    signal = security(syminfo.tickerid, tf, sma(macd, sigsmooth))
+    hist = macd - signal
+    [macd, signal, hist]
+// MACD Colors on WT    
+f_macdWTColors(tf) =>
+    hrsimfi = f_rsimfi(rsiMFIperiod, rsiMFIMultiplier, tf)
+    [macd, signal, hist] = f_macd(close, 28, 42, 9, macdWTColorsTF)
+    macdup = macd >= signal
+    macddown = macd <= signal
+    macdWT1Color = macdup ? hrsimfi > 0 ? colormacdWT1c : colormacdWT1a : macddown ? hrsimfi < 0 ? colormacdWT1d : colormacdWT1b : na
+    macdWT2Color = macdup ? hrsimfi < 0 ? colormacdWT2c : colormacdWT2a : macddown ? hrsimfi < 0 ? colormacdWT2d : colormacdWT2b : na 
+    [macdWT1Color, macdWT2Color]
+    
+// Get higher timeframe candle
+f_getTFCandle(_tf) => 
+    _open  = security(heikinashi(syminfo.tickerid), _tf, open, barmerge.gaps_off, barmerge.lookahead_off)
+    _close = security(heikinashi(syminfo.tickerid), _tf, close, barmerge.gaps_off, barmerge.lookahead_off)
+    _high  = security(heikinashi(syminfo.tickerid), _tf, high, barmerge.gaps_off, barmerge.lookahead_off)
+    _low   = security(heikinashi(syminfo.tickerid), _tf, low, barmerge.gaps_off, barmerge.lookahead_off)
+    hl2   = (_high + _low) / 2.0
+    newBar = change(_open)
+    candleBodyDir = _close > _open
+    [candleBodyDir, newBar]
+// Sommi flag
+f_findSommiFlag(tf, wt1, wt2, rsimfi, wtCross, wtCrossUp, wtCrossDown) =>    
+    [hwt1, hwt2, hwtOversold, hwtOverbought, hwtCross, hwtCrossUp, hwtCrossDown, hwtCrosslast, hwtCrossUplast, hwtCrossDownlast, hwtVwap] = f_wavetrend(wtMASource, wtChannelLen, wtAverageLen, wtMALen, tf)      
+    
+    bearPattern = rsimfi < soomiRSIMFIBearLevel and
+                   wt2 > soomiFlagWTBearLevel and 
+                   wtCross and 
+                   wtCrossDown and 
+                   hwtVwap < sommiVwapBearLevel
+                   
+    bullPattern = rsimfi > soomiRSIMFIBullLevel and 
+                   wt2 < soomiFlagWTBullLevel and 
+                   wtCross and 
+                   wtCrossUp and 
+                   hwtVwap > sommiVwapBullLevel
+    
+    [bearPattern, bullPattern, hwtVwap]
+    
+f_findSommiDiamond(tf, tf2, wt1, wt2, wtCross, wtCrossUp, wtCrossDown) =>
+    [candleBodyDir, newBar] = f_getTFCandle(tf)
+    [candleBodyDir2, newBar2] = f_getTFCandle(tf2)
+    bearPattern = wt2 >= soomiDiamondWTBearLevel and
+                   wtCross and
+                   wtCrossDown and
+                   not candleBodyDir and
+                   not candleBodyDir2                   
+    bullPattern = wt2 <= soomiDiamondWTBullLevel and
+                   wtCross and
+                   wtCrossUp and
+                   candleBodyDir and
+                   candleBodyDir2 
+    [bearPattern, bullPattern]
+ 
+// } FUNCTIONS  
+// CALCULATE INDICATORS {
+// RSI
+rsi = rsi(rsiSRC, rsiLen)
+rsiColor = rsi <= rsiOversold ? colorGreen : rsi >= rsiOverbought ? colorRed : colorPurple
+// RSI + MFI Area
+rsiMFI = f_rsimfi(rsiMFIperiod, rsiMFIMultiplier, timeframe.period)
+rsiMFIColor = rsiMFI > 0 ? #3ee145 : #ff3d2e
+// Calculates WaveTrend
+[wt1, wt2, wtOversold, wtOverbought, wtCross, wtCrossUp, wtCrossDown, wtCross_last, wtCrossUp_last, wtCrossDown_last, wtVwap] = f_wavetrend(wtMASource, wtChannelLen, wtAverageLen, wtMALen, timeframe.period)
+ 
+// Stochastic RSI
+[stochK, stochD] = f_stochrsi(stochSRC, stochLen, stochRsiLen, stochKSmooth, stochDSmooth, stochUseLog, stochAvg)
+// Schaff Trend Cycle
+tcVal = f_tc(tcSRC, tclength, tcfastLength, tcslowLength)
+// Sommi flag
+[sommiBearish, sommiBullish, hvwap] = f_findSommiFlag(sommiVwapTF, wt1, wt2, rsiMFI, wtCross,  wtCrossUp, wtCrossDown)
+//Sommi diamond
+[sommiBearishDiamond, sommiBullishDiamond] = f_findSommiDiamond(sommiHTCRes, sommiHTCRes2, wt1, wt2, wtCross, wtCrossUp, wtCrossDown)
+// macd colors
+[macdWT1Color, macdWT2Color] = f_macdWTColors(macdWTColorsTF)
+// WT Divergences
+[wtFractalTop, wtFractalBot, wtLow_prev, wtBearDiv, wtBullDiv, wtBearDivHidden, wtBullDivHidden] = f_findDivs(wt2, wtDivOBLevel, wtDivOSLevel, true)
+    
+[wtFractalTop_add, wtFractalBot_add, wtLow_prev_add, wtBearDiv_add, wtBullDiv_add, wtBearDivHidden_add, wtBullDivHidden_add] =  f_findDivs(wt2, wtDivOBLevel_add, wtDivOSLevel_add, true)
+[wtFractalTop_nl, wtFractalBot_nl, wtLow_prev_nl, wtBearDiv_nl, wtBullDiv_nl, wtBearDivHidden_nl, wtBullDivHidden_nl] =  f_findDivs(wt2, 0, 0, false)
+wtBearDivHidden_ = showHiddenDiv_nl ? wtBearDivHidden_nl : wtBearDivHidden
+wtBullDivHidden_ = showHiddenDiv_nl ? wtBullDivHidden_nl : wtBullDivHidden
+wtBearDivColor = (wtShowDiv and wtBearDiv) or (wtShowHiddenDiv and wtBearDivHidden_) ? colorRed : na
+wtBullDivColor = (wtShowDiv and wtBullDiv) or (wtShowHiddenDiv and wtBullDivHidden_) ? colorGreen : na
+wtBearDivColor_add = (wtShowDiv and (wtDivOBLevel_addshow and wtBearDiv_add)) or (wtShowHiddenDiv and (wtDivOBLevel_addshow and wtBearDivHidden_add)) ? #9a0202 : na
+wtBullDivColor_add = (wtShowDiv and (wtDivOBLevel_addshow and wtBullDiv_add)) or (wtShowHiddenDiv and (wtDivOBLevel_addshow and wtBullDivHidden_add)) ? #1b5e20 : na
+// RSI Divergences
+[rsiFractalTop, rsiFractalBot, rsiLow_prev, rsiBearDiv, rsiBullDiv, rsiBearDivHidden, rsiBullDivHidden] = f_findDivs(rsi, rsiDivOBLevel, rsiDivOSLevel, true)
+[rsiFractalTop_nl, rsiFractalBot_nl, rsiLow_prev_nl, rsiBearDiv_nl, rsiBullDiv_nl, rsiBearDivHidden_nl, rsiBullDivHidden_nl] = f_findDivs(rsi, 0, 0, false)
+rsiBearDivHidden_ = showHiddenDiv_nl ? rsiBearDivHidden_nl : rsiBearDivHidden
+rsiBullDivHidden_ = showHiddenDiv_nl ? rsiBullDivHidden_nl : rsiBullDivHidden
+rsiBearDivColor = (rsiShowDiv and rsiBearDiv) or (rsiShowHiddenDiv and rsiBearDivHidden_) ? colorRed : na
+rsiBullDivColor = (rsiShowDiv and rsiBullDiv) or (rsiShowHiddenDiv and rsiBullDivHidden_) ? colorGreen : na
+ 
+// Stoch Divergences
+[stochFractalTop, stochFractalBot, stochLow_prev, stochBearDiv, stochBullDiv, stochBearDivHidden, stochBullDivHidden] = f_findDivs(stochK, 0, 0, false)
+stochBearDivColor = (stochShowDiv and stochBearDiv) or (stochShowHiddenDiv and stochBearDivHidden) ? colorRed : na
+stochBullDivColor = (stochShowDiv and stochBullDiv) or (stochShowHiddenDiv and stochBullDivHidden) ? colorGreen : na
+// Small Circles WT Cross
+signalColor = wt2 - wt1 > 0 ? color.red : color.lime
+// Buy signal.
+buySignal = wtCross and wtCrossUp and wtOversold
+buySignalDiv = (wtShowDiv and wtBullDiv) or 
+               (wtShowDiv and wtBullDiv_add) or 
+               (stochShowDiv and stochBullDiv) or 
+               (rsiShowDiv and rsiBullDiv)
+    
+buySignalDiv_color = wtBullDiv ? colorGreen : 
+                     wtBullDiv_add ? color.new(colorGreen, 60) : 
+                     rsiShowDiv ? colorGreen : na
+// Sell signal
+sellSignal = wtCross and wtCrossDown and wtOverbought
+             
+sellSignalDiv = (wtShowDiv and wtBearDiv) or 
+               (wtShowDiv and wtBearDiv_add) or
+               (stochShowDiv and stochBearDiv) or
+               (rsiShowDiv and rsiBearDiv)
+                    
+sellSignalDiv_color = wtBearDiv ? colorRed : 
+                     wtBearDiv_add ? color.new(colorRed, 60) : 
+                     rsiBearDiv ? colorRed : na
+// Gold Buy 
+lastRsi = valuewhen(wtFractalBot, rsi[2], 0)[2]
+wtGoldBuy = ((wtShowDiv and wtBullDiv) or (rsiShowDiv and rsiBullDiv)) and
+           wtLow_prev <= osLevel3 and
+           wt2 > osLevel3 and
+           wtLow_prev - wt2 <= -5 and
+           lastRsi < 30           
+          
+// } CALCULATE INDICATORS
+// DRAW {
+bgcolor(darkMode ? color.new(#000000, 80) : na)
+zLine = plot(0, color = color.new(colorWhite, 50))
+//  MFI BAR 
+rsiMfiBarTopLine = plot(rsiMFIShow ? -95 : na, title = 'MFI Bar TOP Line', transp = 100)
+rsiMfiBarBottomLine = plot(rsiMFIShow ? -99 : na, title = 'MFI Bar BOTTOM Line', transp = 100)
+fill(rsiMfiBarTopLine, rsiMfiBarBottomLine, title = 'MFI Bar Colors', color = rsiMFIColor, transp = 75)
+stopMultiplier   = input(title="Stop Loss ATR", type=input.float, defval=2.2, tooltip="Stop loss multiplier (x ATR)", group="Strategy Settings")
+regimeFilter_length=input(title="regime filter length?", defval=1700, type=input.integer,  group="Strategy Settings")
+localFilter_length=input(title="Local trend filter length", defval=20, type=input.integer,  group="Trend Settings")
+localFilter_frame=input(title="Local trend filter timeframe", defval="D", options=['D','H'],  group="Trend Settings")
+ATR_length=input(title="ATR length", defval=14, type=input.integer,  group="TP/SL Settings")
+trailratio=input(title="ATR length", defval=0.3,step=0.1, type=input.float,  group="TP/SL Settings")
+a=input(title="TP,%", defval=1.2,step=0.1, type=input.float,  group="TP/SL Settings")
+b=input(title="SL,%", defval=0.2, type=input.float,  group="TP/SL Settings")
+stop_sma=input(title="SL by yellow sma", defval=true, type=input.bool,  group="TP/SL Settings")
+// Get ATR
+atr = atr(ATR_length)
+//Hour sma
+basis = security(syminfo.tickerid, "60", sma(close, 20))
+plot(basis, title="Local trend curve", color=color.yellow, style=plot.style_linebr)
+//Trend calculation with EMA
+f_sec(_market, _res, _exp) => security(_market, _res, _exp[barstate.isconfirmed ? 0 : 1])
+ema = sma(close, regimeFilter_length)
+emaValue = f_sec("BTCUSDTPERP", "5", ema)
+marketPrice = f_sec("BTCUSDTPERP", "5", close)
+regimeFilter = marketPrice > emaValue or marketPrice[1] > emaValue[1]
+reverse_regime=marketPrice < emaValue or marketPrice[1] < emaValue[1]
+bgcolor(regimeFilter ? color.green : color.red)
+//Local trend
+regimeFilter_local = close > basis or close[1] > basis[1]
+reverse_regime_local=close < basis or close[1] < basis[1]
+validhigh = sommiBearishDiamond and not na(atr) 
+validshort = validhigh and strategy.position_size == 0 and barstate.isconfirmed and reverse_regime and reverse_regime_local
+// Save trade stop & target & position size if a valid setup is detected
+var tradeStopPrice = 0.0
+var tradeTargetPrice = 0.0
+if validshort 
+    tradeStopPrice := close*(100+b)/100
+    tradeTargetPrice := close*(100-a)/100
+strategy.entry(id="Short", long=strategy.short, when=validshort,comment='')
+//if it's red - cancel it all
+if stop_sma?regimeFilter_local:false
+    strategy.close_all(when=strategy.position_size != 0, comment='')
+// Exit trades whenever our stop or target is hit
+strategy.exit(id="Short Exit", from_entry="Short", limit=tradeTargetPrice, stop=tradeStopPrice, when=strategy.position_size < 0, comment='')
+Expand (422 lines)

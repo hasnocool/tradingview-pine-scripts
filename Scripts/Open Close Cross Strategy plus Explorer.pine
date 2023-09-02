@@ -1,0 +1,870 @@
+Script Name: Open Close Cross Strategy plus Explorer
+Author: roses27
+Description: Open Close Cross Strategy plus Explorer
+V 1.0
+There is a code that can control sensitivity. try to change 'ATR Multiplier' menu
+There is a code for prevent 'repaint'. If you want it check 'Forces Non-Repainting' menu
+
+thanks to 
+PMax Explorer STRATEGY & SCREENER KivancOzbilgic
+Open Close Cross Strategy R5 revised by JustUncleL JustUncleL
+PineScript code:
+
+Pine Script™ strategy
+Open Close Cross Strategy plus Explorer
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//@version=4
+//author roses27
+// V 1.464
+// There is a code that can control sensitivity.
+// There is a code for prevent 'repaint'
+// There is a code for data sorting and display.
+// thanks to @JustUncleL @JayRogers about 'BASE FUNCTIONS'
+strategy(title = "Open Close Cross Strategy plus Explorer",  shorttitle = "OCC plus Explorer",overlay=true, calc_on_every_tick=false,
+         initial_capital=100000, default_qty_type= strategy.cash, default_qty_value=100000, process_orders_on_close = true,
+         pyramiding = 0, commission_type=strategy.commission.percent, commission_value=0.25)
+// === INPUTS ===
+tradeType       = input("LONG",         title = "What trades should be taken : ", options=["LONG", "SHORT", "BOTH", "NONE"])
+resMultiplier   = input(defval = 5,     title = "Multiplier for Alternate Resolution('1' is original)",   minval = 1,  tooltip = "The current resolution is multiplied by this number and calculated at Alternate Resolution.")
+basisType       = input(defval = "TEMA",title = "MA Type: ", options=["SMA", "EMA", "DEMA", "TEMA", "WMA", "VWMA", "SMMA", "HullMA", "LSMA", "ALMA", "SSMA", "TMA"], tooltip = "Moving Average Type")
+basisLen        = input(defval = 50,     title = "MA Period", minval = 1)
+alma_offset     = input(defval = 0.85,  title = "Offset for ALMA",      minval = 0.0, step = 0.01)
+alma_sigma      = input(defval = 6.0,   title = "Sigma for ALMA",       minval = 0.0, step = 0.1)
+lsma_offset     = input(defval = 5,     title = "Offset for LSMA",      minval = 0,   step = 1)
+useStartPeriodTime  = input(true, "Start",                  input.bool,     group = "Date Range",   inline = "Start Period")
+startPeriodTime     = input(timestamp(" 4 Mar 2021"), "",   input.time,     group = "Date Range",   inline = "Start Period")
+useEndPeriodTime    = input(false,"End  ",                  input.bool,     group = "Date Range",   inline = "End Period")
+endPeriodTime       = input(timestamp("19 Apr 2021"), "",   input.time,     group = "Date Range",   inline = "End Period")
+enableHighlight     = input(false, "Highlight",             input.bool,     group = "Date Range",   inline = "Highlight")
+highlightType       = input(      "Anchors","",             input.string, options = ["Anchors", "Background"],  group = "Date Range",inline = "Highlight")
+highlightColor      = input(color.red,     "",              input.color,    group = "Date Range",   inline = "Highlight")
+scolor              = input(defval = true,  title = "Show coloured Bars to indicate Trend?",    group = "Date Range")
+//=== Code to adjust sensitivity  'Multiplier*atr'===
+Periods         = input(defval = 30,    title = "ATR Length",                                   group = "Sensitivity",                    minval = 1)
+Multiplier      = input(defval = 0.3,   title = "ATR Multiplier",                               group = "Sensitivity",                    minval = 0.0, step = 0.01, tooltip = "The larger the value, enter late and exit late.") 
+Non_Repainting  = input(defval = 2,     title = "Forces to Non-Repainting", options=[0,1,2],    group = "Sensitivity", tooltip = "0: The results are delayed as much as '0'. 1: The results are delayed as much as the current resolution. 2: The results are delayed as much as the Alternate Resolution. The larger the probability of 'repainting' decreases.")
+//===/Code to adjust sensitivity  'Multiplier*atr' ===
+// === /INPUTS ===
+start   = useStartPeriodTime ? startPeriodTime >= time : false
+end     = useEndPeriodTime   ? endPeriodTime   <= time : false
+calcPeriod = not start and not end
+var line startAnchor    = line.new(na, na, na, na, xloc.bar_time, extend.both, highlightColor, width = 2)
+var line endAnchor      = line.new(na, na, na, na, xloc.bar_time, extend.both, highlightColor, width = 2)
+useBgcolor = false
+// {—————————— PineCoders MTF Selection Framework functions
+// ————— Converts current "timeframe.multiplier" plus the TF into minutes of type float.
+f_resInMinutes() => 
+    _resInMinutes = timeframe.multiplier * (
+      timeframe.isseconds   ? 1. / 60.  :
+      timeframe.isminutes   ? 1.        :
+      timeframe.isdaily     ? 1440.     :
+      timeframe.isweekly    ? 10080.    :
+      timeframe.ismonthly   ? 43800.    : na)
+// ————— Returns resolution of _resolution period in minutes.
+f_tfResInMinutes(_resolution) =>
+    // _resolution: resolution of any TF (in "timeframe.period" string format).
+    security(syminfo.tickerid, _resolution, f_resInMinutes())
+// ————— Given current resolution, returns next step of HTF.
+f_resNextStep(_res) =>
+    // _res: current TF in fractional minutes.
+    _res    <= 1        ? "60" :
+      _res  <= 60       ? "1D" :
+      _res  <= 360      ? "3D" :
+      _res  <= 1440     ? "1W" :
+      _res  <= 10080    ? "1M" : "12M"
+// ————— Returns a multiple of current resolution as a string in "timeframe.period" format usable with "security()".
+f_multipleOfRes(_res, _mult) => 
+    // _res:  current resolution in minutes, in the fractional format supplied by f_resInMinutes() companion function.
+    // _mult: Multiple of current TF to be calculated.
+    // Convert current float TF in minutes to target string TF in "timeframe.period" format.
+    _targetResInMin = _res * max(_mult, 1)
+    // Find best string to express the resolution.
+    _targetResInMin     <= 0.083        ? "5S"  :
+      _targetResInMin   <= 0.251        ? "15S" :
+      _targetResInMin   <= 0.501        ? "30S" :
+      _targetResInMin   <= 1440         ? tostring(round(_targetResInMin)) :
+      _targetResInMin   <= 43800        ? tostring(round(min(_targetResInMin / 1440, 365))) + "D" :
+      tostring(round(min(_targetResInMin / 43800, 12))) + "M"
+// ————— HTF calcs
+// }—————————— PineCoders MTF Selection Framework functions
+// { === BASE FUNCTIONS ===
+variant(_type, _src, _len, _alma_offset, _alma_sigma, _lsma_offset) =>
+    v1  = sma(_src, _len)                                                   // Simple
+    v2  = ema(_src, _len)                                                   // Exponential
+    v3  = 2 * v2 - ema(v2, _len)                                            // Double Exponential
+    v4  = 3 * (v2 - ema(v2, _len)) + ema(ema(v2, _len), _len)               // Triple Exponential
+    v5  = wma(_src, _len)                                                   // Weighted
+    v6  = vwma(_src, _len)                                                  // Volume Weighted
+    v7  = 0.0
+    v7 := na(v7[1]) ? sma(_src, _len) : (v7[1] * (_len - 1) + _src) / _len  // Smoothed
+    v8  = wma(2 * wma(_src, _len / 2) - wma(_src, _len), round(sqrt(_len))) // Hull
+    v9  = linreg(_src, _len, _lsma_offset)                                  // Least Squares
+    v10 = alma(_src, _len, _alma_offset, _alma_sigma)                       // Arnaud Legoux
+    v11 = sma(v1,_len)                                                      // Triangular (extreme smooth)
+    // SuperSmoother filter
+    // © 2013  John F. Ehlers
+    a1  = exp(-1.414*3.14159 / _len)
+    b1  = 2*a1*cos(1.414*3.14159 / _len)
+    c2  = b1
+    c3  = (-a1)*a1
+    c1  = 1 - c2 - c3
+    v12 = 0.0
+    v12 := c1*(_src + nz(_src[1])) / 2 + c2*nz(v12[1]) + c3*nz(v12[2])
+    _type=="EMA" ? v2 :_type=="DEMA"   ? v3 : _type=="TEMA" ? v4 : _type=="WMA"  ? v5  : _type=="VWMA" ? v6 : _type=="SMMA" ? v7  : 
+                       _type=="HullMA" ? v8 : _type=="LSMA" ? v9 : _type=="ALMA" ? v10 : _type=="TMA"  ? v11: _type=="SSMA" ? v12 : v1
+// }=== /BASE FUNCTIONS ===
+// {==== Code for prevent 'repaint' ===
+// security wrapper for repeat calls
+f_security(     _id, _res, _exp, _non_rep) =>               
+      security(_id, _res,         _exp[_non_rep == 2 ? 1 : 0], gaps=barmerge.gaps_off, 
+      lookahead=barmerge.lookahead_on)[_non_rep == 1 ? 1 : 0]        
+// }====/Code for prevent 'repaint' ===
+// Get current resolution in float minutes.
+var vResInMinutes   = f_resInMinutes()
+stratRes            = f_multipleOfRes(vResInMinutes, resMultiplier)
+atr                 = atr(Periods)
+// === SERIES SETUP ===
+closeSeries     = variant(basisType, close, basisLen, alma_offset, alma_sigma, lsma_offset)
+openSeries      = variant(basisType,  open, basisLen, alma_offset, alma_sigma, lsma_offset)
+// === /SERIES ===
+// Get Alternate resolution Series if selected.
+closeSeriesAlt  = f_security(syminfo.tickerid, stratRes, closeSeries, Non_Repainting)
+openSeriesAlt   = f_security(syminfo.tickerid, stratRes,  openSeries, Non_Repainting)
+// {=== PLOTTING ===
+trendColour     = (closeSeriesAlt > openSeriesAlt + Multiplier*atr) ? color.green : (closeSeriesAlt < openSeriesAlt - Multiplier*atr) ? color.red : color.yellow
+bcolour         = (closeSeriesAlt > openSeriesAlt) ? color.green : color.red
+barcolor(scolor and calcPeriod ? bcolour : na, title = "Bar Colours")
+closeP          = plot(series= scolor and calcPeriod ? closeSeriesAlt : na, title = "Close Series", color = trendColour, linewidth = 2, style = plot.style_line, transp = 20)
+openP           = plot(series= scolor and calcPeriod ? openSeriesAlt  : na, title = "Open Series",  color = trendColour, linewidth = 2, style = plot.style_line, transp = 20)
+fill(closeP,openP,color=trendColour,transp=80)
+if enableHighlight
+    if highlightType == "Anchors"
+        if useStartPeriodTime
+            line.set_xy1(startAnchor, startPeriodTime, low)
+            line.set_xy2(startAnchor, startPeriodTime, high)
+        if useEndPeriodTime
+            line.set_xy1(endAnchor, calcPeriod ? time : line.get_x1(endAnchor), low)
+            line.set_xy2(endAnchor, calcPeriod ? time : line.get_x1(endAnchor), high)
+            
+    if highlightType == "Background"
+        useBgcolor :=  true
+bgcolor(useBgcolor and calcPeriod ? highlightColor : na, editable = false)
+// plot "calcPeriod of time"
+// }=== /PLOTTING ===
+//
+// {=== STRATEGY conditions
+long    = crossover( closeSeriesAlt, openSeriesAlt + Multiplier*atr) //Code to adjust sensitivity  'Multiplier*atr'
+short   = crossunder(closeSeriesAlt, openSeriesAlt - Multiplier*atr) //Code to adjust sensitivity  'Multiplier*atr'
+// === /STRATEGY conditions.
+// === STRATEGY ===
+// stop loss
+// stopLoss    = input(defval = 0, title = "Stop Loss Points (zero for disable)",      group = "Stop Condition", minval = 0)
+// targetProfit= input(defval = 0, title = "Target Profit Points (zero for disable)",  group = "Stop Condition", minval = 0)
+// STEP 1:
+// Configure trail stop level with input options (optional)
+// longTrailPerc = input(title="Trail Long Loss (%)(zero for disable)", type=input.float, minval=0.0, step=0.1, defval=5.0, group = "Stop Condition",  tooltip = "from highest point") * 0.01
+// shortTrailPerc= input(title="Trail Short Loss(%)(zero for disable)", type=input.float, minval=0.0, step=0.1, defval=5.0, group = "Stop Condition",  tooltip = "from lowest point" ) * 0.01
+longTrailPerc = input(title="Trail Long Loss (%)(zero for disable)", type=input.float, minval=0.0, step=0.1, defval=0.0, group = "Stop Condition",  tooltip = "From the previous 'close' value") * 0.01
+shortTrailPerc= input(title="Trail Short Loss(%)(zero for disable)", type=input.float, minval=0.0, step=0.1, defval=0.0, group = "Stop Condition",  tooltip = "From the previous 'close' value") * 0.01
+// STEP 2:
+// Determine trail stop loss prices
+longStopPrice = 0.0, shortStopPrice = 0.0
+longStopPrice := if (strategy.position_size > 0)
+    stopValue = close * (1 - longTrailPerc)
+    // stopValue = high * (1 - longTrailPerc)    
+    max(stopValue, longStopPrice[1])
+else
+    0
+shortStopPrice := if (strategy.position_size < 0)
+    stopValue = close * (1 + shortTrailPerc)
+    // stopValue = low * (1 + shortTrailPerc)    
+    min(stopValue, shortStopPrice[1])
+else
+    9999999999
+// Plot stop loss values for confirmation
+plot(series=(strategy.position_size > 0) and calcPeriod and longTrailPerc != 0.0 ? longStopPrice : na,
+     color=color.fuchsia, style=plot.style_linebr,
+     linewidth=2, title="Long Trail Stop" , transp = 0)
+         
+plot(series=(strategy.position_size < 0) and calcPeriod and shortTrailPerc != 0.0 ? shortStopPrice : na,
+     color=color.purple, style=plot.style_linebr,
+     linewidth=2, title="Short Trail Stop", transp = 0)
+//exit parameters
+// TP          = targetProfit  > 0 ? targetProfit  : na
+// SL          = stopLoss      > 0 ? stopLoss      : na
+if (calcPeriod and tradeType!="NONE")
+    strategy.entry("long",  strategy.long,  when=long ==true and tradeType!="SHORT", comment = "EL"          , alert_message = "Long")
+    strategy.entry("short", strategy.short, when=short==true and tradeType!="LONG" , comment = "ES"          , alert_message = "Short")
+    strategy.close("long",                  when=short==true and tradeType=="LONG" , comment = "EL close"    , alert_message = "Long close")
+    strategy.close("short",                 when=long ==true and tradeType=="SHORT", comment = "ES close"    , alert_message = "Short close")
+    // strategy.exit( "XL", from_entry = "long",  profit = TP, loss = SL,              comment = "XL long"     , alert_message = "exit long")
+    // strategy.exit( "XS", from_entry = "short", profit = TP, loss = SL,              comment = "XL short"    , alert_message = "exit short")
+    strategy.exit(id="long",  when = strategy.position_size > 0 and longTrailPerc  != 0.0, stop=longStopPrice,  comment = "Long TRL STP",  alert_message = "Long TRL STP")    
+    strategy.exit(id="short", when = strategy.position_size < 0 and shortTrailPerc != 0.0, stop=shortStopPrice, comment = "Short TRL STP", alert_message = "Short TRL STP")
+// }=== /STRATEGY ===
+// eof
+// { To view trends start
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
+//                                                                              //
+// If you don't want a [screen label], comment or delete the line below all.    //
+//                                                                              //
+//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// { input for Label start 
+showLabel       = input(defval = true,  title = "Show Screener Label with Text Color",          group = "Label", inline = "Show Label")
+textColor       = input(color.blue,     "", input.color,                                        group = "Label", inline = "Show Label")
+rmCurrency      = input(defval = true,  title = "Remove Currency Display",                      group = "Label", inline = "Remove Currency")
+Currency        = input(defval = "USDT,USD,KRW", title ="" , type = input.string, confirm =false,group = "Label",inline = "Remove Currency")
+sort_by         = input(defval ="Change Rate",title = "Label Sort by: ", options=["Profit", "Change Rate", "None"], group = "Label")
+posX_scr        = input(defval = 100,   title = "Label Position x-axis(#bars)",                 group = "Label", tooltip = "The label moves to the right by the number of bars..")
+posY_scr        = input(defval = 100.0, title = "Label Position y-axis(ohlc4[100] * %/100)", step = 0.1,    group = "Label", tooltip = "The label moves up and down depending on the input value. 100% is original point. ex) 99.5, ex) 105 ")
+// } input for Label end
+// { Function for handling strings start
+// ————— Function returning a string representation of a numeric `_val` using a special `_fmt` string allowing all strings to be of the same width, to help align columns of values.
+f_tostringPad(_val, _fmt) =>
+    // float  _val: string to separate.
+    // string _fmt: formatting string similar to those used in the `tostring()` format string, with "?" used to indicate padding, 
+    //              e.g., "??0.00" to ensure that numbers always contain three characters left of the decimal point.
+    //              WARNING: A minus sign MUST begin the format ("-??0.00") if negative values are to be handled, otherwise negative values will have no minus sign.
+    // Character used to pad numbers: Unicode figure space (U+2007).
+    var string FIGURE_SPACE = " "
+    // Character used to pad minus signs: Unicode punctuation space (U+2008).
+    var string PUNCTUATION_SPACE = " "
+    // Preliminary conversion of the value to a string.
+    string _formattedVal = tostring(_val, _fmt)
+    // Remove minus sign from format string.
+    _formattedVal := str.replace_all(_formattedVal, "-", "")
+    // Split value and format string into characters.
+    string[] _chars    = str.split(_formattedVal, "")
+    string[] _charsFmt = str.split(_fmt, "")
+    
+    // Detect if we need to handle negative values, and if so, remove the minus sign from format.
+    bool _handleNegs = array.get(_charsFmt, 0) == "-"
+    if _handleNegs
+        array.shift(_charsFmt)
+    // Detect if value or format string are without a decimal point and if so, add a temporary one for our logic, which we'll remove later.
+    int _pointPos    = array.indexof(_chars, ".")
+    int _pointPosFmt = array.indexof(_charsFmt, ".")
+    bool _noPoint    = _pointPos == -1
+    bool _noPointFmt = _pointPosFmt == -1
+    if _noPoint
+        array.push(_chars, ".")
+        _pointPos := array.indexof(_chars, ".")
+    if _noPointFmt
+        array.push(_charsFmt, ".")
+        _pointPosFmt := array.indexof(_charsFmt, ".")
+    // Remove extra instances of "?" in front of value.
+    _extraChars = _pointPos - _pointPosFmt
+    if _extraChars > 0
+        for _i = 0 to _extraChars - 1
+            array.shift(_chars)
+    // Add minus sign or space if needed.
+    if _handleNegs
+        // Format accounts for negative values; insert minus sign or space.
+        array.unshift(_chars, (_val < 0 ? "-" : PUNCTUATION_SPACE))
+    // Remove temporary decimal point if needed.
+    if _noPointFmt or _noPoint
+        array.pop(_chars)
+    // Rejoin our array and replace the "?" chars left in our result with figure space padding.
+    string _return = array.join(_chars, "")
+    _return := str.replace_all(_return, "?", FIGURE_SPACE)
+f_rmDnC(_str, _space, _rmCurrency  ,_Currency) => 
+    // string _str: string to separate.
+    // int _space : space for id
+    // bool _rmCurrency : if true remove currency display
+    // string _Currency : Separated by ',' list of Currency 
+    var string FIGURE_SPACE = " "
+    var string _str0        = _str
+    if _rmCurrency
+        _Currencys0         = str.split(str.replace_all(_Currency, " ", ""), ",")
+        for i = 0 to array.size(_Currencys0) - 1        
+            _str0 := str.replace_all(_str0,  array.get(_Currencys0, i),  '')            
+    string[] _chars = str.split(_str0, "")
+    int _len    = array.size(_chars)
+    int _ofPos  = array.indexof(_chars, ":")
+    string[] _substr = array.new_string(0)
+    if _ofPos >= 0 and _ofPos < _len - 1
+        _substr := array.slice(_chars, _ofPos + 1, _len) // remove Dealer code
+        int _len2 = array.size(_substr)    
+        if _len2 < _space
+            for _i = _len2 + 1 to _space
+                array.push(_substr, FIGURE_SPACE)
+                // array.unshift(_substr, FIGURE_SPACE)
+    else if _len < _space
+        _len := _str == '' ? 0 : _len  // size of 'string[] _chars = str.split('', "")' is 1 not 0
+        for _i = _len + 1  to _space
+            array.push(_chars, FIGURE_SPACE)
+            // array.unshift(_chars, FIGURE_SPACE)
+    string _return = _ofPos >= 0 and _ofPos < _len - 1 ? array.join(_substr, "") : array.join(_chars, "")
+// } Function for handling strings end    
+OCCmax(_id, _multiplier, _non_rep) =>
+    var Trend       = 0
+    var Position    = 0
+    var profit      = 0.0
+    var changeRate  = 0.0
+    var tm          = 0
+    var to_num      = 0    
+    if _id == ''
+        Trend := 0, Position := 0, profit := -99999999.9, changeRate := -99999999.9, tm := 0
+    if _id != ''
+        Trend       := closeSeries[1] > (openSeries[1]  + _multiplier * atr) ?  1 :
+                      closeSeries[1] < (openSeries[1]  - _multiplier * atr) ? -1 : 0
+        Position    := Trend != 0 ?  Trend : Position[1]
+        to_num      := barssince(Position[1] != Position[0]) + 1
+        profit      := 100.0  * (close[0] - close[to_num]) / close[to_num]
+        tm          := to_num * resMultiplier
+        changeRate  := 100.0  * profit / (tm * vResInMinutes)
+    [Trend, Position, profit, changeRate, tm]     
+//////////////////////////////////////////////////////////////////////////////////////////////
+// If you want to reduce the input space, adjust the 'array_size'.                          //
+// And comment the id number as many as you want from the line below.                       //    
+// 'array_size' is 1 larger than the 'ID number'. array_size cannot be greater than 38.     //
+//////////////////////////////////////////////////////////////////////////////////////////////
+array_size = 38
+spaceSize = rmCurrency ? 4 : 6 // for tickerid display
+// { Label list start
+var id_ = array.new_string(array_size), var t_  = array.new_int(array_size),   var p_  = array.new_int(array_size) 
+var pr_ = array.new_float(array_size),  var cr_ = array.new_float(array_size), var tm_ = array.new_int(array_size)
+id00 = syminfo.tickerid                                                               , [t00, p00, pr00, cr00, tm00] = security(id00, stratRes, OCCmax(id00, Multiplier, Non_Repainting)), array.set(id_,  0, f_rmDnC(id00, spaceSize, rmCurrency , Currency)), array.set(t_,  0, t00), array.set(p_,  0, p00), array.set(pr_,  0, pr00), array.set(cr_,  0, cr00), array.set(tm_,  0, tm00) 
+id01 = input('', title='Symbol 01',type=input.symbol, group = "Inputs to view trends"), [t01, p01, pr01, cr01, tm01] = security(id01, stratRes, OCCmax(id01, Multiplier, Non_Repainting)), array.set(id_,  1, f_rmDnC(id01, spaceSize, rmCurrency , Currency)), array.set(t_,  1, t01), array.set(p_,  1, p01), array.set(pr_,  1, pr01), array.set(cr_,  1, cr01), array.set(tm_,  1, tm01)
+id02 = input('', title='Symbol 02',type=input.symbol, group = "Inputs to view trends"), [t02, p02, pr02, cr02, tm02] = security(id02, stratRes, OCCmax(id02, Multiplier, Non_Repainting)), array.set(id_,  2, f_rmDnC(id02, spaceSize, rmCurrency , Currency)), array.set(t_,  2, t02), array.set(p_,  2, p02), array.set(pr_,  2, pr02), array.set(cr_,  2, cr02), array.set(tm_,  2, tm02)
+id03 = input('', title='Symbol 03',type=input.symbol, group = "Inputs to view trends"), [t03, p03, pr03, cr03, tm03] = security(id03, stratRes, OCCmax(id03, Multiplier, Non_Repainting)), array.set(id_,  3, f_rmDnC(id03, spaceSize, rmCurrency , Currency)), array.set(t_,  3, t03), array.set(p_,  3, p03), array.set(pr_,  3, pr03), array.set(cr_,  3, cr03), array.set(tm_,  3, tm03)
+id04 = input('', title='Symbol 04',type=input.symbol, group = "Inputs to view trends"), [t04, p04, pr04, cr04, tm04] = security(id04, stratRes, OCCmax(id04, Multiplier, Non_Repainting)), array.set(id_,  4, f_rmDnC(id04, spaceSize, rmCurrency , Currency)), array.set(t_,  4, t04), array.set(p_,  4, p04), array.set(pr_,  4, pr04), array.set(cr_,  4, cr04), array.set(tm_,  4, tm04)
+id05 = input('', title='Symbol 05',type=input.symbol, group = "Inputs to view trends"), [t05, p05, pr05, cr05, tm05] = security(id05, stratRes, OCCmax(id05, Multiplier, Non_Repainting)), array.set(id_,  5, f_rmDnC(id05, spaceSize, rmCurrency , Currency)), array.set(t_,  5, t05), array.set(p_,  5, p05), array.set(pr_,  5, pr05), array.set(cr_,  5, cr05), array.set(tm_,  5, tm05)
+id06 = input('', title='Symbol 06',type=input.symbol, group = "Inputs to view trends"), [t06, p06, pr06, cr06, tm06] = security(id06, stratRes, OCCmax(id06, Multiplier, Non_Repainting)), array.set(id_,  6, f_rmDnC(id06, spaceSize, rmCurrency , Currency)), array.set(t_,  6, t06), array.set(p_,  6, p06), array.set(pr_,  6, pr06), array.set(cr_,  6, cr06), array.set(tm_,  6, tm06)
+id07 = input('', title='Symbol 07',type=input.symbol, group = "Inputs to view trends"), [t07, p07, pr07, cr07, tm07] = security(id07, stratRes, OCCmax(id07, Multiplier, Non_Repainting)), array.set(id_,  7, f_rmDnC(id07, spaceSize, rmCurrency , Currency)), array.set(t_,  7, t07), array.set(p_,  7, p07), array.set(pr_,  7, pr07), array.set(cr_,  7, cr07), array.set(tm_,  7, tm07)
+id08 = input('', title='Symbol 08',type=input.symbol, group = "Inputs to view trends"), [t08, p08, pr08, cr08, tm08] = security(id08, stratRes, OCCmax(id08, Multiplier, Non_Repainting)), array.set(id_,  8, f_rmDnC(id08, spaceSize, rmCurrency , Currency)), array.set(t_,  8, t08), array.set(p_,  8, p08), array.set(pr_,  8, pr08), array.set(cr_,  8, cr08), array.set(tm_,  8, tm08)
+id09 = input('', title='Symbol 09',type=input.symbol, group = "Inputs to view trends"), [t09, p09, pr09, cr09, tm09] = security(id09, stratRes, OCCmax(id09, Multiplier, Non_Repainting)), array.set(id_,  9, f_rmDnC(id09, spaceSize, rmCurrency , Currency)), array.set(t_,  9, t09), array.set(p_,  9, p09), array.set(pr_,  9, pr09), array.set(cr_,  9, cr09), array.set(tm_,  9, tm09)
+id10 = input('', title='Symbol 10',type=input.symbol, group = "Inputs to view trends"), [t10, p10, pr10, cr10, tm10] = security(id10, stratRes, OCCmax(id10, Multiplier, Non_Repainting)), array.set(id_, 10, f_rmDnC(id10, spaceSize, rmCurrency , Currency)), array.set(t_, 10, t10), array.set(p_, 10, p10), array.set(pr_, 10, pr10), array.set(cr_, 10, cr10), array.set(tm_, 10, tm10)
+id11 = input('', title='Symbol 11',type=input.symbol, group = "Inputs to view trends"), [t11, p11, pr11, cr11, tm11] = security(id11, stratRes, OCCmax(id11, Multiplier, Non_Repainting)), array.set(id_, 11, f_rmDnC(id11, spaceSize, rmCurrency , Currency)), array.set(t_, 11, t11), array.set(p_, 11, p11), array.set(pr_, 11, pr11), array.set(cr_, 11, cr11), array.set(tm_, 11, tm11)
+id12 = input('', title='Symbol 12',type=input.symbol, group = "Inputs to view trends"), [t12, p12, pr12, cr12, tm12] = security(id12, stratRes, OCCmax(id12, Multiplier, Non_Repainting)), array.set(id_, 12, f_rmDnC(id12, spaceSize, rmCurrency , Currency)), array.set(t_, 12, t12), array.set(p_, 12, p12), array.set(pr_, 12, pr12), array.set(cr_, 12, cr12), array.set(tm_, 12, tm12)
+id13 = input('', title='Symbol 13',type=input.symbol, group = "Inputs to view trends"), [t13, p13, pr13, cr13, tm13] = security(id13, stratRes, OCCmax(id13, Multiplier, Non_Repainting)), array.set(id_, 13, f_rmDnC(id13, spaceSize, rmCurrency , Currency)), array.set(t_, 13, t13), array.set(p_, 13, p13), array.set(pr_, 13, pr13), array.set(cr_, 13, cr13), array.set(tm_, 13, tm13)
+id14 = input('', title='Symbol 14',type=input.symbol, group = "Inputs to view trends"), [t14, p14, pr14, cr14, tm14] = security(id14, stratRes, OCCmax(id14, Multiplier, Non_Repainting)), array.set(id_, 14, f_rmDnC(id14, spaceSize, rmCurrency , Currency)), array.set(t_, 14, t14), array.set(p_, 14, p14), array.set(pr_, 14, pr14), array.set(cr_, 14, cr14), array.set(tm_, 14, tm14)
+id15 = input('', title='Symbol 15',type=input.symbol, group = "Inputs to view trends"), [t15, p15, pr15, cr15, tm15] = security(id15, stratRes, OCCmax(id15, Multiplier, Non_Repainting)), array.set(id_, 15, f_rmDnC(id15, spaceSize, rmCurrency , Currency)), array.set(t_, 15, t15), array.set(p_, 15, p15), array.set(pr_, 15, pr15), array.set(cr_, 15, cr15), array.set(tm_, 15, tm15)
+id16 = input('', title='Symbol 16',type=input.symbol, group = "Inputs to view trends"), [t16, p16, pr16, cr16, tm16] = security(id16, stratRes, OCCmax(id16, Multiplier, Non_Repainting)), array.set(id_, 16, f_rmDnC(id16, spaceSize, rmCurrency , Currency)), array.set(t_, 16, t16), array.set(p_, 16, p16), array.set(pr_, 16, pr16), array.set(cr_, 16, cr16), array.set(tm_, 16, tm16)
+id17 = input('', title='Symbol 17',type=input.symbol, group = "Inputs to view trends"), [t17, p17, pr17, cr17, tm17] = security(id17, stratRes, OCCmax(id17, Multiplier, Non_Repainting)), array.set(id_, 17, f_rmDnC(id17, spaceSize, rmCurrency , Currency)), array.set(t_, 17, t17), array.set(p_, 17, p17), array.set(pr_, 17, pr17), array.set(cr_, 17, cr17), array.set(tm_, 17, tm17)
+id18 = input('', title='Symbol 18',type=input.symbol, group = "Inputs to view trends"), [t18, p18, pr18, cr18, tm18] = security(id18, stratRes, OCCmax(id18, Multiplier, Non_Repainting)), array.set(id_, 18, f_rmDnC(id18, spaceSize, rmCurrency , Currency)), array.set(t_, 18, t18), array.set(p_, 18, p18), array.set(pr_, 18, pr18), array.set(cr_, 18, cr18), array.set(tm_, 18, tm18)
+id19 = input('', title='Symbol 19',type=input.symbol, group = "Inputs to view trends"), [t19, p19, pr19, cr19, tm19] = security(id19, stratRes, OCCmax(id19, Multiplier, Non_Repainting)), array.set(id_, 19, f_rmDnC(id19, spaceSize, rmCurrency , Currency)), array.set(t_, 19, t19), array.set(p_, 19, p19), array.set(pr_, 19, pr19), array.set(cr_, 19, cr19), array.set(tm_, 19, tm19)
+id20 = input('', title='Symbol 20',type=input.symbol, group = "Inputs to view trends"), [t20, p20, pr20, cr20, tm20] = security(id20, stratRes, OCCmax(id20, Multiplier, Non_Repainting)), array.set(id_, 20, f_rmDnC(id20, spaceSize, rmCurrency , Currency)), array.set(t_, 20, t20), array.set(p_, 20, p20), array.set(pr_, 20, pr20), array.set(cr_, 20, cr20), array.set(tm_, 20, tm20)
+id21 = input('', title='Symbol 21',type=input.symbol, group = "Inputs to view trends"), [t21, p21, pr21, cr21, tm21] = security(id21, stratRes, OCCmax(id21, Multiplier, Non_Repainting)), array.set(id_, 21, f_rmDnC(id21, spaceSize, rmCurrency , Currency)), array.set(t_, 21, t21), array.set(p_, 21, p21), array.set(pr_, 21, pr21), array.set(cr_, 21, cr21), array.set(tm_, 21, tm21)
+id22 = input('', title='Symbol 22',type=input.symbol, group = "Inputs to view trends"), [t22, p22, pr22, cr22, tm22] = security(id22, stratRes, OCCmax(id22, Multiplier, Non_Repainting)), array.set(id_, 22, f_rmDnC(id22, spaceSize, rmCurrency , Currency)), array.set(t_, 22, t22), array.set(p_, 22, p22), array.set(pr_, 22, pr22), array.set(cr_, 22, cr22), array.set(tm_, 22, tm22)
+id23 = input('', title='Symbol 23',type=input.symbol, group = "Inputs to view trends"), [t23, p23, pr23, cr23, tm23] = security(id23, stratRes, OCCmax(id23, Multiplier, Non_Repainting)), array.set(id_, 23, f_rmDnC(id23, spaceSize, rmCurrency , Currency)), array.set(t_, 23, t23), array.set(p_, 23, p23), array.set(pr_, 23, pr23), array.set(cr_, 23, cr23), array.set(tm_, 23, tm23)
+id24 = input('', title='Symbol 24',type=input.symbol, group = "Inputs to view trends"), [t24, p24, pr24, cr24, tm24] = security(id24, stratRes, OCCmax(id24, Multiplier, Non_Repainting)), array.set(id_, 24, f_rmDnC(id24, spaceSize, rmCurrency , Currency)), array.set(t_, 24, t24), array.set(p_, 24, p24), array.set(pr_, 24, pr24), array.set(cr_, 24, cr24), array.set(tm_, 24, tm24)
+id25 = input('', title='Symbol 25',type=input.symbol, group = "Inputs to view trends"), [t25, p25, pr25, cr25, tm25] = security(id25, stratRes, OCCmax(id25, Multiplier, Non_Repainting)), array.set(id_, 25, f_rmDnC(id25, spaceSize, rmCurrency , Currency)), array.set(t_, 25, t25), array.set(p_, 25, p25), array.set(pr_, 25, pr25), array.set(cr_, 25, cr25), array.set(tm_, 25, tm25)
+id26 = input('', title='Symbol 26',type=input.symbol, group = "Inputs to view trends"), [t26, p26, pr26, cr26, tm26] = security(id26, stratRes, OCCmax(id26, Multiplier, Non_Repainting)), array.set(id_, 26, f_rmDnC(id26, spaceSize, rmCurrency , Currency)), array.set(t_, 26, t26), array.set(p_, 26, p26), array.set(pr_, 26, pr26), array.set(cr_, 26, cr26), array.set(tm_, 26, tm26)
+id27 = input('', title='Symbol 27',type=input.symbol, group = "Inputs to view trends"), [t27, p27, pr27, cr27, tm27] = security(id27, stratRes, OCCmax(id27, Multiplier, Non_Repainting)), array.set(id_, 27, f_rmDnC(id27, spaceSize, rmCurrency , Currency)), array.set(t_, 27, t27), array.set(p_, 27, p27), array.set(pr_, 27, pr27), array.set(cr_, 27, cr27), array.set(tm_, 27, tm27)
+id28 = input('', title='Symbol 28',type=input.symbol, group = "Inputs to view trends"), [t28, p28, pr28, cr28, tm28] = security(id28, stratRes, OCCmax(id28, Multiplier, Non_Repainting)), array.set(id_, 28, f_rmDnC(id28, spaceSize, rmCurrency , Currency)), array.set(t_, 28, t28), array.set(p_, 28, p28), array.set(pr_, 28, pr28), array.set(cr_, 28, cr28), array.set(tm_, 28, tm28)
+id29 = input('', title='Symbol 29',type=input.symbol, group = "Inputs to view trends"), [t29, p29, pr29, cr29, tm29] = security(id29, stratRes, OCCmax(id29, Multiplier, Non_Repainting)), array.set(id_, 29, f_rmDnC(id29, spaceSize, rmCurrency , Currency)), array.set(t_, 29, t29), array.set(p_, 29, p29), array.set(pr_, 29, pr29), array.set(cr_, 29, cr29), array.set(tm_, 29, tm29)
+id30 = input('', title='Symbol 30',type=input.symbol, group = "Inputs to view trends"), [t30, p30, pr30, cr30, tm30] = security(id30, stratRes, OCCmax(id30, Multiplier, Non_Repainting)), array.set(id_, 30, f_rmDnC(id30, spaceSize, rmCurrency , Currency)), array.set(t_, 30, t30), array.set(p_, 30, p30), array.set(pr_, 30, pr30), array.set(cr_, 30, cr30), array.set(tm_, 30, tm30)
+id31 = input('', title='Symbol 31',type=input.symbol, group = "Inputs to view trends"), [t31, p31, pr31, cr31, tm31] = security(id31, stratRes, OCCmax(id31, Multiplier, Non_Repainting)), array.set(id_, 31, f_rmDnC(id31, spaceSize, rmCurrency , Currency)), array.set(t_, 31, t31), array.set(p_, 31, p31), array.set(pr_, 31, pr31), array.set(cr_, 31, cr31), array.set(tm_, 31, tm31)
+id32 = input('', title='Symbol 32',type=input.symbol, group = "Inputs to view trends"), [t32, p32, pr32, cr32, tm32] = security(id32, stratRes, OCCmax(id32, Multiplier, Non_Repainting)), array.set(id_, 32, f_rmDnC(id32, spaceSize, rmCurrency , Currency)), array.set(t_, 32, t32), array.set(p_, 32, p32), array.set(pr_, 32, pr32), array.set(cr_, 32, cr32), array.set(tm_, 32, tm32)
+id33 = input('', title='Symbol 33',type=input.symbol, group = "Inputs to view trends"), [t33, p33, pr33, cr33, tm33] = security(id33, stratRes, OCCmax(id33, Multiplier, Non_Repainting)), array.set(id_, 33, f_rmDnC(id33, spaceSize, rmCurrency , Currency)), array.set(t_, 33, t33), array.set(p_, 33, p33), array.set(pr_, 33, pr33), array.set(cr_, 33, cr33), array.set(tm_, 33, tm33)
+id34 = input('', title='Symbol 34',type=input.symbol, group = "Inputs to view trends"), [t34, p34, pr34, cr34, tm34] = security(id34, stratRes, OCCmax(id34, Multiplier, Non_Repainting)), array.set(id_, 34, f_rmDnC(id34, spaceSize, rmCurrency , Currency)), array.set(t_, 34, t34), array.set(p_, 34, p34), array.set(pr_, 34, pr34), array.set(cr_, 34, cr34), array.set(tm_, 34, tm34)
+id35 = input('', title='Symbol 35',type=input.symbol, group = "Inputs to view trends"), [t35, p35, pr35, cr35, tm35] = security(id35, stratRes, OCCmax(id35, Multiplier, Non_Repainting)), array.set(id_, 35, f_rmDnC(id35, spaceSize, rmCurrency , Currency)), array.set(t_, 35, t35), array.set(p_, 35, p35), array.set(pr_, 35, pr35), array.set(cr_, 35, cr35), array.set(tm_, 35, tm35)
+id36 = input('', title='Symbol 36',type=input.symbol, group = "Inputs to view trends"), [t36, p36, pr36, cr36, tm36] = security(id36, stratRes, OCCmax(id36, Multiplier, Non_Repainting)), array.set(id_, 36, f_rmDnC(id36, spaceSize, rmCurrency , Currency)), array.set(t_, 36, t36), array.set(p_, 36, p36), array.set(pr_, 36, pr36), array.set(cr_, 36, cr36), array.set(tm_, 36, tm36)
+id37 = input('', title='Symbol 37',type=input.symbol, group = "Inputs to view trends"), [t37, p37, pr37, cr37, tm37] = security(id37, stratRes, OCCmax(id37, Multiplier, Non_Repainting)), array.set(id_, 37, f_rmDnC(id37, spaceSize, rmCurrency , Currency)), array.set(t_, 37, t37), array.set(p_, 37, p37), array.set(pr_, 37, pr37), array.set(cr_, 37, cr37), array.set(tm_, 37, tm37)
+// { Label list end
+// { for Label display start
+var string scr_label = ''
+var string pot_label = ''
+var string up_label  = ''
+var string dn_label  = ''
+pot_label := rmCurrency ? '[ Potential Reversal:        ]\n'  : '[ Potential Reversal:            ]\n'
+up_label  := rmCurrency ? '[ Uptrend:Profit,ChgRate,#Bars\n'  : '[ Uptrend: Profit%, ChgRate,#Bars\n'
+dn_label  := rmCurrency ? '[ Downtrend:              ]\n'     : '[ Downtrend:                  ]\n' 
+scr_label := rmCurrency ? '[ Confirmed Reversal:       ]\n'   : '[ Confirmed Reversal:           ]\n'
+up_label  := sort_by ==  "Profit"       ? (rmCurrency ? up_label + '|         -------           |\n' : up_label + '|          -----------           |\n') : up_label
+up_label  := sort_by ==  "Change Rate"  ? (rmCurrency ? up_label + '|               --------    |\n' : up_label + '|                 ---------     |\n' ) : up_label
+up_label  := sort_by ==  "None"         ? (rmCurrency ? up_label + '|                         |\n'   : up_label + '|                           |\n'     ) : up_label
+// { sorting start
+var not_blank   = array.indexof(id_, rmCurrency ? "    " : "      ") != -1 ? array.indexof(id_, rmCurrency ? "    " : "      ") : array_size
+arrayForSort    = sort_by == "Profit" ? array.copy(pr_) :  array.copy(cr_)
+array.sort(arrayForSort, order.descending)
+stock_info      = ''
+sorted_index    = 0
+for i = 0 to not_blank
+    if i == 0 
+        sorted_index := 0  // for id00 = syminfo.tickerid
+    else
+        sorted_index := sort_by == "None" ?  i - 1 : sort_by == "Profit" ?  array.indexof(pr_, array.get(arrayForSort, i - 1)[0]) :   array.indexof(cr_, array.get(arrayForSort, i - 1)[0])
+        sorted_index := sorted_index != -1 ? sorted_index : 0
+    stock_info := array.get(id_, sorted_index)[0] + ' ' +
+                     f_tostringPad(array.get(pr_, sorted_index)[0], "-??0.00") + ' ' + 
+                     f_tostringPad(array.get(cr_, sorted_index)[0],  "-?0.00") + ' ' +
+                     f_tostringPad(array.get(tm_, sorted_index)[0],   "???0") + '\n'
+    scr_label   := array.get(p_, sorted_index)[0] != array.get(p_, sorted_index)[1] and  array.get(t_, sorted_index)[0] != 0 ?  scr_label + stock_info : scr_label
+    pot_label   := array.get(t_, sorted_index)[0] ==  0  ?  pot_label + stock_info : pot_label
+    up_label    := array.get(t_, sorted_index)[0] ==  1  ?  up_label  + stock_info : up_label
+    dn_label    := array.get(t_, sorted_index)[0] == -1  ?  dn_label  + stock_info : dn_label
+// } sorting end
+f_printscr (_txtscr ) => 
+     var _lblscr  = label(na), 
+     label.delete(_lblscr ), 
+     _lblscr  := label.new(
+     time + (time-time[1])*posX_scr, 
+     ohlc4[100] * posY_scr/100.0, 
+     _txtscr,
+     xloc.bar_time, 
+     yloc.price, 
+     showLabel  ? #00000000 : na,
+     textcolor  =  showLabel ? textColor : na,      
+     size       = size.normal, 
+     style      = label.style_label_center,
+     textalign  = text.align_right
+     )
+f_printscr ( scr_label + '\n' + pot_label +'\n' + up_label + '\n' + dn_label)
+// } for Label display end
+// }To view trends end
+Expand (450 lines)

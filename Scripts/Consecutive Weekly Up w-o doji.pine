@@ -1,0 +1,64 @@
+Script Name: Consecutive Weekly Up w-o doji
+Author: alex.crown.jr
+Description: Based on the built-in Consecutive Up/Down strategy by TradingView . Long only
+PineScript code:
+
+Pine Script™ strategy
+Consecutive Weekly Up w/o doji
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+//@version=5
+// Based on the built-in Consecutive Up/Down strategy by TradingView 
+strategy("Consecutive Weekly Up w/o doji", overlay=true, default_qty_value = 100, initial_capital = 1000, currency = "USD", default_qty_type = strategy.percent_of_equity,   process_orders_on_close = true)
+consecutiveBarsUp = input(3)
+percentage = input(0.1, "doji mult in %")
+var float inDeal = 0.0
+doji = math.abs(close - open) <= (high - close) * percentage
+price = close
+ups = 0.0
+ups := price > price[1] and not doji and not inDeal  ? nz(ups[1]) + 1 : 0
+openPrice = strategy.opentrades.entry_price(0)
+tp = fixnan(ta.change(inDeal)!=0 ? math.max(ta.tr, ta.tr[1], ta.tr[2]) + openPrice : na)
+longCond = ups >= consecutiveBarsUp
+if (longCond and strategy.position_size == 0)
+    inDeal := 1.0
+    strategy.entry("l", strategy.long, comment="l")
+if ta.crossover(high, tp)
+    inDeal := 0.0
+    strategy.close_all()
+    
+plot(tp, title="TP", color=color.green, linewidth=2, style=plot.style_circles)
+Expand (34 lines)

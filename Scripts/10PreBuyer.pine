@@ -1,0 +1,61 @@
+Script Name: 10PreBuyer
+Author: HermanBrummer
+Description: Quite a simple system
+
+ 
+  Uses a moving average, the blue line to try and get filled at favorable prices
+  The MA is multiplied by a number (e.g. .90) which means the system tries to get filled at a 10% lower price (on the Blue MA line)
+  This means that stop limit buy orders have to be set in advance on the blue line and hope that they would get filled when...
+PineScript code:
+
+Pine Script™ strategy
+10PreBuyer
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+//@version=4
+// >> 3D 1.2 target, .9 loss
+strategy("10PreBuyer", "", 1)
+length              = input(10)
+multiplier          = input(0.90, step=0.01)
+highest             = input(2) 
+prof_trg_perc       = input(1.2, "Prof TRG %",  step=0.05)
+loss_trg_perc       = input(0.9, "Loss TRG %",  step=0.05)
+teemo               = highest(hma(high, length), highest) * multiplier // teemo
+strategy.entry("enter", true, limit=teemo, alert_message = "Enter > DONE >> V3.5 Perc Buyer") // Pre-Place ENTER WITH LIMIT ORDERS and wait for them to fill !!! If they don't fill, then move the order limit price up in line with previous candle's teemo amount
+prof_line           = strategy.position_avg_price * prof_trg_perc // if no new trade, these numbers will just be the previous trades numbers
+loss_line           = strategy.position_avg_price * loss_trg_perc
+strategy.exit("exit", "enter", limit=prof_line, stop=loss_line, alert_message = "Exit > DONE >> V3.5 Perc Buyer")
+plot(teemo,         "Place Limit orders and hope 4 Fill",        color.blue, 2) // blue
+plot(prof_line,     "ProfLine",    #00ff00, 2) // green
+plot(loss_line,     "LossLine",    #ff0000, 2) // red
+barcolor(strategy.opentrades > 0 ? color.yellow : na)
+Expand (30 lines)

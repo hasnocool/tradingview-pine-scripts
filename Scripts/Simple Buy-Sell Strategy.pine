@@ -1,0 +1,91 @@
+Script Name: Simple Buy-Sell Strategy
+Author: BlockchainSpecialists
+Description: This is the strategy version of the original 'Simple Buy/Sell Indicator' by @Shizaru .
+
+The original indicator description explains the logic behind the strategy:
+
+"The original script was posted on ProRealCode by user Doctrading.
+
+This little and simple code allows you to draw an indicator, which show you when buy or sell conditions are met.
+For "buy" conditions,...
+PineScript code:
+
+Pine Script™ strategy
+Simple Buy/Sell Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © BlockchainSpecialists
+//@version=4
+//Original Indicator by @Shizaru - simply made into a strategy!
+strategy("Simple Buy/Sell Strategy", overlay=false)
+psar = sar(0.02,0.02,0.2)
+c1a = close > psar
+c1v = close < psar
+malen = input(200, title="MA Length")
+mm200 = sma(close, malen)
+c2a = close > mm200
+c2v = close < mm200
+fast = input(12, title="Fast EMA Length")
+slow = input(26, title="Slow EMA Length")
+[macd,signal,hist] = macd(close, fast,slow, 9)
+c3a = macd >= 0
+c3v = macd <= 0
+rsilen = input(7, title="RSI Length")
+th = input(50, title="RSI Threshold")
+rsi14 = rsi(close, rsilen)
+c4a = rsi14 >= th
+c4v = rsi14 <= th
+buy = c1a and c2a and c3a and c4a ? 1 : 0
+sell = c1v and c2v and c3v and c4v ? -1 : 0
+longtrades = input(true, title="Long Trades")
+shorttrades = input(true, title="Short Trades")
+quickexit = input(false, title="Quick Exits")
+strategy.entry("Buy", strategy.long, when=buy==1 and longtrades==true)
+strategy.close("Buy", when=quickexit==true ? buy==0 : sell==-1)
+strategy.entry("Sell", strategy.short, when=sell==-1 and shorttrades==true)
+strategy.close("Sell", when=quickexit==true ? sell==0 : buy==1)
+plot(buy, style=plot.style_histogram, color=color.green, linewidth=3, title="Buy Signals")
+plot(sell, style=plot.style_histogram, color=color.red, linewidth=3, title="Sell Signals")
+Expand (42 lines)

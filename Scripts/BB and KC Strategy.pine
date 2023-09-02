@@ -1,0 +1,132 @@
+Script Name: BB and KC Strategy
+Author: jensenvilhelm
+Description: This script is designed as a TradingView strategy that uses Bollinger Bands (BB) and Keltner Channels (KC) as the primary indicators for generating trade signals. It aims to catch potential market trends by comparing the movements of these two popular volatility measures.
+
+Key aspects of this strategy:
+
+1. **Bollinger Bands and Keltner Channels:** Both are...
+PineScript code:
+
+Pine Script™ strategy
+BB and KC Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © jensenvilhelm
+//@version=5
+strategy("BB and KC Strategy", overlay=true, default_qty_type=strategy.cash, default_qty_value=1000)
+// Define the input parameters for the strategy, these can be changed by the user to adjust the strategy
+kcLength = input.int(20, "KC Length", minval=1) // Length for Keltner Channel calculation
+kcStdDev = input.float(2.2, "KC StdDev") // Standard Deviation for Keltner Channel calculation
+bbLength = input.int(20, "BB Length", minval=1) // Length for Bollinger Bands calculation
+bbStdDev = input.float(2, "BB StdDev") // Standard Deviation for Bollinger Bands calculation
+volumeLength = input.int(10, "Volume MA Length", minval=1) // Length for moving average of volume calculation
+stopLossPercent = input.float(1.5, "Stop Loss (%)") // Percent of price for Stop loss 
+trailStopPercent = input.float(2, "Trail Stop (%)") // Percent of price for Trailing Stop
+barsInTrade = input.int(20, "Bars in trade before exit", minval = 1) // Minimum number of bars in trade before considering exit
+// Calculate Bollinger Bands and Keltner Channel
+[bb_middle, bb_upper, bb_lower] = ta.bb(close, bbLength, bbStdDev) // Bollinger Bands calculation
+[kc_middle, kc_upper, kc_lower] = ta.kc(close, kcLength, kcStdDev) // Keltner Channel calculation
+// Calculate moving average of volume
+vol_ma = ta.sma(volume, volumeLength) // Moving average of volume calculation
+// Plotting Bollinger Bands and Keltner Channels on the chart
+plot(bb_upper, color=color.red) // Bollinger Bands upper line
+plot(bb_middle, color=color.blue) // Bollinger Bands middle line
+plot(bb_lower, color=color.red) // Bollinger Bands lower line
+plot(kc_upper, color=color.rgb(105, 255, 82)) // Keltner Channel upper line
+plot(kc_middle, color=color.blue) // Keltner Channel middle line
+plot(kc_lower, color=color.rgb(105, 255, 82)) // Keltner Channel lower line
+// Define entry conditions: long position if upper KC line crosses above upper BB line and volume is above MA of volume
+// and short position if lower KC line crosses below lower BB line and volume is above MA of volume
+longCond = ta.crossover(kc_upper, bb_upper) and volume > vol_ma // Entry condition for long position
+shortCond = ta.crossunder(kc_lower, bb_lower) and volume > vol_ma // Entry condition for short position
+// Define variables to store entry price and bar counter at entry point
+var float entry_price = na // variable to store entry price
+var int bar_counter = na // variable to store bar counter at entry point
+// Check entry conditions and if met, open long or short position
+if (longCond)
+    strategy.entry("Buy", strategy.long) // Open long position
+    entry_price := close // Store entry price
+    bar_counter := 1 // Start bar counter
+if (shortCond)
+    strategy.entry("Sell", strategy.short) // Open short position
+    entry_price := close // Store entry price
+    bar_counter := 1 // Start bar counter
+// If in a position and bar counter is not na, increment bar counter
+if (strategy.position_size != 0 and na(bar_counter) == false)
+    bar_counter := bar_counter + 1 // Increment bar counter
+// Define exit conditions: close position if been in trade for more than specified bars
+// or if price drops by more than specified percent for long or rises by more than specified percent for short
+if (bar_counter > barsInTrade) // Only consider exit after minimum bars in trade
+    if (bar_counter >= barsInTrade)
+        strategy.close_all() // Close all positions
+    // Stop loss and trailing stop
+    if (strategy.position_size > 0)
+        strategy.exit("Sell", "Buy", stop=entry_price * (1 - stopLossPercent/100), trail_points=entry_price * trailStopPercent/100) // Set stop loss and trailing stop for long position
+    else if (strategy.position_size < 0)
+        strategy.exit("Buy", "Sell", stop=entry_price * (1 + stopLossPercent/100), trail_points=entry_price * trailStopPercent/100) // Set stop loss and trailing stop for short position
+Expand (65 lines)

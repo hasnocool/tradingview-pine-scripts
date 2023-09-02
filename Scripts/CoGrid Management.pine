@@ -1,0 +1,441 @@
+Script Name: CoGrid Management
+Author: UnknownUnicorn2151907
+Description: This strategy uses grid levels determined by pivot points based on the selected time period.
+It's useful for swing trading without leverage, spot trading or for Hold management.
+If the price goes down we buy and if it continues to go down we keep buying improving the average price.
+When the price rises above the average entry price, we sell and if it continues to...
+PineScript code:
+
+Pine Script™ strategy
+CoGrid Management
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © XaviZ
+//@version=4
+strategy(title = "CoGrid Management", shorttitle = "CoGrid💹", overlay = true, pyramiding = 1000, default_qty_value = 0)
+// ———————————————————— Inputs
+WOption             = input('PRICE',        " 》 WIDTH TYPE",                                                   options = ['PRICE','% PP'])
+Width               = input(500,            " 》 WIDTH",                type = input.float,     minval = 0)
+ppPeriod            = input('Month',        " 》 PP PERIOD",                                                    options = ['Day','Week','15D','Month'])
+BuyType             = input("CASH",         " 》 BUY TYPE",                                                     options = ["CONTRACTS","CASH","% EQUITY"])
+BuyQ                = input(10000,          " 》 QUANTITY TO BUY",      type = input.float,     minval = 0)
+SellType            = input('CONTRACTS',    " 》 SELL TYPE",                                                    options = ["CONTRACTS","CASH","% EQUITY"])
+SellQ               = input(2,              " 》 QUANTITY TO SELL",     type = input.float,     minval = 0)
+// ———————————————————— Vars
+// ————— Final Buy Price & Final Sell Price
+var float FinalBuyPrice = na
+var float FinalSellPrice = na
+var float FinalOpenPrice = na
+// ————— Average Price
+var int nBuys = na
+nBuys := nz(nBuys[1])
+var int nSells = na
+nSells := nz(nSells[1])
+var float sumBuy = na
+sumBuy := nz(sumBuy[1])
+var float sumSell = na
+sumSell := nz(sumSell[1])
+var float sumQtyBuy = na
+sumQtyBuy := nz(sumQtyBuy[1])
+var float sumQtySell = na
+sumQtySell := nz(sumQtySell[1])
+var float AveragePrice = na
+color Color = na
+// ————— Fibonacci Pivots Level Calculation
+var float PP = na
+// ————— Backtest
+BuyFactor           = BuyType  == "CONTRACTS"   ? 1 : BuyType == "% EQUITY" ? (100 / (strategy.equity / close)) : close
+SellFactor          = SellType == "CASH"        ? close : 1
+BuyQuanTity         = BuyQ  / BuyFactor
+SellQuanTity        = SellQ / SellFactor
+// ————— Width between levels
+float GridWidth     = WOption == 'PRICE' ? Width : PP * (Width/100)
+// ————— Origin from Rounded Pivot Points or last Sell
+var float PPdownOrigin = na
+PPdownOrigin        := floor(PP / GridWidth) * GridWidth
+PPdownOrigin        := (fixnan(FinalSellPrice[1]) <= PP ? (floor(fixnan(FinalSellPrice[1]) / GridWidth) * GridWidth) - GridWidth : floor(PP / GridWidth) * GridWidth)
+// ————— Origin from Rounded Position Price
+var float PPupOrigin = na
+PPupOrigin          := nz(PPupOrigin[1])
+PPupOrigin          := (ceil(fixnan(AveragePrice[1]) / GridWidth) * GridWidth) + GridWidth
+// ———————————————————— Pivot Points
+// ————— Pivot Points Period
+res                 = ppPeriod == '15D' ? '15D' : ppPeriod == 'Week' ? 'W' : ppPeriod == 'Day' ? 'D' : 'M'
+// ————— High, Low, Close Calc. 
+// "Function to securely and simply call `security()` so that it never repaints and never looks ahead" (@PineCoders)
+f_secureSecurity(_symbol, _res, _src) => security(_symbol, _res, _src[1], lookahead = barmerge.lookahead_on)
+phigh               = f_secureSecurity(syminfo.tickerid, res, high)
+plow                = f_secureSecurity(syminfo.tickerid, res, low)
+pclose              = f_secureSecurity(syminfo.tickerid, res, close)
+// ————— Fibonacci Pivots Level Calculation
+PP                  := (phigh + plow + pclose) / 3
+// ———————————————————— Grid Strategy
+// ————— Grid Calculation
+fGrid(_1, _2, _n) =>
+    _a = _1, _b = _2, _c = 0.0
+    for _i = 1 to _n
+        if _i == 1
+            _c := _a
+        else
+            _c := _a + _b
+        _a := _c
+// ————— Buy at better Price
+fBuyCondition(_n) =>
+    var float _ldown = na
+    _ldown := nz(_ldown[1])
+    var bool _pb = na
+    _pb := nz(_pb[1])
+    var bool _BuyCondition = na
+    _BuyCondition := nz(_BuyCondition[1])
+    for _i = 1 to _n
+        _ldown := fGrid(PPdownOrigin, -GridWidth, _i)
+        _pb    := crossunder(low, _ldown) and high >= _ldown
+        _BuyCondition := na(FinalOpenPrice) ? _pb : _pb and _ldown < (FinalOpenPrice[1] - GridWidth / 4)
+    _BuyCondition
+// ————— Sell at better Price
+fSellCondition(_n) =>
+    var float _lup = na
+    _lup := nz(_lup[1])
+    var bool  _ps = na
+    _ps := nz(_ps[1])
+    var bool _SellCondition = na
+    _SellCondition := nz(_SellCondition[1])
+    for _i = 1 to _n
+        _lup := fGrid(PPupOrigin, GridWidth, _i)
+        _ps  := crossover(high, _lup) and low <= _lup
+        _SellCondition := na(FinalOpenPrice) ? _ps : _ps and _lup > (FinalOpenPrice[1] + GridWidth / 4)
+    _SellCondition
+// ————— Final Trade Price, Average Price & Backtest
+for _i = 1 to 15
+    
+    // Buys
+    if fBuyCondition(_i)
+        FinalBuyPrice       := fGrid(PPdownOrigin, -GridWidth, _i)
+        FinalSellPrice      := na
+        FinalOpenPrice      := fGrid(PPdownOrigin, -GridWidth, _i)
+        nBuys               := nBuys + 1
+        nSells              := na
+        sumBuy              := FinalOpenPrice * BuyQuanTity + nz(sumBuy[1])
+        sumQtyBuy           := BuyQuanTity + nz(sumQtyBuy[1])
+        AveragePrice        := sumBuy / sumQtyBuy
+        Color               := color.lime
+        
+        // Numbering    
+        label.new(x         = time, 
+                  y         = FinalOpenPrice, 
+                  text      = '    ' + tostring(nBuys), 
+                  textcolor = color.lime,
+                  style     = label.style_none, 
+                  xloc      = xloc.bar_time, 
+                  yloc      = yloc.price,
+                  size      = size.small)
+        
+        // Backtest Buys
+        strategy.entry("BUY", strategy.long, qty = BuyQuanTity)
+    
+    else
+    
+        // Sells    
+        if fSellCondition(_i)
+            FinalBuyPrice       := na
+            FinalSellPrice      := fGrid(PPupOrigin, GridWidth, _i)
+            FinalOpenPrice      := fGrid(PPupOrigin, GridWidth, _i)
+            nBuys               := na
+            nSells              := nSells + 1
+            sumBuy              := na
+            sumQtyBuy           := na
+            Color               := color.orange
+            
+            // Numbering    
+            label.new(x         = time, 
+                      y         = FinalOpenPrice, 
+                      text      = '    ' + tostring(nSells), 
+                      textcolor = color.orange,
+                      style     = label.style_none, 
+                      xloc      = xloc.bar_time, 
+                      yloc      = yloc.price,
+                      size      = size.small)
+            
+            // Backtest Sells
+            strategy.close("BUY", qty = SellType != "% EQUITY" ? SellQuanTity : na, qty_percent = (SellType == "% EQUITY" ? SellQuanTity : na), comment = "SELL")
+// ———————————————————— Plotting
+// ————— Plotting Pivot Points
+plot(PP, title  = "PP", style = plot.style_circles, color = color.aqua, linewidth = 2)
+// ————— Plotting the average price
+plot(nBuys > 1 ? AveragePrice[1] : na, title = "Average Price", style = plot.style_circles, color = color.fuchsia, linewidth = 2)
+// ————— Buy Shapes
+fPlotBuySell(_n) =>
+    if fBuyCondition(_n)
+        fGrid(PPdownOrigin, -GridWidth, _n)
+    else
+        if fSellCondition(_n)
+            fGrid(PPupOrigin, GridWidth, _n)
+        
+plotshape(fPlotBuySell(1),  title = "Buy/Sell 1",  style = shape.diamond, location = location.absolute, color = Color, size = size.tiny)
+plotshape(fPlotBuySell(2),  title = "Buy/Sell 2",  style = shape.diamond, location = location.absolute, color = Color, size = size.tiny)
+plotshape(fPlotBuySell(3),  title = "Buy/Sell 3",  style = shape.diamond, location = location.absolute, color = Color, size = size.tiny)
+plotshape(fPlotBuySell(4),  title = "Buy/Sell 4",  style = shape.diamond, location = location.absolute, color = Color, size = size.tiny)
+plotshape(fPlotBuySell(5),  title = "Buy/Sell 5",  style = shape.diamond, location = location.absolute, color = Color, size = size.tiny)
+plotshape(fPlotBuySell(6),  title = "Buy/Sell 6",  style = shape.diamond, location = location.absolute, color = Color, size = size.tiny)
+plotshape(fPlotBuySell(7),  title = "Buy/Sell 7",  style = shape.diamond, location = location.absolute, color = Color, size = size.tiny)
+plotshape(fPlotBuySell(8),  title = "Buy/Sell 8",  style = shape.diamond, location = location.absolute, color = Color, size = size.tiny)
+plotshape(fPlotBuySell(9),  title = "Buy/Sell 9",  style = shape.diamond, location = location.absolute, color = Color, size = size.tiny)
+plotshape(fPlotBuySell(10), title = "Buy/Sell 10", style = shape.diamond, location = location.absolute, color = Color, size = size.tiny)
+plotshape(fPlotBuySell(11), title = "Buy/Sell 11", style = shape.diamond, location = location.absolute, color = Color, size = size.tiny)
+plotshape(fPlotBuySell(12), title = "Buy/Sell 12", style = shape.diamond, location = location.absolute, color = Color, size = size.tiny)
+plotshape(fPlotBuySell(13), title = "Buy/Sell 13", style = shape.diamond, location = location.absolute, color = Color, size = size.tiny)
+plotshape(fPlotBuySell(14), title = "Buy/Sell 14", style = shape.diamond, location = location.absolute, color = Color, size = size.tiny)
+plotshape(fPlotBuySell(15), title = "Buy/Sell 15", style = shape.diamond, location = location.absolute, color = Color, size = size.tiny)
+// ————— Plotting Lines under PP
+fBuySellLevel(_n) =>
+    if low < fGrid(PPdownOrigin, -GridWidth, _n) and PP > fGrid(PPdownOrigin, -GridWidth, _n)
+        fGrid(PPdownOrigin, -GridWidth, _n)
+    else
+        if high > fGrid(PPupOrigin, GridWidth, _n) and PP < fGrid(PPupOrigin, GridWidth, _n)
+            fGrid(PPupOrigin, GridWidth, _n)
+        
+plot(fBuySellLevel(1),  title = "Level down/up 1",  style = plot.style_circles, color = high > PP ? color.green : color.red)
+plot(fBuySellLevel(2),  title = "Level down/up 2",  style = plot.style_circles, color = high > PP ? color.green : color.red)
+plot(fBuySellLevel(3),  title = "Level down/up 3",  style = plot.style_circles, color = high > PP ? color.green : color.red)
+plot(fBuySellLevel(4),  title = "Level down/up 4",  style = plot.style_circles, color = high > PP ? color.green : color.red)
+plot(fBuySellLevel(5),  title = "Level down/up 5",  style = plot.style_circles, color = high > PP ? color.green : color.red)
+plot(fBuySellLevel(6),  title = "Level down/up 6",  style = plot.style_circles, color = high > PP ? color.green : color.red)
+plot(fBuySellLevel(7),  title = "Level down/up 7",  style = plot.style_circles, color = high > PP ? color.green : color.red)
+plot(fBuySellLevel(8),  title = "Level down/up 8",  style = plot.style_circles, color = high > PP ? color.green : color.red)
+plot(fBuySellLevel(9),  title = "Level down/up 9",  style = plot.style_circles, color = high > PP ? color.green : color.red)
+plot(fBuySellLevel(10), title = "Level down/up 10", style = plot.style_circles, color = high > PP ? color.green : color.red)
+plot(fBuySellLevel(11), title = "Level down/up 11", style = plot.style_circles, color = high > PP ? color.green : color.red)
+plot(fBuySellLevel(12), title = "Level down/up 12", style = plot.style_circles, color = high > PP ? color.green : color.red)
+plot(fBuySellLevel(13), title = "Level down/up 13", style = plot.style_circles, color = high > PP ? color.green : color.red)
+plot(fBuySellLevel(14), title = "Level down/up 14", style = plot.style_circles, color = high > PP ? color.green : color.red)
+plot(fBuySellLevel(15), title = "Level down/up 15", style = plot.style_circles, color = high > PP ? color.green : color.red)
+// by XaviZ💤
+Expand (228 lines)

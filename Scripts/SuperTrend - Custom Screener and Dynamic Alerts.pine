@@ -1,0 +1,223 @@
+Script Name: SuperTrend - Custom Screener and Dynamic Alerts
+Author: sharaaU7
+Description: Trading View today published a desktop Bad Internet connection indicator ?! which set me thinking…
+Despite recently introduced Dynamic Alerts many scripts do not leverage the information available for active traders and traders on the GO!
+So decided to share this script totally ALERT focused on one of the most popular DAY trading indicators.
+Of course no more BAD...
+PineScript code:
+
+Pine Script™ strategy
+SuperTrend - Custom Screener and Dynamic Alerts
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ralagh
+//@version=4
+strategy("Supertrend", overlay = true, format=format.price, precision=2)
+alert_strings = array.new_string(2)
+array.set(alert_strings, 0, "")
+array.set(alert_strings, 1, "")
+table_row_count = array.new_int(5)
+array.set(table_row_count, 0, 1)
+array.set(table_row_count, 1, 1)
+array.set(table_row_count, 2, 1)
+array.set(table_row_count, 3, 1)
+array.set(table_row_count, 4, 1)
+var UpTabl = table.new(position = position.top_center, columns = 5, rows = 20, bgcolor = color.rgb(255,255,255), border_width = 2, frame_color= color.black, frame_width = 2)
+var DnTabl = table.new(position = position.bottom_center, columns = 5, rows = 20, bgcolor = color.rgb(255,255,255), border_width = 2, frame_color= color.black, frame_width = 2)
+table.cell(table_id = UpTabl, column = 1, row = 0, text = "     SuperTrend Buy")
+table.cell(table_id = DnTabl, column = 1, row = 0, text = "     SuperTrend Sell") 
+table.cell(table_id = UpTabl, column = 2, row = 0, text = "     ▲▲")
+table.cell(table_id = DnTabl, column = 2, row = 0, text = "     ▼▼") 
+table.cell(table_id = UpTabl, column = 0, row = 1, text = "Ticker")
+table.cell(table_id = UpTabl, column = 1, row = 1, text = "Close")
+table.cell(table_id = UpTabl, column = 2, row = 1, text = "DHigh") 
+table.cell(table_id = UpTabl, column = 3, row = 1, text = "DLow") 
+table.cell(table_id = UpTabl, column = 4, row = 1, text = "% Change") 
+table.cell(table_id = DnTabl, column = 0, row = 1, text = "Ticker")
+table.cell(table_id = DnTabl, column = 1, row = 1, text = "Close") 
+table.cell(table_id = DnTabl, column = 2, row = 1, text = "DHigh") 
+table.cell(table_id = DnTabl, column = 3, row = 1, text = "DLow") 
+table.cell(table_id = DnTabl, column = 4, row = 1, text = "% Change")
+mult = input(type=input.float, defval=3)
+period = input(type=input.integer, defval=10)
+[superTrend, dir] = supertrend(mult, period)
+colResistance = dir == 1 and dir == dir[1] ? color.new(color.red, 0) : color.new(color.red, 100)
+colSupport = dir == -1 and dir == dir[1] ? color.new(color.green, 0) : color.new(color.green, 100)
+plot(superTrend, color = colResistance, linewidth=2)
+plot(superTrend, color = colSupport, linewidth=2)
+if (dir == -1 and dir == dir[1])
+    strategy.entry("Buy", strategy.long, comment="Buy")
+if (dir == 1 and dir == dir[1])
+    strategy.entry("Sell", strategy.short, comment="Sell")
+f_SupCro(_ticker)=>
+    
+    
+    p_chg = (close - close[1])/close[1] * 100
+    
+    [cl_dp, hi_dp, lo_dp, chg_dp] = security(_ticker, 'D', [close, high, low, p_chg], lookahead = barmerge.lookahead_on)
+    
+    [cl_p, ST_R] = security(_ticker, timeframe.period, [close, superTrend], lookahead = barmerge.lookahead_on)
+    _msg = _ticker + "~Cls-" + tostring(round(cl_p * 100) / 100) + "/" + tostring(round(chg_dp * 100) / 100) + "% ,"
+    
+//cl_p > ST_R  (Uptrend)
+//cl_p < ST_R  (Downtrend)
+    if crossover(cl_p, ST_R)   
+        _msg := _msg + "PHi~" + tostring(round(hi_dp * 100) / 100) + ", PLo~" + tostring(round(lo_dp * 100) / 100) + "-ST▲"
+        array.set(alert_strings, 0, array.get(alert_strings, 0) + "\n" + _msg)
+        array.set(table_row_count, 0, array.get(table_row_count, 0) + 1)
+        //alert(_msg + "-Sup▲", alert.freq_once_per_bar_close ) // For Individual Stock Alerts
+        
+        if barstate.islast
+            table.cell(table_id = UpTabl, column = 0, row = array.get(table_row_count, 0), text = _ticker)
+            table.cell(table_id = UpTabl, column = 1, row = array.get(table_row_count, 0), text = tostring(round(cl_p * 100) / 100), bgcolor=color.rgb(0, 200, 100))
+            table.cell(table_id = UpTabl, column = 2, row = array.get(table_row_count, 0), text = tostring(round(hi_dp * 100) / 100), bgcolor=color.rgb(0, 200, 100))
+            table.cell(table_id = UpTabl, column = 3, row = array.get(table_row_count, 0), text = tostring(round(lo_dp * 100) / 100), bgcolor=color.rgb(0, 200, 100))
+            table.cell(table_id = UpTabl, column = 4, row = array.get(table_row_count, 0), text = tostring(round(chg_dp * 100) / 100), bgcolor=color.rgb(0, 200, 100))
+            
+    else if crossunder(cl_p, ST_R)
+        _msg := _msg + "PHi~" + tostring(round(hi_dp * 100) / 100) + ", PLo~" + tostring(round(lo_dp * 100) / 100) + "-ST▼"
+        array.set(table_row_count, 1, array.get(table_row_count, 1) + 1)
+        array.set(alert_strings, 1, array.get(alert_strings, 1) + "\n" + _msg)
+        //alert(_msg + "-Sup▼", alert.freq_once_per_bar_close) // For Individual Stock Alerts
+        if barstate.islast
+            table.cell(table_id = DnTabl, column = 0, row = array.get(table_row_count, 1), text = _ticker)
+            table.cell(table_id = DnTabl, column = 1, row = array.get(table_row_count, 1), text = tostring(round(cl_p * 100) / 100), bgcolor=color.rgb(255, 0, 0))
+            table.cell(table_id = DnTabl, column = 2, row = array.get(table_row_count, 1), text = tostring(round(hi_dp * 100) / 100), bgcolor=color.rgb(255, 0, 0))
+            table.cell(table_id = DnTabl, column = 3, row = array.get(table_row_count, 1), text = tostring(round(lo_dp * 100) / 100), bgcolor=color.rgb(255, 0, 0))
+            table.cell(table_id = DnTabl, column = 4, row = array.get(table_row_count, 1), text = tostring(round(chg_dp * 100) / 100), bgcolor=color.rgb(255, 0, 0))
+            
+//plot(close, "Close", color=#8E1599)
+f_SupCro(syminfo.tickerid)
+f_SupCro(input('DJI', title=input.symbol)) 
+f_SupCro(input('IXIC', title=input.symbol)) 
+f_SupCro(input('SPX', title=input.symbol)) 
+f_SupCro(input('RUT', title=input.symbol)) 
+f_SupCro(input('AAPL', title=input.symbol))
+f_SupCro(input('AMZN', title=input.symbol)) 
+f_SupCro(input('FB', title=input.symbol)) 
+f_SupCro(input('GOOG', title=input.symbol)) 
+f_SupCro(input('NFLX', title=input.symbol))
+f_SupCro(input('MSFT', title=input.symbol)) 
+f_SupCro(input('NVDA', title=input.symbol)) 
+f_SupCro(input('FDX', title=input.symbol)) 
+f_SupCro(input('GLD', title=input.symbol))
+if array.get(alert_strings, 0) != ""
+    alert(array.get(alert_strings, 0),  alert.freq_once_per_bar_close)
+if array.get(alert_strings, 1) != ""
+    alert(array.get(alert_strings, 1),  alert.freq_once_per_bar_close)
+Expand (115 lines)

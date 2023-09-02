@@ -1,0 +1,151 @@
+Script Name: Hull MA TimeFrame CrossOver
+Author: SeaSide420
+Description: Hello traders, 
+Although this strategy is configured on  BTCUSDT , with a changing of settings, it can be used on any trading instrument.
+Here it is seen, on the 2 hour chart. With Trading Fees included in result (adjust to suit your exchange fees).
+The candle crossover is set to Daily timeframe.
+That means that the Candle crossover is going to see if todays price...
+PineScript code:
+
+Pine Script™ strategy
+Hull MA TimeFrame CrossOver
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//             © @SeaSide420
+//@version=5
+strategy('HullTimeFrameCrossOver', shorttitle='H&TF', overlay=true, currency="BTC",initial_capital=1, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_value=0.1, commission_type=strategy.commission.percent)
+stfu = "Select Time Frame for Candle crossover (close>close[1]=buy else sell)"
+ptt = "Recommended to use OPEN as source to avoid repainting (OPEN is a set value each candle, where as a CLOSE value changes with each tick for the duration of the candle)"
+masmthng = "Select type of Moving Average"
+prdtt = "Amount of candles back to use with calculation"
+atrsnstt = "Basicly, adjusts ATR SL distance from candles"
+tph = "Close order when user set % in Profit"
+slh = "Close order when user set % in Loss"
+btt = "If selected, Buying is allowed"
+stt = "If selected, Selling is allowed"
+res = input.timeframe(title='Candle X Resolution', defval='D', tooltip=stfu)
+price = input(title='Source of Price', defval=open, tooltip=ptt)
+smoothing = input.string(title="Moving Average Type", defval="HMA", options=["ALMA", "SMA", "EMA", "WMA", "HMA"], tooltip=masmthng)
+MA_Period = input.int(title='Moving Average Period', defval=1000, minval=3, tooltip = prdtt)
+atrsens = input.float(14, title='ATR sensitivity',tooltip=atrsnstt)
+atrperiod = input.int(14, title='ATR Period', tooltip = prdtt)
+TakeProfit = input(title='Take Profit (%)', defval=1000, tooltip=tph)
+StopLoss = input(title='StopLoss (%)', defval=1000, tooltip=slh)
+uatrh = "If selected, StopLoss will be the ATR line"
+UseATRSL = input.bool(defval=false, title='Use ATR SL?', tooltip=uatrh)
+AllowBuy = input.bool(defval=true, title='Allow Buy?', tooltip=btt)
+AllowSell = input.bool(defval=true, title='Allow Sell?', tooltip=stt)
+balance = strategy.initial_capital + strategy.netprofit
+TP = TakeProfit / 100 * balance
+SL = StopLoss / 100 * balance - StopLoss / 100 * balance * 2
+ma_function(price, MA_Period) =>
+    switch smoothing
+        "ALMA" => ta.alma(price, MA_Period, 0.85, 6)
+        "SMA" => ta.sma(price, MA_Period)
+        "EMA" => ta.ema(price, MA_Period)
+        "WMA" => ta.wma(price, MA_Period)
+        => ta.hma(price, MA_Period)
+ma = ma_function(price, MA_Period)
+ma0 = ma_function(price, 2)
+ma1 = ma_function(price, MA_Period)
+ma2 = ma_function(price[1], MA_Period)
+D1 = request.security(syminfo.tickerid, res, price, barmerge.gaps_off, barmerge.lookahead_off)
+xATR = ta.atr(atrperiod)
+nLoss = atrsens * xATR
+xATRTrailingStop = 0.0
+iff_1 = price > nz(xATRTrailingStop[1], 0) ? price - nLoss : price + nLoss
+iff_2 = price < nz(xATRTrailingStop[1], 0) and price[1] < nz(xATRTrailingStop[1], 0) ? math.min(nz(xATRTrailingStop[1]), price + nLoss) : iff_1
+xATRTrailingStop := price > nz(xATRTrailingStop[1], 0) and price[1] > nz(xATRTrailingStop[1], 0) ? math.max(nz(xATRTrailingStop[1]), price - nLoss) : iff_2
+pos = 0
+iff_3 = price[1] > nz(xATRTrailingStop[1], 0) and price < nz(xATRTrailingStop[1], 0) ? -1 : nz(pos[1], 0)
+pos := price[1] < nz(xATRTrailingStop[1], 0) and price > nz(xATRTrailingStop[1], 0) ? 1 : iff_3
+above = ta.crossover(ma, xATRTrailingStop)
+below = ta.crossover(xATRTrailingStop, ma)
+longCondition = ma1 > ma2 and ma0 > D1 and ma0 > ma1
+shortCondition = ma1 < ma2 and ma0 < D1 and ma0 < ma1
+clr1 = price > D1 ? color.green : color.red
+clr2 = ma1 > ma2 ? color.red : color.green
+plot(ta.cross(ma1, ma2) ? ma1 : na, label.style_cross, color=clr2, linewidth=3)
+plot(ta.cross(ma1, D1) ? ma1 : na, label.style_cross, color=clr1, linewidth=3)
+plot(D1, color=clr1, title='C_X', linewidth=2)
+plot(xATRTrailingStop, color=color.black, title='ATR SL', linewidth=3)
+strategy.close('buy', when=strategy.openprofit > TP, comment='buy TP',alert_message='buy TP')
+strategy.close('buy', when=strategy.openprofit < SL, comment='buy SL',alert_message='buy SL')
+strategy.close('sell', when=strategy.openprofit > TP, comment='sell TP',alert_message='sell TP')
+strategy.close('sell', when=strategy.openprofit < SL, comment='sell SL',alert_message='sell SL')
+if UseATRSL
+    strategy.close_all(when=(price > xATRTrailingStop and above) or (price < xATRTrailingStop and below), comment='ATR SL',alert_message='ATR SL') 
+if AllowBuy and longCondition and above
+    strategy.entry('buy', strategy.long,comment='buy',alert_message='buy')
+if AllowSell and shortCondition and below
+    strategy.entry('sell', strategy.short,comment='sell',alert_message='sell')
+Expand (69 lines)

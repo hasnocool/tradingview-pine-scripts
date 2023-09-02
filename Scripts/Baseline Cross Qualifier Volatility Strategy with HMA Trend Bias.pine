@@ -1,0 +1,145 @@
+Script Name: Baseline Cross Qualifier Volatility Strategy with HMA Trend Bias
+Author: sevencampbell
+Description: For trading ES on 30min Chart 
+
+Trading Rules
+Post Baseline Cross Qualifier (PBCQ): If price crosses the baseline but the trade is invalid due to additional qualifiers, then the strategy doesn't enter a trade on that candle. This setting allows you override this disqualification in the following manner: If price crosses XX bars ago and is now qualified by other...
+PineScript code:
+
+Pine Script™ strategy
+Baseline Cross Qualifier Volatility Strategy with HMA Trend Bias
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © sevencampbell
+//@version=5
+strategy(title="Baseline Cross Qualifier Volatility Strategy with HMA Trend Bias", overlay=true)
+// --- User Inputs ---
+// Baseline Inputs
+baselineLength = input.int(title="Baseline Length", defval=20)
+baseline = ta.sma(close, baselineLength)
+// PBCQ Inputs
+pbcqEnabled = input.bool(title="Post Baseline Cross Qualifier Enabled", defval=true)
+pbcqBarsAgo = input.int(title="Post Baseline Cross Qualifier Bars Ago", defval=3)
+// Volatility Inputs
+atrLength = input.int(title="ATR Length", defval=14)
+multiplier = input.float(title="Volatility Multiplier", defval=2.0)
+rangeMultiplier = input.float(title="Volatility Range Multiplier", defval=1.0)
+qualifierMultiplier = input.float(title="Volatility Qualifier Multiplier", defval=0.5)
+// Take Profit Inputs
+takeProfitType = input.string(title="Take Profit Type", options=["1 Take Profit", "2 Take Profits", "3 Take Profits"], defval="1 Take Profit")
+// HMA Inputs
+hmaLength = input.int(title="HMA Length", defval=50)
+// --- Calculations ---
+// ATR
+atr = ta.atr(atrLength)
+// Range Calculation
+rangeHigh = baseline + rangeMultiplier * atr
+rangeLow = baseline - rangeMultiplier * atr
+rangeColor = rangeLow <= close and close <= rangeHigh ? color.yellow : na
+bgcolor(rangeColor, transp=90)
+// Qualifier Calculation
+qualifier = qualifierMultiplier * atr
+// Dot Calculation
+isLong = close > baseline and (close - baseline) >= qualifier and close > ta.hma(close, hmaLength)
+isShort = close < baseline and (baseline - close) >= qualifier and close < ta.hma(close, hmaLength)
+colorDot = isLong ? color.green : isShort ? color.red : na
+plot(isLong or isShort ? baseline : na, color=colorDot, style=plot.style_circles, linewidth=3)
+// --- Strategy Logic ---
+// PBCQ
+pbcqValid = not pbcqEnabled or low[pbcqBarsAgo] > baseline
+// Entry Logic
+longCondition = isLong and pbcqValid
+shortCondition = isShort and pbcqValid
+if (longCondition)
+    strategy.entry("Long", strategy.long)
+if (shortCondition)
+    strategy.entry("Short", strategy.short)
+// Exit Logic
+if (takeProfitType == "1 Take Profit")
+    strategy.exit("TP/SL", "Long", limit=rangeHigh, stop=rangeLow)
+    strategy.exit("TP/SL", "Short", limit=rangeLow, stop=rangeHigh)
+else if (takeProfitType == "2 Take Profits")
+    strategy.exit("TP1", "Long", qty=strategy.position_size * 0.5, limit=rangeHigh / 2)
+    strategy.exit("TP2", "Long", qty=strategy.position_size * 0.5, limit=rangeHigh)
+    strategy.exit("TP1", "Short", qty=strategy.position_size * 0.5, limit=rangeLow / 2)
+    strategy.exit("TP2", "Short", qty=strategy.position_size * 0.5, limit=rangeLow)
+else if (takeProfitType == "3 Take Profits")
+    strategy.exit("TP1", "Long", qty=strategy.position_size * 0.5, limit=rangeHigh / 2)
+    strategy.exit("TP2", "Long", qty=strategy.position_size * 0.25, limit=rangeHigh * 0.75)
+    strategy.exit("TP3", "Long", qty=strategy.position_size * 0.25, limit=rangeHigh * 1.5)
+Expand (75 lines)

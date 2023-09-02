@@ -1,0 +1,211 @@
+Script Name: EMA Slope Cross Trend Follower Strategy
+Author: lukescream
+Description: This strategy uses the cross of the slopes of two EMAs having different lengths to generate trend follower signals. By default, I use 130 and 400, which behave very well.
+
+The conditions which make the strat enter the market are:
+- Fast Slope > Slow Slope and price > EMA 200 : go Long
+- Fast Slope < Slow Slope and price < EMA200 : go Short
+
+The simple slopes cross...
+PineScript code:
+
+Pine Script™ strategy
+EMA Slope Cross Trend Follower Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+//@version=4
+strategy(title="Slopes",initial_capital=1000, default_qty_type=strategy.percent_of_equity, commission_type=strategy.commission.percent, commission_value=0.06, slippage = 2, default_qty_value=30, overlay=false)
+//definizione input
+start = timestamp(input(2018, "start year"), input(1, "start month"), input(1, "start day"), 00, 00)
+end = timestamp(input(2020, "end year"), input(1, "end month"), input(1, "end day"), 00, 00)
+average = input (title="Source MA Type", type=input.string, defval="EMA",options=["EMA","SMA"])
+len1=input(130,title="Fast MA Length")
+len2=input(400,title="Slow MA Length")
+smoothingavg = input (title="Smoothing MAs Type", type=input.string, defval="EMA",options=["EMA","SMA"])
+smoothingavglen = input (3,title="Smoothing MAs Length")
+trendfilter=input(true,title="Trend Filter")
+trendfilterperiod=input(200,title="Trend Filter MA Period")
+trendfiltertype=input (title="Trend Filter MA Type", type=input.string, defval="EMA",options=["EMA","SMA"])
+volatilityfilter=input(false,title="Volatility Filter")
+volatilitydelta=input(0.0003,step=0.0001,title="Delta Slopes EMA")
+//variabili
+m1 = if average == "EMA" 
+    ema(close,len1)
+else
+    sma(close,len1)
+m2=if average == "EMA" 
+    ema(close,len2)
+else
+    sma(close,len2)
+slp1=(m1-m1[1])/m1
+slp2=(m2-m2[1])/m2
+e1=if smoothingavg == "EMA" 
+    ema(slp1,smoothingavglen)
+else
+    sma(slp1,smoothingavglen)
+e2=if smoothingavg == "EMA" 
+    ema(slp2,smoothingavglen)
+else
+    sma(slp2,smoothingavglen)
+plot(e1,color=color.yellow)
+plot(e2,color=color.red)
+//plot (abs(e1-e2),color=color.white)
+//plot (ema(e1-e2,9),color=color.yellow)
+//variabili accessorie e condizioni
+TrendConditionL=if trendfiltertype =="EMA"
+    close>ema(close,trendfilterperiod)
+else
+    close>sma(close,trendfilterperiod)
+    
+TrendConditionS=if trendfiltertype =="EMA"
+    close<ema(close,trendfilterperiod)
+else
+    close<sma(close,trendfilterperiod)
+    
+VolatilityCondition = abs(e1-e2) > volatilitydelta
+ConditionEntryL= if trendfilter == true
+    if volatilityfilter == true
+        e1>e2 and TrendConditionL and VolatilityCondition
+    else
+        e1>e2 and TrendConditionL
+else
+    if volatilityfilter == true
+        e1>e2 and VolatilityCondition
+    else 
+        e1>e2
+ConditionEntryS= if trendfilter == true
+    if volatilityfilter == true
+        e1<e2 and TrendConditionS and VolatilityCondition
+    else 
+        e1<e2 and TrendConditionS
+else
+    if volatilityfilter == true
+        e1<e2 and VolatilityCondition
+    else
+        e1<e2
+ConditionExitL=crossunder(e1,e2)
+ConditionExitS=crossover(e1,e2)
+if time > start and time < end
+    if ConditionExitS
+        if strategy.position_size < 0
+            strategy.close("SLPShort")
+if time > start and time < end
+    if ConditionExitL
+        if strategy.position_size > 0
+            strategy.close("SLPLong")
+if time > start and time < end
+    if ConditionEntryL
+        strategy.entry ("SLPLong",long=true)
+        
+if time > start and time < end
+    if ConditionEntryS 
+        strategy.entry("SLPShort",long=false)
+Expand (109 lines)

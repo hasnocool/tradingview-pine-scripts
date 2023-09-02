@@ -1,0 +1,75 @@
+Script Name: REVERSALS
+Author: HermanBrummer
+Description: The systems basically play reversals, it enters when the close is lower than its low of 5 bars ago to enter
+  It exits when the price is higher than the high of 5 days ago
+ 
+
+ 
+  Uses a 200 MA as a market filter, does not trade when the price is below its 200 Moving average
+  Uses a 5% stop, as per the red Stop Loss Line -- can be adjusted
+ 
+
+The amount of...
+PineScript code:
+
+Pine Script™ strategy
+REVERSALS
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+//  @version=4
+//  © HermanBrummer
+//  This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//  BUYS    WHEN THE CLOSE IS SMALLER THAN THE LOW OF 5 DAYS AGO
+//  SELLS   WHEN THE CLOSE IS HIGHER THEN THE HIGH OF 5 DAYS AGO
+//  USES A 200 MOVING AVERGE AS A FILTER, AND DOESN'T TAKE TRADES IF THE MARKET IS BELOW IT'S 200 MA
+//  USES A 5% STOP LOSS FROM ENTRIES
+strategy("REVERSALS", overlay=true)
+StopLoss    = input(.95, step=0.01)
+HowManyBars = input( 5 )
+///     EXITS
+if  close > sma(high,HowManyBars)[1]
+    strategy.close_all()
+///     ENTRIES
+MarketFilter    = sma(close, 200)
+F1              = close < sma(low,HowManyBars)[1]
+F2              = close > MarketFilter
+plot(MarketFilter, "MarketFilter", color.yellow)
+strategy.entry("Long", true, 1, when=F1 and F2)
+///     STOP LOSS
+StopLossLine    = strategy.position_avg_price * StopLoss
+plot(StopLossLine, "StopLossLine", #FF0000)
+strategy.exit("Exit", stop=StopLossLine)
+Expand (34 lines)

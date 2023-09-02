@@ -1,0 +1,422 @@
+Script Name: Intraday Grid trading example
+Author: Oracle_Systems
+Description: Hello everyone,
+This was a grid trading example for intraday trading.
+Please be advised that every commodity have diferent kind of reaction and rate of change between periods therefore the percentages need to be adjusted acording to the commodities change %.
+In order to specify the adjustment rate we add the Zig Zag in the script.
+For Example ; 
+Last 3 days zigzag...
+PineScript code:
+
+Pine Script™ strategy
+Intraday Grid trading example
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+//@version=5
+strategy("MTFR-X", overlay=true)
+emax = ta.ema(close,1)
+plot(emax,title="X-EMA",color=color.black,linewidth=2)
+i_sess = input.session("2359-0001", "Session", options=["2359-0001", "1700-2100"])
+tet = time(timeframe.period, i_sess)
+xcross=ta.valuewhen(tet, close,1)
+xdaily = ta.ema(xcross,1)
+zz1 = input.int(title="Z%1", defval=3, minval=0)
+zz2 = input.int(title="Z%2", defval=6, minval=0)
+zz3 = input.int(title="Z%3", defval=9, minval=0)
+xdaily1up = xdaily *(1+(zz1/100))
+xdaily2up = xdaily *(1+(zz2/100))
+xdaily3up = xdaily *(1+(zz3/100))
+xdaily1down = xdaily *(1-(zz1/100))
+xdaily2down = xdaily *(1-(zz2/100))
+xdaily3down = xdaily *(1-(zz3/100))
+plot(xdaily,title="X-DAILY",color=color.yellow,linewidth=4)
+plot(xdaily1up,title="X-DAILY+1%",color=color.black,linewidth=2)
+plot(xdaily2up,title="X-DAILY+2%",color=color.black,linewidth=2)
+plot(xdaily3up,title="X-DAILY+3%",color=color.black,linewidth=2)
+plot(xdaily1down,title="X-DAILY-1%",color=color.black,linewidth=2)
+plot(xdaily2down,title="X-DAILY-2%",color=color.black,linewidth=2)
+plot(xdaily3down,title="X-DAILY-3%",color=color.black,linewidth=2)
+//////////////STRATEGY ///////////////////
+strategy.entry("LONG", strategy.long, when = ta.crossover(emax,xdaily3down) or ta.crossover(emax,xdaily2down) or ta.crossover(emax,xdaily1down) or ta.crossover(emax,xdaily) or ta.crossover(emax,xdaily3up) or ta.crossover(emax,xdaily2up) or ta.crossover(emax,xdaily1up))
+strategy.close("LONG", when =ta.crossunder(emax,xdaily3down) or ta.crossunder(emax,xdaily2down) or ta.crossunder(emax,xdaily1down) or ta.crossunder(emax,xdaily) or ta.crossunder(emax,xdaily3up) or ta.crossunder(emax,xdaily2up) or ta.crossunder(emax,xdaily1up))
+strategy.entry("SHORT", strategy.short, when = ta.crossunder(emax,xdaily3down) or ta.crossunder(emax,xdaily2down) or ta.crossunder(emax,xdaily1down) or ta.crossunder(emax,xdaily) or ta.crossunder(emax,xdaily3up) or ta.crossunder(emax,xdaily2up) or ta.crossunder(emax,xdaily1up))
+strategy.close("SHORT", when =ta.crossover(emax,xdaily3down) or ta.crossover(emax,xdaily2down) or ta.crossover(emax,xdaily1down) or ta.crossover(emax,xdaily) or ta.crossover(emax,xdaily3up) or ta.crossover(emax,xdaily2up) or ta.crossover(emax,xdaily1up))
+// ZIG ZAG //
+dev_threshold = input.float(title="Deviation (%)", defval=5.0, minval=0.00001, maxval=100.0)
+depth = input.int(title="Depth", defval=10, minval=1)
+line_color = input(title="Line Color", defval=#2962FF)
+extend_to_last_bar = input(title="Extend to Last Bar", defval=true)
+display_reversal_price = input(title="Display Reversal Price", defval=true)
+display_cumulative_volume = input(title="Display Cumulative Volume", defval=true)
+display_reversal_price_change = input(title="Display Reversal Price Change", defval=true, inline="price rev")
+difference_price = input.string("Absolute", "", options=["Absolute", "Percent"], inline="price rev")
+pivots(src, length, isHigh) =>
+    p = nz(src[length])
+    if length == 0
+        [time, p]
+    else
+        isFound = true
+        for i = 0 to math.abs(length - 1)
+            if isHigh and src[i] > p
+                isFound := false
+            if not isHigh and src[i] < p
+                isFound := false
+        for i = length + 1 to 2 * length
+            if isHigh and src[i] >= p
+                isFound := false
+            if not isHigh and src[i] <= p
+                isFound := false
+        if isFound and length * 2 <= bar_index
+            [time[length], p]
+        else
+            [int(na), float(na)]
+[iH, pH] = pivots(high, math.floor(depth / 2), true)
+[iL, pL] = pivots(low, math.floor(depth / 2), false)
+calc_dev(base_price, price) =>
+    100 * (price - base_price) / base_price
+price_rotation_aggregate(price_rotation, pLast, cum_volume) =>
+    str = ""
+    if display_reversal_price
+        str += str.tostring(pLast, format.mintick) + " "
+    if display_reversal_price_change
+        str += price_rotation + " "
+    if display_cumulative_volume
+        str += "\n" + cum_volume
+    str
+    
+caption(isHigh, iLast, pLast, price_rotation, cum_volume) =>
+    price_rotation_str = price_rotation_aggregate(price_rotation, pLast, cum_volume)
+    if display_reversal_price or display_reversal_price_change or display_cumulative_volume
+        if not isHigh
+            label.new(iLast, pLast, text=price_rotation_str, style=label.style_none, xloc=xloc.bar_time, yloc=yloc.belowbar, textcolor=color.red)
+        else
+            label.new(iLast, pLast, text=price_rotation_str, style=label.style_none, xloc=xloc.bar_time, yloc=yloc.abovebar, textcolor=color.green)
+price_rotation_diff(pLast, price) =>
+    if display_reversal_price_change
+        tmp_calc = price - pLast
+        str = difference_price == "Absolute"? (math.sign(tmp_calc) > 0? "+" : "") + str.tostring(tmp_calc, format.mintick) : (math.sign(tmp_calc) > 0? "+" : "-") + str.tostring((math.abs(tmp_calc) * 100)/pLast, format.percent)
+        str := "(" + str  + ")"
+        str
+    else
+        ""
+var line lineLast = na
+var label labelLast = na
+var int iLast = 0
+var float pLast = 0
+var bool isHighLast = true // otherwise the last pivot is a low pivot
+var int linesCount = 0
+var float sumVol = 0
+var float sumVolLast = 0
+pivotFound(dev, isHigh, index, price) =>
+    if isHighLast == isHigh and not na(lineLast)
+        // same direction
+        if isHighLast ? price > pLast : price < pLast
+            if linesCount <= 1
+                line.set_xy1(lineLast, index, price)
+            line.set_xy2(lineLast, index, price)
+            label.set_xy(labelLast, index, price)
+            label.set_text(labelLast, price_rotation_aggregate(price_rotation_diff(line.get_y1(lineLast), price), price, str.tostring(sumVol + sumVolLast, format.volume)))
+            [lineLast, labelLast, isHighLast, false, sumVol + sumVolLast]
+        else
+            [line(na), label(na), bool(na), false, float(na)]
+    else // reverse the direction (or create the very first line)
+        if na(lineLast)
+            id = line.new(index, price, index, price, xloc=xloc.bar_time, color=line_color, width=2)
+            lb = caption(isHigh, index, price, price_rotation_diff(pLast, price),  str.tostring(sumVol, format.volume))
+            [id, lb, isHigh, true, sumVol]
+        else
+            // price move is significant
+            if math.abs(dev) >= dev_threshold
+                id = line.new(iLast, pLast, index, price, xloc=xloc.bar_time, color=line_color, width=2)
+                lb = caption(isHigh, index, price, price_rotation_diff(pLast, price),  str.tostring(sumVol, format.volume))
+                [id, lb, isHigh, true, sumVol]
+            else
+                [line(na), label(na), bool(na), false, float(na)]
+sumVol += nz(volume[math.floor(depth / 2)])
+if not na(iH) and not na(iL) and iH == iL
+    dev1 = calc_dev(pLast, pH)
+    [id2, lb2, isHigh2, isNew2, sum2] = pivotFound(dev1, true, iH, pH)
+    if isNew2
+        linesCount := linesCount + 1
+    if not na(id2)
+        lineLast := id2
+        labelLast := lb2
+        isHighLast := isHigh2
+        iLast := iH
+        pLast := pH
+        sumVolLast := sum2
+        sumVol := 0
+    dev2 = calc_dev(pLast, pL)
+    [id1, lb1, isHigh1, isNew1, sum1] = pivotFound(dev2, false, iL, pL)
+    if isNew1
+        linesCount := linesCount + 1
+    if not na(id1)
+        lineLast := id1
+        labelLast := lb1
+        isHighLast := isHigh1
+        iLast := iL
+        pLast := pL
+        sumVolLast := sum1
+        sumVol := 0
+else
+    if not na(iH)
+        dev1 = calc_dev(pLast, pH)
+        [id, lb, isHigh, isNew, sum] = pivotFound(dev1, true, iH, pH)
+        if isNew
+            linesCount := linesCount + 1
+        if not na(id)
+            lineLast := id
+            labelLast := lb
+            isHighLast := isHigh
+            iLast := iH
+            pLast := pH
+            sumVolLast := sum
+            sumVol := 0
+    else
+        if not na(iL)
+            dev2 = calc_dev(pLast, pL)
+            [id, lb, isHigh, isNew, sum] = pivotFound(dev2, false, iL, pL)
+            if isNew
+                linesCount := linesCount + 1
+            if not na(id)
+                lineLast := id
+                labelLast := lb
+                isHighLast := isHigh
+                iLast := iL
+                pLast := pL
+                sumVolLast := sum
+                sumVol := 0
+var line extend_line = na
+var label extend_label = na
+if extend_to_last_bar == true and barstate.islast == true
+    isHighLastPoint = not isHighLast
+    curSeries = isHighLastPoint ? high : low
+    if na(extend_line) and na(extend_label)
+        extend_line := line.new(line.get_x2(lineLast), line.get_y2(lineLast), time, curSeries, xloc=xloc.bar_time, color=line_color, width=2)
+        extend_label := caption(not isHighLast, time, curSeries,  price_rotation_diff(line.get_y2(lineLast), curSeries), str.tostring(sumVol, format.volume))  
+    line.set_xy1(extend_line, line.get_x2(lineLast), line.get_y2(lineLast))
+    line.set_xy2(extend_line, time, curSeries)
+    
+    price_rotation = price_rotation_diff(line.get_y1(extend_line), curSeries)                                                                                                  
+    remaingRealTimeVol = 0.
+    for i = math.abs(math.floor(depth / 2) - 1) to 0
+        remaingRealTimeVol += volume[i]
+    label.set_xy(extend_label, time, curSeries)    
+    label.set_text(extend_label, price_rotation_aggregate(price_rotation, curSeries, str.tostring(sumVol+remaingRealTimeVol, format.volume)))
+    label.set_textcolor(extend_label, isHighLastPoint? color.green : color.red)
+    label.set_yloc(extend_label, yloc= isHighLastPoint? yloc.abovebar : yloc.belowbar)
+Expand (215 lines)

@@ -1,0 +1,165 @@
+Script Name: Ichimoku Kinko Hyo- ETH 3h Strategy by tobuno
+Author: rubberducketh
+Description: Ichimoku Kinko Hyo strategy for long term trend trades of Ethereum . Optimized for 3H ticks.
+PineScript code:
+
+Pine Script™ strategy
+Ichimoku Kinko Hyo: ETH 3h Strategy by tobuno
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+strategy("Ichimoku Kinko Hyo: ETH 3h Strategy by tobuno", overlay=true)
+//Inputs
+ts_bars = input(22, minval=1, title="Tenkan-Sen Bars")
+ks_bars = input(60, minval=1, title="Kijun-Sen Bars")
+ssb_bars = input(120, minval=1, title="Senkou-Span B Bars")
+cs_offset = input(30, minval=1, title="Chikou-Span Offset")
+ss_offset = input(30, minval=1, title="Senkou-Span Offset")
+long_entry = input(true, title="Long Entry")
+short_entry = input(true, title="Short Entry")
+//Volatility
+vollength = input(defval=2, title="VolLength")
+voltarget = input(defval=0.2, type=float, step=0.1, title="Volatility Target")
+Difference = abs((close - open)/((close + open)/2) * 100)
+MovingAverage = sma(Difference, vollength)
+highvolatility = MovingAverage > voltarget
+////////////////////////////////////////////////////////////////////////////////
+// BACKTESTING RANGE
+ 
+// From Date Inputs
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2019, title = "From Year", minval = 1970)
+ 
+// To Date Inputs
+toDay = input(defval = 31, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 12, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2020, title = "To Year", minval = 1970)
+ 
+// Calculate start/end date and time condition
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate
+ 
+////////////////////////////////////////////////////////////////////////////////
+middle(len) => avg(lowest(len), highest(len))
+// Ichimoku Components
+tenkan = middle(ts_bars)
+kijun = middle(ks_bars)
+senkouA = avg(tenkan, kijun)
+senkouB = middle(ssb_bars)
+//RSI
+change = change(close)
+gain = change >= 0 ? change : 0.0
+loss = change < 0 ? (-1) * change : 0.0
+avgGain = rma(gain, 14)
+avgLoss = rma(loss, 14)
+rs = avgGain / avgLoss
+rsi = 100 - (100 / (1 + rs))
+// Plot Ichimoku Kinko Hyo
+plot(tenkan, color=#0496ff, title="Tenkan-Sen")
+plot(kijun, color=#991515, title="Kijun-Sen")
+plot(close, offset=-cs_offset+1, color=#459915, title="Chikou-Span")
+sa=plot(senkouA, offset=ss_offset-1, color=green, title="Senkou-Span A")
+sb=plot(senkouB, offset=ss_offset-1, color=red, title="Senkou-Span B")
+fill(sa, sb, color = senkouA > senkouB ? green : red, title="Cloud color")
+ss_high = max(senkouA[ss_offset-1], senkouB[ss_offset-1])
+ss_low = min(senkouA[ss_offset-1], senkouB[ss_offset-1])
+// Entry/Exit Signals
+tk_cross_bull = tenkan > kijun
+tk_cross_bear = tenkan < kijun
+cs_cross_bull = mom(close, cs_offset-1) > 0
+cs_cross_bear = mom(close, cs_offset-1) < 0
+price_above_kumo = close > ss_high
+price_below_kumo = close < ss_low
+rsi_bullish = rsi > 50
+rsi_bearish = rs < 50
+bullish = tk_cross_bull and cs_cross_bull and price_above_kumo and rsi_bullish and highvolatility
+bearish = tk_cross_bear and cs_cross_bear and price_below_kumo and rsi_bearish and highvolatility
+strategy.entry("Long", strategy.long, when=bullish and long_entry and time_cond)
+strategy.entry("Short", strategy.short, when=bearish and short_entry and time_cond)
+strategy.close("Long", when=bearish and not short_entry and time_cond)
+strategy.close("Short", when=bullish and not long_entry and time_cond)
+Expand (84 lines)

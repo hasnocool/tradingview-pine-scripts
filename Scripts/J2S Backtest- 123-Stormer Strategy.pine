@@ -1,0 +1,411 @@
+Script Name: J2S Backtest- 123-Stormer Strategy
+Author: julianossilva
+Description: This backtest presents the 123-Stormer strategy created by trader Alexandre Wolwacz "Stormer". The strategy is advocates and shared by the trader through his YouTube channel without restrictions.
+ Note :
+This is not an investment recommendation. The purpose of this study is only to share knowledge with the community on tradingview.
+
+ What is the purpose of the...
+PineScript code:
+
+Pine Script™ strategy
+J2S Backtest: 123-Stormer Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © julianossilva
+//@version=5
+strategy(title="J2S Backtest: 123-Stormer Strategy", shorttitle="J2S Backtest: 123-Stormer Strategy", overlay=true, initial_capital=1000, default_qty_value=10, default_qty_type=strategy.percent_of_equity, pyramiding=0)
+// Initial Backtest Date Range
+useStartDate = timestamp("01 Jan 2020 21:00:00")
+useEndDate   = timestamp("01 Jan 2023 21:00:00")
+// User Inputs
+SIGNAL_CONFIG          = "BACKTEST: STORMER STRATEGY (123)"
+longEntryInput         = input.bool(defval=true,         group=SIGNAL_CONFIG, title="Long entry")
+shortEntryInput        = input.bool(defval=true,         group=SIGNAL_CONFIG, title="Short entry")
+METHOD_CONFIG          = "BACKTEST: METHOD"
+barLimitForEntryInput  = input.int(defval=3,             group=METHOD_CONFIG, title="Bar limit for trading entry", tooltip="Given a signal, entry must be reached within how many bars?", minval=1)
+barLimitForCloseInput  = input.int(defval=8,             group=METHOD_CONFIG, title="Bar limit for trading close", tooltip="Once a position is opened, close when it reaches the number of bars in trading.", minval=1)
+profitOverRiskInput    = input.float(defval=1,           group=METHOD_CONFIG, title="Profit over risk", tooltip="Multiplication factor based on the risk assumed in trading. The value range from stop-loss to trade entry is used to determine the profit target. This value range is multiplied by the value entered in 'profit over risk' parameter.", minval=1, step=0.5)
+insideBarStrategyInput = input.bool(defval=true,         group=METHOD_CONFIG, title="Only third candle inside bar is valid", tooltip="According to Stomer, it would be the best signal for the strategy")
+EMA_CONFIG             = "BACKTEST: EXPONENTIAL MOVING AVERAGES"
+emaTimeframeInput      = input.timeframe("1W",           group=EMA_CONFIG,    title="Timeframe")
+sourceInput            = input.source(defval=close,      group=EMA_CONFIG,    title="Source")
+fastEMALengthInput     = input.int(defval=8,             group=EMA_CONFIG,    inline="03", title="Fast EMA length           ")
+useFastEMAInput        = input.bool(defval=true,         group=EMA_CONFIG,    inline="03", title="Use")
+slowEMALengthInput     = input.int(defval=80,            group=EMA_CONFIG,    inline="04", title="Slow EMA length           ")
+useSlowEMAInput        = input.bool(defval=true,         group=EMA_CONFIG,    inline="04", title="Use")
+emaOffsetInput         = input.int(defval=9,             group=EMA_CONFIG,    title="Offset")
+PERIOD_CONFIG          = "BACKTEST: TIME PERIOD"
+useDateFilterInput     = input.bool(defval=true,         group=PERIOD_CONFIG, title="Filter date range of backtest")
+backtestStartDateInput = input.time(defval=useStartDate, group=PERIOD_CONFIG, title="Start date")
+backtestEndDateInput   = input.time(defval=useEndDate,   group=PERIOD_CONFIG, title="End date")
+// Colors
+candleColorDown    = color.rgb(239, 83, 80, 80)
+candleColorUp      = color.rgb(38, 166, 154, 70)
+insideBarColorDown = color.rgb(239, 83, 80, 40)
+insideBarColorUp   = color.rgb(38, 166, 154, 20)
+downTrendColor     = color.rgb(239, 83, 80, 80)
+sidewaysTrendColor = color.rgb(252, 232, 131, 80)
+upTrendColor       = color.rgb(38, 166, 154, 80)
+buySignalColor     = color.lime
+sellSignalColor    = color.orange
+// Candles
+isCandleUp()   => close > open
+isCandleDown() => close <= open
+barcolor(isCandleUp() ? candleColorUp : isCandleDown() ? candleColorDown : na)
+// Exponential Moving Averages
+fastEMA         = request.security(syminfo.tickerid, emaTimeframeInput, ta.ema(sourceInput,    fastEMALengthInput), barmerge.gaps_on,  barmerge.lookahead_on)
+currentFastEMA  = request.security(syminfo.tickerid, emaTimeframeInput, ta.ema(sourceInput,    fastEMALengthInput), barmerge.gaps_off, barmerge.lookahead_on)
+previousFastEMA = request.security(syminfo.tickerid, emaTimeframeInput, ta.ema(sourceInput[1], fastEMALengthInput), barmerge.gaps_off, barmerge.lookahead_on)
+slowEMA         = request.security(syminfo.tickerid, emaTimeframeInput, ta.ema(sourceInput,    slowEMALengthInput), barmerge.gaps_on,  barmerge.lookahead_on)
+currentSlowEMA  = request.security(syminfo.tickerid, emaTimeframeInput, ta.ema(sourceInput,    slowEMALengthInput), barmerge.gaps_off, barmerge.lookahead_on)
+previousSlowEMA = request.security(syminfo.tickerid, emaTimeframeInput, ta.ema(sourceInput[1], slowEMALengthInput), barmerge.gaps_off, barmerge.lookahead_on)
+// Trend Rules for Exponential Moving Averages
+isSlowEMAUp()   => currentSlowEMA > previousSlowEMA
+isSlowEMADown() => currentSlowEMA < previousSlowEMA
+isFastEMAUp()   =>
+    if useFastEMAInput and useSlowEMAInput
+        currentFastEMA > previousFastEMA and isSlowEMAUp()
+    else if useFastEMAInput
+        currentFastEMA > previousFastEMA
+    else
+        false
+isFastEMADown() => 
+    if useFastEMAInput and useSlowEMAInput
+        currentFastEMA < previousFastEMA and isSlowEMADown()
+    else if useFastEMAInput
+        currentFastEMA < previousFastEMA
+    else
+        false
+// Exponential Moving Average Colors
+fastEMAColor = isFastEMAUp() ? upTrendColor : isFastEMADown() ? downTrendColor : sidewaysTrendColor
+slowEMAColor = isSlowEMAUp() ? upTrendColor : isSlowEMADown() ? downTrendColor : sidewaysTrendColor
+// Display Exponential Moving Averages
+plot(useFastEMAInput ? fastEMA : na, offset=emaOffsetInput, color=fastEMAColor, title="Fast EMA", style=plot.style_line, linewidth=4)
+plot(useSlowEMAInput ? slowEMA : na, offset=emaOffsetInput, color=slowEMAColor, title="Slow EMA", style=plot.style_line, linewidth=7)
+// Price Trend
+pricesAboveFastEMA() => low[2] > currentFastEMA and low[1] > currentFastEMA and low > currentFastEMA
+pricesAboveSlowEMA() => low[2] > currentSlowEMA and low[1] > currentSlowEMA and low > currentSlowEMA
+pricesBelowFastEMA() => high[2] < currentFastEMA and high[1] < currentFastEMA and high < currentFastEMA
+pricesBelowSlowEMA() => high[2] < currentSlowEMA and high[1] < currentSlowEMA and high < currentSlowEMA
+// Market in Bullish Trend
+isBullishTrend() =>
+    if useFastEMAInput and useSlowEMAInput
+        pricesAboveFastEMA() and pricesAboveSlowEMA()
+    else if useFastEMAInput
+        pricesAboveFastEMA()
+    else if useSlowEMAInput
+        pricesAboveSlowEMA()
+    else
+        na
+// Market in Bearish Trend
+isBearishTrend() =>
+    if useFastEMAInput and useSlowEMAInput
+        pricesBelowFastEMA() and pricesBelowSlowEMA()
+    else if useFastEMAInput
+        pricesBelowFastEMA()
+    else if useSlowEMAInput
+        pricesBelowSlowEMA()
+    else
+        na
+// Stormer Strategy (123)
+isFirstCandleUp()   => high[2] > high[1] and low[2] > low[1]
+isFirstCandleDown() => high[2] < high[1] and low[2] < low[1]
+isThirdCandleUp()   => low > low[1]
+isThirdCandleDown() => high < high[1]
+isThirdCandleInsideBar() => high < high[1] and low > low[1]
+// Buy Signal
+isStormer123Buy() =>
+    if insideBarStrategyInput
+        longEntryInput and isFirstCandleUp() and isThirdCandleInsideBar() and isBullishTrend()
+    else
+        longEntryInput and isFirstCandleUp() and isThirdCandleUp() and isBullishTrend()
+// Sell Signal
+isStormer123Sell() =>
+    if insideBarStrategyInput
+        shortEntryInput and isFirstCandleDown() and isThirdCandleInsideBar() and isBearishTrend()
+    else
+        shortEntryInput and isFirstCandleDown() and isThirdCandleDown() and isBearishTrend()
+// Backtest Time Period
+inTradeWindow = not useDateFilterInput or (time >= backtestStartDateInput and time < backtestEndDateInput)
+isInTradeWindow() => inTradeWindow
+isBacktestDateRangeOver() => not inTradeWindow and inTradeWindow[1]
+// Backtest Price Parameters
+highestPrice = ta.highest(high, 3)
+lowestPrice  = ta.lowest(low,3)
+priceRange   = highestPrice - lowestPrice
+// Stormer Strategy (123): LONG
+var myLongOrders = array.new_int(0)
+longtEntryID        = "Long Entry:\n" + str.tostring(bar_index)
+longExitID          = "Long Exit:\n" + str.tostring(bar_index)
+stopLossInLong      = lowestPrice + 1 * syminfo.mintick
+takeProfitInLong    = high + priceRange * profitOverRiskInput
+longEntryHasBeenMet = isInTradeWindow() and isBullishTrend() and isStormer123Buy()
+// Scheduling LONG entry
+if longEntryHasBeenMet
+    array.push(myLongOrders, bar_index)
+    strategy.order(longtEntryID, strategy.long, stop=high)
+    strategy.exit(longExitID, longtEntryID, stop=stopLossInLong, limit=takeProfitInLong)
+// In pine script, any order scheduled but not yet filled can be canceled.
+// Once a order is filled, the trade is only finished with use of close or exit functions.
+// As scheduled orders are not stored in the strategy.opentrades array, manual control is required.
+int myLongOrderIndex = 0
+while myLongOrderIndex < array.size(myLongOrders) and array.size(myLongOrders) > 0 
+    myLongOrder = array.get(myLongOrders, myLongOrderIndex)
+    if bar_index - myLongOrder == barLimitForEntryInput
+        longEntryID = "Long Entry:\n" + str.tostring(myLongOrder)
+        strategy.cancel(longEntryID)
+        array.remove(myLongOrders, myLongOrderIndex)
+        continue
+    myLongOrderIndex += 1
+// Stormer Strategy (123): SHORT
+var myShortOrders    = array.new_int(0)
+shortEntryID         = "Short Entry:\n" + str.tostring(bar_index)
+shortExitID          = "Short Exit:\n" + str.tostring(bar_index)
+stopLossInShort      = highestPrice + 1 * syminfo.mintick
+takeProfitInShort    = low - priceRange * profitOverRiskInput
+shortEntryHasBeenMet = isInTradeWindow() and isBearishTrend() and isStormer123Sell()
+// Scheduling SHORT entry
+if shortEntryHasBeenMet
+    array.push(myShortOrders, bar_index)
+    strategy.order(shortEntryID, strategy.short, stop=low)
+    strategy.exit(shortExitID, shortEntryID, stop=stopLossInShort, limit=takeProfitInShort)
+// In pine script, any order scheduled but not yet filled can be canceled.
+// Once a order is filled, the trade is only finished with use of close or exit functions.
+// As scheduled orders are not stored in the strategy.opentrades array, manual control is required.
+int myShortOrderIndex = 0
+while myShortOrderIndex < array.size(myShortOrders) and array.size(myShortOrders) > 0 
+    myShortOrder = array.get(myShortOrders, myShortOrderIndex)
+    if bar_index - myShortOrder == barLimitForEntryInput
+        shortEntryID := "Short Entry:\n" + str.tostring(myShortOrder)
+        strategy.cancel(shortEntryID)
+        array.remove(myShortOrders, myShortOrderIndex)
+        continue
+    myShortOrderIndex += 1
+// Trading must be stopped when candlestick limit reached in a trading
+for tradeNumber = 0 to strategy.opentrades - 1
+    tradeEntryID  = strategy.opentrades.entry_id(tradeNumber)
+    splitPosition = str.pos(tradeEntryID, ":")
+    entryBar      = str.tonumber(str.substring(tradeEntryID, splitPosition + 1))
+    if bar_index - entryBar == barLimitForCloseInput
+        closeID = "Close Position:\n" + str.tostring(entryBar)
+        strategy.close(id=tradeEntryID, comment=closeID, immediately=true)
+// Close all positions at the end of the backtest period
+if isBacktestDateRangeOver()
+    strategy.cancel_all()
+    strategy.close_all(comment="Date Range Exit")
+// Display Signals
+plotshape(series=longEntryHasBeenMet,  title="123 Buy",  style=shape.triangleup,   location=location.abovebar, color=buySignalColor,  text="Buy",  textcolor=buySignalColor)
+plotshape(series=shortEntryHasBeenMet, title="123 Sell", style=shape.triangledown, location=location.belowbar, color=sellSignalColor, text="Sell", textcolor=sellSignalColor)
+Expand (212 lines)

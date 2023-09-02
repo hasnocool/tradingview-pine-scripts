@@ -1,0 +1,480 @@
+Script Name: 3x SuperTrend Strategy (Mel0nTek) V1
+Author: mel0n
+Description: This is a triple SuperTrend based strategy for lower time frame trades such as day trades and scalping. I have not seen many strategies that combine multiple SuperTrends so I thought I would publish this one since I put it together and have been quite happy with the results. I have found through testing that the best results are on currency exchange markets such...
+PineScript code:
+
+Pine Script™ strategy
+3x SuperTrend Strategy (Mel0nTek) V1
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+//@version=4
+strategy("3x SuperTrend Strategy (Mel0nTek) V1", calc_on_every_tick=true, overlay=true)
+// ***************************************************
+//  A Mel0nTek Project
+//  Author: mel0n
+//  Revision: 1.0 - Initial Release
+// ***************************************************
+// ***************************************************
+//              Strategy & Rules
+// ***************************************************
+// === Sources ===
+// Strategy Idea:
+// Trade Pro - HIGHEST PROFIT Triple Supertrend Trading Strategy Proven 100 Trade Results
+// https://www.youtube.com/watch?v=HpNZ2VpZzSE
+//
+// Combining SuperTrend with StochRSI is not a new idea by any means.
+// However the method/criteria used in his video to apply them caught my interest.
+// So I decided to code it up for myself to do some backtesting.
+// The default values are the ones he uses in his video, however I found some tuning beneficial. YMMV
+// Trade Pro makes some great content, the video is a good watch to get a better understanding of this strategy.
+//
+// Improved SuperTrend Calculation Method:
+// SuperTrend by KivancOzbilgic
+// === Indicators ===
+// EMA 
+// @ 200
+// Stoch RSI (default)
+// @ 3, 3, 14, 14, close
+// Supertrend slow
+// @ 12, hl2, 3, change = true
+// Supertrend med
+// @ 11, hl2, 2, change = true
+// Supertrend fast
+// @ 10, hl2, 1, change = true
+// === Rules ===
+// long only 
+// - price above EMA200
+// short only 
+// - price below EMA200
+// Stop Loss = 2nd SuperTrend line above (short) or below(long) entry candle
+// Profit = 1.5x SL/risk (Profit Ratio x Max Loss)
+// === Entries ===
+// LONG
+// - long entry (Typical): 
+// - Stoch RSI below 20, cross up
+// - 2nd SuperTrend line below close
+// SHORT
+// - short entry (Typical): 
+// - Stoch RSI above 80, cross down
+// - 2nd SuperTrend line above close
+// ***************************************************
+// Backtest Parameters
+// ***************************************************
+testStartYear = input(2020, "Backtest Start Year")
+testStartMonth = input(1, "Backtest Start Month")
+testStartDay = input(1, "Backtest Start Day")
+testPeriodStart = timestamp(testStartYear, testStartMonth, testStartDay, 0, 0)
+timeCondition = time >= testPeriodStart
+direction = input(0, title = "Strategy Direction", type=input.integer, minval=-1, maxval=1)
+strategy.risk.allow_entry_in(direction == 0 ? strategy.direction.all : (direction < 0 ? strategy.direction.short : strategy.direction.long))
+// ***************************************************
+// Inputs
+// ***************************************************
+// P/L Ratio
+plInput = input(1.5, title="P/L Ratio", step=0.1, minval=0.1)
+// EMA
+EMAInputlength = input(200, "EMA Length",step=100, minval=1)
+// Stoch RSI
+srsiInputSmoothK = input(3, "K", minval=1)
+srsiInputSmoothD = input(3, "D", minval=1)
+srsiInputLengthRSI = input(14, "Stoch RSI Length", minval=1)
+srsiInputLengthStoch = input(14, "Stochastic Length", minval=1)
+srsiInputSrc = input(close, title="Stoch RSI Source")
+srsiInputThresh = input(20, title="Stoch RSI Entry Zone +/-", minval=1)
+// SuperTrends
+stInputSrc = input(hl2, title="SuperTrend Source")
+stSlowInputLength = input(12, "Slow SuperTrend Length", minval=1)
+stSlowInputMult = input(3, "Slow SuperTrend Multiplier", minval=1)
+stMedInputLength = input(11, "Med SuperTrend Length", minval=1)
+stMedInputMult = input(2, "Med SuperTrend Multiplier", minval=1)
+stFastInputLength = input(10, "Fast SuperTrend Length", minval=1)
+stFastInputMult = input(1, "Fast SuperTrend Multiplier", minval=1)
+stInputchangeATR= input(title="Alternate SuperTrend ATR Calculation?", type=input.bool, defval=true)
+// Toggles
+showPLTargets = input(true, title="Show Open Profit/Loss Targets?")
+showBuySell = input(true, title="Show Buy/Sell Indicators?")
+// ***************************************************
+// Indicator Functions
+// ***************************************************
+// SuperTrend Function
+superTrend(period, src, mult, chgATR) =>
+    stATRSmooth = sma(tr, period)                       // tr = true range
+    stATR = chgATR ? atr(period) : stATRSmooth          // select ATR to use
+    stUP = src - (mult * stATR)                         // up value
+    stUP1 = nz(stUP[1], stUP)                           // prev candle value if not 0
+    stUP := close[1] > stUP1 ? max(stUP,stUP1) : stUP   // select the larger up value if close is higher than previous up value
+    stDN = src  + (mult * stATR)
+    stDN1 = nz(stDN[1], stDN)
+    stDN := close[1] < stDN1 ? min(stDN, stDN1) : stDN
+    stTrend = 1
+    stTrend := nz(stTrend[1], stTrend)
+    stTrend := stTrend == -1 and close > stDN1 ? 1 : stTrend == 1 and close < stUP1 ? -1 : stTrend
+    stBuySignal = stTrend == 1 and stTrend[1] == -1
+    stSellSignal = stTrend == -1 and stTrend[1] == 1
+    stChangeCond = stTrend != stTrend[1]
+    [stUP, stDN, stTrend, stBuySignal, stSellSignal, stChangeCond]
+// Stochastic RSI Function
+stochRSI(smoothK, smoothD, lengthRSI, lengthStoch, src) =>
+    rsiVal = rsi(src, lengthRSI)
+    k = sma(stoch(rsiVal, rsiVal, rsiVal, lengthStoch), smoothK)
+    d = sma(k, smoothD)
+    [k, d]
+// ***************************************************
+// Data Calculation
+// ***************************************************
+// SuperTrend Slow
+[stSlowUP, stSlowDN, stSlowTrend, stSlowBuy, stSlowSell, stSlowChanged] = superTrend(stSlowInputLength, stInputSrc, stSlowInputMult, stInputchangeATR)
+// SuperTrend Medium
+[stMedUP, stMedDN, stMedTrend, stMedBuy, stMedSell, stMedChanged] = superTrend(stMedInputLength, stInputSrc, stMedInputMult, stInputchangeATR)
+// SuperTrend Fast
+[stFastUP, stFastDN, stFastTrend, stFastBuy, stFastSell, stFastChanged] = superTrend(stFastInputLength, stInputSrc, stFastInputMult, stInputchangeATR)
+// Stoch RSI
+[srsiK, srsiD] = stochRSI(srsiInputSmoothK,srsiInputSmoothD,srsiInputLengthRSI,srsiInputLengthStoch,srsiInputSrc)
+// EMA
+emaVal = ema(close,EMAInputlength)
+// ***************************************************
+// Indicator Plots
+// ***************************************************
+// EMA
+plot(emaVal, "K", color=#0094FF)
+// SuperTrend Slow
+plot(stSlowTrend == 1 ? stSlowUP : na, title="Slow Up Trend", style=plot.style_linebr, linewidth=2, color=color.green)
+plotshape(stSlowBuy ? stSlowUP : na, title="Slow UpTrend Begins", location=location.absolute, style=shape.triangleup, size=size.tiny, color=color.green, transp=0)
+plot(stSlowTrend == 1 ? na : stSlowDN, title="Slow Down Trend", style=plot.style_linebr, linewidth=2, color=color.red)
+plotshape(stSlowSell ? stSlowDN : na, title="Slow DownTrend Begins", location=location.absolute, style=shape.triangledown, size=size.tiny, color=color.red, transp=0)
+// SuperTrend Medium
+plot(stMedTrend == 1 ? stMedUP : na, title="Med Up Trend", style=plot.style_linebr, linewidth=2, color=color.green)
+plotshape(stMedBuy ? stMedUP : na, title="Med UpTrend Begins", location=location.absolute, style=shape.triangleup, size=size.tiny, color=color.green, transp=0)
+plot(stMedTrend == 1 ? na : stMedDN, title="Med Down Trend", style=plot.style_linebr, linewidth=2, color=color.red)
+plotshape(stMedSell ? stMedDN : na, title="Med DownTrend Begins", location=location.absolute, style=shape.triangledown, size=size.tiny, color=color.red, transp=0)
+// SuperTrend Fast
+plot(stFastTrend == 1 ? stFastUP : na, title="Fast Up Trend", style=plot.style_linebr, linewidth=2, color=color.green)
+plotshape(stFastBuy ? stFastUP : na, title="Fast UpTrend Begins", location=location.absolute, style=shape.triangleup, size=size.tiny, color=color.green, transp=0)
+plot(stFastTrend == 1 ? na : stFastDN, title="Fast Down Trend", style=plot.style_linebr, linewidth=2, color=color.red)
+plotshape(stFastSell ? stFastDN : na, title="Fast DownTrend Begins", location=location.absolute, style=shape.triangledown, size=size.tiny, color=color.red, transp=0)
+// Stoch RSI
+// plot(srsiK, "K", color=#0094FF)
+// plot(srsiD, "D", color=#FF6A00)
+// h0 = hline(80, "Upper Band", color=#606060)
+// h1 = hline(20, "Lower Band", color=#606060)
+// fill(h0, h1, color=#9915FF, transp=80, title="Background")
+// ***************************************************
+// Conditional Logic
+// ***************************************************
+// common vars
+float longStop = na
+float longProfit = na
+float shortStop = na
+float shortProfit = na
+// check EMA to determine long/short side trading
+emaTrend = emaVal < close ? 1 : -1
+// count how many supertrends are above/below
+stCount = 0
+stCount := stFastTrend + stMedTrend + stSlowTrend
+// LONG
+// - long entry (Typical): 
+// - Stoch RSI below 20, cross up
+// - 2 ST's below close
+stochLongCond = srsiK < srsiInputThresh and crossover(srsiK, srsiD)
+stLongCond = stCount >= 1
+longCondition = emaTrend > 0 and stochLongCond and stLongCond
+tempStopLong = longCondition ? stCount == 3 ? stMedUP : stSlowUP : longStop
+longStopDelta = abs(close - tempStopLong)
+tempProfitLong = longCondition ? close + (plInput * longStopDelta) : longProfit
+longStop := strategy.position_size <= 0 ? longCondition ? tempStopLong : na : longStop[1]
+longProfit := strategy.position_size <= 0 ? longCondition ? tempProfitLong : na : longProfit[1]
+// SHORT
+// - short entry (Typical): 
+// - Stoch RSI above 80, cross down
+// - 2 ST's above close
+stochShortCond = srsiK > 100 - srsiInputThresh and crossunder(srsiK, srsiD)
+stShortCond = stCount <= -1
+shortCondition = emaTrend < 0 and stochShortCond and stShortCond
+tempStopShort = shortCondition ? stCount == -3 ? stMedDN : stSlowDN : shortStop
+shortStopDelta = abs(close - tempStopShort)
+tempProfitShort = shortCondition ? close - (plInput * shortStopDelta) : shortProfit
+shortStop := strategy.position_size >= 0 ? shortCondition ? tempStopShort : na : shortStop[1]
+shortProfit := strategy.position_size >= 0 ? shortCondition ? tempProfitShort : na : shortProfit[1]
+// ***************************************************
+// Strategy Execution
+// ***************************************************
+strategy.exit("TP/SL", "LongPos", stop=longStop, limit=longProfit) 
+strategy.exit("TP/SL", "ShortPos", stop=shortStop, limit=shortProfit) 
+if (longCondition and timeCondition)
+    strategy.entry("LongPos", strategy.long, stop=longStop, oca_name="3xST", oca_type=strategy.oca.cancel, comment="Long")
+else
+    strategy.cancel(id="LongPos")
+if (shortCondition and timeCondition)
+    strategy.entry("ShortPos", strategy.short, stop=shortStop, oca_name="3xST", oca_type=strategy.oca.cancel, comment="Short")
+else
+    strategy.cancel(id="ShortPos")
+// ***************************************************
+// Strategy Plotting
+// ***************************************************
+// profit/loss target lines
+plot(showPLTargets ? strategy.position_size <= 0 ? na : longStop : na, title="Long Stop Loss", color=color.new(#ff0000, 0), style=plot.style_linebr, linewidth=2)
+plot(showPLTargets ? strategy.position_size <= 0 ? na : longProfit : na, title="Long Profit Target", color=color.new(#00ff00, 0), style=plot.style_linebr, linewidth=2)
+plot(showPLTargets ? strategy.position_size >= 0 ? na : shortStop : na, title="Short Stop Loss", color=color.new(#ff0000, 0), style=plot.style_linebr, linewidth=2)
+plot(showPLTargets ? strategy.position_size >= 0 ? na : shortProfit : na, title="Short Profit Target", color=color.new(#00ff00, 0), style=plot.style_linebr, linewidth=2)
+// buy/sell arrows
+plotshape(showBuySell and longCondition ? true : na, title='Buy Arrow',  location=location.belowbar, color=color.green,   style=shape.arrowup,   text="BUY",  textcolor=color.green, transp=0, size=size.small)
+plotshape(showBuySell and shortCondition ? true : na, title='Sell Arrow', location=location.abovebar, color=color.red,     style=shape.arrowdown, text="SELL", textcolor=color.red,   transp=0, size=size.small)
+// ***************************************************
+// Alerts (for use in a study)
+// ***************************************************
+alertcondition(longCondition, title="3xST Buy alert", message="Buy")
+alertcondition(shortCondition, title="3xST SELL alert", message="Sell")
+alertcondition(stSlowChanged, title="3xST Slow Trend alert", message="Slow Trend Changed")
+Expand (253 lines)

@@ -1,0 +1,985 @@
+Script Name: Support and Resistance Signals MTF [LuxAlgo]
+Author: LuxAlgo
+Description: The  Support and Resistance Signals MTF   indicator aims to identify undoubtedly one of the key concepts of technical analysis  Support and Resistance Levels  and more importantly, the script aims to capture and highlight major price action movements, such as  Breakouts ,  Tests of the Zones ,  Retests of the Zones , and  Rejections . 
+
+The script supports...
+PineScript code:
+
+Pine Script™ indicator
+Support and Resistance Signals MTF [LuxAlgo]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+// This work is licensed under a Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) https://creativecommons.org/licenses/by-nc-sa/4.0/
+// © LuxAlgo
+ 
+//@version=5
+indicator("Support and Resistance Signals MTF [LuxAlgo]", 'LuxAlgo - Support and Resistance Signals MTF', true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)
+//------------------------------------------------------------------------------
+// Settings
+//-----------------------------------------------------------------------------{
+srGR   = 'Support & Resistance Settings'
+srTF   = input.string('Chart', 'Detection Timeframe', options=['Chart', '15 Minutes', '1 Hour', '4 Hours', '1 Day', '1 Week'], group = srGR)
+srLN   = input(15, 'Detection Length', group = srGR)
+srHST  = input(true, 'Check Previous Historical S&R Level', group = srGR)
+srMR   = input.float(1.3, 'Support Resistance Margin', minval = .1, maxval = 10, step = .1, group = srGR)
+srSLC  = input(color.new(#089981, 53), '   - Support,     Lines', inline = 'srS', group = srGR)
+srSZC  = input(color.new(#089981, 83), 'Zones', inline = 'srS', group = srGR)
+srRLC  = input(color.new(#f23645, 53), '   - Resistance, Lines', inline = 'srR', group = srGR)
+srRZC  = input(color.new(#f23645, 83), 'Zones', inline = 'srR', group = srGR)
+mnMR   = input.float(2, 'Manupulation Margin', minval = .1, maxval = 10, step = .1, group = srGR)
+mnSZC  = input(color.new(#089981, 43), '   - Support Zones', inline = 'mn', group = srGR)
+mnRZC  = input(color.new(#f23645, 43), 'Resistance Zones', inline = 'mn', group = srGR)
+sigGR  = 'Signals'
+srBUC  = input(color.new(#089981, 33), 'Breakouts, Bullish', inline = 'srB', group = sigGR)
+srBDC  = input(color.new(#f23645, 33), 'Bearish', inline = 'srB', group = sigGR)
+srBS   = input.string('Tiny', "", options=['Auto', 'Tiny', 'Small', 'Normal', 'None'], inline = 'srB', group = sigGR)
+srTUC  = input(color.new(#2962ff, 33), 'Tests,        Bullish', inline = 'srT', group = sigGR)
+srTDC  = input(color.new(#e040fb, 33), 'Bearish', inline = 'srT', group = sigGR)
+srTS   = input.string('Tiny', "", options=['Auto', 'Tiny', 'Small', 'Normal', 'None'], inline = 'srT', group = sigGR)
+srRUC  = input(color.new(#089981, 33), 'Retests,     Bullish', inline = 'srR', group = sigGR)
+srRDC  = input(color.new(#f23645, 33), 'Bearish', inline = 'srR', group = sigGR)
+srRS   = input.string('Tiny', "", options=['Auto', 'Tiny', 'Small', 'Normal', 'None'], inline = 'srR', group = sigGR)
+srPUC  = input(color.new(#089981, 33), 'Rejections, Bullish', inline = 'srP', group = sigGR)
+srPDC  = input(color.new(#f23645, 33), 'Bearish', inline = 'srP', group = sigGR)
+srPS   = input.string('Tiny', "", options=['Auto', 'Tiny', 'Small', 'Normal', 'None'], inline = 'srP', group = sigGR)
+othGR  = 'Others'
+swSH   = input.string('None', "Swing Levels", options=['Auto', 'Small', 'Normal', 'Large', 'None'], inline = 'sw', group = othGR)
+swHC   = input(color.new(#f23645, 33), 'H', inline = 'sw', group = othGR)
+swLC   = input(color.new(#089981, 33), 'L', inline = 'sw', group = othGR)
+//-----------------------------------------------------------------------------}
+// User Defined Types
+//-----------------------------------------------------------------------------{
+// @type        bar properties with their values 
+//
+// @field o     (float) open price of the bar
+// @field h     (float) high price of the bar
+// @field l     (float) low price of the bar
+// @field c     (float) close price of the bar
+// @field v     (float) volume of the bar
+// @field i     (int) index of the bar
+type bar
+    float o = open
+    float h = high
+    float l = low
+    float c = close
+    float v = volume
+    int   i = bar_index
+// @type        store pivot high/low and index data 
+//
+// @field x     (int)    last pivot bar index
+// @field x1    (int)    previous pivot bar index
+// @field h     (float)  last pivot high
+// @field h1    (float)  previous pivot high
+// @field l     (float)  last pivot low
+// @field l1    (float)  previous pivot low
+// @field hx    (bool)   pivot high cross status
+// @field lx    (bool)   pivot low cross status
+type pivotPoint
+    int    x
+    int    x1
+    float  h
+    float  h1
+    float  l
+    float  l1
+    bool   hx
+    bool   lx
+// @type        stores support and resistance visuals and signal status 
+//
+// @field bx    (box)   support and resistance zones
+// @field lq    (box)   liquidity sweeps
+// @field ln    (line)  support and resistance levels
+// @field b     (bool)  breakout status
+// @field b     (bool)  test status
+// @field b     (bool)  retest status
+// @field b     (bool)  liqudation status
+type SnR
+    box    bx
+    box    lq
+    line   ln
+    bool   b
+    bool   t
+    bool   r
+    bool   l
+//-----------------------------------------------------------------------------}
+// Variables
+//-----------------------------------------------------------------------------{
+bar b = bar.new()
+var pivotPoint pp  = pivotPoint.new()
+var SnR[] R = array.new<SnR> (1, SnR.new(box(na), box(na), line(na), false, false, false, false))  
+var SnR[] S = array.new<SnR> (1, SnR.new(box(na), box(na), line(na), false, false, false, false)) 
+var SnR lR = SnR.new(box(na), box(na), line(na), false, false, false, false)
+var SnR lS = SnR.new(box(na), box(na), line(na), false, false, false, false)
+var float RpCHG = na
+var float SpCHG = na
+var int mss = 0
+//-----------------------------------------------------------------------------}
+// General Calculations
+//-----------------------------------------------------------------------------{
+int tf_m = switch srTF
+    "Chart"      => timeframe.isintraday ? timeframe.multiplier : timeframe.isdaily ? 1440 : timeframe.isweekly ? 10080 : 10080 * 30
+    "15 Minutes" => 15
+    "1 Hour"     => 60
+    "4 Hours"    => 240
+    "1 Day"      => 1440
+    "1 Week"     => 10080
+ch_m  = if timeframe.isintraday
+    timeframe.multiplier
+else if timeframe.isdaily
+    1440
+else if timeframe.isweekly
+    10080
+else if timeframe.ismonthly
+    10080 * 30
+srLN := srLN * tf_m / ch_m
+pHST = ta.highest(b.h, srLN)
+pLST = ta.lowest (b.l, srLN)
+atr   = ta.atr(17)
+isLLS = math.abs(b.l - math.min(b.o, b.c)) >= 1.618 * atr
+isLUS = math.abs(b.h - math.max(b.o, b.c)) >= 1.618 * atr
+vSMA  = ta.sma(nz(b.v), 17)
+isHV  = nz(b.v) >= 1.618 * vSMA
+isLV  = nz(b.v) <= 0.618 * vSMA
+vST   = isHV ? '\n *High Trading Activity' : isLV ? '\n *Low Trading Activity' : '\n *Average Trading Activity'
+if isHV
+    if nz(b.v) > vSMA * 4.669
+        alert('Volume SPIKE detected\n' + syminfo.ticker + ' price (' + str.tostring(b.c, format.mintick) + '), timeframe ' + timeframe.period + '\n')
+srBUC := srBS != 'None' ? srBUC : color(na)
+srBDC := srBS != 'None' ? srBDC : color(na)
+srBTC  = srBS != 'None' ? color.white : color(na)
+srTUC := srTS != 'None' ? srTUC : color(na)
+srTDC := srTS != 'None' ? srTDC : color(na)
+srTTC  = srTS != 'None' ? color.white : color(na)
+srRUC := srRS != 'None' ? srRUC : color(na)
+srRDC := srRS != 'None' ? srRDC : color(na)
+srRTC  = srRS != 'None' ? color.white : color(na)
+//-----------------------------------------------------------------------------}
+// Functions/Methods
+//-----------------------------------------------------------------------------{
+// @function        calcuates cumulative volume of the given range
+//                     
+// @param _l        (int)  length of the range
+// @param _o        (int)  offset 
+//
+// @returns         (float) cumulative volume
+f_getTradedVolume(_l, _o) =>
+    v = 0.
+    for x = 0 to _l - 1
+        v += volume[_o + x]
+    v
+// @function        converts size strings to enumerated values
+//                     
+// @param _l        (string) size string
+//
+// @returns         (enumeration) size enumerated value
+f_getSize(_s) =>
+    switch _s
+        'Tiny'   => size.tiny
+        'Small'  => size.small
+        'Normal' => size.normal
+        'Large'  => size.large
+        'Huge'   => size.huge
+        => size.auto
+//-----------------------------------------------------------------------------}
+// Calculations
+//-----------------------------------------------------------------------------{
+pp_h  = ta.pivothigh(srLN, srLN)
+if not na(pp_h)
+    pp.h1 := pp.h 
+    pp.h  := pp_h
+    pp.x1 := pp.x
+    pp.x  := b.i[srLN]
+    pp.hx := false
+    RpCHG := (pHST - pLST) / pHST
+    if R.size() > 1 
+        lR := R.get(0)
+        lRt = R.get(1)
+        if pp.h < lR.bx.get_bottom() * (1 - RpCHG * .17 * srMR) or pp.h > lR.bx.get_top() * (1 + RpCHG * .17 * srMR) 
+            if pp.x < lR.bx.get_left() and pp.x + srLN > lR.bx.get_left()
+                na
+            else
+                if pp.h < lRt.bx.get_bottom() * (1 - RpCHG * .17 * srMR) or pp.h > lRt.bx.get_top() * (1 + RpCHG * .17 * srMR) 
+                    R.unshift(
+                      SnR.new(
+                      box.new(pp.x, pp.h, b.i, pp.h * (1 - RpCHG * .17 * srMR), border_color = color(na), bgcolor = srRZC),
+                      box.new(na, na, na, na, bgcolor = color(na), border_color = color(na)),
+                      line.new(pp.x, pp.h, b.i, pp.h, color = srRLC, width = srMR <= .5 ? 2 : 3),
+                      false, false, false, false))
+                    lS.t := false
+                else
+                    lRt.bx.set_right(b.i)
+                    lRt.ln.set_x2(b.i)
+        else
+            lR.bx.set_right(b.i)
+            lR.ln.set_x2(b.i)
+    else
+        R.unshift(
+          SnR.new(
+             box.new(pp.x, pp.h, b.i, pp.h * (1 - RpCHG * .17 * srMR), border_color = color(na), bgcolor = srRZC),
+             box.new(na, na, na, na, bgcolor = color(na), border_color = color(na)),
+             line.new(pp.x, pp.h, b.i, pp.h, color = srRLC, width = srMR <= .5 ? 2 : 3),
+             false, false, false, false))
+        lS.t := false
+    if swSH != 'None'
+        StS = pp.x - pp.x1
+        tradedVolume = f_getTradedVolume(StS, srLN)
+        swH = pp.h > pp.h1 ? "Higher High" : pp.h < pp.h1 ? "Lower High" : na
+        rTT = 'Swing High (' + swH + ') : ' + str.tostring(pp.h, format.mintick) + 
+              (mss == -1 and pp.h < pp.h1 ? '\n    *Counter-Trend Move' : '') +
+              '\n -Price Change : ↑ %' + str.tostring((pp.h - pp.l) * 100 / pp.l , '#.##') + 
+              (nz(b.v) ? '\n -Traded Volume : ' + str.tostring(tradedVolume, format.volume)  + ' (' + str.tostring(StS - 1) + ' bars)' +
+              '\n    *Average Volume/Bar : ' + str.tostring(tradedVolume / (StS - 1), format.volume) : '') 
+        label.new(pp.x, pp.h, '◈', color = color(na), style = label.style_label_down, textcolor = swHC, size = f_getSize(swSH), tooltip = rTT)
+        alert('New ' + swH + (mss == -1 and pp.h < pp.h1 ? ' (counter-trend move)' : '') + ' formed\n' + syminfo.ticker + ' price (' + str.tostring(b.c, format.mintick) + '), timeframe ' + timeframe.period + '\n')
+if b.c[1] > pp.h and b.c > pp.h and not pp.hx 
+    pp.hx := true
+    mss := 1
+pp_l  = ta.pivotlow (srLN, srLN)
+if not na(pp_l) 
+    pp.l1 := pp.l
+    pp.l  := pp_l
+    pp.x1 := pp.x
+    pp.x  := b.i[srLN]
+    pp.lx := false
+    SpCHG := (pHST - pLST) / pHST
+    if S.size() > 2 
+        lS := S.get(0)
+        lSt = S.get(1)
+        if pp.l < lS.bx.get_bottom() * (1 - SpCHG * .17 * srMR) or pp.l > lS.bx.get_top() * (1 + SpCHG * .17 * srMR)
+            if pp.x < lS.bx.get_left() and pp.x + srLN > lS.bx.get_left() //not lR.b
+                na
+            else
+                if pp.l < lSt.bx.get_bottom() * (1 - SpCHG * .17 * srMR) or pp.l > lSt.bx.get_top() * (1 + SpCHG * .17 * srMR)
+                    S.unshift(
+                      SnR.new(
+                      box.new(pp.x, pp.l * (1 + SpCHG * .17 * srMR), b.i, pp.l, border_color = color(na), bgcolor = srSZC),
+                      box.new(na, na, na, na, bgcolor = color(na), border_color = color(na)),
+                      line.new(pp.x, pp.l, b.i, pp.l, color = srSLC, width = srMR <= .5 ? 2 : 3),
+                      false, false, false, false))
+                    lR.t := false
+                else
+                    lSt.bx.set_right(b.i)
+                    lSt.ln.set_x2(b.i)
+        else
+            lS.bx.set_right(b.i)
+            lS.ln.set_x2(b.i)
+    else
+        S.unshift(
+          SnR.new(
+             box.new(pp.x, pp.l * (1 + SpCHG * .17 * srMR), b.i, pp.l, border_color = color(na), bgcolor = srSZC),
+             box.new(na, na, na, na, bgcolor = color(na), border_color = color(na)),
+             line.new(pp.x, pp.l, b.i, pp.l, color = srSLC, width = srMR <= .5 ? 2 : 3),
+             false, false, false, false))
+        lR.t := false
+    if swSH != 'None'
+        StS = pp.x - pp.x1
+        tradedVolume = f_getTradedVolume(StS, srLN)
+        swL = pp.l < pp.l1 ? "Lower Low" : pp.l > pp.l1 ? "Higher Low" : na
+        sTT = 'Swing Low (' + swL + ') : ' + str.tostring(pp.l, format.mintick) + 
+              (mss == 1 and pp.l > pp.l1 ? '\n    *Counter-Trend Move' : '') +
+              '\n -Price Change : ↓ %' + str.tostring((pp.h - pp.l) * 100 / pp.h , '#.##') + 
+              (nz(b.v) ? '\n -Traded Volume : ' + str.tostring(tradedVolume, format.volume)  + ' (' + str.tostring(StS - 1) + ' bars)' +
+              '\n    *Average Volume/Bar : ' + str.tostring(tradedVolume / (StS - 1), format.volume) : '')
+        label.new(pp.x, pp.l, '◈', color = color(na), style = label.style_label_up, textcolor = swLC, size = f_getSize(swSH), tooltip = sTT)
+        alert('New ' + swL + (mss == 1 and pp.l > pp.l1 ? ' (counter-trend move)' : '') + ' formed\n' + syminfo.ticker + ' price (' + str.tostring(b.c, format.mintick) + '), timeframe ' + timeframe.period + '\n')
+if b.c[1] < pp.l and b.c < pp.l and not pp.lx 
+    pp.lx := true
+    mss := -1
+if R.size() > 0
+    lR := R.get(0)
+    if  b.c[1] > lR.bx.get_top() * (1 + RpCHG * .17) and not lR.b
+        lR.bx.set_right(b.i[1])
+        lR.ln.set_x2(b.i[1])
+        if b.c > lR.bx.get_top() * (1 + RpCHG * .17)
+            lR.b := true
+            lR.r := false
+            label.new(b.i[1], b.l[1] * (1 - RpCHG * .017), '▲\n\nB', color = srBUC, style = label.style_label_up , textcolor = srBTC, size = f_getSize(srBS), tooltip = 'Bullish Breakout' + vST[1])
+            
+            S.unshift(
+             SnR.new(
+             box.new(b.i[1], lR.bx.get_top(), b.i + 1, lR.bx.get_bottom(), border_color = color(na), bgcolor = srSZC),
+             box.new(na, na, na, na, bgcolor = color(na), border_color = color(na)),
+             line.new(b.i[1], lR.bx.get_bottom(), b.i + 1, lR.bx.get_bottom(), color = srSLC, width = srMR <= .5 ? 2 : 3),
+             false, false, false, false))
+            if srBS != 'None'
+                alert('Bullish breakout detected\n' + syminfo.ticker + ' price (' + str.tostring(b.c, format.mintick) + '), timeframe ' + timeframe.period + '\n')
+        else
+            lS.lq.set_lefttop(b.i[1] - 1, lR.bx.get_top())
+            lS.lq.set_rightbottom(b.i + 1, lR.bx.get_top() * (1 + RpCHG * .17 * mnMR))
+            lS.lq.set_bgcolor(mnRZC)
+            lS.l := true
+    else if lS.b and b.o < lR.bx.get_top() and b.h > lR.bx.get_bottom() and b.c < lR.bx.get_bottom() and not lR.r and not lS.l
+        label.new(b.i, b.h * (1 + RpCHG * .017), 'R', color = srRDC, style = label.style_label_down , textcolor = srRTC, size = f_getSize(srRS), tooltip = 'Re-test of Resistance Level' + vST )
+        lR.r := true //
+        lR.bx.set_right(b.i)
+        lR.ln.set_x2(b.i)
+        if srRS != 'None'
+            alert('Re-test of resistance level detected\n' + syminfo.ticker + ' price (' + str.tostring(b.c, format.mintick) + '), timeframe ' + timeframe.period + '\n')
+    else if b.h[1] > lR.bx.get_bottom() and b.c[1] < lR.bx.get_top() and b.c < lR.bx.get_top() and not lR.t and not lR.r and not lR.b and not lS.b and b.i[1] != lR.bx.get_left()
+        label.new(b.i[1], b.h[1] * (1 + RpCHG * .017), 'T', color = srTDC, style = label.style_label_down , textcolor = srTTC, size = f_getSize(srTS), tooltip = 'Test of Resistance Level' + vST[1] )
+        lR.t := true
+        lR.bx.set_right(b.i)
+        lR.ln.set_x2(b.i)
+        if srTS != 'None'
+            alert('Test of resistance level detected\n' + syminfo.ticker + ' price (' + str.tostring(b.c, format.mintick) + '), timeframe ' + timeframe.period + '\n')
+    else if b.h > lR.bx.get_bottom() * (1 - RpCHG * .17) and not lR.b
+        lR.ln.set_x2(b.i)
+    if isLLS[1] and isHV[1] and srPS != 'None'
+        label.new(b.i[1], b.l[1] * (1 - RpCHG * .017), '', color = srPUC, style = label.style_label_up , textcolor = color.white, size = f_getSize(srPS), tooltip = 'Rejection of Lower Prices' + vST[1])
+        alert('Rejection (Pin Bar) detected\n' + syminfo.ticker + ' price (' + str.tostring(b.c, format.mintick) + '), timeframe ' + timeframe.period + '\n')
+if R.size() > 1 and lR.b and srHST
+    lRt = R.get(1)
+    if  b.c[1] > lRt.bx.get_top() * (1 + RpCHG * .17) and not lRt.b
+        lRt.bx.set_right(b.i[1])
+        lRt.ln.set_x2(b.i[1])
+        if b.c > lRt.bx.get_top() * (1 + RpCHG * .17)
+            lRt.b := true
+            lRt.r := false
+            label.new(b.i[1], b.l[1] * (1 - RpCHG * .017), '▲\n\nB', color = srBUC, style = label.style_label_up , textcolor = srBTC, size = f_getSize(srBS), tooltip = 'Bullish Breakout' + vST[1])
+            S.unshift(
+             SnR.new(
+             box.new(b.i[1], lRt.bx.get_top(), b.i + 1, lRt.bx.get_bottom(), border_color = color(na), bgcolor = srSZC),
+             box.new(na, na, na, na, bgcolor = color(na), border_color = color(na)),
+             line.new(b.i[1], lRt.bx.get_bottom(), b.i + 1, lRt.bx.get_bottom(), color = srSLC, width = srMR <= .5 ? 2 : 3),
+             false, false, false, false))
+            if srBS != 'None'
+                alert('Bullish breakout detected\n' + syminfo.ticker + ' price (' + str.tostring(b.c, format.mintick) + '), timeframe ' + timeframe.period + '\n')
+        else
+            lS.lq.set_lefttop(b.i[1] - 1, lRt.bx.get_top())
+            lS.lq.set_rightbottom(b.i + 1, lRt.bx.get_top() * (1 + RpCHG * .17 * mnMR))
+            lS.lq.set_bgcolor(mnRZC)
+            lS.l := true
+    else if lS.b and b.o < lRt.bx.get_top() and b.h > lRt.bx.get_bottom() and b.c < lRt.bx.get_bottom() and not lRt.r 
+        label.new(b.i, b.h * (1 + RpCHG * .017), 'R', color = srRDC, style = label.style_label_down , textcolor = srRTC, size = f_getSize(srRS), tooltip = 'Re-test of Resistance Level' + vST )
+        lRt.r := true //
+        lRt.bx.set_right(b.i)
+        lRt.ln.set_x2(b.i)
+        if srRS != 'None'
+            alert('Re-test of resistance level detected\n' + syminfo.ticker + ' price (' + str.tostring(b.c, format.mintick) + '), timeframe ' + timeframe.period + '\n')
+    else if b.h[1] > lRt.bx.get_bottom() and b.c[1] < lRt.bx.get_top() and b.c < lRt.bx.get_top() and not lRt.t and not lRt.b and not lS.b and b.i[1] != lRt.bx.get_left()
+        label.new(b.i[1], b.h[1] * (1 + RpCHG * .017), 'T', color = srTDC, style = label.style_label_down , textcolor = srTTC, size = f_getSize(srTS), tooltip = 'Test of Resistance Level' + vST[1] )
+        lRt.t := true
+        lRt.bx.set_right(b.i)
+        lRt.ln.set_x2(b.i)
+        if srTS != 'None'
+            alert('Test of resistance level detected\n' + syminfo.ticker + ' price (' + str.tostring(b.c, format.mintick) + '), timeframe ' + timeframe.period + '\n')
+    else if b.h > lRt.bx.get_bottom() * (1 - RpCHG * .17) and not lRt.b
+        lRt.ln.set_x2(b.i)
+if S.size() > 0
+    lS := S.get(0)
+    if  b.c[1] < lS.bx.get_bottom() * (1 - SpCHG * .17) and not lS.b
+        lS.bx.set_right(b.i[1])
+        lS.ln.set_x2(b.i[1])
+        if b.c < lS.bx.get_bottom() * (1 - SpCHG * .17)
+            lS.b := true
+            lS.r := false
+            label.new(b.i[1], b.h[1] * (1 + SpCHG * .017), 'B\n\n▼', color = srBDC, style = label.style_label_down , textcolor = srBTC, size = f_getSize(srBS), tooltip = 'Bearish Breakout' + vST[1] )
+            R.unshift(
+             SnR.new(
+             box.new(b.i[1], lS.bx.get_top(), b.i + 1, lS.bx.get_bottom(), border_color = color(na), bgcolor = srRZC),
+             box.new(na, na, na, na, bgcolor = color(na), border_color = color(na)),
+             line.new(b.i[1], lS.bx.get_top(), b.i + 1, lS.bx.get_top(), color = srRLC, width = srMR <= .5 ? 2 : 3),
+             false, false, false, false))
+            if srBS != 'None'
+                alert('Bearish breakout detected\n' + syminfo.ticker + ' price (' + str.tostring(b.c, format.mintick) + '), timeframe ' + timeframe.period + '\n')
+        else
+            lR.lq.set_lefttop(b.i[1] - 1, lS.bx.get_bottom())
+            lR.lq.set_rightbottom(b.i + 1, lS.bx.get_bottom() * (1 - SpCHG * .17 * mnMR))
+            lR.lq.set_bgcolor(mnSZC)
+            lR.l := true
+    else if lR.b and b.o > lS.bx.get_bottom() and b.l < lS.bx.get_top() and b.c > lS.bx.get_top() and not lS.r and not lR.l
+        label.new(b.i, b.l * (1 - SpCHG * .017), 'R', color = srRUC, style = label.style_label_up , textcolor = srRTC, size = f_getSize(srRS), tooltip = 'Re-test of Support Level' + vST )
+        lS.r := true //
+        lS.bx.set_right(b.i)
+        lS.ln.set_x2(b.i)
+        if srRS != 'None'
+            alert('Re-test of support level detected\n' + syminfo.ticker + ' price (' + str.tostring(b.c, format.mintick) + '), timeframe ' + timeframe.period + '\n')
+    else if b.l[1] < lS.bx.get_top() and b.c[1] > lS.bx.get_bottom() and b.c > lS.bx.get_bottom() and not lS.t and not lS.b and not lR.b and b.i[1] != lS.bx.get_left()
+        label.new(b.i[1], b.l[1] * (1 - SpCHG * .017), 'T', color = srTUC, style = label.style_label_up , textcolor = srTTC, size = f_getSize(srTS), tooltip = 'Test of Support Level' + vST[1] )
+        lS.t := true
+        lS.bx.set_right(b.i)
+        lS.ln.set_x2(b.i)
+        if srTS != 'None'
+            alert('Test of support level detected\n' + syminfo.ticker + ' price (' + str.tostring(b.c, format.mintick) + '), timeframe ' + timeframe.period + '\n')
+    else if b.l < lS.bx.get_top() * (1 + SpCHG * .17) and not lS.b
+        lS.ln.set_x2(b.i)
+    if isLUS[1] and isHV[1] and srPS != 'None'
+        label.new(b.i[1], b.h[1] * (1 + SpCHG * .017), '', color = srPDC, style = label.style_label_down , textcolor = color.white, size = f_getSize(srPS), tooltip = 'Rejection of Higher Prices' + vST[1] )
+        alert('Rejection (Pin Bar) detected\n' + syminfo.ticker + ' price (' + str.tostring(b.c, format.mintick) + '), timeframe ' + timeframe.period + '\n')
+if S.size() > 1 and lS.b and srHST
+    lSt = S.get(1)
+    if  b.c[1] < lSt.bx.get_bottom() * (1 - SpCHG * .17) and not lSt.b
+        lSt.bx.set_right(b.i[1])
+        lSt.ln.set_x2(b.i[1])
+        if b.c < lSt.bx.get_bottom() * (1 - SpCHG * .17)
+            lSt.b := true
+            lSt.r := false
+            label.new(b.i[1], b.h[1] * (1 + SpCHG * .017), 'B\n\n▼', color = srBDC, style = label.style_label_down , textcolor = srBTC, size = f_getSize(srBS), tooltip = 'Bearish Breakout' + vST[1] )
+            R.unshift(
+             SnR.new(
+             box.new(b.i[1], lSt.bx.get_top(), b.i + 1, lSt.bx.get_bottom(), border_color = color(na), bgcolor = srRZC),
+             box.new(na, na, na, na, bgcolor = color(na), border_color = color(na)),
+             line.new(b.i[1], lSt.bx.get_top(), b.i + 1, lSt.bx.get_top(), color = srRLC, width = srMR <= .5 ? 2 : 3),
+             false, false, false, false))
+            if srBS != 'None'
+                alert('Bearish breakout detected\n' + syminfo.ticker + ' price (' + str.tostring(b.c, format.mintick) + '), timeframe ' + timeframe.period + '\n')
+        else
+            lR.lq.set_lefttop(b.i[1] - 1, lSt.bx.get_bottom())
+            lR.lq.set_rightbottom(b.i + 1, lSt.bx.get_bottom() * (1 - SpCHG * .17 * mnMR))
+            lR.lq.set_bgcolor(mnSZC)
+            lR.l := true
+    else if lR.b and b.o > lSt.bx.get_bottom() and b.l < lSt.bx.get_top() and b.c > lSt.bx.get_top() and not lSt.r
+        label.new(b.i, b.l * (1 - SpCHG * .017), 'R', color = srRUC, style = label.style_label_up , textcolor = srRTC, size = f_getSize(srRS), tooltip = 'Re-test of Support Level' + vST )
+        lSt.r := true //
+        lSt.bx.set_right(b.i)
+        lSt.ln.set_x2(b.i)
+        if srRS != 'None'
+            alert('Re-test of support level detected\n' + syminfo.ticker + ' price (' + str.tostring(b.c, format.mintick) + '), timeframe ' + timeframe.period + '\n')
+    else if b.l[1] < lSt.bx.get_top() and b.c[1] > lSt.bx.get_bottom() and b.c > lSt.bx.get_bottom() and not lSt.t and not lSt.b and not lR.b and b.i[1] != lSt.bx.get_left()
+        label.new(b.i[1], b.l[1] * (1 - SpCHG * .017), 'T', color = srTUC, style = label.style_label_up , textcolor = srTTC, size = f_getSize(srTS), tooltip = 'Test of Support Level' + vST[1] )
+        lSt.t := true
+        lSt.bx.set_right(b.i)
+        lSt.ln.set_x2(b.i)
+        if srTS != 'None'
+            alert('Test of support level detected\n' + syminfo.ticker + ' price (' + str.tostring(b.c, format.mintick) + '), timeframe ' + timeframe.period + '\n')
+    else if b.l < lSt.bx.get_top() * (1 + SpCHG * .17) and not lSt.b
+        lSt.ln.set_x2(b.i)
+//-----------------------------------------------------------------------------}
+Expand (539 lines)

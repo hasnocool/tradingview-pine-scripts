@@ -1,0 +1,104 @@
+Script Name: RSI-CCI Fusion Strategy
+Author: Julien_Eche
+Description: RSI-CCI Fusion Strategy: Harnessing the Power of RSI and CCI 
+
+The "RSI-CCI Fusion Strategy" is a powerful trading approach that combines the strengths of the Relative Strength Index (RSI) and the Commodity Channel Index (CCI) to provide enhanced trading insights. This strategy is based on the popular "RSI & CCI Fusion + Alerts" indicator, which utilizes the RSI...
+PineScript code:
+
+Pine Script™ strategy
+RSI-CCI Fusion Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+// © Julien_Eche
+//@version=5
+strategy("RSI-CCI Fusion Strategy", shorttitle="RSI-CCI Fusion Strategy", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=10)
+length = input(14, title="Length")
+rsi_weight = input.float(0.5, title="RSI Weight", minval=0.0, maxval=1.0)
+cci_weight = 1.0 - rsi_weight
+enableShort = input(false, "Enable Short Positions")
+src = close
+rsi = ta.rsi(src, length)
+cci = ta.cci(src, length)
+// Standardize the RSI and CCI values using z-score
+rsi_std = ta.stdev(rsi, length)
+rsi_mean = ta.sma(rsi, length)
+rsi_z = (rsi - rsi_mean) / rsi_std
+cci_std = ta.stdev(cci, length)
+cci_mean = ta.sma(cci, length)
+cci_z = (cci - cci_mean) / cci_std
+// Combine the standardized RSI and CCI
+combined_z = rsi_weight * rsi_z + cci_weight * cci_z
+// Rescale to the original scale
+rescaled = combined_z * ta.stdev(combined_z, length) + ta.sma(combined_z, length)
+// Calculate dynamic upper and lower bands
+upper_band = ta.sma(rescaled, length) + ta.stdev(rescaled, length)
+lower_band = ta.sma(rescaled, length) - ta.stdev(rescaled, length)
+// Buy and sell conditions
+buySignal = ta.crossover(rescaled, lower_band)
+sellSignal = ta.crossunder(rescaled, upper_band)
+// Enter long position
+if buySignal
+    strategy.entry("Buy", strategy.long)
+// Exit long position
+if sellSignal
+    strategy.close("Buy")
+// Enter short position if enabled
+if enableShort and sellSignal
+    strategy.entry("Sell", strategy.short)
+// Exit short position if enabled
+if enableShort and buySignal
+    strategy.close("Sell")
+Expand (54 lines)

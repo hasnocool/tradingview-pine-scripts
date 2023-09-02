@@ -1,0 +1,186 @@
+Script Name: Hull Fisher
+Author: SeaSide420
+Description: This strategy has a Fisher-Transform indicator applied to the highs and lows of a Hull moving average instead of the price. It also has a Commodity Channel Index to help with entry/exit. Each part of the strategy can be turned on and off, for example turn off CCI or HMA so they are not used in the order opening/exiting. The base of the strategies entry and exit...
+PineScript code:
+
+Pine Script™ strategy
+Hull Fisher
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+// This source code is free to copy/paste/use. no permission required. just do it!
+// © @SeaSide420 
+//@version=4
+strategy(title="Hull Fisher",currency="USD",default_qty_type=strategy.percent_of_equity,default_qty_value=100,commission_type=strategy.commission.percent,commission_value=0.25)
+//=================================== Inputs =========================================================
+period =input(title="HullMA Length", type=input.integer, defval=14, minval=2)
+length =input(9, minval=1, title="Signal Length")
+line1 = input(5, minval=2, title="Top Line")
+line5 = input(-5, maxval=-2, title="Bottom Line")
+price = input(open, type=input.source, title="Price data")
+entry1 =input(true,type=input.bool, title="Open when HullFisher crossover outside Lines")
+entry2 =input(true,type=input.bool, title="Open when HullFisher past zero")
+useHMA =input(true,type=input.bool, title="Include Hull_moving_average")
+useCCI =input(true,type=input.bool, title="Include Commodity_channel_index")
+fishclose=input(true,type=input.bool, title="Close order when Fisher crossover")
+HMAclose=input(true,type=input.bool, title="Close order when Hull crossover")
+//================================ Calculations ======================================================
+HMA = hma(price,period)
+HMA2 = HMA[1]
+high_ = highest(HMA, length)
+low_ = lowest(HMA, length)
+round_(val) => val > .99 ? .999 : val < -.99 ? -.999 : val
+value = 0.0
+value := round_(.66 * ((HMA - low_) / max(high_ - low_, .001) - .5) + .67 * nz(value[1]))
+value1 = 0.0
+value1 := .5 * log((1 + value) / max(1 - value, .001)) + .5 * nz(value1[1])
+value2 = value1[1]
+CCI1 = cci(price,period)
+CCI2 = CCI1[1]
+line2 = line1/2
+line4 = line5/2
+//================================ Draw Plots =======================================================
+colorchange1 =CCI1>CCI2?color.lime:color.red
+colorchange2 =value1>value2?color.lime:color.red
+a =plot(line1,style=plot.style_line,color=color.red,transp=50,linewidth=2,title="Top Line")
+b =plot(line2,style=plot.style_line,color=color.red,transp=50,linewidth=2,title="Upper Line")
+c =plot(0,style=plot.style_line,color=color.black,transp=50,linewidth=2,title="Middle Line")
+d =plot(line4,style=plot.style_line,color=color.lime,transp=50,linewidth=2,title="Lower Line")
+e =plot(line5,style=plot.style_line,color=color.lime,transp=50,linewidth=2,title="Bottom Line")
+f =plot(value1, color=color.black,transp=50,linewidth=2, title="Value 1")
+g =plot(value2, color=color.black,transp=50,linewidth=2, title="Value 2")
+h =plot(CCI1/50,style=plot.style_area, color=colorchange1,transp=50,linewidth=2, title="CCI")
+fill(f,g,color=colorchange2,transp=20,title="Color fill")
+plot(cross(value1, value2) ? value1 : na, style=plot.style_circles, color=color.black, linewidth=10)
+plot(cross(value1, value2) ? value1 : na, style=plot.style_circles, color=color.white, linewidth=8)
+plot(cross(value1, value2) ? value1 : na, style=plot.style_circles, color=colorchange2, linewidth=5)
+//============================= Entry conditions ====================================================
+// Outside Lines crossover or zero lines crossover
+LongCondition1 = value1>value2 and value1<line5 and entry1 and not useCCI and not useHMA
+ShortCondition1 = value1<value2 and value1>line1 and entry1 and not useCCI and not useHMA
+LongCondition2 = value1>value2 and value1>0 and entry2 and not useCCI and not useHMA
+ShortCondition2 = value1<value2 and value1<0 and entry2 and not useCCI and not useHMA
+// Use CCI
+LongCondition3 = value1>value2 and value1<line5 and CCI1>CCI2 and entry1 and useCCI and not useHMA
+ShortCondition3 = value1<value2 and value1>line1 and CCI1<CCI2 and entry1 and useCCI and not useHMA
+LongCondition4 = value1>value2 and value1>0 and CCI1>CCI2 and entry2 and useCCI and not useHMA
+ShortCondition4 = value1<value2 and value1<0 and CCI1<CCI2 and entry2 and useCCI and not useHMA
+// Use HMA
+LongCondition5 = value1>value2 and value1<line5 and CCI1>CCI2 and HMA>HMA2 and entry1 and not useCCI and useHMA
+ShortCondition5 = value1<value2 and value1>line1 and CCI1<CCI2 and HMA<HMA2 and entry1 and not useCCI and useHMA
+LongCondition6 = value1>value2 and value1>0 and CCI1>CCI2 and HMA>HMA2 and entry2 and not useCCI and useHMA
+ShortCondition6 = value1<value2 and value1<0 and CCI1<CCI2 and HMA<HMA2 and entry2 and not useCCI and useHMA
+//Use CCI & HMA
+LongCondition7 = value1>value2 and value1<line5 and CCI1>CCI2 and HMA>HMA2 and entry1 and useCCI and useHMA
+ShortCondition7 = value1<value2 and value1>line1 and CCI1<CCI2 and HMA<HMA2 and entry1 and useCCI and useHMA
+LongCondition8 = value1>value2 and value1>0 and CCI1>CCI2 and HMA>HMA2 and entry2 and useCCI and useHMA
+ShortCondition8 = value1<value2 and value1<0 and CCI1<CCI2 and HMA<HMA2 and entry2 and useCCI and useHMA
+//========================= Exit & Entry excecution =================================================
+if HMAclose and fishclose and value1<value2 and HMA<HMA2
+    strategy.close("BUY")
+if HMAclose and fishclose and value1>value2 and HMA>HMA2
+    strategy.close("SELL")
+if HMAclose and HMA<HMA2
+    strategy.close("BUY")
+if HMAclose and HMA>HMA2
+    strategy.close("SELL")
+if fishclose and value1<value2
+    strategy.close("BUY")
+if fishclose and value1>value2
+    strategy.close("SELL")    
+if LongCondition1 or LongCondition2 or LongCondition3 or LongCondition4 or LongCondition5 or LongCondition6 or LongCondition7 or LongCondition8
+    strategy.entry("BUY", strategy.long)
+if ShortCondition1 or ShortCondition2 or ShortCondition3 or ShortCondition4 or ShortCondition5 or ShortCondition6 or ShortCondition7 or ShortCondition8
+    strategy.entry("SELL", strategy.short)
+Expand (93 lines)

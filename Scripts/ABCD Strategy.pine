@@ -1,0 +1,216 @@
+Script Name: ABCD Strategy
+Author: kerok3g
+Description: One from many harmonic pattern that consists of two equivalent price legs. The ABCD pattern that helps traders predict when the price is about to change direction.
+
+ Tracing And Calculation 
+
+This code using pivot high and pivot low built-in method and calculate with Fibonacci Retracement.
+
+ Limitation 
+
+To find ABCD pattern is very difficult, just coming up a few...
+PineScript code:
+
+Pine Script™ strategy
+ABCD Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © kerok3g
+//@version=5
+strategy("ABCD Strategy", shorttitle="ABCDS", overlay=true, commission_value=0.04)
+calcdev(fprice, lprice, fbars, lbars) =>
+    rise = lprice - fprice
+    run = lbars - fbars
+    avg = rise/run
+    ((bar_index - lbars) * avg) + lprice
+len = input(5)
+ph = ta.pivothigh(len, len)
+pl = ta.pivotlow(len, len)
+var bool ishigh = false
+ishigh := ishigh[1]
+var float currph = 0.0
+var int currphb = 0
+currph := nz(currph)
+currphb := nz(currphb)
+var float oldph = 0.0
+var int oldphb = 0
+oldph := nz(oldph)
+oldphb := nz(oldphb)
+var float currpl = 0.0
+var int currplb = 0
+currpl := nz(currpl)
+currplb := nz(currplb)
+var float oldpl = 0.0
+var int oldplb = 0
+oldpl := nz(oldpl)
+oldplb := nz(oldplb)
+if (not na(ph))
+    ishigh := true
+    oldph := currph
+    oldphb := currphb
+    currph := ph
+    currphb := bar_index[len]
+else
+    if (not na(pl))
+        ishigh := false
+        oldpl := currpl
+        oldplb := currplb
+        currpl := pl
+        currplb := bar_index[len]
+endHighPoint = calcdev(oldph, currph, oldphb, currphb)
+endLowPoint = calcdev(oldpl, currpl, oldplb, currplb)
+plotshape(ph, style=shape.triangledown, color=color.red, location=location.abovebar, offset=-len)
+plotshape(pl, style=shape.triangleup, color=color.green, location=location.belowbar, offset=-len)
+var line lnhigher = na
+var line lnlower = na
+lnhigher := line.new(oldphb, oldph, bar_index, endHighPoint)
+lnlower := line.new(oldplb, oldpl, bar_index, endLowPoint)
+line.delete(lnhigher[1])
+line.delete(lnlower[1])
+formlong = oldphb < oldplb and oldplb < currphb and currphb < currplb
+longratio1 = (currph - oldpl) / (oldph - oldpl)
+longratio2 = (currph - currpl) / (currph - oldpl)
+formshort = oldplb < oldphb and oldphb < currplb and currplb < currphb
+shortratio1 = (oldph - currpl) / (oldph - oldpl)
+shortratio2 = (currph - currpl) / (oldph - currpl)
+// prevent multiple entry for one pattern
+var int signalid = 0
+signalid := nz(signalid[1])
+longCond = formlong and 
+           longratio1 < 0.786 and 
+           longratio1 > 0.5 and 
+           longratio2 > 1 and 
+           longratio2 < 1.414 and 
+           close < oldph and 
+           close > currpl and 
+           signalid != oldplb
+if (longCond)
+    signalid := oldplb
+    longsl = currpl - ta.tr
+    longtp = ((close - longsl) * 1.5) + close
+    strategy.entry("Long", strategy.long)
+    strategy.exit("Exit Long", "Long", limit=math.min(longtp, oldph), stop=longsl)
+shortCond = formshort and 
+             shortratio1 < 0.786 and 
+             shortratio1 > 0.5 and 
+             shortratio2 > 1.1 and 
+             shortratio2 < 1.414 and 
+             close > oldpl and 
+             close < currph and 
+             signalid != oldphb
+if (shortCond)
+    signalid := oldphb
+    shortsl = currph + ta.tr
+    shorttp = close - ((shortsl - close) * 1.5)
+    strategy.entry("Short", strategy.short)
+    strategy.exit("Exit Short", "Short", limit=math.max(shorttp, oldpl), stop=shortsl)
+Expand (109 lines)

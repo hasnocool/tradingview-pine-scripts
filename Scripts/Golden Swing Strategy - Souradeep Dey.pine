@@ -1,0 +1,202 @@
+Script Name: Golden Swing Strategy - Souradeep Dey
+Author: rajm14
+Description: This strategy is developed by Mr. Souradeep Dey. Strategy is based on RSI, Stoch, BB & Supertrend.
+Coding by Rajkumar
+PineScript code:
+
+Pine Script™ strategy
+Golden Swing Strategy - Souradeep Dey
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © rajm14
+//@version=5
+strategy(title = "Golden Swing Strategy - Souradeep Dey", shorttitle = "GSS", overlay = true, process_orders_on_close = true, default_qty_type = strategy.cash, default_qty_value=100000, currency = currency.USD)
+// Indicator - RSI - 20
+rsiSrc = input(defval = close, title = "RSI Source")
+rsiLen = input.int(defval = 20, title = "RSI Length", minval = 0, maxval = 200, step = 1)
+rsi = ta.rsi(rsiSrc, rsiLen)
+//plot(rsi)
+// Indicator - Stochastic (55,34,21)
+kLength = input.int(defval = 55, title="Stoch %K Length", minval=1)
+kSmooth = input.int(defval = 34, title="Stoch %K Smoothing", minval=1)
+dLength = input.int(defval = 21, title="Stoch %D Smoothing", minval=1)
+kLine = ta.sma(ta.stoch(close, high, low, kLength), kSmooth)
+dLine = ta.sma(kLine, dLength)
+// plot(kLine, color=color.red)
+// plot(dLine, color=color.green)
+// Indicator - ATR(5)
+atrLength = input(5, "ATR Length")
+atr = ta.atr(5)
+// plot(atr)
+// Indicator - SuperTrend(10,2)
+atrPeriod = input(10, "SuperTrend ATR Length")
+stSrc = hl2
+stfactor = input.float(2.0, "SuperTrend Multiplier", step = 0.1)
+stAtr = ta.atr(atrPeriod)
+[supertrend, direction] = ta.supertrend(stfactor, atrPeriod)
+bodyMiddle = (open + close) / 2
+upTrend = direction < 0 ? supertrend : na
+downTrend = direction < 0? na : supertrend
+// plot(bodyMiddle, display=display.none)
+// plot(upTrend)
+// plot(downTrend)
+// Indicator - Bollinger Bands (20,2)
+bblength = input.int(defval = 20, title = "BB Length")
+bbsource = input(defval = close, title = "BB Source")
+bbStdDev = input.float(defval = 2.0, title = "BB Std Dev", step = 0.1)
+bbmultiplier = bbStdDev * ta.stdev(bbsource, bblength)
+bbMband = ta.sma(bbsource, bblength)
+bbUband = bbMband + bbmultiplier
+bbLband = bbMband - bbmultiplier
+// plot (bbUband, color = color.red, linewidth = 2)
+// plot (bbMband, color = color.black, linewidth = 2)
+// plot (bbLband, color = color.green, linewidth = 2)
+// Trade Entry
+LongEntry = rsi >= 50 and kLine > dLine and low < supertrend and direction < 0 and supertrend < bbMband
+ShortEntry = rsi <= 50 and kLine < dLine and high > supertrend and direction > 0 and supertrend > bbMband
+plotshape(LongEntry, style = shape.triangleup,  text = "Long", location = location.belowbar, size = size.large, color = color.green)
+plotshape(ShortEntry, style = shape.triangledown,  text = "Short", location = location.abovebar, size = size.large, color = color.red)
+//Trade execution
+if LongEntry
+    strategy.entry(id = "Buy", direction = strategy.long, limit = close * .5 * atr)
+closelong = close >= strategy.position_avg_price * 2.2 * atr
+stoplong = close <=  strategy.position_avg_price * 1.1 * atr
+if closelong
+    strategy.close(id = "Buy")
+    
+if stoplong
+    strategy.close(id = "Buy")
+    
+if ShortEntry
+    strategy.entry(id = "Sell", direction = strategy.long, limit = close * .5 * atr)
+closeshort = close <= strategy.position_avg_price * 2.2 * atr
+stopshort = close >=  strategy.position_avg_price * 1.1 * atr
+if closeshort
+    strategy.close(id = "Sell")
+    
+if stopshort
+    strategy.close(id = "Sell")
+    
+Expand (122 lines)

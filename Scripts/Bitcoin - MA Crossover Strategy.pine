@@ -1,0 +1,103 @@
+Script Name: Bitcoin - MA Crossover Strategy
+Author: TsangYouJun
+Description: Before You Begin: 
+Please read these warnings carefully before using this script, you will bear all fiscal responsibility for your own trades.
+
+ 
+ Trading Strategy Warning - Past performance of this strategy may not equal future performance, due to macro-environment changes, etc.
+ Account Size Warning - Performance based upon default 10% risk per trade, of account...
+PineScript code:
+
+Pine Script™ strategy
+Bitcoin - MA Crossover Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+//@version=4
+//Trading Strategy Warning - Past performance may not equal future performance
+//Account Size Warning - Performance based upon default 10% risk per trade, of account size $100,000. Adjust before you trade to see your own drawdown.
+//Time Frame - D1 and H4, warning H4 has a lower profit factor (fake-outs, and account drawdown), D1 recommended
+//Trend Following System - Profitability of this system is dependent on a STRONG trend in Bitcoin, into the future
+strategy("Bitcoin - MA Crossover Strategy", overlay=true)
+// User Input
+usr_risk = input(title="Equity Risk (%)",type=input.integer,minval=1,maxval=100,step=1,defval=10,confirm=false)
+sma_fast = input(title="Fast MA (Period)",type=input.integer,minval=1,maxval=500,step=1,defval=20,confirm=false)
+sma_slow = input(title="Slow MA (Period)",type=input.integer,minval=1,maxval=500,step=1,defval=40,confirm=false)
+rsi_valu = input(title="RSI (Period)",type=input.integer,minval=1,maxval=500,step=1,defval=14,confirm=false)
+// Create Indicator's
+shortSMA = sma(close, sma_fast)
+longSMA = sma(close, sma_slow)
+rsi = rsi(close, rsi_valu)
+// Units to buy
+amount = usr_risk / 100 * (strategy.initial_capital + strategy.netprofit)
+units = floor(amount / close)
+// Specify entry conditions
+longEntry = crossover(shortSMA, longSMA)
+shortEntry = crossunder(shortSMA, longSMA)
+// Specify exit conditions
+longExit = crossunder(shortSMA, longSMA)
+shortExit = crossover(shortSMA, longSMA)
+// Execute long trade
+if (longEntry)
+    strategy.entry("long", strategy.long, units, when = rsi > 50)
+// Exit long trade
+if(longExit and strategy.position_size > 0)    
+    strategy.order("exit long", strategy.short, abs(strategy.position_size))
+// Execute short trade
+if (shortEntry)
+    strategy.entry("short", strategy.short, units, when = rsi < 50)
+    
+// Exit short trade
+if(shortExit and strategy.position_size < 0)    
+    strategy.order("exit short", strategy.long, abs(strategy.position_size))
+// Plot Moving Average's to chart
+plot(shortSMA)
+plot(longSMA, color=color.black)
+Expand (49 lines)

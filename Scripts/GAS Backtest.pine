@@ -1,0 +1,387 @@
+Script Name: GAS Backtest
+Author: windlu
+Description: A simulator for crypto grid. It could do the backtest.
+PineScript code:
+
+Pine Script™ strategy
+GAS Backtest
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//@version=5
+strategy("GAS Backtest",overlay=true, initial_capital=10000, process_orders_on_close=false)
+startDate   = input.time(title="Start Date", defval=timestamp("5 Mar 2022 00:00 +0800"))
+endDate     = input.time(title="Start Date", defval=timestamp("5 Mar 2022 00:00 +0800"))
+gridPct     = input.float(title="Grid PCT", defval=1, minval = 0.1, step = 0.25, maxval = 100)
+maxOrder    = input.int(title="Max Order", defval=2, minval=1)
+initBuy     = input.bool(title="Grid Reward Only",defval=true)
+userVol     = input.float(title="Grid Vol (optional)",defval=0)
+refGrid     = input.float(title="Ref. Grid (optional)",defval=0, minval=0)
+userSetting = input.bool(title="Apply User setting",defval=false)
+today       = input.bool(title="Today Only",defval=true)
+if today
+    startDate := timenow - ( timenow + 28800000 ) % 86400000 - 1800000
+    endDate   := timenow
+if userSetting 
+    switch syminfo.ticker
+        "SOLUSD" =>
+            gridPct  := 1
+            maxOrder := 5
+            userVol  := 1
+            refGrid  := 45  
+        => startDate := time + 120000
+    
+if timeframe.period != "1"
+    startDate := time + 120000
+pct       = 1 + gridPct / 100.0
+gridLine  = open
+vol       = 0.0
+ratio     = 2
+sellCount = 0
+buyCount  = 0
+gain      = 0.0
+var label labelName = na
+if labelName[1] != na
+    label.delete(labelName[1])
+         
+    
+if time > startDate and time <= endDate
+    vol       := vol[1]
+    gridLine  := gridLine[1]
+    pct       := pct[1]
+    
+    if hour != 16 or minute != 0
+        buyCount  := buyCount[1]
+        sellCount := sellCount[1]
+        gain      := gain[1]
+        
+    nt  = math.max( math.floor( math.log( high / gridLine ) / math.log( pct ) ), 0)
+    nt := math.min( nt , maxOrder)
+    //highLine   = gridLine * math.pow(pct,nt)
+    highLine = gridLine
+    if nt != 0 
+        prePrice = highLine
+        for i = 1 to nt
+            highLine := math.ceil( highLine * pct / syminfo.mintick ) * syminfo.mintick
+            gain += ( highLine - prePrice ) * vol
+            prePrice := highLine
+        gain := math.round( gain * 100 ) * 0.01
+    
+    
+    sellCount += nt
+    
+    nb  = math.min( math.ceil( math.log( low / gridLine ) / math.log( pct ) ), 0)
+    nb := math.max( nb , -1 * maxOrder)
+    //lowLine = gridLine * math.pow(pct,nb)
+    lowLine = gridLine
+    if nb != 0
+        for i = 1 to -1*nb
+            lowLine := math.floor( lowLine / pct / syminfo.mintick ) * syminfo.mintick
+      
+    
+    buyCount -= nb
+    
+    if ( highLine != gridLine ) and ( lowLine != gridLine )  
+        gridLine := ( highLine - gridLine ) > ( gridLine - lowLine ) ? lowLine : highLine
+    else if  highLine != gridLine 
+        gridLine := highLine
+    else if  lowLine != gridLine 
+        gridLine := lowLine
+        
+        
+    if ( gridLine != gridLine[1] ) 
+        buyPrice  = gridLine
+        sellPrice = gridLine 
+        strategy.cancel_all()
+        
+        for i = 1 to maxOrder 
+            //sellPrice := sellPrice * pct
+            sellPrice := math.ceil( sellPrice * pct / syminfo.mintick ) * syminfo.mintick
+            strategy.order( str.format("Sell{0}",i), strategy.short, vol, limit=sellPrice)
+            
+            //buyPrice  := buyPrice  / pct
+            buyPrice  := math.floor( buyPrice / pct / syminfo.mintick ) * syminfo.mintick
+            strategy.order( str.format("Buy{0}",i), strategy.long, vol, limit=buyPrice)  
+            
+else if time == startDate 
+    //label.new(bar_index, high, syminfo.ticker )
+    if refGrid != 0 
+        n = math.floor( math.log( gridLine / refGrid ) / math.log( pct ) )
+        
+        line1 = refGrid
+        line2 = line1
+        
+        for i = 1 to ( n >= 0 ? n+1 : -1*n )
+            line2 := line1 
+            line1 := if n >= 0 
+                math.ceil( line1 * pct / syminfo.mintick ) * syminfo.mintick
+            else 
+                math.floor( line1 / pct / syminfo.mintick ) * syminfo.mintick
+            
+        
+//        line1 = refGrid * math.pow( pct, n )
+//        line2 = line1 * pct
+        h = high
+        l = low
+        i = 1
+        while true 
+            if ( line1 <= h ) and ( line1 >= l )
+                gridLine := line1 
+                break 
+            if ( line2 <= h ) and ( line2 >= l )
+                gridLine := line2 
+                break
+            h := high[i] > h ? high[i] : h
+            l := low[i]  < l ? low[i]  : l
+            i += 1
+     
+    botBound = gridLine / 1.1
+    topBound = gridLine * 1.1
+    nb       = math.floor( math.log( gridLine / botBound ) / math.log( pct ) )
+    vol     := gridLine / pct * ( 1 - math.pow( 1/pct, math.max(nb,0) ) ) / ( 1 - 1/pct)
+    nt       = math.floor( math.log( topBound / gridLine ) / math.log( pct ) )
+    
+    if nt < 0
+        vol -= gridLine / pct * ( 1 - math.pow( 1/pct, -1 - nt) ) / ( 1 - 1/pct )
+        nt  := 0
+    
+    if initBuy == false
+        if nb < 0
+            nt  -= -1 - nb
+        vol += nt * close
+        
+    else 
+        vol += gridLine * ( 1 - math.pow( pct, nt ) ) / ( 1 - pct)
+        if nb < 0
+            vol -= gridLine * ( 1 - math.pow( pct, -1*nb ) ) / ( 1 - pct )
+    
+    if userVol == 0
+        vol := strategy.equity / vol
+    else if userVol > 0
+        vol := userVol
+    else 
+        vol := -1 * userVol * gridPct 
+    if initBuy == false
+        strategy.order("init", strategy.long, nt*vol)
+    
+    buyPrice  = gridLine
+    sellPrice = gridLine 
+    
+    for i = 1 to maxOrder 
+        sellPrice := sellPrice * pct
+        strategy.order( str.format("Sell{0}",i), strategy.short, vol, limit=sellPrice)
+        
+        buyPrice  := buyPrice  / pct 
+        strategy.order( str.format("Buy{0}",i), strategy.long, vol, limit=buyPrice)
+if time == endDate 
+    strategy.cancel_all()
+//plot(line1, color= color.red)
+//plot(line2)
+//plot(pct * 100 -10)
+//plot(syminfo.mintick)
+if today and ( time >= startDate ) and bar_index >= last_bar_index-1  
+    labelName := label.new(x=bar_index+80, y=high*1.002, text = str.format("Buy : {0}\nSell : {1}\nGain : {2}",buyCount,sellCount,gain), style=label.style_label_center, textcolor = color.white)
+plot( time >= startDate and time <= endDate? gridLine : na , color = color.yellow, style = plot.style_stepline )
+//plot(close)
+Expand (202 lines)

@@ -1,0 +1,68 @@
+Script Name: BTC_ISHIMOKU
+Author: IntelTrading
+Description: Investment trading strategy on the daily timeframe of the BTC-USD pair based on the Ichimoku cloud indicator
+PineScript code:
+
+Pine Script™ strategy
+BTC_ISHIMOKU
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Alferow
+//@version=4
+strategy("BTC_ISHIMOKU", overlay=true, initial_capital=1000, commission_value=0.25, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+period_max = input(20, minval = 1)
+period_med = input(10, minval = 1)
+period_min = input(16, minval = 1)
+Lmax = highest(high, period_max)
+Smax = lowest(low, period_max)
+Lmed = highest(high, period_med)
+Smed = lowest(low, period_med)
+Lmin = highest(high, period_min)
+Smin = lowest(low, period_min)
+HL1 = (Lmax + Smax + Lmed + Smed)/4
+HL2 = (Lmed + Smed + Lmin + Smin)/4
+p1 = plot(HL1, color = color.red, linewidth = 2)
+p2 = plot(HL2, color = color.green, linewidth = 2)
+fill(p1, p2, color = HL1 < HL2 ? color.green : color.red, transp = 90)
+start = timestamp(input(2020, minval=1), 01, 01, 00, 00)
+finish = timestamp(input(2025, minval=1),01, 01, 00, 00)
+trig = time > start and time < finish ? true : false
+strategy.entry("Long", true, when = crossover(HL2, HL1) and trig)
+// strategy.entry("Short", false, when = crossunder(HL2, HL1) and trig)
+strategy.close("Long", when = crossunder(HL2, HL1) and trig)
+Expand (35 lines)

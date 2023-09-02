@@ -1,0 +1,264 @@
+Script Name: SPY 1 Hour Swing Trader
+Author: fbearman2000
+Description: The purpose of this script is to spot 1 hour pivots that indicate ~5 to 6 trading day swings. Results indicate that swings are held approximately 5 to 6 trading days on average, over the last 6 years. This indicator spots a go long opportunity when the 5 ema crosses the 13 ema on the 1 hour along with the RSI > 50. It also spots uses a couple different means to...
+PineScript code:
+
+Pine Script™ strategy
+SPY 1 Hour Swing Trader
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+//@version=5
+strategy(title="SPY 1 Hour Swing Trader", initial_capital=300000, default_qty_type=strategy.percent_of_equity, default_qty_value=15, pyramiding=0, commission_type=strategy.commission.cash_per_order, commission_value=0, overlay=true, calc_on_every_tick=false, process_orders_on_close=true, max_labels_count=500)
+//The purpose of this script is to spot 1 hour pivots that indicate ~5 to 6 trading day swings.
+//Results indicate that swings are held approximately 5 to 6 trading days on average, over the last 6 years.
+//This indicator spots a go long opportunity when the 5 ema crosses the 13 ema on the 1 hour along with the RSI > 50.
+//It also spots uses a couple different means to determine when to exit the trade. Sell condition is 
+//primarily when the 13 ema crosses the 5 ema and the MACD line crosses below the signal line and
+//the smoothed Stochastic appears oversold (greater than 70). Stop Losses and Take Profits are configurable
+//in Inputs along with ability to include short trades plus other MACD and Stochastic settings.
+//If a stop loss is encountered the trade will close. Also once twice the expected move is encountered
+//partial profits will taken and stop losses and take profits will be re-established based on most recent close
+//Once long trades are exited, short trades will be initiated if recent conditions appeared oversold and
+//input option for short trading is enabled. If trying to use this for something other than SPXL it is best
+//to update stop losses and take profit percentages and check backtest results to ensure proper levels have
+//been selected and the script gives satisfactory results.
+// Initialize variables
+var float long_entry_price = na
+var float short_entry_price = na
+var float stop_loss = na
+var float take_profit = na
+var float twoxtake_profit = na
+var float short_stop_loss = na
+var float short_take_profit = na
+var float short_twoxtake_profit = na
+var int startshort = 0
+// Inputs
+short = input.bool(true, "Include Short Trades!")
+option_SL_P = input.float(0.02, "Input Stop Loss Percentage (0.02 = 2%)")
+option_TP_P = input.float(0.03, "Input Take Profit Percentage (0.03 = 3%)")
+pp = input.int(50, "Partial Profit Percentage in whole numbers (50 is 50%)")
+ema5 = input.int(5, "Fast EMA Period", minval=1)
+ema13 = input.int(13, "Slow EMA Period", minval=1)
+rsi_length = input.int(14, "RSI Length", minval=1)
+macd_fast_length = input.int(8, "MACD Fast Length", minval=1)
+macd_slow_length = input.int(21, "MACD Slow Length", minval=1)
+macd_signal_length = input.int(5, "MACD Signal Length", minval=1)
+len = input.int(14, title="ADX Length", minval=1)
+length = input.int(14, "Stochastic Length")
+smoothK = input.int(3, "Stoicastic Smooth K")
+src = input(close, "Stoicastic Source")
+// Calculating EMA 
+ema_13 = ta.ema(close, ema13)
+ema_5 = ta.ema(close, ema5)
+// Calculate RSI
+rsi = ta.rsi(close, rsi_length)
+smooth_rsi = ta.ema(rsi, 5)
+// Calculate MACD
+[macd_line, signal_line, _] = ta.macd(close, macd_fast_length, macd_slow_length, macd_signal_length)
+// Calculate the True Range
+tr = ta.tr(true)
+// Calculate slope of MACD line
+rsiSlope = (smooth_rsi - smooth_rsi[3]) / (bar_index - bar_index[3])
+// Calculate the Directional Movement
+up = ta.change(high)
+down = -ta.change(low)
+plusDM = na(up) ? na : (up > down and up > 0 ? up : 0)
+minusDM = na(down) ? na : (down > up and down > 0 ? down : 0)
+// Calculate the Smoothed Directional Movement
+plusDI = 100 * ta.ema(plusDM, len) / ta.ema(tr, len)
+minusDI = 100 * ta.ema(minusDM, len) / ta.ema(tr, len)
+// Calculate the Directional Index (DX)
+DX = 100 * math.abs(plusDI - minusDI) / (plusDI + minusDI)
+// Calculate the ADX
+adx = ta.ema(DX, len)
+// Calculate slope of ADX line
+ADXSlope = (adx - adx[3]) / (bar_index - bar_index[3])
+//Stochastic Calculation
+highestHigh = ta.highest(src, length)
+lowestLow = ta.lowest(src, length)
+k = 100 * ((src - lowestLow) / (highestHigh - lowestLow))
+d = ta.sma(k, smoothK)
+// Determine current VIX
+vixClose = request.security("VIX", timeframe.period, close[3])
+//plot(vixClose, title="VIX Close", color=color.red)
+// Buy and Sell Conditions
+buy_condition = ta.crossover(ema_5 , ema_13) and rsi > 50
+sell_condition = ema_13 > ema_5 and macd_line < signal_line and (d >70)
+// Plotting indicators
+plot(ema_13, color=color.orange, title="Slow EMA Period")
+plot(ema_5, color=color.blue, title="Fast EMA Period")
+// Executing trades
+if buy_condition and strategy.position_size == 0 and barstate.isconfirmed
+    strategy.entry("Pivot Up", strategy.long, alert_message = "Pivoting Up")
+    long_entry_price := close
+    stop_loss := long_entry_price - (option_SL_P * close)
+    take_profit := long_entry_price + (option_TP_P * close)
+    twoxtake_profit := long_entry_price + (2 * option_TP_P * close)
+if strategy.position_size > 0 and barstate.isconfirmed
+    if close < stop_loss and barstate.isconfirmed
+        strategy.close("Pivot Up", "Exit Longs Stopped", alert_message = "Exit Longs Stopped")
+        if short == 1 
+            startshort := 1
+    else if sell_condition and barstate.isconfirmed
+        if short == 1
+            startshort := 1
+        strategy.close("Pivot Up", "Exit Longs Sell Condition Met", alert_message = "Exit Longs Sell Condition Met")
+    else if close >= twoxtake_profit and ADXSlope < 0 and barstate.isconfirmed
+        stop_loss := close - (.5*option_TP_P*close)
+        take_profit := close + (.5*option_TP_P*close)
+        strategy.exit("Exit Partial Longs", "Pivot Up", stop=stop_loss, limit = take_profit, qty_percent = pp, alert_message = "Exit Partial Longs")
+if startshort == 1
+    if (d[6] > 80) and barstate.isconfirmed
+        strategy.entry("Pivot Down", strategy.short, alert_message = "Pivoting Down")
+        short_entry_price := close
+        short_stop_loss := short_entry_price + (option_SL_P * close)
+        short_take_profit := short_entry_price - (option_TP_P * close)
+        short_twoxtake_profit := short_entry_price - (2 * option_TP_P * close)
+        startshort := 0
+    else
+        startshort := 0
+if strategy.position_size < 0 and barstate.isconfirmed
+    if close > short_stop_loss and barstate.isconfirmed
+        strategy.close("Pivot Down", "Exit Shorts Stopped" , alert_message = "Exit Shorts Stopped")
+    else if close <= short_twoxtake_profit and ADXSlope < 0 and barstate.isconfirmed
+        short_stop_loss := close + (.5*option_TP_P*close)
+        short_take_profit := close - (.5*option_TP_P*close)
+        strategy.exit("Exit Partial Shorts", "Pivot Down", stop=short_stop_loss, limit = short_take_profit, qty_percent = pp, alert_message = "Exit Partial Shorts")
+Expand (138 lines)

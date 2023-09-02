@@ -1,0 +1,90 @@
+Script Name: Heiken Ashi MTF Strategy- Indicator
+Author: SoftKill21
+Description: Hello, this is both a strategy and indicator that revolves around Heikin Ashi candles.
+
+In this case we take 3 different time frames, in this example we use daily , weekly and monthly.
+
+The conditions for entry are :
+For long : we check that we have a green daily candle, at the same time we check that the weekly and monthly candles are also green.
+For short : We...
+PineScript code:
+
+Pine Script™ strategy
+Heiken Ashi MTF Strategy- Indicator
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+//@version=4
+strategy("Heiken Ashi MTF Strategy")
+ha_t = heikinashi(syminfo.tickerid)
+res = input('D', title="TM 1")
+ha_open = security(ha_t, res, open)
+ha_close = security(ha_t, res, close)
+ha_dif = ha_open-ha_close
+ha_diff=iff(ha_dif > 0, 1, iff(ha_dif<0, 2, 3))
+res2 = input('W', title="TM 2")
+ha_open2 = security(ha_t, res2, open)
+ha_close2 = security(ha_t, res2, close)
+ha_dif2 = ha_open2-ha_close2
+ha_diff2=iff(ha_dif2 > 0, 1, iff(ha_dif2<0, 2, 3))
+res3 = input('M', title="TM 3")
+ha_open3 = security(ha_t, res3, open)
+ha_close3 = security(ha_t, res3, close)
+ha_dif3 = ha_open3-ha_close3
+ha_diff3=iff(ha_dif3 > 0, 1, iff(ha_dif3<0, 2, 3))
+plot(15, title="TF1", color=iff(ha_diff==1, color.red, iff(ha_diff==2, color.green, color.white)), style=plot.style_circles, linewidth=5, join=true)
+plot(14, title="TF2", color=iff(ha_diff2==1, color.red, iff(ha_diff2==2, color.green, color.white)), style=plot.style_circles, linewidth=5, join=true)
+plot(13, title="TF3", color=iff(ha_diff3==1, color.red, iff(ha_diff3==2, color.green, color.white)), style=plot.style_circles, linewidth=5, join=true)
+short = ha_diff ==1 and ha_diff2==1 and ha_diff3 ==1
+long = ha_diff ==2 and ha_diff2==2 and ha_diff3 ==2
+exitlong = ha_diff ==1 or ha_diff2==1 or ha_diff3 ==1
+exitshort = ha_diff ==2 or ha_diff2==2 or ha_diff3 ==2
+longA = input(true)
+shortA = input(false)
+if(longA)
+    strategy.entry("long",1,when=long)
+    strategy.close("long",when=exitlong)
+if(shortA)
+    strategy.entry("short",0,when=short)
+    strategy.close("short",when=exitshort)
+Expand (42 lines)

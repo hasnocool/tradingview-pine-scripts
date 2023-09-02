@@ -1,0 +1,376 @@
+Script Name: Momentum Strategy (BTC-USDT; 30m) - STOCH RSI (with source code)
+Author: Drun30
+Description: Here's a strategy for low time frames (30min suggested) for BTC , based on momentum Analysis using Stochastic RSI
+By default the strategy will use the 50% of the specified capital for each trade; if "Gamble Sizing" is enabled, it will add the specified amount of capital (25% by default, until reaching the 100% limit or lower) for the next trade after having...
+PineScript code:
+
+Pine Script™ strategy
+Momentum Strategy (BTC/USDT; 30m) - STOCH RSI (with source code)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Drun30 (Federico Magnani)
+//@version=4
+//STRATEGIA PRINCIPALE
+/////////////////// CHANGE THESE VARIABLES FOR TV-HUB ///////////////////
+var pair = "BTCUSDT" //metti il valore associato a "pair" nel JSON generato da TVHUB
+var orderSizePercent = 70 // → % di capitale investita per ogni trade, la percentuale è da riferirsi alla PERCENTUALE DI CRIPTOVALUTA PRESENTE NEL PORTAFOGLIO SPOT (se ho messo la coppia "BTCUSDT", ho 1200 USDT liberi nel portafoglio e lascio "orderSizePercent"=50, mi eseguirà un ordine di acquisto spendendo 600 USDT (=1200*0.5) per comprare BTC (in caso di ordine long))
+var stopLossPercent_Long = 10 //è lo stop loss (percentuale) per le posizioni Long, metti il valore associato a "stopLossPercent" nel JSON generato da TVHUB per le posizioni long
+var takeProfitPercent_Long = 8 //è il take profit (percentuale) per le posizioni Long, metti il valore associato a "takeProfitPercent" nel JSON generato da TVHUB per le posizioni long
+var stopLossPercent_Short = 20 //è lo stop loss (percentuale) per le posizioni Short, metti il valore associato a "stopLossPercent" nel JSON generato da TVHUB per le posizioni short
+var takeProfitPercent_Short = 35 //è il take profit (percentuale) per le posizioni Short, metti il valore associato a "takeProfitPercent" nel JSON generato da TVHUB per le posizioni short
+var tokenTVHUB = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" //è il token associato al tuo account su TV-HUB, metti il valore associato a "token" nel JSON generato da TVHUB
+var exchange = "Binance-Futures-Testnet" //metti il valore associato a "exchange" nel JSON generato da TVHUB
+//Excgange possibili: Bitmex, Bitmex-Testnet, Binance, Binance-Futures, Binance-Futures-Testnet, Bybit, Bybit-Testnet
+var leverage = 1 //lascia 1 se non stai usando binance futures o bitmex
+commissionsPercent = 0.1 //commissioni dell'exchange (0.1 = 0.1%, sono le commissioni di Binance)
+////////////////////////////////////////////////////////////////////////
+/////////////////// QUICK CHANGE VARIABLES OF THE STRATEGY ///////////////////
+wantToUseGambleSizing=true //se "true" aumenterà la size del trade successivo a quello perdente per il valore percentuale associato a "deltasize" (se ho fallito un trade con il 50% della size, se wantToUseGambleSizing=true e deltaSize=25, il trade successivo impiegherà il 75% della valuta in portafoglio)
+var deltaSize = 25 // → delta% di capitale investito se trade precedente è stato in perdita (cumulabile: se parto con il 50% del capitale ed il trade va in perdita, il trade successivo userà il 75% (=50+25), se fallisce anche quello userà il 100%(=50+25+25) (ammesso che sia stato raggiunto il valore "sizeLimite"))
+var sizeLimite = 100 //il trade non impiegherà mai una percentuale superiore a questa nei trade successivi a quello andato in perdita
+capitaleIniziale=1000
+var sizeordineInit= orderSizePercent
+var sizeordine = sizeordineInit
+//Parametri ottimali 30 min
+usiShort=true
+usiLong=true
+ipercomprato=85.29
+ipervenduto=30.6
+//
+//////////////////////////////////////////////////////////////////////////////
+strategy("Momentum Strategy (V7.B.4)", initial_capital=capitaleIniziale, currency="USD", default_qty_type=strategy.percent_of_equity, commission_type=strategy.commission.percent, commission_value=commissionsPercent, slippage = 5, default_qty_value=sizeordineInit, overlay=false, pyramiding=0)
+backtest = input(title="------------------------Backtest Period------------------------", defval = false)
+start = timestamp(input(2020, "start year"), input(1, "start month"), input(1, "start day"), 00, 00)
+end = timestamp(input(0, "end year"), input(0, "end month"), input(0, "end day"), 00, 00) 
+siamoindata=time > start?true:false
+if end > 0
+    siamoindata:=time > start and time <= end?true:false
+basicParameters = input(title="------------------------Basic Parameters------------------------", defval = false)
+smoothK = input(3, minval=1)
+smoothD = input(6, minval=1)
+lengthRSI = input(12, minval=1) 
+src = input(close, title="RSI Source")
+rsi1 = rsi(src, lengthRSI)
+lengthStoch = input(12, minval=1)
+k = ema(stoch(rsi1, rsi1, rsi1, lengthStoch), smoothK)
+d = ema(k, smoothD)
+altezzaipercomprato= input(ipercomprato, title="Overbought Height", minval=1, type=input.float)
+altezzaipervenduto= input(ipervenduto, title="Oversold Height", minval=1,type=input.float) 
+BarsDelay = input(6,title="Bars delay",minval=0) 
+GambleSizing = input(wantToUseGambleSizing, title = "Gamble Sizing?",type=input.bool)
+gambleAdd = input(deltaSize,title="Gamble Add (%)",minval=0,type=input.integer)
+gambleLimit = input(sizeLimite,title="Gamble MAX (%)",minval=0,type=input.integer)
+if GambleSizing and strategy.closedtrades[0]>strategy.closedtrades[1]
+    if strategy.losstrades[0]>strategy.losstrades[1] and sizeordine<gambleLimit
+        sizeordine:=sizeordine+gambleAdd
+    if strategy.wintrades[0]>strategy.wintrades[1]
+        sizeordine:=sizeordineInit
+periodomediamobile_fast = input(1, title="Fast EMA length",minval=1)
+periodomediamobile_slow = input(60, title="Slow EMA length",minval=1)
+plot(k, color=color.blue)
+plot(d, color=color.orange)
+h0 = hline(altezzaipercomprato)
+h1 = hline(altezzaipervenduto)
+fill(h0, h1, color=color.purple, transp=80)
+// n=input(Vicinanzadalcentro,title="Vicinanza dal centro",minval=0) 
+//sarebbe il livello di D in cui si acquista o si vende, maggiore è la vicinanza maggiore sarà la frequenza dei trades, SE 0 è DISABILITATO
+//     siamoinipervenduto= d<=altezzaipervenduto and d<=d[n] and d>d[1]?true:false //and d<d[3] and d>d[1]
+//     siamoinipercomprato= d>=altezzaipercomprato and d>=d[n] and d<d[1]?true:false //and d>d[3] and d<d[1]
+goldencross = crossover(k,d)
+deathcross = crossunder(k,d)
+// METTI VARIABILE IN CUI AVVIENE CROSSOVER O CROSSUNDER
+valoreoro = valuewhen(goldencross,d,0)
+valoremorte = valuewhen(deathcross,d,0)
+siamoinipervenduto = goldencross and valoreoro<=altezzaipervenduto?true:false//d<=altezzaipervenduto?true:false
+siamoinipercomprato = deathcross and valoremorte>=altezzaipercomprato?true:false//d>=altezzaipercomprato?true:false
+long_separator = input(title="------------------------LONG------------------------", defval = usiLong)
+sl_long_inp = input(stopLossPercent_Long, title="Stop Loss LONG %", type=input.float,step=0.1) 
+tp_long_inp = input(takeProfitPercent_Long, title="Take Profit LONG %",type=input.float,step=0.1)
+stop_level_long = strategy.position_avg_price * (1 - (sl_long_inp/100)) //strategy.position_avg_price corrisponde al prezzo con cui si è aperta la posizione
+take_level_long = strategy.position_avg_price * (1 + (tp_long_inp/100))
+//BINANCE
+JSON_long = '{"pair":"'+pair+'","isBuy":true,"isSell":false,"isMarket":true,"isLimit":false,"isClose":false,"price":"9497.59","unitsPercent":"'+tostring(sizeordine)+'","unitsType":"percentBalance","stopLoss":"8545.44","stopLossPercent":"-'+tostring(sl_long_inp)+'","stopLossType":"percent","marginType":"ISOLATED","targets":[{"idx":1,"price":"10257.32","amount":"'+tostring(100-commissionsPercent)+'","takeProfitPercent":"'+tostring(tp_long_inp)+'"}],"targetType":"percent","leverage":"'+tostring(leverage)+'","closeCurrentPosition":true,"token":"'+tokenTVHUB+'","exchange":"'+exchange+'"}'
+JSON_chiusura = '{"pair":"'+pair+'","isBuy":false,"isSell":false,"isMarket":true,"isLimit":false,"isClose":true,"price":"9497.36","units":"0.01","unitsPercent":"'+tostring(sizeordine)+'","unitsType":"percentBalance","stopLoss":"8545.44","stopLossPercent":"-'+tostring(sl_long_inp)+'","stopLossType":"percent","marginType":"ISOLATED","targets":[{"idx":1,"price":"10257.32","amount":"'+tostring(100-commissionsPercent)+'","takeProfitPercent":"'+tostring(tp_long_inp)+'"}],"targetType":"percent","leverage":"'+tostring(leverage)+'","closeCurrentPosition":true,"token":"'+tokenTVHUB+'","exchange":"'+exchange+'"}' 
+webhookLong = JSON_long
+webhookClose= JSON_chiusura
+trendFilterL = input(title="TREND FILTER LONG?", defval = true)
+EMAfast=ema(close,periodomediamobile_fast)
+EMAslow=ema(close,periodomediamobile_slow)
+siamoinuptrend_ema=EMAfast>EMAslow?true:false //close>=EMAfast and EMAfast>EMAslow
+siamoinuptrend = siamoinuptrend_ema
+// CondizioneAperturaLong = siamoinipervenduto and siamoindata // and siamoinuptrend
+CondizioneAperturaLong = siamoinipervenduto and siamoindata and long_separator
+if trendFilterL
+    CondizioneAperturaLong := siamoinipervenduto and siamoindata and long_separator and siamoinuptrend
+CondizioneChiusuraLong = siamoinipercomprato and siamoindata 
+possiamoAprireLong=0
+if trendFilterL and siamoinuptrend
+    possiamoAprireLong:=5
+plot(possiamoAprireLong,color=color.green)
+sonPassateLeBarreG = barssince(CondizioneAperturaLong) == BarsDelay?true:false
+sonPassateLeBarreD = barssince(CondizioneChiusuraLong) == BarsDelay?true:false
+haiUnLongAncoraAperto = false
+haiUnLongAncoraAperto := strategy.position_size>0?true:false
+// Se l'ultimo valore della serie "CondizioneAperturaLong" è TRUE, allora hai un long ancora aperto
+// Se l'ultimo valore della serie "CondizioneAperturaLong" è FALSE, allora:
+//       Se l'ultimo valore della serie "CondizioneChiusuraLong" è TRUE, allora NON hai un long ancora aperto 
+//       Se l'ultimo valore della serie "CondizioneChiusuraLong" è FALSE, allora restituisce l'ultimo valore della serie "haiUnLongAncoraAperto"
+haiUnLongAncoraAperto_float = if(haiUnLongAncoraAperto==true)
+    10
+else
+    0
+plot(haiUnLongAncoraAperto_float,color=color.red) //FInché la linea rossa si trova a livello "1" allora c'è un ordine long in corso
+quantita = (sizeordine/100*(capitaleIniziale+strategy.netprofit))/valuewhen(haiUnLongAncoraAperto==false and CondizioneAperturaLong,close,0)
+plot(sizeordine,color=color.purple, linewidth=3)
+if  strategy.position_size<=0 and CondizioneAperturaLong //and sonPassateLeBarreG and haiUnLongAncoraAperto==false strategy.opentrades==0
+    strategy.entry("Vamonos",strategy.long, alert_message=webhookLong, comment="OPEN LONG", qty=quantita)
+if  strategy.position_size>0 //and sonPassateLeBarreD // and CondizioneChiusuraLong 
+    if siamoinuptrend == true and sonPassateLeBarreD
+        strategy.close("Vamonos", alert_message=webhookClose, comment="CLOSE LONG")
+    else if siamoinuptrend == false and CondizioneChiusuraLong
+        strategy.close("Vamonos", alert_message=webhookClose, comment="CLOSE LONG")
+    
+if strategy.position_size>0 and siamoindata
+    strategy.exit("Vamonos", stop=stop_level_long, limit=take_level_long, alert_message=webhookClose, comment="CLOSE LONG (LIMIT/STOP)")
+short_separator = input(title="------------------------SHORT------------------------", defval = usiShort)    
+sl_short_inp = input(stopLossPercent_Short, title="Stop Loss SHORT %",type=input.float,step=0.1)
+tp_short_inp = input(takeProfitPercent_Short, title="Take Profit SHORT %",type=input.float,step=0.1)
+stop_level_short = strategy.position_avg_price * (1 + (sl_short_inp/100))
+take_level_short= strategy.position_avg_price * (1 - (tp_short_inp/100))
+// BINANCE 
+JSON_short = '{"pair":"'+pair+'","isBuy":false,"isSell":true,"isMarket":true,"isLimit":false,"isClose":false,"price":"9147.62","units":"'+tostring(sizeordine)+'","unitsPercent":"'+tostring(sizeordine)+'","unitsType":"percentBalance","stopLoss":"10062.41","stopLossPercent":"-'+tostring(sl_short_inp)+'","stopLossType":"percent","marginType":"ISOLATED","targets":[{"idx":1,"price":"7775.50","amount":"'+tostring(100-commissionsPercent)+'","takeProfitPercent":"'+tostring(tp_short_inp)+'"}],"targetType":"percent","leverage":"'+tostring(leverage)+'","closeCurrentPosition":true,"token":"'+tokenTVHUB+'","exchange":"'+exchange+'"}'
+webhookShort = JSON_short
+trendFilterS = input(title="TREND FILTER SHORT?", defval = true)
+siamoindowntrend_ema=EMAfast<EMAslow?true:false //close<=EMAfast and EMAfast<EMAslow
+siamoindowntrend=siamoindowntrend_ema
+CondizioneAperturaShort = short_separator and siamoinipercomprato and siamoindata 
+if trendFilterS
+    CondizioneAperturaShort:=short_separator and siamoinipercomprato and siamoindata and siamoindowntrend
+CondizioneChiusuraShort = siamoinipervenduto and siamoindata
+sonPassateLeBarreGs = barssince(CondizioneAperturaShort) == BarsDelay?true:false
+sonPassateLeBarreDs = barssince(CondizioneChiusuraShort) == BarsDelay?true:false
+haiUnoShortAncoraAperto = false
+haiUnoShortAncoraAperto := strategy.position_size<0?true:false
+haiUnoShortAncoraAperto_float = if(haiUnoShortAncoraAperto==true)
+    15
+else
+    0
+plot(haiUnoShortAncoraAperto_float,color=color.purple) //FInché la linea viola si trova a livello "2" allora c'è un ordine short in corso
+if CondizioneAperturaShort and strategy.position_size>=0 //and haiUnoShortAncoraAperto==false
+    strategy.entry("Andale",strategy.short,alert_message=webhookShort, comment="OPEN SHORT")
+if  strategy.position_size<0 //and sonPassateLeBarreD // and CondizioneChiusuraLong 
+    if siamoindowntrend == true and sonPassateLeBarreDs
+        strategy.close("Andale",alert_message=webhookClose, comment="CLOSE SHORT")
+    else if siamoindowntrend == false and CondizioneChiusuraShort
+        strategy.close("Andale",alert_message=webhookClose, comment="CLOSE SHORT")
+if strategy.position_size<0 and siamoindata
+    strategy.exit("Andale", stop=stop_level_short, limit=take_level_short, alert_message=webhookClose, comment="CLOSE SHORT (LIMIT/STOP)")
+Expand (208 lines)

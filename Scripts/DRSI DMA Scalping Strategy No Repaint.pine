@@ -1,0 +1,161 @@
+Script Name: DRSI DMA Scalping Strategy No Repaint
+Author: allenlk
+Description: This strategy compares the slope of a Moving Average (of your choosing) to the slope of a Momentum Indicator (of your choosing). Zero is the center line because 0 slope means sideways movement. When both lines cross your buy threshold, it buys. When both lines cross your Sell threshold, it sells. The lines may look choppy, but that is probably because it is...
+PineScript code:
+
+Pine Script™ strategy
+DRSI DMA Scalping Strategy No Repaint
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Allenlk
+//@version=4
+strategy("DRSI DMA Scalping Strategy", shorttitle="DRSIDMA", overlay=false, initial_capital=1000, pyramiding=2, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+//Inputs
+matype             = input(7, minval=1, maxval=8, title="1=SMA, 2=EMA, 3=WMA, 4=HullMA, 5=VWMA, 6=RMA, 7=TEMA, 8=Tilson T3", group="Moving Average")
+masrc              = input(close, title="MA Source", group="Moving Average")
+malen              = input(5, title="Moving Average Length - LookBack Period", group="Moving Average")
+factorT3           = input(defval=7, title="Tilson T3 Factor - *.10 - so 7 = .7 etc.", minval=0, group="Moving Average")
+maderiv            = input(3, title="MA Slope Lookback", minval=1, group="Moving Average")
+masmooth           = input(5, title="MA Slope Smoothing", minval=1, group="Moving Average")
+momtype            = input(3, minval=1, maxval=3, title="1=RSI, 2=CCI, 3=RSI/ROC", group="Momentum Moving Average")
+momsrc             = input(close, title="Momentum Source", group="Momentum Moving Average")
+momlen             = input(3, title="Momentum Length", minval=1, group="Momentum Moving Average")
+momderiv           = input(8, title="Momentum Slope Lookback", minval=1, group="Momentum Moving Average")
+momsmooth          = input(7, title="Momentum Slope Smoothing", minval=1, group="Momentum Moving Average")
+higherTf           = input("1", title="Higher timeframe?", type = input.resolution, group="Time Resolution")
+higherTfmult       = input(130, title="MA Slope multiplier for Alternate Resolutions (Make the waves of the blue line similar size as the orange line)", group="Time Resolution")
+buffup             = input(0.02, title="Buy when both slopes cross this line", step=0.01, group="Buy and Sell Threshold")
+bufflow            = input(-0.03, title="Sell when both slopes cross this line", step=0.01, group="Buy and Sell Threshold")
+lowVolMALength     = input(28, title="Big MA Length", minval=1, group="Low Volatility Function")
+MAlength           = input(10, title="Low Volatility Moving Average Length", minval=1, group="Low Volatility Function")
+MAThresh           = input(0.05, title="Low Volatility Buy and Sell Threshold", step=0.01, group="Low Volatility Function")
+Volminimum         = input(2.5, title="Minimum volatility to trade", minval=0, step=0.01, group="Low Volatility Function")
+//Low Volatility Function
+//When Volatility is low refer to the slope of a long moving average
+low_vol_MA         = sma(close, lowVolMALength)
+low_vol_down       = (low_vol_MA[3] - low_vol_MA[1]) > MAThresh
+low_vol_up         = (low_vol_MA[3] - low_vol_MA[1]) < MAThresh * -1
+percent_volatility = (1 - (low / high)) * 100
+chng_MA            = sma(percent_volatility, MAlength)
+bad_vol            = chng_MA < Volminimum
+//No repaint function
+nrp_funct(_symbol, _res, _src) => security(_symbol, _res, _src[barstate.isrealtime ? 1 : 0])
+//hull ma definition
+hullma = wma(2*wma(masrc, malen/2)-wma(masrc, malen), round(sqrt(malen)))
+//TEMA definition
+ema1 = ema(masrc, malen)
+ema2 = ema(ema1, malen)
+ema3 = ema(ema2, malen)
+tema = 3 * (ema1 - ema2) + ema3
+//Tilson T3
+factor = factorT3 *.10
+gd(masrc, malen, factor) => ema(masrc, malen) * (1 + factor) - ema(ema(masrc, malen), malen) * factor 
+t3(masrc, malen, factor) => gd(gd(gd(masrc, malen, factor), malen, factor), malen, factor) 
+tilT3 = t3(masrc, malen, factor) 
+ 
+//MA Type 
+avg = matype == 1 ? sma(masrc,malen) : matype == 2 ? ema(masrc,malen) : matype == 3 ? wma(masrc,malen) : matype == 4 ? hullma : matype == 5 ? vwma(masrc, malen) : matype == 6 ? rma(masrc,malen) : matype == 7 ? 3 * (ema1 - ema2) + ema3 : tilT3
+//MA Slope Percentage
+DeltaAvg      = (avg / avg[maderiv]) - 1
+SmoothedAvg   = sma(DeltaAvg, masmooth) 
+MAout         = nrp_funct(syminfo.tickerid, higherTf, SmoothedAvg) * higherTfmult
+//Momentum indicators
+Momentum = momtype == 1 ? rsi(momsrc, momlen) : momtype == 2 ? cci(momsrc, momlen) : momtype == 3 ? rsi(roc(momsrc,momlen),momlen) : na
+//Momentum Slope Percentage
+Deltamom = (Momentum / Momentum[momderiv]) - 1
+SmoothedMom = sma(Deltamom, momsmooth) 
+Momout   = nrp_funct(syminfo.tickerid, higherTf, SmoothedMom)
+//Plottings
+plot(buffup, color=color.green, title="Buy line")
+plot(bufflow, color=color.red, title="Sell line")
+plot(MAout, color=color.blue, linewidth=2, title="MA Slope")
+plot(Momout, color=color.orange, linewidth=2, title="Momentum Slope")
+longCondition = bad_vol ? low_vol_up : MAout > buffup and Momout > buffup
+if (longCondition)
+    strategy.entry("Buy", strategy.long)
+shortCondition = bad_vol ? low_vol_down : MAout < bufflow and Momout < bufflow
+if (shortCondition)
+    strategy.entry("Sell", strategy.short)
+Expand (82 lines)

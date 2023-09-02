@@ -1,0 +1,362 @@
+Script Name: NSRDMKVIC
+Author: reasonableSeah64076
+Description: this is a test indicator that evaluate the market and entry and exit positions gain fortune
+PineScript code:
+
+Pine Script™ strategy
+NSRDMKVIC
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+//73.00
+//@version=5
+strategy(title='RSI Multi Time Frame', shorttitle='RSI', max_lines_count=500, format=format.price, precision=2, explicit_plot_zorder=true, overlay=true)
+TimeframeU = input.string(defval='240', title='Higher Time Frame', options=['Auto', '1', '2', '4', '5', '10', '15', '30', '60', '120', '180', '240', '360', '480', '720', 'D', 'W', '2W', 'M', '3M', '6M', '12M'])
+len = input.int(defval=2, minval=1, title='Length')
+src = input(defval=close, title='Source')
+//SL and TP inputs
+SL = input.float(defval=0.01, minval=0.001, title='Stop Loss')
+TP = input.float(defval=0.02, minval = 0.001, title = 'Take Profit')
+//calculating the exit price for SL and TP
+longStop = strategy.position_avg_price * (1-SL)
+longProfit = strategy.position_avg_price * (1+TP)
+// shortStop = strategy.position_avg_price * (1+SL)
+// shortProfit = strategy.position_avg_price * (1-TP)
+if strategy.position_avg_price > 0 
+    strategy.exit(id="close",stop = longStop, limit = longProfit )
+// if strategy.position_avg_price < 0 
+//     strategy.exit(id="close",stop = shortStop, limit = shortProfit )
+isupquery = false
+isdownquery = false
+isupleftover = false
+isdownleftover = false
+highest = false
+sechighest = false
+dataMax = 0.00
+volpassed = false
+trail=false
+myArray = array.new_float(3)
+crrntbarvol = volume
+array.push(id=myArray, value=volume[1])
+array.push(id=myArray, value=volume[2])
+array.push(id=myArray, value=volume[3])
+dataMax := array.median(id=myArray)
+if crrntbarvol > dataMax
+    volpassed := true
+else
+    volpassed := false
+num_bars = input.int(defval=294, title='Number of Bars for RSI HTF', minval=10, maxval=495)
+len1 = input.int(90, minval=1, title='RSI Up Standar')
+len2 = input.int(10, minval=1, title='RSI Down Standar')
+lookbackbars = input.int(3,minval=1,maxval= 10, title='Bars to look back')
+emaStatus = input.string(defval='ON', title='EMA Filter', options=['ON', 'OFF'], group='Moving Average')
+mtf = input.timeframe(title='MTF', defval='1D', group='Moving Average')
+// ma1Type = input(defval="SMA",title="Lower MA Type",options=["SMA","EMA"],group = "Moving Average")
+ma1Period = input.int(20, title='Lower MA Length', group='Moving Average')
+// ma2Type = input(defval="SMA",title="Higher MA Type",options=["SMA","EMA"],group = "Moving Average")
+ma2Period = input.int(50, title='Higher MA Length', group='Moving Average')
+ma1 = request.security(syminfo.tickerid, mtf, ta.ema(close, ma1Period))
+ma2 = request.security(syminfo.tickerid, mtf, ta.ema(close, ma2Period))
+htf = TimeframeU == 'Auto' ? timeframe.period == '1 minute' ? '60' : timeframe.period == '2' ? '60' : timeframe.period == '4' ? '60' : timeframe.period == '5' ? '60' : timeframe.period == '10' ? '120' : timeframe.period == '15' ? '120' : timeframe.period == '30' ? 'D' : timeframe.period == '45' ? 'D' : timeframe.period == '60' ? 'D' : timeframe.period == '120' ? 'D' : timeframe.period == '180' ? 'D' : timeframe.period == '240' ? 'D' : timeframe.period == 'D' ? 'W' : timeframe.period == 'W' ? 'M' : timeframe.period : TimeframeU
+rsi = ta.rsi(src, len)
+// RSI HTF
+var rsi_htf_lines = array.new_line(0)
+var float last_rsi = na
+new_htf_bar = ta.change(time(htf)) != 0
+rsi_htf = request.security(syminfo.tickerid, htf, ta.rsi(src, len), lookahead=barmerge.lookahead_off)
+var line rsi_line = na
+if new_htf_bar
+    last_rsi := rsi_htf[1]
+    line.delete(rsi_line)
+    rsi_line := line.new(x1=bar_index, y1=rsi_htf, x2=bar_index - 1, y2=last_rsi)
+    rsi_line
+else
+    line.set_x1(rsi_line, bar_index)
+    line.set_x2(rsi_line, bar_index - 1)
+    line.set_y1(rsi_line, rsi_htf)
+    rsi_line
+if new_htf_bar
+    if array.size(rsi_htf_lines) >= num_bars
+        line.delete(array.get(rsi_htf_lines, array.size(rsi_htf_lines) - 1))
+        array.pop(rsi_htf_lines)
+    array.unshift(rsi_htf_lines, line.new(x1=bar_index - 1, y1=last_rsi, x2=bar_index - 2, y2=last_rsi[1]))
+else
+    if array.size(rsi_htf_lines) > 0
+        for x = 0 to array.size(rsi_htf_lines) - 1 by 1
+            line.set_x1(array.get(rsi_htf_lines, x), line.get_x1(array.get(rsi_htf_lines, x)) + 1)
+            line.set_x2(array.get(rsi_htf_lines, x), line.get_x2(array.get(rsi_htf_lines, x)) + 1)
+            
+// Volume Zone ossicillator
+VZO_length      = input.int(14, 'VZO Length', minval=2, group = 'VZO')
+VZO_zone_lower  = input.int(40, 'Overbought/sold Lower Limit', minval=0, group = 'VZO')
+VZO_zone_upper  = input.int(60, 'Overbought/sold Upper Limit', minval=0, group = 'VZO')
+VZO_zone_chop   = input.int(15, 'Chop Zone', minval=0, group = 'VZO')
+VZO_Intraday    = input.bool(true, 'Enable Plot Smoothing for Intraday', group = 'VZO Intraday Setting')
+VZO_noise       = input.int(4, 'Noise Filter', minval=2, group = 'VZO Intraday Setting')
+vzoBuyFilter = false
+vzoSellFilter = false
+// VZO CALCULATIONS
+//Detailed explanation of Volume Zone Oscillator (see pages 18-25 of Journal): https://ifta.org/public/files/journal/d_ifta_journal_09.pdf
+VZO(length) =>
+    Volume_Direction    = close > close[1] ? volume : -volume
+    VZO_volume          = ta.ema(Volume_Direction, length)
+    Total_volume        = ta.ema(volume, length)
+    100 * VZO_volume / Total_volume
+    
+VZO = VZO(VZO_length)
+if VZO == -VZO_zone_lower or VZO < -VZO_zone_lower
+    vzoSellFilter := true
+if VZO == VZO_zone_lower or VZO > VZO_zone_lower
+    vzoBuyFilter := true
+// show value as indicator values
+if emaStatus == 'ON'
+    isupquery := rsi_htf[1] > len1 and rsi_htf <= len1 and ma1 < ma2  and volpassed and open > close and vzoBuyFilter
+    isdownquery := rsi_htf[1] < len2 and rsi_htf >= len2 and ma1 > ma2 and volpassed and close > open and vzoSellFilter
+    
+else
+    if emaStatus == 'OFF'
+        isupquery := rsi_htf[1] > len1 and rsi_htf <= len1 and volpassed and open > close and vzoBuyFilter
+        isdownquery := rsi_htf[1] < len2 and rsi_htf >= len2 and volpassed  and close > open and vzoSellFilter
+isup() =>
+    isupquery
+isdown() =>
+    isdownquery
+isupLeft() =>
+    isupleftover
+isdownLeft()=>
+    isdownleftover
+    
+if isup()
+    alert('SIGNAL TYPE: SELL\nCOIN: ' + syminfo.tickerid + '\nLINK: https://www.tradingview.com/chart/?symbol=' + syminfo.tickerid + '&interval=' + timeframe.period, freq=alert.freq_once_per_bar_close)
+    // strategy.entry("short",strategy.short)
+if isdown()
+    alert('SIGNAL TYPE: BUY\nCOIN: ' + syminfo.tickerid + '\nLINK: https://www.tradingview.com/chart/?symbol=' + syminfo.tickerid + '&interval=' + timeframe.period, freq=alert.freq_once_per_bar_close)
+    strategy.entry("long",strategy.long)
+//ZONE COLORS
+OB_Zone     = color.new(color.red, 75)
+Chop_Zone   = color.new(color.yellow, 75)
+OS_Zone     = color.new(color.green, 75)
+//ZONES LEVELS
+Red_1       = hline(VZO_zone_upper, linestyle=hline.style_dotted, color=OB_Zone, title = 'Overbought Upper Limit')
+Red_2       = hline(VZO_zone_lower, linestyle=hline.style_dotted, color=OB_Zone, title = 'Overbought Lower Limit')
+fill(Red_1, Red_2, color = OB_Zone, title = 'Overbought Zone')
+Yell_1      = hline(VZO_zone_chop, linestyle=hline.style_dotted, color=Chop_Zone, title = 'Chop Zone Upper Limit')
+Yell_2      = hline(-VZO_zone_chop, linestyle=hline.style_dotted, color=Chop_Zone, title = 'Chop Zone Lower Limit')
+fill(Yell_1, Yell_2, color = Chop_Zone, title = 'Chop Zone')
+Green_1     = hline(-VZO_zone_lower, linestyle=hline.style_dotted, color=OS_Zone, title = 'Oversold Lower Limit')
+Green_2     = hline(-VZO_zone_upper, linestyle=hline.style_dotted, color=OS_Zone, title = 'Oversold Upper Limit')
+fill(Green_1, Green_2, color = OS_Zone, title = 'Oversold Zone')
+hline(0, linestyle=hline.style_dashed, color=color.new(color.white, 50), title = 'Zero Line')
+// VZO PLOT
+Plot_color  = VZO > VZO_zone_chop ? color.new(color.green, 0) : VZO < -VZO_zone_chop ? color.new(color.red, 0) : color.new(color.yellow, 0)
+plot(VZO, color=Plot_color, style=plot.style_line, linewidth=1)
+plotshape(isup(), color=color.new(color.red, 0), style=shape.labeldown, text='Sell', textcolor=color.new(color.black, 0), location=location.abovebar, title='Shape color (RSI Standar)')
+plotshape(isdown(), color=color.new(color.green, 0), style=shape.labelup, text='Buy', textcolor=color.new(color.black, 0), location=location.belowbar, title='Shape color (RSI Standar)')
+// plotshape(vzoFilter, color=color.new(color.blue, 0), style=shape.labeldown, text='Sell', textcolor=color.new(color.black, 0), location=location.abovebar, title='Shape color (RSI Standar)')
+//plotshape(isdownLeft(), color=color.new(color.yellow, 0), style=shape.labelup, text='Buy', textcolor=color.new(color.black, 0), location=location.belowbar, title='Shape color (RSI Standar)')
+plot(ma1, color=color.new(color.blue, 0), linewidth=2)
+plot(ma2, color=color.new(color.yellow, 0), linewidth=2)
+// plot(rsi_htf, color = rsi_h_col, show_last = 1)
+Expand (204 lines)

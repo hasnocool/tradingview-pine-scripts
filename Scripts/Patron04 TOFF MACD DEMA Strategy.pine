@@ -1,0 +1,120 @@
+Script Name: Patron04 TOFF MACD DEMA Strategy
+Author: patron04
+Description: I prepared the macd dema indicator made by Toff as a startegy test. There is another strategy like this. But the process is opened according to the intersection of macd and signal. But the difference between my test is this. Macd is testing according to the intersection of 0 value. Macd sells 0 when cut down, buying when 0 cuts down
+
+Toff's Macd dema:
+PineScript code:
+
+Pine Script™ strategy
+Patron04 TOFF MACD DEMA Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+//@version=4
+strategy(title="Patron04 MACD DEMA TOFF Stategy",default_qty_type = strategy.percent_of_equity,default_qty_value = 3500, commission_value=0.075, overlay=true)
+testStartYear = input(2000, "Backtest Start Year") 
+testStartMonth = input(1, "Backtest Start Month")
+testStartDay = input(1, "Backtest Start Day")
+testPeriodStart = timestamp(testStartYear,testStartMonth,testStartDay,0,0)
+testStopYear = input(2100, "Backtest Stop Year")
+testStopMonth = input(12, "Backtest Stop Month")
+testStopDay = input(31, "Backtest Stop Day")
+testPeriodStop = timestamp(testStopYear,testStopMonth,testStopDay,0,0)
+testPeriod() =>
+    time >= testPeriodStart and time <= testPeriodStop ? true : false
+sma = input(12,title='DEMA Courte')
+lma = input(26,title='DEMA Longue')
+tsp = input(9,title='Signal')
+dolignes = input(true,title="Lignes")
+MMEslowa = ema(close,lma)
+MMEslowb = ema(MMEslowa,lma)
+DEMAslow = ((2 * MMEslowa) - MMEslowb )
+MMEfasta = ema(close,sma)
+MMEfastb = ema(MMEfasta,sma)
+DEMAfast = ((2 * MMEfasta) - MMEfastb)
+LigneMACDZeroLag = (DEMAfast - DEMAslow)
+MMEsignala = ema(LigneMACDZeroLag, tsp)
+MMEsignalb = ema(MMEsignala, tsp)
+Lignesignal = ((2 * MMEsignala) - MMEsignalb )
+MACDZeroLag = (LigneMACDZeroLag - Lignesignal)
+a = input(title="Long Value", type=input.integer, defval=0)
+b = input(title="Short Value", type=input.integer, defval=0)
+long = crossover(LigneMACDZeroLag, a)
+short = crossunder(LigneMACDZeroLag, b)
+if testPeriod()
+    strategy.entry("Long", strategy.long,when=long)
+    strategy.entry("Short", strategy.short,when=short)
+Expand (75 lines)

@@ -1,0 +1,77 @@
+Script Name: WhaleCrew Backtester
+Author: WhaleCrew
+Description: Backtesting indicators  is  easy , just add the following line of code to your script:
+ plot(longEntry ? 1 : shortEntry ? -1 : longTP ? 0.5 : shortTP ? -0.5 : 0, color=na, editable=false, title='Backtest') 
+These numbers are defined as constants in the backtester source-code.
+
+After adding this indicator to your chart:
+1. Open Settings
+2. Select supported...
+PineScript code:
+
+Pine Script™ strategy
+WhaleCrew Backtester
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+//@version=5
+//Constants
+var LONG = 1
+var LONG_TP = 0.5
+var SHORT = -1
+var SHORT_TP = -0.5
+strategy('WhaleCrew Backtester')
+i_input = input.source(ohlc4, 'Select "Indicator: Backtest" (Backtest-Plot)', group='Indicator', tooltip='Select Backtest-Plot (e.g. "WhaleCrew Vision: Backtest") of a supported indicator')
+i_longPositions = input.bool(true, 'Enter Long Positions', group='Settings')
+i_shortPositions = input.bool(true, 'Enter Short Positions', group='Settings')
+//Current market position
+position = strategy.position_size < 0 ? SHORT : strategy.position_size > 0 ? LONG : 0
+if i_input == LONG and i_longPositions
+    strategy.close('Short', when=position == SHORT)
+    strategy.entry('Long', strategy.long, 10)
+    label.new(bar_index, -10, style=label.style_label_up, size=size.tiny, text='Entry', color=color.new(color.lime, 20), textcolor=color.white)
+    
+if i_input == LONG_TP and position == LONG
+    label.new(bar_index, 0, style=label.style_label_down, size=size.tiny, text='TP', color=color.new(color.red, 20), textcolor=color.white)
+    strategy.close('Long')
+    
+if i_input == SHORT and i_shortPositions
+    strategy.close('Long', when=position == LONG)
+    strategy.entry('Short', strategy.short, 10)
+    label.new(bar_index, 10, style=label.style_label_down, size=size.tiny, text='Entry', color=color.new(color.red, 20), textcolor=color.white)
+if i_input == SHORT_TP and position == SHORT
+    label.new(bar_index, 0, style=label.style_label_up, size=size.tiny, text='TP', color=color.new(color.lime, 20), textcolor=color.white)
+    strategy.close('Short')
+Expand (34 lines)

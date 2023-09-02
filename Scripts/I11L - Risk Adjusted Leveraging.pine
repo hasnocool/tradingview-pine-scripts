@@ -1,0 +1,53 @@
+Script Name: I11L - Risk Adjusted Leveraging
+Author: I11L
+Description: This trading system, called "I11L - Risk Adjusted Leveraging", is designed to manage trades based on the current market volatility relative to its historical average. The system calculates the target number of open trades based on the ATR (Average True Range) indicator and adjusts the leverage accordingly. The system opens and closes trades using a pyramiding...
+PineScript code:
+
+Pine Script™ strategy
+I11L - Risk Adjusted Leveraging
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+//@version=5
+strategy("I11L - Risk Adjusted Leveraging", overlay=false, pyramiding=25, default_qty_value=20, initial_capital=20000, default_qty_type=strategy.percent_of_equity,process_orders_on_close=false, calc_on_every_tick=false)
+atr = ta.atr(14) / close
+avg_atr = ta.sma(atr,100)
+ratio = atr / avg_atr
+targetLeverage = 2 / ratio
+targetOpentrades = 5 * targetLeverage
+plot(targetOpentrades)
+plot(strategy.opentrades)
+isBuy = strategy.opentrades < targetOpentrades
+isClose = strategy.opentrades > targetOpentrades + 1
+var string[] openTrades = array.new_string(0)
+if(isBuy)
+    strategy.entry("Buy"+str.tostring(array.size(openTrades)),strategy.long)
+    array.push(openTrades, "Buy" + str.tostring(array.size(openTrades)))
+if(isClose)
+    if array.size(openTrades) > 0
+        strategy.close(array.get(openTrades, array.size(openTrades) - 1))
+        array.pop(openTrades)
+Expand (25 lines)

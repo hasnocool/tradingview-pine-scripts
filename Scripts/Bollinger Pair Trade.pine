@@ -1,0 +1,953 @@
+Script Name: Bollinger Pair Trade
+Author: ozdemirtrading
+Description: NYSE:MA-1.6*NYSE:V 
+
+Revision:        1
+Author: @ozdemirtrading
+
+Revision 2 Considerations :
+ - Simplify and clean up plotting
+
+Disclaimer: This strategy is currently working on the 5M chart. Change the length input to accommodate your needs.
+For the backtesting of more than 3 months, you may need to upgrade your membership.
+
+Description:
+
+The general idea of the...
+PineScript code:
+
+Pine Script™ strategy
+Bollinger Pair Trade
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+// 5M time-frame only (using 20 steps 1H bollinger band)
+//@version=4
+strategy("BT-5M-1H", overlay=true,default_qty_value=100, initial_capital=10000)
+// Source and length
+length = 240 // 5M Timeframe - 1H BOLLINGER BAND - 20*12 STEPS FOR 5M CHART
+src = close
+/////////////////////////////////////////////////////////////////////////////////
+// Author: @ozdemirtrading
+// Revision:        2 (graph update)
+// revision bugfix: close interval
+////////////////////////////////////////////////////////////////////////////////////
+// CHECK MY VIDEO THAT I USE THIS STRATEGY:
+// Setup & Run Your Fully Functional PAIR TRADING BOT in Less Than 30 MIN! 
+// https://www.youtube.com/watch?v=-jfJ6g-fZpI
+//My GitHub:
+//https://github.com/ozdemirozcelik
+//
+//PAIRS-API repo.:
+//https://github.com/ozdemirozcelik/pai...
+//
+//PAIRS-IBKR repo.:
+//https://github.com/ozdemirozcelik/pai...
+// Revision 3 Considerations :
+//  - Simplify and clean up plotting
+// Disclaimer: This strategy is currently working on the 5M chart. Change the length input to accommodate your needs.
+// For the backtesting of more than 3 months, you may need to upgrade your membership.
+// Description:
+// The general idea of the strategy is very straightforward: it takes positions according to the lower and upper Bollinger bands. 
+// But I am mainly using this strategy for pair trading stocks. Do not forget that you will get better results if you trade with cointegrated pairs.
+// Bollinger band: Moving average & standard deviation are calculated based on 20 bars on the 1H chart (approx 240 bars on a 5m chart).  X-day moving averages (20 days as default) are also used in the background in some of the exit strategy choices.
+// You can define position entry levels as the multipliers of standard deviation (for exp: mult2 as 2 * standard deviation).
+// There are 4 choices for the exit strategy:
+//  SMA: Exit when touches simple moving average (SMA)
+//  SKP: Skip SMA and do not stop if moving towards 20D SMA, and exit if it touches the other side of the band
+//  SKPXDSMA: Skip SMA if moving towards 20D SMA, and exit if it touches 20D SMA
+//  NoExit: Exit if it touches the upper & lower band only.
+// Options:
+// - Strategy hard stop: if trade loss reaches a point defined as a percent of the initial capital. Stop taking new positions. (not recommended for pair trade)
+// - Loss per trade: close position if the loss is at a defined level but keeps watching for new positions.
+// - Enable expected profit for trade (expected profit is calculated as the distance to SMA) (recommended for pair trade)
+// - Enable VIX threshold for the following options: (recommended for volatile periods)
+//     - Stop trading if VIX for the previous day closes above the threshold
+//     - Reverse active trade direction if VIX for the previous day is above the threshold
+//     - Take reverse positions (assuming the Bollinger band is going to expand) for all trades
+// Backtesting:
+// Close positions after a defined interval: mark this if you want the close the final trade for backtesting purposes. Unmark it to get live signals.
+// Use custom interval: Backtest specific time periods.
+// Other Options:
+// - Use EMA: use an exponential moving average for the calculations instead of simple moving average
+// - Not against XDSMA: do not take a position against 20D SMA (if X is selected as 20) (recommended for pairs with a clear trend)
+// - Not in XDSMA 1 DEV: do not take a position in 20D SMA 1*standart deviation band (recommended if you need to decrease # of trades and increase profit for trade)
+// - Not in XDSMA 2 DEV: do not take a position in 20D SMA 2*standart deviation band
+// Session management:
+// - Not in session: Session start and end times can be defined here. If you do not want to trade in certain time intervals, mark that session.(helps to reduce slippage and get more realistic backtest results)
+/////////////////////////////////////////////////////////////////////////////////
+// *** Inputs *** //
+// Input for the strategy's maximum drawdown per trade (in % of strategy equity)
+maxPercDd = input(title="Hard Stop Strategy if any trade loss is (%)", type=input.integer, defval=100, minval=1, maxval=100)
+// Use the input's value with the maximum drawdown function
+strategy.risk.max_drawdown(value=maxPercDd, type=strategy.percent_of_equity)
+// Stop Loss amount
+sl_pertrade = input(title="Loss per trade($)", type=input.integer, defval=400, minval=10, maxval=5000)
+// Enable Stop Loss
+enable_stop = input(title="Enable stop loss per trade?", type=input.bool, defval=false)
+// Expected profit amount
+expprofit_pertrade = input(title="Exp Profit per trade($)", type=input.integer, defval=20, minval=10, maxval=10000)
+// Enable Expected Profit Per Trade
+enable_expprofit = input(title="Enable expected profit per trade?", type=input.bool, defval=false)
+// VIX threshold
+threshold_vix = input(30,'vix threshold')
+// Enable VIX threshold
+// Stop positions when VIX (daily close) reaches threshold
+enable_vix_stop = input(title="Enable vix threshold?", type=input.bool, defval=false)
+// Enable reverse first trade
+// Reverse positions when VIX (daily close) reaches threshold, exit SMA
+enable_vix_reverse = input(title="Enable first reverse trade?", type=input.bool, defval=false)
+// Enable Reverse trade
+// Trade against SMA if reverse trade
+enable_vix_trade = input(title="Enable all reverse trade?", type=input.bool, defval=false)
+// Exit choice
+// SMA: Exit at standart moving average (20 x 30m or 1h)
+// SKP: Skip SMA if moving towards 20D SMA, and exit at 2DEV
+// SKPXDSMA: Skip SMA if moving towards 20D SMA, and exit at 20D SMA
+// NoExit: Exit at 2DEV
+exitchoice = input(title="Exit Type", defval="SMA", options=["SMA", "SKP", "SKPXDSMA", "NOEXT"])
+// SKP Ref #of days
+// Change 20D SMA to XD SMA
+skprefchoice = input(title="SKP Ref #of days", defval="20", options=["10","20","50"])
+// entry exit input
+entrychoice = input(title="Entry", defval="mult2", options=["mult", "mult2", "mult3"])
+// std dev & fine tuning inputs
+exit_band = input(0.0, minval=0, maxval=0.5, step=0.05)
+mult = input(1.0, minval=0.001, maxval=10, step=0.1)
+mult2 = input(2.0, minval=0.001, maxval=10, step=0.1)
+mult3 = input(3.0, minval=0.001, maxval=10, step=0.1)
+// BT period
+//datechoice = input(title="BT Period", defval="1Y", options=["SOM","1M","3M", "6M", "1Y", "2Y", "3Y"])
+datechoice = input(title="BT Period", defval="1Y", options=["SOM","1M","3M","6M","1Y"])
+// Close after interval ends
+closeafterinterval = input(title="Close positions after interval?", type=input.bool, defval=true)
+// Use custom interval
+custominterval = input(title="Use custom interval?", type=input.bool, defval=false)
+// BT start date - end date
+startDay = input(title="Start Date", type=input.integer, defval=5, minval=1, maxval=31)
+startMonth = input(title="Start Month", type=input.integer, defval=2, minval=1, maxval=12)
+startYear = input(title="Start Year", type=input.integer, defval=2022, minval=1800, maxval=2100)
+endDay = input(title="End Date", type=input.integer, defval=24, minval=1, maxval=31)
+endMonth = input(title="End Month", type=input.integer, defval=5, minval=1, maxval=12)
+endYear = input(title="End Year", type=input.integer, defval=2022, minval=1800, maxval=2100)
+// Boolean Inputs
+// isEMA: Use EMA insted of SMA
+// notagainstSMA: No new position against SMA
+// notXDSMA_1: No new positions inside x DEV
+isEMA = input(title="Use EMA?", type=input.bool, defval=false)
+notagainstSMA = input(title="Not against XDSMA?", type=input.bool, defval=false)
+notXDSMA_1 = input(title="Not in XDSMA 1DEV?", type=input.bool, defval=false)
+notXDSMA_2 = input(title="Not in XDSMA 2DEV?", type=input.bool, defval=false)
+// session timeframe inputs
+timeframe_1 = input(title="Not in session1", type=input.bool, defval=true)
+timeframe_2 = input(title="Not in session2", type=input.bool, defval=false)
+timeframe_3 = input(title="Not in session3", type=input.bool, defval=false)
+timeframe_4 = input(title="Not in session4", type=input.bool, defval=true)
+session1_start = input(title="Session1_start", defval="0930", options=["0930","0935","0940","0945","0950","0955","1000","1005","1010","1015","1020","1025","1030","1035","1040","1045","1050","1055","11:00"])
+session2_start = input(title="Session2_start", defval="0935", options=["0931","0932","0933","0934","0935","0940","0945","0950","0955","1000","1005","1010","1015","1020","1025","1030","1035","1040","1045","1050","1055","11:00"])
+session3_start = input(title="Session3_start", defval="1200", options=["1030","1040","1050","1100","1110","1120","1130","1140", "1150", "1200", "1210", "1220","1230","1240","1250","1300"])
+session4_start = input(title="Session4_start", defval="1555", options=["1200","1215","1230","1245","1300","1315", "1330","1345", "1400","1430","1445","1500","1515","1530","1535","1540","1545","1550","1555"])
+session4_end = input(title="Session4_end", defval="1600", options=["1500","1515", "1530","1535","1540","1545","1550","1555","1600"])
+// *** End of Inputs *** //
+// VIX modifications
+vix = security("CBOE:VIX",timeframe.period,close)
+vix_d = security("CBOE:VIX",'1D',close)
+reverse_pair = 0 // set initial trade mode
+if (enable_vix_stop and threshold_vix < vix_d)
+    reverse_pair := 1 // change to reverse trade mode
+// timeframe calculations for sessions
+session1 = session1_start + "-" + session2_start
+session2 = session2_start + "-" + session3_start
+session3 = session3_start + "-" + session4_start
+session4 = session4_start + "-" + session4_end
+t1 = time(timeframe.period,session1) // t = time(timeframe.period,"1130-1600:1234567") for all days
+time_cond_1 = (not na(t1) and not timeframe_1)
+bgcolor(not na(t1) and timeframe_1 ? color.red : na)
+t2 = time(timeframe.period,session2) 
+time_cond_2 = (not na(t2) and not timeframe_2)
+bgcolor(not na(t2) and timeframe_2 ? color.red : na)
+t3 = time(timeframe.period,session3) 
+time_cond_3 = (not na(t3) and not timeframe_3)
+bgcolor(not na(t3) and timeframe_3 ? color.red : na)
+t4 = time(timeframe.period,session4) 
+time_cond_4 = (not na(t4) and not timeframe_4)
+bgcolor(not na(t4) and timeframe_4 ? color.red : na)
+// date calculations for backtest period
+TimeNow = timenow
+YearNow= year(TimeNow)
+MonthNow = month(TimeNow)
+DayNow= dayofmonth(TimeNow)
+Year1M = YearNow
+Month1M = MonthNow
+Day1M = DayNow
+Year3M= YearNow
+Month3M = MonthNow
+Day3M= DayNow
+Year6M= YearNow
+Month6M = MonthNow
+Day6M= DayNow
+Year1Y= YearNow-1
+Month1Y = MonthNow
+Day1Y= DayNow
+Year2Y= YearNow-2
+Month2Y = MonthNow
+Day2Y= DayNow
+Year3Y= YearNow-3
+Month3Y = MonthNow
+Day3Y= DayNow
+if (MonthNow<4)
+    Year3M := Year3M-1
+    Month3M := Month3M+9
+    if (MonthNow<2)
+        Month1M := Month1M+11
+        Year1M := Year1M-1 
+    else
+        Month1M := Month1M-1
+else
+    Month3M := Month3M-3
+    Month1M := Month1M-1
+if (MonthNow<7)
+    Year6M := Year6M-1
+    Month6M := Month6M+6
+else
+    Month6M := Month6M-6
+datestart0 = timestamp(syminfo.timezone, YearNow, MonthNow, 1, 0, 0, 0)
+datestart1 = timestamp(syminfo.timezone, Year1M, Month1M, Day1M, 0, 0, 0)
+datestart3 = timestamp(syminfo.timezone, Year3M, Month3M, Day3M, 0, 0, 0)
+datestart6 = timestamp(syminfo.timezone, Year6M, Month6M, Day6M, 0, 0, 0)
+datestart12 = timestamp(syminfo.timezone, Year1Y, Month1Y, Day1Y, 0, 0, 0)
+datestart24 = timestamp(syminfo.timezone, Year2Y, Month2Y, Day2Y, 0, 0, 0)
+datestart36 = timestamp(syminfo.timezone, Year3Y, Month3Y, Day3Y, 0, 0, 0)
+startDate= (datechoice == "SOM" ? datestart0 : datechoice == "1M" ? datestart1 : datechoice == "3M" ? datestart3 : datechoice == "6M" ? datestart6 : datechoice == "1Y" ? datestart12: datechoice == "2Y" ? datestart24: datechoice == "3Y" ? datestart36 :na)
+// std dev lines & plots
+basis = sma(src, length)
+if isEMA
+    basis := ema(src, length)
+basis_low = basis - exit_band * stdev(src, length)
+basis_up = basis + exit_band * stdev(src, length)
+dev = mult * stdev(src, length)
+upper = basis + dev
+lower = basis - dev
+dev2 = mult2 * stdev(src, length)
+upper2 = basis + dev2
+lower2 = basis - dev2
+dev3 = mult3 * stdev(src, length)
+upper3 = basis + dev3
+lower3 = basis - dev3
+// xD avg variables
+skpchoice= (skprefchoice == "10" ? 10 : skprefchoice == "20" ? 20 : skprefchoice == "50" ? 50 :na)
+basis_D = sma(src, skpchoice) // for x days SMA
+if isEMA
+    basis_D = ema(src, skpchoice) // for x days EMA
+dev_D = stdev(src, skpchoice)
+daysMA = security(syminfo.tickerid, 'D', basis_D)
+upper_D = security(syminfo.tickerid, 'D', basis_D + dev_D)
+lower_D = security(syminfo.tickerid, 'D', basis_D - dev_D)
+upper_D2 = security(syminfo.tickerid, 'D', basis_D + 2*dev_D)
+lower_D2 = security(syminfo.tickerid, 'D', basis_D - 2*dev_D)
+// enable if you want to plot xD avg lines
+//plot(daysMA, color=color.silver, title="XDSMA", offset=0, linewidth=3)
+//plot(upper_D, color=color.yellow, title="2XSTD UP", offset=0, linewidth=3)
+//plot(lower_D, color=color.yellow, title="2XSTD DOWN", offset=0, linewidth=3)
+//plot(upper_D2, color=color.red, title="2XSTD UP", offset=0, linewidth=3)
+//plot(lower_D2, color=color.red, title="2XSTD DOWN", offset=0, linewidth=3)
+// plot std dev lines
+plot(basis, color=color.black) //sma
+plot(basis_low, color=color.gray) //sma
+plot(basis_up, color=color.gray) //sma
+p1a = plot(upper, color=color.orange)
+p1b = plot(lower, color=color.orange)
+p2a = plot(upper2, color=color.red)
+p2b = plot(lower2, color=color.red)
+p3a = plot(upper3, color=color.black)
+p3b = plot(lower3, color=color.black)
+// specify stop conditions and signals
+posSize = abs(strategy.position_size)
+pipsExit = 100*(sl_pertrade/posSize),
+if enable_stop and posSize > 0
+    strategy.exit("long exit","le",loss= pipsExit, comment ="Stop Loss(-" +str.format("{0,number,#.#}",sl_pertrade) +"$)") //take profit or stop loss
+    strategy.exit("short exit","se",loss= pipsExit, comment ="Stop Loss(-" +str.format("{0,number,#.#}",sl_pertrade) +"$)") //take profit or stop loss
+// exit signal &  bandwidth modification
+exitSignal_low = cross(src, basis_low)
+exitSignal_up = cross(src, basis_up)
+exitSignal = (exitSignal_low or exitSignal_up)
+// specify crossover conditions and signals
+signallow= (entrychoice == "mult" ? lower : entrychoice == "mult2" ? lower2 : entrychoice == "mult3" ? lower3 :na)
+signalhigh= (entrychoice == "mult" ? upper : entrychoice == "mult2" ? upper2 : entrychoice == "mult3" ? upper3 :na)
+longentry = cross(src, signallow)
+shortentry = cross(src, signalhigh)
+longEntrySignal = longentry
+shortEntrySignal = shortentry
+// exit at XDSMA modification for SKP
+exitSignal_D = cross(src, daysMA)
+// check the backtest interval
+inDateRange = false
+if (custominterval)
+    inDateRange := (time >= timestamp(syminfo.timezone, startYear, startMonth, startDay, 0, 0)) and (time < timestamp(syminfo.timezone, endYear, endMonth, endDay, 0, 0))
+else
+    
+    if (closeafterinterval)
+        inDateRange := (time >= startDate) and (time <= timestamp(syminfo.timezone, YearNow, MonthNow, DayNow, 0, 0))
+    else
+        inDateRange := (time >= startDate)
+datecheck = (inDateRange)
+// apply expected profit conditions
+var def_pos_size = 0.0
+var exp_profit = 0.0
+var isProfit = true
+price_dif = abs(src - basis)
+if (strategy.position_size != 0) // keep get the latest position size
+    def_pos_size := abs(strategy.position_size)
+   
+exp_profit := price_dif*def_pos_size
+if (enable_expprofit)
+    if (strategy.closedtrades != 0) //check the initial position size, execute the first trade, there should be at least one trade
+        isProfit := exp_profit>=expprofit_pertrade
+    
+if (enable_expprofit)
+    if ((src>signalhigh) and (strategy.position_size == 0)) // wait until it is out expected profit region
+        if isProfit
+            shortEntrySignal:=1
+        else
+            shortEntrySignal:=0
+    
+    
+    if ((src<signallow) and (strategy.position_size == 0)) // wait until it is out expected profit region
+        if isProfit
+            longEntrySignal:=1
+        else
+            longEntrySignal:=0
+// no new positions for boolean flags
+if (strategy.position_size == 0)
+    if (src<daysMA) and notagainstSMA
+        shortEntrySignal:=0    
+    
+    if (src>daysMA) and notagainstSMA
+        longEntrySignal:=0
+    
+    if (src<upper_D) and notXDSMA_1
+        shortEntrySignal:=0
+     
+    if (src>lower_D) and notXDSMA_1
+        longEntrySignal:=0
+    
+    if (src<upper_D2) and notXDSMA_2
+        shortEntrySignal:=0
+     
+    if (src>lower_D2) and notXDSMA_2
+        longEntrySignal:=0
+// execute trade if conditions are satisfied
+// time conditions for reverse mode
+// time conditions in general
+time_cond_all = (time_cond_2 or time_cond_3 or time_cond_4)
+if (time_cond_all and datecheck)
+    if (reverse_pair) // vix_stop is selected and threshold conditions are satisfied
+        if (enable_vix_reverse) // reverse positions and no new positions after close
+        
+            if (strategy.position_size != 0 and exitSignal) // close at SMA for reverse mode
+                strategy.close_all(true, comment="Close Reverse")
+            else if ((strategy.position_size > 0) and (src < basis))
+                strategy.entry("se", strategy.short, comment="Enter Short (rev_1)(vix:"+str.format("{0,number,#.#}",vix_d) +")")
+            else if ((strategy.position_size < 0) and (src > basis))
+                strategy.entry("le", strategy.long, comment = "Enter Long (rev_1)(vix:"+str.format("{0,number,#.#}",vix_d) +")")
+        
+            else if (enable_vix_trade and (strategy.position_size == 0))  // enable if you want to take new positions in reverse mode
+            
+                if (longEntrySignal)
+                    strategy.entry("se", strategy.short, comment="Enter Short (rev_all)(vix:"+str.format("{0,number,#.#}",vix_d) +")")
+                    
+                if (shortEntrySignal)
+                    strategy.entry("le", strategy.long, comment = "Enter Long (rev_all)(vix:"+str.format("{0,number,#.#}",vix_d) +")")
+        
+        else
+        
+            strategy.close_all(true, comment="Close VIX")
+       
+    // if not reverse mode
+    else
+        if (longEntrySignal)
+            // NO NEW POSITIONS AGAINST XDSMA IF SELECTED
+            if (notagainstSMA and (strategy.position_size <= 0) and (src > daysMA)) 
+                strategy.close_all(true, comment="Not Against XDSMA")
+            else if isProfit
+                strategy.entry("le", strategy.long, comment = "Enter Long (exp_profit:"+str.format("{0,number,#.#}",exp_profit) +"$)")
+            
+        if (shortEntrySignal)
+            // NO NEW POSITIONS AGAINST XDSMA IF SELECTED
+            if (notagainstSMA and (strategy.position_size > 0) and (src < daysMA)) 
+                strategy.close_all(true, comment="Not Against XDSMA")
+            else if isProfit
+                strategy.entry("se", strategy.short, comment="Enter Short (exp_profit:"+str.format("{0,number,#.#}",exp_profit) +"$)")
+       
+// exit conditions
+isLong = (strategy.position_size > 0)
+isShort = (strategy.position_size < 0)
+isFlat = (strategy.position_size == 0)
+exittype= (exitchoice == "SKPXDSMA" ? 2 : exitchoice == "SKP" ? 1 : exitchoice == "SMA" ? 0 : exitchoice == "NOEXT" ? -1 :na)
+isSKPXDSMA = (exittype > 1)
+isSKP = (exittype == 1)
+isSMA = (exittype == 0)
+isNOEXT = (exittype < 0)
+if (datecheck and time_cond_all and exitSignal)
+    if (isSMA)
+        strategy.close_all(true, comment="Close SMA")
+     
+        
+    if (isSKP and isLong and (basis > daysMA)) 
+        strategy.close_all(true, comment="Close SKP")
+    
+    
+    if (isSKP and isShort and (basis < daysMA)) 
+        strategy.close_all(true, comment="Close SKP")
+      
+      
+    if (isSKPXDSMA and exitSignal_D and isLong and (basis > daysMA)) 
+        strategy.close_all(true, comment="Close XDSMA")
+        
+    
+    if (isSKPXDSMA and exitSignal_D and isShort and (basis < daysMA)) 
+        strategy.close_all(true, comment="Close XDSMA")
+    
+    
+// exit open market position when date range ends
+if (closeafterinterval and not datecheck)
+    strategy.close_all(true, comment="Interval End")
+    
+Expand (539 lines)

@@ -1,0 +1,225 @@
+Script Name: Vin's Playzone Strategy
+Author: Vvaz_
+Description: How it works  
+Playzone is a very simple system, utilizing just two exponential moving
+averages. The 'Zones' in which different 'actions' should be taken is
+highlighted with different colors on the chart. Calculations for the zones
+are based on the relative position of price to the two EMA lines and the
+relationship between the two EMAs
+
+  How to use  
+The basic...
+PineScript code:
+
+Pine Script™ strategy
+Vin's Playzone Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Vvaz_
+//base-on CDC ActionZone By Piriya   a simple 2EMA and is most suitable for use with medium volatility market
+//@version=5
+strategy(title='Playzone', shorttitle='VXIZ', overlay=true, initial_capital=1000)
+//variable
+srcf = input(title='Source of price', defval=close)
+tffix = input(title='Fixed Timeframe?', defval=true)
+tfn = input.timeframe(title='Timeframe in', defval='D')
+ema1 = input(title='Fast EMA', defval=13)
+ema2 = input(title='Slow EMA', defval=26)
+ema3 = input(title='Base-Line', defval=60)
+smooter = input(title='Smoothing period', defval=2)
+fillbar = input(title='Fill Bar Color', defval=false)
+emasw = input(title='Show Green-Red EMA?', defval=true)
+bssw = input(title='Show Buy-Sell signal?', defval=true)
+blsw = input(title='Show Base-line?', defval=true)
+fxbl = input(title='Fixed Base-line?', defval=true)
+plotmm = input(title='Show Long-Short?', defval=true)
+plotmmsm = input.int(title='RSI Smoothing', defval=3, minval=0, maxval=3)
+//ema
+xcross = ta.ema(srcf, smooter)
+efast = tffix ? ta.ema(request.security(syminfo.tickerid, tfn, ta.ema(srcf, ema1), gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on), smooter) : ta.ema(xcross, ema1)
+eslow = tffix ? ta.ema(request.security(syminfo.tickerid, tfn, ta.ema(srcf, ema2), gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on), smooter) : ta.ema(xcross, ema2)
+ema3x = fxbl ? ta.ema(request.security(syminfo.tickerid, tfn, ta.ema(srcf, ema3), gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on), smooter) : ta.ema(xcross, ema3)
+emabl = ta.ema(xcross, 1)
+//Zone
+Bull = efast > eslow
+Bear = efast < eslow
+G1 = Bull and xcross > efast  //buy
+G2 = Bear and xcross > efast and xcross > eslow  //pre-buy1
+G3 = Bear and xcross > efast and xcross < eslow  //pre-buy2
+R1 = Bear and xcross < efast  //sell
+R2 = Bull and xcross < efast and xcross < eslow  //pre-sell1
+R3 = Bull and xcross < efast and xcross > eslow  //pre-sell2
+//color
+bcl = G1 ? color.green : G2 ? color.yellow : G3 ? color.orange : R1 ? color.red : R2 ? color.orange : R3 ? color.yellow : color.black
+barcolor(color=fillbar ? bcl : na)
+//plots
+line1 = plot(blsw ? ema3x : na, 'Base-Line', color=color.new(color.yellow, 0))
+line2 = plot(emasw ? efast : na, 'Fast EMA', color=color.new(color.green, 0))
+line3 = plot(emasw ? eslow : na, 'Slow EMA', color=color.new(color.red, 30))
+fillcl = Bull ? color.new(color.green, 80) : Bear ? color.new(color.red, 80) : color.new(color.black, 99)
+fill(line2, line3, fillcl )
+//actions
+buywhen = G1 and G1[1] == 0
+sellwhen = R1 and R1[1] == 0
+bullish = ta.barssince(buywhen) < ta.barssince(sellwhen)
+bearish = ta.barssince(sellwhen) < ta.barssince(buywhen)
+buy = bearish[1] and buywhen
+sell = bullish[1] and sellwhen
+//plot trend
+plotshape(bssw ? buy : na, style=shape.diamond, title='BUY', location=location.belowbar, color=color.new(color.green, 0), size=size.tiny)
+plotshape(bssw ? sell : na, style=shape.diamond, title='Sell', location=location.abovebar, color=color.new(color.red, 0), size=size.tiny)
+// Momentum Signal using StochRSI
+smoothK = input.int(27, 'StochRSI smooth K', minval=1)
+smoothD = input.int(18, 'StochRSI smooth D', minval=1)
+RSIlen = input.int(42, 'RSI length', minval=1)
+STOlen = input.int(42, 'Stochastic length', minval=1)
+SRsrc = input(close, 'Source for StochasticRSI')
+OSlel = input.float(30, 'Oversold Threshold', minval=0.00)
+OBlel = input.float(70, 'overbought Threshold', minval=0.00)
+rsil = ta.rsi(SRsrc, RSIlen)
+K = ta.sma(ta.stoch(rsil, rsil, rsil, STOlen), smoothK)
+D = ta.sma(K, smoothD)
+crossover_1 = ta.crossover(K, D)
+crossover_2 = ta.crossover(K, D)
+iff_1 = D > OSlel and crossover_2 ? 2 : 0
+iff_2 = D < OSlel and crossover_1 ? 4 : iff_1
+buymore = bullish ? iff_2 : 0
+crossunder_1 = ta.crossunder(K, D)
+crossunder_2 = ta.crossunder(K, D)
+iff_3 = D < OBlel and crossunder_2 ? 2 : 0
+iff_4 = D > OBlel and crossunder_1 ? 4 : iff_3
+sellmore = bearish ? iff_4 : 0
+//plot momentum
+plotshape(plotmm ? buymore > plotmmsm ? buymore : na : na, 'Long', style=shape.triangleup, location=location.belowbar, color=color.new(color.green, 0), size=size.tiny)
+plotshape(plotmm ? sellmore > plotmmsm ? sellmore : na : na, 'Short', style=shape.triangledown, location=location.abovebar, color=color.new(color.red, 0), size=size.tiny)
+//stratgy excuter
+//condition
+buycon =  buy
+sellcon = sell
+buycon1 = buymore > plotmmsm
+sellcon1 = sellmore > plotmmsm
+//confirm_trend
+buyfirm = emabl >= ema3x and Bull
+sellfirm = emabl <= ema3x and Bear
+//Long
+strategy.entry('Long', strategy.long, when= buycon and buyfirm , comment='Buy', alert_message='Buy Now!')
+strategy.entry('Long', strategy.long, when= buycon1 and buyfirm , comment='Long', alert_message='Buy More!')
+strategy.close('Long', when= sell or Bear, comment='Stop-L', alert_message='Take profit Long')
+//Short
+strategy.entry('Short', strategy.short, when= sellcon and sellfirm , comment='Sell', alert_message='Sell Now!')
+strategy.entry('Short', strategy.short, when= sellcon1 and sellfirm , comment='Short', alert_message='Sell More!')
+strategy.close('Short', when= buy or Bull, comment='Stop-S', alert_message='Take profit Short')
+Expand (113 lines)

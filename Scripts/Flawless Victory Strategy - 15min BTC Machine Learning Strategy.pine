@@ -1,0 +1,246 @@
+Script Name: Flawless Victory Strategy - 15min BTC Machine Learning Strategy
+Author: Bunghole
+Description: Hello everyone, I am a heavy Python programmer bringing machine learning to TradingView. This 15 minute Bitcoin Long strategy was created using a machine learning library and 1 year of historical data in Python. Every parameter is hyper optimized to bring you the most profitable buy and sell signals for Bitcoin on the 15min chart. The historical Bitcoin data was...
+PineScript code:
+
+Pine Script™ strategy
+Flawless Victory Strategy - 15min BTC Machine Learning Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Bunghole
+//@version=4
+strategy(overlay=true, shorttitle="Flawless Victory Strategy", default_qty_type = strategy.percent_of_equity, initial_capital = 100000, default_qty_value = 100, pyramiding = 0, title="Flawless Victory Strategy", currency = 'USD')
+////////// ** Inputs ** //////////
+// Stoploss and Profits Inputs
+v1 = input(true, title="Version 1 - Doesn't Use SL/TP")
+v2 = input(false, title="Version 2 - Uses SL/TP")
+v3 = input(false, title="Version 3 - Uses SL/TP")
+v2stoploss_input = input(6.604, title='Stop Loss %', type=input.float, minval=0.01)/100
+v2takeprofit_input = input(2.328, title='Take Profit %', type=input.float, minval=0.01)/100
+v2stoploss_level = strategy.position_avg_price * (1 - v2stoploss_input)
+v2takeprofit_level = strategy.position_avg_price * (1 + v2takeprofit_input)
+v3stoploss_input = input(8.882, title='Stop Loss %', type=input.float, minval=0.01)/100
+v3takeprofit_input = input(2.317, title='Take Profit %', type=input.float, minval=0.01)/100
+v3stoploss_level = strategy.position_avg_price * (1 - v3stoploss_input)
+v3takeprofit_level = strategy.position_avg_price * (1 + v3takeprofit_input)
+plot(v2 and v2stoploss_input and v2stoploss_level ? v2stoploss_level: na, color=color.red, style=plot.style_linebr, linewidth=2, title="v2 Stoploss")
+plot(v2 and v2takeprofit_input ? v2takeprofit_level: na, color=color.green, style=plot.style_linebr, linewidth=2, title="v2 Profit")
+plot(v3 and v3stoploss_input and v3stoploss_level ? v3stoploss_level: na, color=color.red, style=plot.style_linebr, linewidth=2, title="v3 Stoploss")
+plot(v3 and v3takeprofit_input ? v3takeprofit_level: na, color=color.green, style=plot.style_linebr, linewidth=2, title="v3 Profit")
+////////// ** Indicators ** //////////
+// RSI
+len = 14
+src = close
+up = rma(max(change(src), 0), len)
+down = rma(-min(change(src), 0), len)
+rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - 100 / (1 + up / down)
+// MFI
+MFIlength = 14
+MFIsrc = hlc3
+MFIupper = sum(volume * (change(MFIsrc) <= 0 ? 0 : MFIsrc), MFIlength)
+MFIlower = sum(volume * (change(MFIsrc) >= 0 ? 0 : MFIsrc), MFIlength)
+_rsi(MFIupper, MFIlower) =>
+    if MFIlower == 0
+        100
+    if MFIupper == 0
+        0
+    100.0 - (100.0 / (1.0 + MFIupper / MFIlower))
+mfi = _rsi(MFIupper, MFIlower)
+// v1 Bollinger Bands
+length1 = 20
+src1 = close
+mult1 = 1.0
+basis1 = sma(src1, length1)
+dev1 = mult1 * stdev(src1, length1)
+upper1 = basis1 + dev1
+lower1 = basis1 - dev1
+// v2 Bollinger Bands
+length2 = 17
+src2 = close
+mult2 = 1.0
+basis2 = sma(src2, length2)
+dev2 = mult2 * stdev(src2, length2)
+upper2 = basis2 + dev2
+lower2 = basis2 - dev2
+////////// ** Triggers and Guards ** //////////
+// v1 Strategy Parameters
+RSILowerLevel1 = 42
+RSIUpperLevel1 = 70
+BBBuyTrigger1 = src1 < lower1
+BBSellTrigger1 = src1 > upper1
+rsiBuyGuard1 = rsi > RSILowerLevel1
+rsiSellGuard1 = rsi > RSIUpperLevel1
+// v2 Strategy Parameters
+RSILowerLevel2 = 42
+RSIUpperLevel2 = 76
+BBBuyTrigger2 = src2 < lower2
+BBSellTrigger2 = src2 > upper2
+rsiBuyGuard2 = rsi > RSILowerLevel2
+rsiSellGuard2 = rsi > RSIUpperLevel2
+// v3 Strategy Parameters
+MFILowerLevel3 = 60
+RSIUpperLevel3 = 65
+MFIUpperLevel3 = 64
+BBBuyTrigger3 = src1 < lower1
+BBSellTrigger3 = src1 > upper1
+mfiBuyGuard3 = mfi < MFILowerLevel3
+rsiSellGuard3 = rsi > RSIUpperLevel3
+mfiSellGuard3 = mfi > MFIUpperLevel3 
+//////////** Strategy Signals ** //////////
+// v1 Signals
+Buy_1 = BBBuyTrigger1 and rsiBuyGuard1
+Sell_1 = BBSellTrigger1 and rsiSellGuard1
+if v1 == true
+    strategy.entry("Long", strategy.long, when = Buy_1, alert_message = "v1 - Buy Signal!")
+    strategy.close("Long", when = Sell_1, alert_message = "v1 - Sell Signal!")
+// v2 Signals
+Buy_2 = BBBuyTrigger2 and rsiBuyGuard2
+Sell_2 = BBSellTrigger2 and rsiSellGuard2
+if v2 == true
+    strategy.entry("Long", strategy.long, when = Buy_2, alert_message = "v2 - Buy Signal!")
+    strategy.close("Long", when = Sell_2, alert_message = "v2 - Sell Signal!")
+    strategy.exit("Stoploss/TP", "Long", stop = v2stoploss_level, limit = v2takeprofit_level)
+// v3 Signals
+Buy_3 = BBBuyTrigger3 and mfiBuyGuard3
+Sell_3 = BBSellTrigger3 and rsiSellGuard3 and mfiSellGuard3
+if v3 == true
+    strategy.entry("Long", strategy.long, when = Buy_3, alert_message = "v2 - Buy Signal!")
+    strategy.close("Long", when = Sell_3, alert_message = "v2 - Sell Signal!")
+    strategy.exit("Stoploss/TP", "Long", stop = v3stoploss_level, limit = v3takeprofit_level)
+Expand (136 lines)

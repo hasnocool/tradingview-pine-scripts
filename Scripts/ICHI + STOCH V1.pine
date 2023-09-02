@@ -1,0 +1,102 @@
+Script Name: ICHI + STOCH V1
+Author: konglikelike
+Description: symbol : gold
+
+timeframe : h1
+
+take profit : 1800 point
+
+stop loss : 1200 point
+
+enjoy
+PineScript code:
+
+Pine Script™ strategy
+ICHI + STOCH V1
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+//@version=5
+strategy("ICHI + STOCH V1", overlay=true,initial_capital = 1000,default_qty_value = 2.5,slippage = 30)
+length = input.int(20, minval=1)
+smoothK = input(5)
+smoothD = input(3)
+OverBought = input(25)
+OverSold = input(65)
+Profit = input(1800)
+Stop = input(1200)
+k = ta.sma(ta.stoch(close, high, low, length), smoothK)
+d = ta.sma(k, smoothD)
+co = ta.crossover(k,d)
+cu = ta.crossunder(k,d)
+conversionPeriods = input.int(9, minval=1, title="Conversion Line Length")
+basePeriods = input.int(26, minval=1, title="Base Line Length")
+laggingSpan2Periods = input.int(52, minval=1, title="Leading Span B Length")
+displacement = input.int(1, minval=1, title="Lagging Span")
+conversionLine = math.avg(ta.lowest(conversionPeriods), ta.highest(conversionPeriods))
+baseLine = math.avg(ta.lowest(basePeriods), ta.highest(basePeriods))
+leadLine1 = math.avg(conversionLine, baseLine)
+leadLine2 = math.avg(ta.lowest(laggingSpan2Periods), ta.highest(laggingSpan2Periods))
+TREND = ta.ema(math.avg(leadLine1,leadLine2),displacement)
+//plot(conversionLine, color=#2962FF, title="Conversion Line")
+//plot(baseLine, color=#B71C1C, title="Base Line")
+//plot(close, offset = -displacement + 1, color=#43A047, title="Lagging Span")
+plot(TREND, color=#2962FF, title="TREND")
+p1 = plot(leadLine1,style=plot.style_line, offset = displacement - 1, color=#A5D6A7,
+     title="Leading Span A")
+p2 = plot(leadLine2,style=plot.style_line, offset = displacement - 1, color=#EF9A9A,
+     title="Leading Span B")
+fill(p1, p2, color = leadLine1 > leadLine2 ? color.rgb(67, 160, 71, 90) : color.rgb(244, 67, 54, 90))
+close_price = ta.sma(close,1)
+pc = plot(close_price,style=plot.style_line, color=#2a0ab9,
+     title="Price Close")
+if (not na(k) and not na(d))
+    if (co and k < OverSold)and(close_price > TREND)
+        strategy.entry("BUY order", strategy.long, comment="BUY order")
+        strategy.exit("exitBUY", "BUY order", profit = Profit, loss = Stop)
+    if (cu and k > OverBought)and(close_price < TREND)
+        strategy.entry("SELL order", strategy.short, comment="SELL order")
+        strategy.exit("exitSELL", "SELL order", profit = Profit, loss = Stop)
+//plot(strategy.equity, title="equity", color=color.red, linewidth=2, style=plot.style_areabr)
+Expand (43 lines)

@@ -1,0 +1,202 @@
+Script Name: DCA Bot Emulator
+Author: ericlin0122
+Description: Emulate DCA bot. Buy ASAP. Set chart interval to 1 hour.
+PineScript code:
+
+Pine Script™ strategy
+DCA Bot Emulator
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+//@version=4
+strategy("DCA Bot Emulator", overlay=true, pyramiding=999, default_qty_type=strategy.cash, initial_capital=10000, commission_value = 0.02)
+// Date Ranges
+from_month = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+from_day   = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+from_year  = input(defval = 2021, title = "From Year")
+to_month   = input(defval = 1, title = "To Month", minval = 1, maxval = 12)
+to_day     = input(defval = 1, title = "To Day", minval = 1, maxval = 31)
+to_year    = input(defval = 9999, title = "To Year")
+start  = timestamp(from_year, from_month, from_day, 00, 00)  // backtest start window
+finish = timestamp(to_year, to_month, to_day, 23, 59)        // backtest finish window
+window = time >= start and time <= finish ? true : false // create function "within window of time"
+source_type = input("OHLC4", "Source", options = ["Close", "Open", "High", "Low", "HL2", "HLC3", "OHLC4", "Median Body", "Weighted Close", "Trend Biased", "Trend Biased Extreme"])
+source_function(type) =>
+    if type == "Close"
+        close
+    else if type == "Open"
+        open
+    else if type == "High"
+        high
+    else if type == "Low"
+        low
+    else if type == "HL2"
+        hl2
+    else if type == "HL3"
+        hlc3
+    else if type == "OHLC4"
+        ohlc4
+    else if type == "Median Body"
+        (open + close) / 2
+    else if type == "Weighted Close"
+        (high + low + 2 * close) / 4
+    else if type == "Trend Biased"
+        close > open ? (high + close) / 2 : (low + close) / 2
+    else if type == "Trend Biased Extreme"
+        close > open ? high : low
+truncate(number, decimals) =>
+    factor = pow(10, decimals)
+    int(number * factor) / factor
+// Strategy Inputs
+price_deviation = input(2.0, type=input.float, title='Price deviation to open safety orders (%)', minval=0.0)/100
+take_profit = input(1.0, type=input.float, title='Target Take Profit (%)', step=0.01, minval=0.0)/100
+trailing = input(0.0, type=input.float, title='Trailing deviation. Default= 0.0 (%)', step=0.01, minval=0.0)/100
+base_order  = input(10.0, type=input.float, title='base order') 
+safe_order  = input(10.0, type=input.float, title='safe order') 
+safe_order_volume_scale  = input(1.1, type=input.float, step=0.01, title='Safety order volume scale') 
+safe_order_step_scale  = input(1.1, type=input.float, step=0.01, title='Safety order step scale') 
+max_safe_order = input(30, title='max safe order') 
+var current_so = 0
+var initial_order = 0.0
+var previous_high_value = 0.0
+var original_ttp_value = 0.0
+// Calculate our key levels
+take_profit_level = strategy.position_avg_price * (1 + take_profit)
+// First Position
+if(strategy.position_size == 0 and window and source_function(source_type) > 0) and previous_high_value == 0.0
+    strategy.entry("Long @" + tostring(source_function(source_type)), strategy.long, qty = base_order/source_function(source_type))
+    initial_order := source_function(source_type)
+    current_so := 1
+    previous_high_value := 0.0
+    original_ttp_value := 0
+    
+threshold = 0.0
+if(safe_order_step_scale == 1.0)
+    threshold := initial_order -  (initial_order * price_deviation * safe_order_step_scale * current_so)
+else
+    threshold := initial_order - (initial_order * ((price_deviation * pow(safe_order_step_scale,current_so) - price_deviation) / (safe_order_step_scale - 1)))
+// Average Down
+if current_so > 0 and source_function(source_type) <= threshold and current_so <= max_safe_order and previous_high_value == 0.0
+    strategy.entry("SO " + tostring(current_so) + "@" + tostring(source_function(source_type)), long=strategy.long , qty = safe_order * pow(safe_order_volume_scale,(current_so-1))/source_function(source_type))
+    current_so := current_so + 1
+    
+// Take Profit!
+if (take_profit_level <= source_function(source_type) and strategy.position_size > 0) or previous_high_value > 0.0
+    if(trailing > 0.0)
+        if(previous_high_value > 0.0)
+            if source_function(source_type) >= previous_high_value 
+                previous_high_value := source_function(source_type)
+            else  
+                previous_high_percent = (previous_high_value - original_ttp_value ) *1.0 / original_ttp_value
+                current_high_percent =  (source_function(source_type) - original_ttp_value ) *1.0 / original_ttp_value
+                if (previous_high_percent - current_high_percent) >= trailing
+                    strategy.close_all(comment = "Close (trailing) @"  + tostring(truncate( current_high_percent * 100, 3)) + "%")
+                    current_so := 0
+                    previous_high_value := 0
+                    original_ttp_value := 0
+        else
+            previous_high_value := source_function(source_type)
+            original_ttp_value := source_function(source_type)
+    else
+        strategy.close_all(comment = "Close @" + tostring(source_function(source_type)))
+        current_so := 0
+        previous_high_value := 0
+        original_ttp_value := 0
+Expand (99 lines)

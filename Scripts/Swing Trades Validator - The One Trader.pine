@@ -1,0 +1,177 @@
+Script Name: Swing Trades Validator - The One Trader
+Author: the_daily_trader
+Description: This swing trading strategy validator is built on the original strategy taught in my bootcamp for swing traders. 
+
+The strategy is simple and follows a trend trading pattern on prices reacting to Exponential Moving Averages over a multiple time-frame analysis.
+The details of the strategy are as follows:
+
+- Holding Period : Upto a couple of months
+- Time-frames to...
+PineScript code:
+
+Pine Script™ strategy
+Swing Trades Validator - The One Trader
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © the_daily_trader
+//@version=5
+// ---------------------        Start of Code        ---------------------
+strategy("Swing Trades Validator", overlay=true, margin_long=100, pyramiding = 0)
+// Indicator Display Checks
+TakeProfitPercent       = input.float(title="Profit Target %", defval=10, minval=1, step=0.05)
+StopLossPercent         = input.float(title="Stop Loss %", defval=10, minval=1, step=0.05)
+pullbackchoice          = input.bool(true, "Enhanced Entry Rules")
+// EMAs
+emaH            = ta.ema(close, 8)
+emaHyest        = ta.ema(close[1], 8)
+emaHyest1       = ta.ema(close[2], 8)
+emaHyest2       = ta.ema(close[3], 8)
+emaL            = ta.ema(close, 21)
+emaLyest        = ta.ema(close[1], 21)
+emaLyest1       = ta.ema(close[2], 21)
+emaLyest2       = ta.ema(close[3], 21)
+emaf            = ta.ema(close, 50)
+emath           = ta.ema(close, 200)
+emathhigh       = ta.ema(high, 200)
+emathlow        = ta.ema(low, 200)
+emaslowmonthly  = request.security(syminfo.tickerid, "M", emaL) // Monthly 21ema
+emafastmonthly  = request.security(syminfo.tickerid, "M", emaH) // Monthly 8ema
+emaslowweekly   = request.security(syminfo.tickerid, "W", emaL) // Weekly 21ema
+emafastweekly   = request.security(syminfo.tickerid, "W", emaH) // Weekly 8ema
+emaslowdaily    = request.security(syminfo.tickerid, "D", emaL) // Daily 21ema
+emafastdaily    = request.security(syminfo.tickerid, "D", emaH) // Daily 8ema
+emafdaily       = request.security(syminfo.tickerid, "D", emaf) // Daily 50ema
+emathdaily      = request.security(syminfo.tickerid, "D", emath) // Daily ema
+emathdailyhigh  = request.security(syminfo.tickerid, "D", emathhigh) // Daily ema High
+emathdailylow   = request.security(syminfo.tickerid, "D", emathlow) // Daily ema Low
+ema21yest       = request.security(syminfo.tickerid, "D", emaLyest) // Daily 21ema 1 day ago
+ema21yest1      = request.security(syminfo.tickerid, "D", emaLyest1) // Daily 21ema 2 days ago
+ema21yest2      = request.security(syminfo.tickerid, "D", emaLyest2) // Daily 21ema 3 days ago
+ema8yest        = request.security(syminfo.tickerid, "D", emaHyest) // Daily 8ema 1 day ago
+ema8yest1       = request.security(syminfo.tickerid, "D", emaHyest1) // Daily 8ema 2 days ago
+ema8yest2       = request.security(syminfo.tickerid, "D", emaHyest2) // Daily 8ema 3 days ago
+// Prices
+monthopen       = request.security(syminfo.tickerid, 'M', open, barmerge.gaps_off, barmerge.lookahead_on)
+monthclose      = request.security(syminfo.tickerid, 'M', close, barmerge.gaps_off, barmerge.lookahead_on)
+weekopen        = request.security(syminfo.tickerid, 'W', open, barmerge.gaps_off, barmerge.lookahead_on)
+weekclose       = request.security(syminfo.tickerid, 'W', close, barmerge.gaps_off, barmerge.lookahead_on)
+dayopen         = request.security(syminfo.tickerid, 'D', open, barmerge.gaps_off, barmerge.lookahead_on)
+dayclose        = request.security(syminfo.tickerid, 'D', close, barmerge.gaps_off, barmerge.lookahead_on)
+threedayhigh    = request.security(syminfo.tickerid, 'D', high[3], barmerge.gaps_off, barmerge.lookahead_on)
+twodayhigh      = request.security(syminfo.tickerid, 'D', high[2], barmerge.gaps_off, barmerge.lookahead_on)
+yesthigh        = request.security(syminfo.tickerid, 'D', high[1], barmerge.gaps_off, barmerge.lookahead_on)
+yestlow         = request.security(syminfo.tickerid, 'D', low[1], barmerge.gaps_off, barmerge.lookahead_on)
+// Conditions 
+monthlybullish          = emafastmonthly > emaslowmonthly
+monthlybullishprice     = close > emafastmonthly
+monthlybullishcandle    = monthclose > monthopen
+weeklybullish           = emafastweekly > emaslowweekly
+weeklybullishprice      = close > emafastweekly
+weeklybullishcandle     = weekclose > weekopen
+realbullish             = dayclose > emathdailyhigh
+goldencross             = emafdaily > emathdailyhigh
+dailybullish1           = emafdaily > emathdaily
+dailybullish2           = emafastdaily > emaslowdaily
+dailybullishprice       = close > emafastdaily
+dailybullishcandle      = dayclose > dayopen
+ringlow                 = yestlow <= ema8yest
+aggropullback           = twodayhigh < threedayhigh
+pullback                = (pullbackchoice ? aggropullback : 0)
+pullbackfailure         = dayclose > yesthigh and yesthigh < twodayhigh or pullback
+emasetup                = ema8yest > ema21yest and ema8yest1 > ema21yest1 and ema8yest2 > ema21yest2
+// Target Profit and Stop Loss Inputs
+// Input parameters can be found at the beginning of the code
+ProfitTarget        = (close * (TakeProfitPercent / 100)) / syminfo.mintick
+StopLoss            = (close * (StopLossPercent / 100)) / syminfo.mintick
+longCondition = monthlybullish and monthlybullishprice and monthlybullishcandle and weeklybullish and weeklybullishprice and weeklybullishcandle and dailybullish1 and dailybullish2 and dailybullishprice and dailybullishcandle and ringlow and pullbackfailure and emasetup and realbullish and goldencross
+if (longCondition)
+    strategy.entry("Long", strategy.long)
+    strategy.exit ("Exit", "Long", profit = ProfitTarget, loss = StopLoss)
+// -----------xxxxxxxxxxx-------------    End of Code     -----------xxxxxxxxxxx---------------
+Expand (86 lines)

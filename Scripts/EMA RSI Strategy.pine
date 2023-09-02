@@ -1,0 +1,293 @@
+Script Name: EMA RSI Strategy
+Author: anjanakap
+Description: Simple strategy 
+ ============= 
+
+If the last two closes are in ascending order, the rsi is below 50 and ascending, and the current candle is above 200 ema, then LONG. If the last two closes are in descending order, the rsi is above 50 and descending, and the current candle is below 200 ema, then SHORT. 
+
+LONG Exit strategy:
+
+ATR: Last 14 day 
+Lowest: The lowest...
+PineScript code:
+
+Pine Script™ strategy
+EMA RSI Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+//@version=5
+strategy("EMA RSI Strategy", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=1)
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Author       : AJ Rupasinghege
+// Date         : 06/11/2022
+// Release      : v8.0
+// Description  : If the last two closes are in ascending order, the rsi is below 50 and ascending, and the current candle is above 200 ema, then LONG. 
+//                If the last two closes are in descending order, the rsi is above 50 and descending, and the current candle is below 200 ema, then SHORT. 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////// INPUTS //////////////////////////////////////////////////////////////
+ema_length = input(200, "EMA Length")
+rsi_buy_value = input(50, "RSI Buy Value")
+rsi_sell_value = input(50, "RSI Sell Value")
+show_data = input.bool(0, "Show Data")
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////// VARIABLES //////////////////////////////////////////////////////////
+var stop_loss = 0.0
+var last_trade_entry_price = 0.0
+var low_value= 0.0
+var atr = 0.0
+var high_value = 0.0
+var stop_loss_points = 0.0
+var limit = 0.0
+var bar_id_entry = 0
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////// FUNCTIONS //////////////////////////////////////////////////////////
+getTradeConditionsLong() =>
+    //@function         Used to calculate stop_loss, stop_loss points, limit and label values for long trades
+    //@param direction  (float) // strategy.poistion.size
+    //@returns          stop_loss, stop_loss_points, limit
+    //@Dependancies     low_value, atr, last_trade_entry_price,bar_id_entry
+    _stop_loss = low_value - atr
+    _stop_lossPoints = (last_trade_entry_price - _stop_loss) *100000
+    _limit = last_trade_entry_price + (last_trade_entry_price - low_value + atr) 
+    value = "OpenValue: " + str.tostring(last_trade_entry_price) + 
+         "\n OpenBarIndex: " + str.tostring(bar_id_entry) + 
+         "\n LowValue: " + str.tostring(low_value) + 
+         "\n atr: " + str.tostring(atr) + "\n stop_loss: " + 
+         str.tostring(_stop_loss) + "\n Limit: " +
+         str.tostring(_limit)
+    [_stop_loss,_stop_lossPoints,_limit, value]
+getTradeConditionsShort() =>
+    //@function         Used to calculate stop_loss, stop_loss points, limit and label values for short trades
+    //@param direction  (float) // strategy.poistion.size
+    //@returns          stop_loss, stop_loss_points, limit
+    //@Dependancies     high_value, atr, last_trade_entry_price,bar_id_entry
+    _stop_loss = high_value + atr
+    _stop_lossPoints = (_stop_loss  -last_trade_entry_price) * 100000
+    _limit = last_trade_entry_price - (high_value - last_trade_entry_price + atr)
+    value = "OpenValue: " + str.tostring(last_trade_entry_price) + 
+         "\n OpenBarIndex: " + str.tostring(bar_id_entry) + 
+         "\n HighValue: " + str.tostring(high_value) + 
+         "\n atr: " + str.tostring(atr) + "\n stop_loss: " + 
+         str.tostring(_stop_loss)  + "\n Limit: " +
+         str.tostring(_limit)
+    [_stop_loss,_stop_lossPoints,_limit, value]
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////// SIGNALS //////////////////////////////////////////////////////////
+ema = ta.ema(close,ema_length)
+rsi = ta.rsi(close,14)
+ema_buy_signal = ema < low
+ema_sell_signal = ema > high
+rsi_buy_signal = rsi < rsi_buy_value and rsi[1] < rsi[0]
+rsi_sell_signal = rsi > rsi_sell_value and rsi[1] > rsi[0]
+trend_buy_signal = close[2] < close[1] and close[1] < close[0]
+trend_sell_signal = close[2] > close[1] and close[1] > close[0]
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////// TRADES //////////////////////////////////////////////////////////
+long = trend_buy_signal 
+         and ema_buy_signal 
+         and rsi_buy_signal
+short = trend_sell_signal 
+         and ema_sell_signal  
+         and rsi_sell_signal
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////// STRATEGY //////////////////////////////////////////////////////////
+if long 
+    strategy.entry("Long", strategy.long)
+if short 
+    strategy.entry("Short", strategy.short)
+   
+// Calculate Trade Entry Variables
+last_trade_entry_price := strategy.opentrades.entry_price(strategy.opentrades - 1)
+bar_id_entry := strategy.opentrades.entry_bar_index(strategy.opentrades - 1) 
+atr := ta.atr(14) 
+low_value := ta.lowest(14)
+high_value := ta.highest(14)
+// Exit Strategy for Long Positions 
+if (strategy.position_size[1] != strategy.position_size and strategy.position_size>0)
+    [_stop_loss,_stop_loss_points, _limit, value] = getTradeConditionsLong()
+    stop_loss := _stop_loss
+    stop_loss_points := _stop_loss_points
+    limit := _limit
+    
+    if show_data
+        label.new(bar_id_entry,stop_loss - 0.005,str.tostring(value),xloc = xloc.bar_index,yloc = yloc.price,style = label.style_none) 
+    strategy.exit("Long Exit", "Long", trail_offset = stop_loss_points/2, trail_points = stop_loss_points/2 , stop = stop_loss , limit = limit   )
+// Exit Strategy for Short Positions 
+if (strategy.position_size[1] != strategy.position_size and strategy.position_size<0)
+    [_stop_loss,_stop_loss_points, _limit, value] = getTradeConditionsShort()
+    stop_loss := _stop_loss
+    stop_loss_points := _stop_loss_points
+    limit := _limit
+    if show_data
+        label.new(bar_id_entry,stop_loss + 0.005,str.tostring(value),xloc = xloc.bar_index,yloc = yloc.price,style = label.style_none) 
+    strategy.exit("Short Exit", "Short", trail_offset = stop_loss_points/2, trail_points = stop_loss_points/2 , stop = stop_loss , limit = limit )
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////// PLOTS //////////////////////////////////////////////////////////
+plot(ema, "EMA", color = color.blue, linewidth = 2 )
+p1 = plot(strategy.position_size>0? stop_loss:na, style = plot.style_linebr , color = color.rgb(82, 240, 42) )
+p2 = plot(strategy.position_size<0? stop_loss:na, style = plot.style_linebr , color = color.rgb(223, 85, 85) )
+p3 = plot(strategy.position_size!=0?limit : na, style = plot.style_linebr , color = color.rgb(94, 85, 223, 100) )
+fill(p1, p3, color = color.new(color.green, 90))
+fill(p2, p3, color = color.new(#e98787, 90))
+Expand (159 lines)

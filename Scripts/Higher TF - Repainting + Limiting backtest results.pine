@@ -1,0 +1,328 @@
+Script Name: Higher TF - Repainting + Limiting backtest results
+Author: Trendoscope
+Description: This strategy is for illustration purpose only. Do not use this as there is massive repainting. 
+
+As usual, I was experimenting with adding different entry/exit filters to my main strategy. Thought of adding higher frame filter, picked the code for getting higher time frame supertrend from someone else's script and copied it without thinking much about it.
+
+...
+PineScript code:
+
+Pine Script™ strategy
+Higher TF - Repainting + Limiting backtest results
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HeWhoMustNotBeNamed
+//@version=4
+strategy("Higher TF - Repainting", overlay=true, initial_capital = 100000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, pyramiding = 1, commission_value = 0.01, calc_on_order_fills = true)
+HTFMultiplier = input(4, minval=1, step=1)
+AtrMAType = input(title="Moving Average Type", defval="rma", options=["ema", "sma", "hma", "rma", "vwma", "wma"])
+SupertrendMult = input(1)
+SupertrendPd = input(4, minval=4, step=4)
+backtestBars = input(title="Backtest from ", defval=10, minval=1, maxval=30)
+backtestFrom = input(title="Timeframe", defval="years", options=["days", "months", "years"])
+repaintOption = input(title="Repaint", defval="Yes - lookahead : true and merge : true", 
+                     options=[
+                     "Yes - lookahead : true and merge : true", 
+                     "Yes - lookahead : true and merge : false", 
+                     "Yes - lookahead/merge false", 
+                     "Minimal - use custom f_security",
+                     "Minimal - use custom f_secureSecurity",
+                     "No - do not use security"]
+                     )
+usePreviousBar = input(false)
+f_multiple_resolution(HTFMultiplier) => 
+    target_Res_In_Min = timeframe.multiplier * HTFMultiplier * (
+      timeframe.isseconds   ? 1. / 60. :
+      timeframe.isminutes   ? 1. :
+      timeframe.isdaily     ? 1440. :
+      timeframe.isweekly    ? 7. * 24. * 60. :
+      timeframe.ismonthly   ? 30.417 * 24. * 60. : na)
+    target_Res_In_Min     <= 0.0417       ? "1S"  :
+      target_Res_In_Min   <= 0.167        ? "5S"  :
+      target_Res_In_Min   <= 0.376        ? "15S" :
+      target_Res_In_Min   <= 0.751        ? "30S" :
+      target_Res_In_Min   <= 1440         ? tostring(round(target_Res_In_Min)) :
+      tostring(round(min(target_Res_In_Min / 1440, 365))) + "D"
+f_getBackTestTimeFrom(backtestFrom, backtestBars)=>
+    byDate = backtestFrom == "days"
+    byMonth = backtestFrom == "months"
+    byYear = backtestFrom == "years"
+    
+    date = dayofmonth(timenow)
+    mth = month(timenow)
+    yr = year(timenow)
+    
+    leapYearDaysInMonth = array.new_int(12,0)
+    array.set(leapYearDaysInMonth,0,31)
+    array.set(leapYearDaysInMonth,1,29)
+    nonleapYearDaysInMonth = array.new_int(12,0)
+    array.set(leapYearDaysInMonth,0,31)
+    array.set(leapYearDaysInMonth,1,28)
+    
+    restMonths = array.new_int(10,0)
+    array.set(leapYearDaysInMonth,0,31)
+    array.set(leapYearDaysInMonth,1,30)
+    array.set(leapYearDaysInMonth,2,31)
+    array.set(leapYearDaysInMonth,3,30)
+    array.set(leapYearDaysInMonth,4,31)
+    array.set(leapYearDaysInMonth,5,31)
+    array.set(leapYearDaysInMonth,6,30)
+    array.set(leapYearDaysInMonth,7,31)
+    array.set(leapYearDaysInMonth,8,30)
+    array.set(leapYearDaysInMonth,9,31)
+    
+    array.concat(leapYearDaysInMonth,restMonths)
+    array.concat(nonleapYearDaysInMonth,restMonths)
+    isLeapYear = yr % 4 == 0 and (year%100 != 0 or year%400 == 0)
+    numberOfDaysInCurrentMonth = isLeapYear ? array.get(leapYearDaysInMonth, mth-2) : array.get(nonleapYearDaysInMonth, mth-2)
+    if(byDate)
+        mth := (date - backtestBars) < 0 ? mth - 1 : mth
+        yr := mth < 1 ? yr - 1 : yr
+        mth := mth < 1 ? 1 : mth
+        date := (date - backtestBars) < 0 ? numberOfDaysInCurrentMonth - backtestBars + date + 1 : date - backtestBars + 1
+    if(byMonth)
+        date := 1
+        yr := (mth - (backtestBars%12)) < 0 ? yr - int(backtestBars/12) - 1 : yr - int(backtestBars/12)
+        mth := mth - (backtestBars%12) + 1
+    if(byYear)
+        date := 1
+        mth := 1
+        yr := yr - backtestBars
+    [date, mth, yr]
+f_getMovingAverage(source, MAType, length)=>
+    ma = sma(source, length)
+    if(MAType == "ema")
+        ma := ema(source,length)
+    if(MAType == "hma")
+        ma := hma(source,length)
+    if(MAType == "rma")
+        ma := rma(source,length)
+    if(MAType == "vwma")
+        ma := vwma(source,length)
+    if(MAType == "wma")
+        ma := wma(source,length)
+    ma
+f_secureSecurity(_symbol, _res, _src) => security(_symbol, _res, _src[1], lookahead = barmerge.lookahead_on)
+f_security(_symbol, _res, _src, _repaint) => security(_symbol, _res, _src[_repaint ? 0 : barstate.isrealtime ? 1 : 0])[_repaint ? 0 : barstate.isrealtime ? 0 : 1]
+f_getSupertrend(HTFMultiplier, AtrMAType, SupertrendMult, SupertrendPd, wicks, useSecureSecurity, repaint)=>
+    hHigh = useSecureSecurity? f_secureSecurity(syminfo.tickerid, f_multiple_resolution(HTFMultiplier), high) : f_security(syminfo.tickerid, f_multiple_resolution(HTFMultiplier), high, repaint)
+    hLow = useSecureSecurity? f_secureSecurity(syminfo.tickerid, f_multiple_resolution(HTFMultiplier), low) : f_security(syminfo.tickerid, f_multiple_resolution(HTFMultiplier), low, repaint)
+    hOpen = useSecureSecurity? f_secureSecurity(syminfo.tickerid, f_multiple_resolution(HTFMultiplier), open) : f_security(syminfo.tickerid, f_multiple_resolution(HTFMultiplier), open, repaint)
+    hClose = useSecureSecurity? f_secureSecurity(syminfo.tickerid, f_multiple_resolution(HTFMultiplier), close) : f_security(syminfo.tickerid, f_multiple_resolution(HTFMultiplier), close, repaint)
+    truerange = max(hHigh, hClose[1]) - min(hLow, hClose[1])
+    
+    averagetruerange = f_getMovingAverage(truerange, AtrMAType, SupertrendPd)
+    atr = averagetruerange * SupertrendMult
+    dir = -1
+    longStop = hClose - atr
+    longStopPrev = nz(longStop[1], longStop)
+    longStop := nz(dir[1], dir) == -1 ? max(longStop, longStopPrev) : longStop
+    
+    shortStop = hClose + atr
+    shortStopPrev = nz(shortStop[1], shortStop)
+    shortStop := nz(dir[1], dir) == 1 ? min(shortStop, shortStopPrev) : shortStop
+    
+    lowToHigh = (wicks ? hHigh : hClose) > shortStopPrev
+    highToLow = (wicks ? hLow : hClose) < longStopPrev
+    
+    dir := nz(dir[1], dir)
+    dir := dir == 1 and lowToHigh ? -1 : dir == -1 and highToLow ? 1 : dir
+    trailingStop = dir == -1? longStop : shortStop
+    
+    [trailingStop, dir]
+    
+repaint = repaintOption == "Yes - lookahead : true and merge : true"
+useLookAheadButNotMerge = repaintOption == "Yes - lookahead : true and merge : false"
+useSecurityLookahead = repaintOption == "Yes - lookahead/merge false"
+useCustomSecurity = repaintOption == "Minimal - use custom f_security"
+useCustomSecureSecurity = repaintOption == "Minimal - use custom f_secureSecurity"
+[SupertrendRepaint, DirRepaint] = security(syminfo.tickerid, f_multiple_resolution(HTFMultiplier), supertrend(SupertrendMult, SupertrendPd), lookahead = true, gaps=true)
+[SupertrendLookahead, DirLookahead] = security(syminfo.tickerid, f_multiple_resolution(HTFMultiplier), supertrend(SupertrendMult, SupertrendPd), lookahead = true, gaps=false)
+[SupertrendNoLookahead, DirNoLookahead] = security(syminfo.tickerid, f_multiple_resolution(HTFMultiplier), supertrend(SupertrendMult, SupertrendPd), lookahead = false, gaps=false)
+[SupertrendSecure1, DirSecure1] = f_getSupertrend(HTFMultiplier, AtrMAType, SupertrendMult, SupertrendPd, false, false, false)
+[SupertrendSecure2, DirSecure2] = f_getSupertrend(HTFMultiplier, AtrMAType, SupertrendMult, SupertrendPd, false, true, false)
+[SupertrendRegular, DirRegular] = supertrend(SupertrendMult, SupertrendPd)
+[date, mth, yr] = f_getBackTestTimeFrom(backtestFrom, backtestBars)
+inDateRange = time >= timestamp(syminfo.timezone, yr, mth, date, 0, 0)
+offset = usePreviousBar? 1 : 0
+longCondition = repaint ? DirRepaint[offset] == -1 : 
+                 useSecurityLookahead? DirNoLookahead[offset] == -1 : 
+                 useLookAheadButNotMerge? DirLookahead[offset] == -1 : 
+                 useCustomSecurity? DirSecure1 == -1 :
+                 useCustomSecureSecurity? DirSecure2 == -1 :
+                 DirRegular == -1
+shortCondition = repaint ? DirRepaint[offset] == 1 : 
+                 useSecurityLookahead? DirNoLookahead[offset] == 1 : 
+                 useLookAheadButNotMerge? DirLookahead[offset] == 1 :
+                 useCustomSecurity? DirSecure1 == 1 :
+                 useCustomSecureSecurity? DirSecure2 == 1 :
+                 DirRegular == 1
+strategy.entry("Buy", strategy.long, when=longCondition and inDateRange)
+strategy.entry("Sell", strategy.short, when=shortCondition and inDateRange)
+Expand (166 lines)

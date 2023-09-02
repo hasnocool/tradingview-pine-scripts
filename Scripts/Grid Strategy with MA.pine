@@ -1,0 +1,532 @@
+Script Name: Grid Strategy with MA
+Author: Seungdori_
+Description: 0. Preface 
+
+Hello traders,
+
+This is a strategy script that allows you to utilize a Grid Strategy using moving averages.
+
+It is very simple, but I decided to post it because it was hard to find such shared open-source codes in Pine Script.
+
+ 1. Main 
+
+This is a very simple trading method. 
+Based on the moving average line you set, if the price drops by a certain...
+PineScript code:
+
+Pine Script™ strategy
+Grid Strategy with MA
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Seungdori_
+//@version=5
+strategy("Grid Strategy with MA", overlay=true, initial_capital = 100000, default_qty_type = strategy.cash, default_qty_value = 10000, pyramiding = 10, process_orders_on_close = true, commission_type = strategy.commission.percent, commission_value = 0.04)
+//Inputs//
+length = input.int(defval = 100, title = 'MA Length', group = 'MA')
+MA_Type = input.string("SMA", title="MA Type", options=['EMA', 'HMA', 'LSMA', 'RMA', 'SMA', 'WMA'],group = 'MA')
+logic = input.string(defval='ATR', title ='Grid Logic', options = ['ATR', 'Percent'])
+band_mult = input.float(2.5, step = 0.1, title = 'Band Multiplier/Percent', group = 'Parameter')
+atr_len = input.int(defval=100, title = 'ATR Length', group ='parameter')
+//Var//
+var int order_cond = 0
+var bool order_1 = false
+var bool order_2 = false
+var bool order_3 = false
+var bool order_4 = false
+var bool order_5 = false
+var bool order_6 = false
+var bool order_7 = false
+var bool order_8 = false
+var bool order_9 = false
+var bool order_10 = false
+var bool order_11 = false
+var bool order_12 = false
+var bool order_13 = false
+var bool order_14 = false
+var bool order_15 = false
+/////////////////////
+//Region : Function//
+/////////////////////
+getMA(source ,ma_type, length) =>
+    maPrice = ta.ema(source, length)
+    ema = ta.ema(source, length)
+    sma = ta.sma(source, length)
+    if ma_type == 'SMA'
+        maPrice := ta.sma(source, length)
+        maPrice
+    if ma_type == 'HMA'
+        maPrice := ta.hma(source, length)
+        maPrice
+    if ma_type == 'WMA'
+        maPrice := ta.wma(source, length)
+        maPrice
+    if ma_type == "RMA"
+        maPrice := ta.rma(source, length)
+    if ma_type == "LSMA"
+        maPrice := ta.linreg(source, length, 0)
+    maPrice
+main_plot = getMA(ohlc4, MA_Type, length)
+atr = ta.atr(length)
+premium_zone_1 = logic == 'ATR' ? ta.ema(main_plot + atr*(band_mult*1), 5) : ta.ema((main_plot*(1+band_mult*0.01*1)), 5)
+premium_zone_2 = logic == 'ATR' ? ta.ema(main_plot + atr*(band_mult*2), 5) : ta.ema((main_plot*(1+band_mult*0.01*2)), 5)
+premium_zone_3 = logic == 'ATR' ? ta.ema(main_plot + atr*(band_mult*3), 5) : ta.ema((main_plot*(1+band_mult*0.01*3)), 5)
+premium_zone_4 = logic == 'ATR' ? ta.ema(main_plot + atr*(band_mult*4), 5) : ta.ema((main_plot*(1+band_mult*0.01*4)), 5)
+premium_zone_5 = logic == 'ATR' ? ta.ema(main_plot + atr*(band_mult*5), 5) : ta.ema((main_plot*(1+band_mult*0.01*5)), 5)
+premium_zone_6 = logic == 'ATR' ? ta.ema(main_plot + atr*(band_mult*6), 5) : ta.ema((main_plot*(1+band_mult*0.01*6)), 5)
+premium_zone_7 = logic == 'ATR' ? ta.ema(main_plot + atr*(band_mult*7), 5) : ta.ema((main_plot*(1+band_mult*0.01*7)), 5)
+premium_zone_8 = logic == 'ATR' ? ta.ema(main_plot + atr*(band_mult*8), 5) : ta.ema((main_plot*(1+band_mult*0.01*8)), 5)
+//premium_zone_9 = ta.rma(main_plot + atr*(band_mult*9), 5)
+//premium_zone_10 = ta.rma(main_plot + atr*(band_mult*10), 5)
+discount_zone_1 = logic == 'ATR' ? ta.ema(main_plot - atr*(band_mult*1), 5) : ta.ema((main_plot*(1-band_mult*0.01*1)), 5)
+discount_zone_2 = logic == 'ATR' ? ta.ema(main_plot - atr*(band_mult*2), 5) : ta.ema((main_plot*(1-band_mult*0.01*2)), 5)
+discount_zone_3 = logic == 'ATR' ? ta.ema(main_plot - atr*(band_mult*3), 5) : ta.ema((main_plot*(1-band_mult*0.01*3)), 5)
+discount_zone_4 = logic == 'ATR' ? ta.ema(main_plot - atr*(band_mult*4), 5) : ta.ema((main_plot*(1-band_mult*0.01*4)), 5)
+discount_zone_5 = logic == 'ATR' ? ta.ema(main_plot - atr*(band_mult*5), 5) : ta.ema((main_plot*(1-band_mult*0.01*5)), 5)
+discount_zone_6 = logic == 'ATR' ? ta.ema(main_plot - atr*(band_mult*6), 5) : ta.ema((main_plot*(1-band_mult*0.01*6)), 5)
+discount_zone_7 = logic == 'ATR' ? ta.ema(main_plot - atr*(band_mult*7), 5) : ta.ema((main_plot*(1-band_mult*0.01*7)), 5)
+discount_zone_8 = logic == 'ATR' ? ta.ema(main_plot - atr*(band_mult*8), 5) : ta.ema((main_plot*(1-band_mult*0.01*8)), 5)
+//discount_zon_9 = ta.sma(main_plot - atr*(band_mult*9), 5)
+//discount_zone_10 =ta.sma( main_plot - atr*(band_mult*10), 5)
+//Region End//
+////////////////////
+// Region : Plots//
+///////////////////
+dis_low1 = plot(discount_zone_1, color=color.new(color.green, 80))
+dis_low2 = plot(discount_zone_2, color=color.new(color.green, 70))
+dis_low3 = plot(discount_zone_3, color=color.new(color.green, 60))
+dis_low4 = plot(discount_zone_4, color=color.new(color.green, 50))
+dis_low5 = plot(discount_zone_5, color=color.new(color.green, 40))
+dis_low6 = plot(discount_zone_6, color=color.new(color.green, 30))
+dis_low7 = plot(discount_zone_7, color=color.new(color.green, 20))
+dis_low8 = plot(discount_zone_8, color=color.new(color.green, 10))
+//dis_low9 = plot(discount_zone_9, color=color.new(color.green, 0))
+//dis_low10 = plot(discount_zone_10, color=color.new(color.green, 0))
+plot(main_plot, color =color.new(color.gray, 10))
+pre_up1 = plot(premium_zone_1, color=color.new(color.red, 80))
+pre_up2 = plot(premium_zone_2, color=color.new(color.red, 70))
+pre_up3 = plot(premium_zone_3, color=color.new(color.red, 60))
+pre_up4 = plot(premium_zone_4, color=color.new(color.red, 50))
+pre_up5 = plot(premium_zone_5, color=color.new(color.red, 40))
+pre_up6 = plot(premium_zone_6, color=color.new(color.red, 30))
+pre_up7 = plot(premium_zone_7, color=color.new(color.red, 20))
+pre_up8 = plot(premium_zone_8, color=color.new(color.red, 10))
+//pre_up9 = plot(premium_zone_9, color=color.new(color.red, 0))
+//pre_up10 = plot(premium_zone_10, color=color.new(color.red, 0))
+fill(dis_low1, dis_low2, color=color.new(color.green, 95))
+fill(dis_low2, dis_low3, color=color.new(color.green, 90))
+fill(dis_low3, dis_low4, color=color.new(color.green, 85))
+fill(dis_low4, dis_low5, color=color.new(color.green, 80))
+fill(dis_low5, dis_low6, color=color.new(color.green, 75))
+fill(dis_low6, dis_low7, color=color.new(color.green, 70))
+fill(dis_low7, dis_low8, color=color.new(color.green, 65))
+//fill(dis_low8, dis_low9, color=color.new(color.green, 60))
+//fill(dis_low9, dis_low10, color=color.new(color.green, 55))
+fill(pre_up1, pre_up2, color=color.new(color.red, 95))
+fill(pre_up2, pre_up3, color=color.new(color.red, 90))
+fill(pre_up3, pre_up4, color=color.new(color.red, 85))
+fill(pre_up4, pre_up5, color=color.new(color.red, 80))
+fill(pre_up5, pre_up6, color=color.new(color.red, 75))
+fill(pre_up6, pre_up7, color=color.new(color.red, 70))
+fill(pre_up7, pre_up8, color=color.new(color.red, 65))
+//fill(pre_up8, pre_up9, color=color.new(color.red, 60))
+//fill(pre_up9, pre_up10, color=color.new(color.red, 55))
+//Region End//
+///////////////////////
+//Region : Strategies//
+///////////////////////
+//Longs//
+longCondition1 = ta.crossunder(low, discount_zone_7)
+longCondition2 = ta.crossunder(low, discount_zone_6)
+longCondition3 = ta.crossunder(low, discount_zone_5)
+longCondition4 = ta.crossunder(low, discount_zone_4)
+longCondition5 = ta.crossunder(low, discount_zone_3)
+longCondition6 = ta.crossunder(low, discount_zone_2)
+longCondition7 = ta.crossunder(low, discount_zone_1)
+longCondition8 = ta.crossunder(low, main_plot)
+longCondition9 = ta.crossunder(low, premium_zone_1)
+longCondition10 = ta.crossunder(low, premium_zone_2)
+longCondition11 = ta.crossunder(low, premium_zone_3)
+longCondition12 = ta.crossunder(low, premium_zone_4)
+longCondition13 = ta.crossunder(low, premium_zone_5)
+longCondition14 = ta.crossunder(low, premium_zone_6)
+longCondition15 = ta.crossunder(low, premium_zone_7)
+if (longCondition1) and order_1 == false
+    strategy.entry("Long1", strategy.long)
+    order_1 := true
+if (longCondition2) and order_2 == false
+    strategy.entry("Long2", strategy.long)
+    order_2 := true
+if (longCondition3) and order_3 == false
+    strategy.entry("Long3", strategy.long)
+    order_3 := true
+if (longCondition4) and order_4 == false
+    strategy.entry("Long4", strategy.long)
+    order_4 := true
+if (longCondition5) and order_5 == false
+    strategy.entry("Long5", strategy.long)
+    order_5 := true
+if (longCondition6) and order_6 == false
+    strategy.entry("Long6", strategy.long)
+    order_6 := true
+if (longCondition7) and order_7 == false
+    strategy.entry("Long7", strategy.long)
+    order_7 := true
+if (longCondition8) and order_8 == false
+    strategy.entry("Long8", strategy.long)
+    order_8 := true
+if (longCondition9) and order_9 == false
+    strategy.entry("Long9", strategy.long)
+    order_9 := true
+if (longCondition10) and order_10 == false
+    strategy.entry("Long10", strategy.long)
+    order_10 := true
+if (longCondition11) and order_11 == false
+    strategy.entry("Long11", strategy.long)
+    order_11 := true
+if (longCondition12) and order_12 == false
+    strategy.entry("Long12", strategy.long)
+    order_12 := true
+if (longCondition13) and order_13 == false
+    strategy.entry("Long13", strategy.long)
+    order_13 := true
+if (longCondition14) and order_14 == false
+    strategy.entry("Long14", strategy.long)
+    order_14 := true
+if (longCondition15) and order_15 == false
+    strategy.entry("Long14", strategy.long)
+    order_15 := true
+//Close//
+shortCondition1 = ta.crossover(high, discount_zone_6)
+shortCondition2 = ta.crossover(high, discount_zone_5)
+shortCondition3 = ta.crossover(high, discount_zone_4)
+shortCondition4 = ta.crossover(high, discount_zone_3)
+shortCondition5 = ta.crossover(high, discount_zone_2)
+shortCondition6 = ta.crossover(high, discount_zone_1)
+shortCondition7 = ta.crossover(high, main_plot)
+shortCondition8 = ta.crossover(high, premium_zone_1)
+shortCondition9 = ta.crossover(high, premium_zone_2)
+shortCondition10 = ta.crossover(high, premium_zone_3)
+shortCondition11 = ta.crossover(high, premium_zone_4)
+shortCondition12 = ta.crossover(high, premium_zone_5)
+shortCondition13 = ta.crossover(high, premium_zone_6)
+shortCondition14 = ta.crossover(high, premium_zone_7)
+shortCondition15 = ta.crossover(high, premium_zone_8)
+if (shortCondition1) and order_1 == true
+    strategy.close("Long1")
+    order_1 := false
+if (shortCondition2) and order_2 == true
+    strategy.close("Long2")
+    order_2 := false
+if (shortCondition3) and order_3 == true
+    strategy.close("Long3")
+    order_3 := false
+if (shortCondition4) and order_4 == true
+    strategy.close("Long4")
+    order_4 := false
+if (shortCondition5) and order_5 == true
+    strategy.close("Long5")
+    order_5 := false
+if (shortCondition6) and order_6 == true
+    strategy.close("Long6")
+    order_6 := false
+if (shortCondition7) and order_7 == true
+    strategy.close("Long7")
+    order_7 := false
+if (shortCondition8) and order_8 == true
+    strategy.close("Long8")
+    order_8 := false
+if (shortCondition9) and order_9 == true
+    strategy.close("Long9")
+    order_9 := false
+if (shortCondition10) and order_10 == true
+    strategy.close("Long10")
+    order_10 := false
+if (shortCondition11) and order_11 == true
+    strategy.close("Long11")
+    order_11 := false
+if (shortCondition12) and order_12 == true
+    strategy.close("Long12")
+    order_12 := false
+if (shortCondition13) and order_13 == true
+    strategy.close("Long13")
+    order_13 := false
+if (shortCondition14) and order_14 == true
+    strategy.close("Long14")
+    order_14 := false
+if (shortCondition15) and order_15 == true
+    strategy.close("Long15")
+    order_15 := false
+Expand (273 lines)

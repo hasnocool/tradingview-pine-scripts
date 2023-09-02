@@ -1,0 +1,136 @@
+Script Name: Swing Trend Strategy
+Author: Inkedlau
+Description: This script is a trend following system which uses a long term Moving Average to spot the trend in combination with the Average True Range to filter out Fakeouts, limiting the overall drawdown.
+
+Default Settings and Calculation:
+
+- The trend is detected using the Exponential Moving Average on 200 periods.
+- The Average True Range is calculated on 10 periods.
+
+-...
+PineScript code:
+
+Pine Script™ strategy
+Swing Trend Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Inkedlau
+//@version=5
+strategy('Swing Trend Strategy', overlay=true, pyramiding=1, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=1000, commission_value=0.1)
+use_short = input.bool(false, 'Open Short Positions?')
+exit_type = input.bool(true, 'Exit trade on Moving Average Cross?')
+src = input.source(close, 'Source')
+len = input.int(200, 'Trend Length')
+ma_type = input.string('ema', 'Moving Average Type', options=['sma', 'ema', 'rma', 'wma', 'vwma'], tooltip='Select the type of Moving Average to use to calculate the Trend')
+atr_multiplier = input.float(1., 'ATR Threshold', step=0.5, tooltip='Filter the ranging market using the Average True Range')
+// ----------------------- DESCRIPTION -----------------------
+// THIS SCRIPT IS A TREND FOLLOWING SYSTEM THAT USES A COMBINATION OF MOVING AVERAGE AND AVERAGE TRUE RANGE
+// TO SPOT THE TRENDS AND ENTER THE MARKET ACCODINGLY.
+// THE MARKET IS CONSIDERED IN AN UPTREND WHEN THE PRICE CLOSES ABOVE THE MOVING AVERAGE + THE AVERAGE TRUE RANGE OF THE LAST 10 PERIODS
+// THE MARKET IS CONSIDERED IN AN DOWNTREND WHEN THE PRICE CLOSES BLOW THE MOVING AVERAGE - THE AVERAGE TRUE RANGE OF THE LAST 10 PERIODS
+// BY DEFAULT, THE STRATEGY WILL ENTER LONG WHEN AN UPTREND IS SPOTTED, THEN CLOSES WHEN THE PRICE CLOSES BELOW THE MOVING AVERAGE
+// THE STRATEGY WILL ENTER SHORT WHEN A DOWNTREND IS SPOTTED, THEN CLOSES WHEN THE PRICE CLOSES ABOVE THE MOVING AVERAGE
+// ------------------ INDICATORS CALCULATION------------------
+my_ma()=>
+    ma = close
+    if ma_type == 'sma'
+        ma := ta.sma(src, len)
+    if ma_type == 'ema'
+        ma := ta.ema(src, len)
+    if ma_type == 'rma'
+        ma := ta.rma(src, len)
+    if ma_type == 'wma'
+        ma := ta.wma(src, len)
+    if ma_type == 'vwma'
+        ma := ta.vwma(src, len)
+    ma
+trend = my_ma()
+atr = ta.atr(10)
+uptrend = trend + atr * atr_multiplier
+downtrend = trend - atr * atr_multiplier
+// ---------------- ENTRY AND EXIT CONDITIONS ----------------
+open_long = strategy.position_size == 0 and src > uptrend
+close_long = exit_type ? strategy.position_size > 0 and src < trend : strategy.position_size > 0 and src < downtrend
+open_short = use_short and strategy.position_size == 0 and src < downtrend
+close_short = exit_type ? strategy.position_size < 0 and src > trend : strategy.position_size < 0 and src > uptrend
+strategy.entry('long', strategy.long, when=open_long)
+strategy.close('long', when=close_long)
+strategy.entry('short', strategy.short, when=open_short)
+strategy.close('short', when=close_short)
+// ------------------ PLOTTING AND COLORING ------------------
+tcolor = src > uptrend ? color.green : src < downtrend ? color.red : na
+ptrend = plot(trend, color=color.blue, linewidth=1)
+puptrend = plot(uptrend, color=color.green, linewidth=1)
+pdowntrend = plot(downtrend, color=color.red, linewidth=1)
+pclose = plot(close, color=na)
+fill(puptrend, pclose, color=close > uptrend ? color.green : na, transp = 90)
+fill(pdowntrend, pclose, color=close < downtrend ? color.red : na, transp = 90)
+Expand (68 lines)

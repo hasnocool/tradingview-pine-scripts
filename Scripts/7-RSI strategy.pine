@@ -1,0 +1,395 @@
+Script Name: 7-RSI strategy
+Author: rrolik66
+Description: Hello, I've only been trying to learn PineScript for two months on my own, here I am posting a version of the strategy for a grid bot with 20 orders, order size 5%, earlier I tried to find something similar, but could not. Perhaps others, those who, like me, are just starting to learn PineScript, will find something useful. In the process of using grid bots, I...
+PineScript code:
+
+Pine Script™ strategy
+7-RSI strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © rrolik66
+//@version=4
+strategy(title="7-RSI strategy", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=5, currency=currency.USD)
+// inputs
+src = input(close, "Source RSI", type = input.source)
+bot_res = input(title="Bot period", type=input.resolution, defval="1")
+srcin_bot = input(ohlc4, "Source Bot", type = input.source)
+src_bot = security(syminfo.tickerid, bot_res, srcin_bot)
+tradeDirection = input(title="Trade Direction", type=input.string,
+     options=["Long Bot", "Short Bot"], defval="Long Bot")
+rsi1_res = input(title="RSI-1 period", type=input.resolution, defval="1", group="indicators")
+rsi1_Len = input(14, minval=1, title="RSI-1 Length", group="indicators")
+rsi2_res = input(title="RSI-2 period", type=input.resolution, defval="5", group="indicators")
+rsi2_Len = input(14, minval=1, title="RSI-2 Length", group="indicators")
+rsi3_res = input(title="RSI-3 period", type=input.resolution, defval="15", group="indicators")
+rsi3_Len = input(14, minval=1, title="RSI-3 Length", group="indicators")
+rsi4_res = input(title="RSI-4 period", type=input.resolution, defval="30", group="indicators")
+rsi4_Len = input(14, minval=1, title="RSI-4 Length", group="indicators")
+rsi5_res = input(title="RSI-5 period", type=input.resolution, defval="60", group="indicators")
+rsi5_Len = input(14, minval=1, title="RSI-5 Length", group="indicators")
+rsi6_res = input(title="RSI-6 period", type=input.resolution, defval="120", group="indicators")
+rsi6_Len = input(14, minval=1, title="RSI-6 Length", group="indicators")
+rsi7_res = input(title="RSI-7 period", type=input.resolution, defval="1D", group="indicators")
+rsi7_Len = input(14, minval=1, title="RSI-7 Length", group="indicators")
+longProfitPerc = input(title="Long Bot Take Profit (%)",
+     type=input.float, minval=0.0, step=0.05, defval=0.5, group="Long Bot") * 0.01
+st_long_orders = input(title="Long Bot Step orders (%)",
+     type=input.float, minval=0.0, step=0.1, defval=2.0, group="Long Bot") * 0.01
+rsi1_low = input(100, title="RSI-1 <", group="Long Bot")
+rsi2_low = input(100, title="RSI-2 <", group="Long Bot")
+rsi3_low = input(100, title="RSI-3 <", group="Long Bot")
+rsi4_low = input(100, title="RSI-4 <", group="Long Bot")
+rsi5_low = input(100, title="RSI-5 <", group="Long Bot")
+rsi6_low = input(100, title="RSI-6 <", group="Long Bot")
+rsi7_low = input(100, title="RSI-7 <", group="Long Bot")
+shortProfitPerc = input(title="Short Bot Take Profit (%)",
+     type=input.float, minval=0.0, step=0.05, defval=0.5, group="Short Bot") * 0.01
+st_short_orders = input(title="Short Bot Step orders (%)",
+     type=input.float, minval=0.0, step=0.1, defval=2.0, group="Short Bot") * 0.01
+rsi1_up = input(0, title="RSI-1 >", group="Short Bot")
+rsi2_up = input(0, title="RSI-2 >", group="Short Bot")
+rsi3_up = input(0, title="RSI-3 >", group="Short Bot")
+rsi4_up = input(0, title="RSI-4 >", group="Short Bot")
+rsi5_up = input(0, title="RSI-5 >", group="Short Bot")
+rsi6_up = input(0, title="RSI-6 >", group="Short Bot")
+rsi7_up = input(0, title="RSI-7 >", group="Short Bot")
+//indicators
+rsi1 = rsi(src, rsi1_Len)
+rsi1_sec = security(syminfo.tickerid, rsi1_res, rsi1)
+rsi2 = rsi(src, rsi2_Len)
+rsi2_sec = security(syminfo.tickerid, rsi2_res, rsi2)
+rsi3 = rsi(src, rsi3_Len)
+rsi3_sec = security(syminfo.tickerid, rsi3_res, rsi3)
+rsi4 = rsi(src, rsi4_Len)
+rsi4_sec = security(syminfo.tickerid, rsi4_res, rsi4)
+rsi5 = rsi(src, rsi5_Len)
+rsi5_sec = security(syminfo.tickerid, rsi5_res, rsi5)
+rsi6 = rsi(src, rsi6_Len)
+rsi6_sec = security(syminfo.tickerid, rsi6_res, rsi6)
+rsi7 = rsi(src, rsi7_Len)
+rsi7_sec = security(syminfo.tickerid, rsi7_res, rsi7)
+//RSI
+rsi1_up_signal = rsi1_sec > rsi1_up
+rsi1_low_signal = rsi1_sec < rsi1_low
+rsi2_up_signal = rsi2_sec > rsi2_up
+rsi2_low_signal = rsi2_sec < rsi2_low
+rsi3_up_signal = rsi3_sec > rsi3_up
+rsi3_low_signal = rsi3_sec < rsi3_low
+rsi4_up_signal = rsi4_sec > rsi4_up
+rsi4_low_signal = rsi4_sec < rsi4_low
+rsi5_up_signal = rsi5_sec > rsi5_up
+rsi5_low_signal = rsi5_sec < rsi5_low
+rsi6_up_signal = rsi6_sec > rsi6_up
+rsi6_low_signal = rsi6_sec < rsi6_low
+rsi7_up_signal = rsi7_sec > rsi7_up
+rsi7_low_signal = rsi7_sec < rsi7_low
+//Buy & Sell
+Buy = rsi1_low_signal and rsi2_low_signal and rsi3_low_signal and rsi4_low_signal and rsi5_low_signal and rsi6_low_signal and rsi7_low_signal
+Sell = rsi1_up_signal and rsi2_up_signal and rsi3_up_signal and rsi4_up_signal and rsi5_up_signal and rsi6_up_signal and rsi7_up_signal
+// input into trading conditions
+longOK  = (tradeDirection == "Long Bot")
+shortOK = (tradeDirection == "Short Bot")
+// in entry orders price
+longEntryPrice1 = src_bot * (1 - (st_long_orders))
+longEntryPrice2 = src_bot * (1 - (st_long_orders*2))
+longEntryPrice3 = src_bot * (1 - (st_long_orders*3))
+longEntryPrice4 = src_bot * (1 - (st_long_orders*4))
+longEntryPrice5 = src_bot * (1 - (st_long_orders*5))
+longEntryPrice6 = src_bot * (1 - (st_long_orders*6))
+longEntryPrice7 = src_bot * (1 - (st_long_orders*7))
+longEntryPrice8 = src_bot * (1 - (st_long_orders*8))
+longEntryPrice9 = src_bot * (1 - (st_long_orders*9))
+longEntryPrice10 = src_bot * (1 - (st_long_orders*10))
+longEntryPrice11 = src_bot * (1 - (st_long_orders*11))
+longEntryPrice12 = src_bot * (1 - (st_long_orders*12))
+longEntryPrice13 = src_bot * (1 - (st_long_orders*13))
+longEntryPrice14 = src_bot * (1 - (st_long_orders*14))
+longEntryPrice15 = src_bot * (1 - (st_long_orders*15))
+longEntryPrice16 = src_bot * (1 - (st_long_orders*16))
+longEntryPrice17 = src_bot * (1 - (st_long_orders*17))
+longEntryPrice18 = src_bot * (1 - (st_long_orders*18))
+longEntryPrice19 = src_bot * (1 - (st_long_orders*19))
+shortEntryPrice1 = src_bot * (1 + st_short_orders)
+shortEntryPrice2 = src_bot * (1 + (st_short_orders*2))
+shortEntryPrice3 = src_bot * (1 + (st_short_orders*3))
+shortEntryPrice4 = src_bot * (1 + (st_short_orders*4))
+shortEntryPrice5 = src_bot * (1 + (st_short_orders*5))
+shortEntryPrice6 = src_bot * (1 + (st_short_orders*6))
+shortEntryPrice7 = src_bot * (1 + (st_short_orders*7))
+shortEntryPrice8 = src_bot * (1 + (st_short_orders*8))
+shortEntryPrice9 = src_bot * (1 + (st_short_orders*9))
+shortEntryPrice10 = src_bot * (1 + (st_short_orders*10))
+shortEntryPrice11 = src_bot * (1 + (st_short_orders*11))
+shortEntryPrice12 = src_bot * (1 + (st_short_orders*12))
+shortEntryPrice13 = src_bot * (1 + (st_short_orders*13))
+shortEntryPrice14 = src_bot * (1 + (st_short_orders*14))
+shortEntryPrice15 = src_bot * (1 + (st_short_orders*15))
+shortEntryPrice16 = src_bot * (1 + (st_short_orders*16))
+shortEntryPrice17 = src_bot * (1 + (st_short_orders*17))
+shortEntryPrice18 = src_bot * (1 + (st_short_orders*18))
+shortEntryPrice19 = src_bot * (1 + (st_short_orders*19))
+// take profit price
+longExitPrice  = strategy.position_avg_price * (1 + longProfitPerc)
+shortExitPrice = strategy.position_avg_price * (1 - shortProfitPerc)
+// take profit values for confirmation
+plot(series=(strategy.position_size > 0) ? longExitPrice : na,
+     color=color.green, style=plot.style_circles,
+     linewidth=3, title="Long Take Profit")
+plot(series=(strategy.position_size < 0) ? shortExitPrice : na,
+     color=color.red, style=plot.style_circles,
+     linewidth=3, title="Short Take Profit")
+// entry orders
+if (strategy.position_size == 0)
+    strategy.order(id="Long0", long=true, limit=src_bot, when=longOK and Buy)
+    strategy.order(id="Long1", long=true, limit=longEntryPrice1, when=longOK and Buy)
+    strategy.order(id="Long2", long=true, limit=longEntryPrice2, when=longOK and Buy)
+    strategy.order(id="Long3", long=true, limit=longEntryPrice3, when=longOK and Buy)
+    strategy.order(id="Long4", long=true, limit=longEntryPrice4, when=longOK and Buy)
+    strategy.order(id="Long5", long=true, limit=longEntryPrice5, when=longOK and Buy)
+    strategy.order(id="Long6", long=true, limit=longEntryPrice6, when=longOK and Buy)
+    strategy.order(id="Long7", long=true, limit=longEntryPrice7, when=longOK and Buy)
+    strategy.order(id="Long8", long=true, limit=longEntryPrice8, when=longOK and Buy)
+    strategy.order(id="Long9", long=true, limit=longEntryPrice9, when=longOK and Buy)
+    strategy.order(id="Long10", long=true, limit=longEntryPrice10, when=longOK and Buy)
+    strategy.order(id="Long11", long=true, limit=longEntryPrice11, when=longOK and Buy)
+    strategy.order(id="Long12", long=true, limit=longEntryPrice12, when=longOK and Buy)
+    strategy.order(id="Long13", long=true, limit=longEntryPrice13, when=longOK and Buy)
+    strategy.order(id="Long14", long=true, limit=longEntryPrice14, when=longOK and Buy)
+    strategy.order(id="Long15", long=true, limit=longEntryPrice15, when=longOK and Buy)
+    strategy.order(id="Long16", long=true, limit=longEntryPrice16, when=longOK and Buy)
+    strategy.order(id="Long17", long=true, limit=longEntryPrice17, when=longOK and Buy)
+    strategy.order(id="Long18", long=true, limit=longEntryPrice18, when=longOK and Buy)
+    strategy.order(id="Long19", long=true, limit=longEntryPrice19, when=longOK and Buy)
+if (strategy.position_size == 0)
+    strategy.order(id="Short0", long=false, limit=src_bot, when=shortOK and Sell)
+    strategy.order(id="Short1", long=false, limit=shortEntryPrice1, when=shortOK and Sell)
+    strategy.order(id="Short2", long=false, limit=shortEntryPrice2, when=shortOK and Sell)
+    strategy.order(id="Short3", long=false, limit=shortEntryPrice3, when=shortOK and Sell)
+    strategy.order(id="Short4", long=false, limit=shortEntryPrice4, when=shortOK and Sell)
+    strategy.order(id="Short5", long=false, limit=shortEntryPrice5, when=shortOK and Sell)
+    strategy.order(id="Short6", long=false, limit=shortEntryPrice6, when=shortOK and Sell)
+    strategy.order(id="Short7", long=false, limit=shortEntryPrice7, when=shortOK and Sell)
+    strategy.order(id="Short8", long=false, limit=shortEntryPrice8, when=shortOK and Sell)
+    strategy.order(id="Short9", long=false, limit=shortEntryPrice9, when=shortOK and Sell)
+    strategy.order(id="Short10", long=false, limit=shortEntryPrice10, when=shortOK and Sell)
+    strategy.order(id="Short11", long=false, limit=shortEntryPrice11, when=shortOK and Sell)
+    strategy.order(id="Short12", long=false, limit=shortEntryPrice12, when=shortOK and Sell)
+    strategy.order(id="Short13", long=false, limit=shortEntryPrice13, when=shortOK and Sell)
+    strategy.order(id="Short14", long=false, limit=shortEntryPrice14, when=shortOK and Sell)
+    strategy.order(id="Short15", long=false, limit=shortEntryPrice15, when=shortOK and Sell)
+    strategy.order(id="Short16", long=false, limit=shortEntryPrice16, when=shortOK and Sell)
+    strategy.order(id="Short17", long=false, limit=shortEntryPrice17, when=shortOK and Sell)
+    strategy.order(id="Short18", long=false, limit=shortEntryPrice18, when=shortOK and Sell)
+    strategy.order(id="Short19", long=false, limit=shortEntryPrice19, when=shortOK and Sell)
+// exit position based on take profit price
+if (strategy.position_size > 0)
+    strategy.order(id="exit_Long", long=false, limit=longExitPrice, qty=strategy.position_size)
+if (strategy.position_size < 0)
+    strategy.order(id="exit_Short", long=true, limit=shortExitPrice, qty=abs(strategy.position_size))
+Expand (206 lines)

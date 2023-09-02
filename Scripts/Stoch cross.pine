@@ -1,0 +1,73 @@
+Script Name: Stoch cross
+Author: utanico
+Description: すときゃすのくろす
+PineScript code:
+
+Pine Script™ strategy
+Stoch cross
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © utanico
+//@version=4
+strategy(title="Stochastic", overlay=true, shorttitle="Stoch")
+periodK = input(35, title="K", minval=1)
+periodD = input(21, title="D", minval=1)
+smoothK = input(21, title="Smooth", minval=1)
+startYear = input(type=input.integer, title = "開始年", defval = 2020)
+startMonth = input(type=input.integer, title = "開始月", defval = 1)
+startDay = input(type=input.integer, title = "開始日", defval = 1)
+endYear = input(type=input.integer, title = "終了年", defval = 2030)
+endMonth = input(type=input.integer, title = "終了月", defval = 12)
+endDay = input(type=input.integer, title = "終了日", defval = 31)
+//開始日時
+test_start = timestamp(startYear, startMonth, startDay, 00, 00)
+//終了日時
+test_end   = timestamp(endYear, endMonth, endDay, 00, 00)
+//テスト期間の指定
+is_test = test_start <= time and  time <= test_end
+k = sma(stoch(close, high, low, periodK), smoothK)
+d = sma(k, periodD)
+if (is_test)
+    if (k > d)
+        strategy.entry("Stoch_LE", strategy.long, comment="Stoch_LE")
+    //if (strategy.opentrades > 0 and k < d)
+        //strategy.close("Stoch_LE",comment="CloseLONG")
+    if (k < d)
+        strategy.entry("Stoch_SE", strategy.short, comment="Stoch_SE")
+    //if (strategy.opentrades < 0 and k > d)
+        //strategy.close("Stoch_SE",comment="CloseShort")
+Expand (34 lines)

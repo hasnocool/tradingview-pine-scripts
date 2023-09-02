@@ -1,0 +1,87 @@
+Script Name: Higher High - Lower Low Strategy
+Author: FXEngineering
+Description: This is a very simple trend following strategy for Day Trading. The premise is to follow the Moving Average for the trend direction and buy/sell the dips and blips in the trend.
+1. In an uptrend, when the candle action offers a "dip", or a lower high, the strategy will then buy on the close of the candle that breaks the high of the previous candle.
+2. In a...
+PineScript code:
+
+Pine Script™ strategy
+Higher High / Lower Low Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+//@version=4
+strategy("Higher High / Lower Low Strategy", overlay=true)
+// Getting inputs
+longOnly = input(true, title="Long or Short Only")
+useMACD = input(true, title="Use MACD Filter")
+useSignal = input(true, title="Use Signal Filter")
+//Filter backtest month and year
+startMonth = input(10, minval=1, maxval=12, title="Month")
+startYear = input(2020, minval=2000, maxval=2100, title="Year")
+//Filter funtion inputs
+periodA = input(20, minval=1, title="Period SMA")
+periodK = input(5, minval=1, title="Period %K")
+fast_length = input(title="Period Fast", type=input.integer, defval=5)
+slow_length = input(title="Period Slow", type=input.integer, defval=20)
+signal_length = input(title="Signal Smoothing", type=input.integer, minval = 1, maxval = 50, defval = 30)
+//Calculations
+smoothD = 3 //input(3, minval=1, title="Smooth %D")
+smoothK = 2 //input(2, minval=1, title="Smooth %K")
+ma50 = sma(close, periodA)
+k = sma(stoch(close, high, low, periodK), smoothK) - 50
+d = sma(k, smoothD)
+macd = ema(close,fast_length) - ema(close,slow_length)
+signal = ema(macd,signal_length)
+hist = macd - signal
+if (not na(k) and not na(d) and not na(macd) and not na(signal) and longOnly and month>=startMonth and year>=startYear)// if(k > k[1] and k[2] >= k[1] and (ma50 > ma50[1]) and (not useK or k[1] <= -threshold_k) and (not useMACD or macd > macd[1]) and (not useSignal or signal > signal[1]) and (not useHHLL or close >= high[1]) and (not useD or d <= -threshold_d))
+    if(high[2] >= high[1] and high > high[1] and (ma50 > ma50[1]) and (not useMACD or macd > macd[1]) and (not useSignal or signal > signal[1]))
+    strategy.order("HH_LE", strategy.long, when=strategy.position_size == 0, comment="HH_LE")
+    if (k < k[1])
+    strategy.order("HH_SX", strategy.short, when=strategy.position_size != 0, comment="HH_SX")
+if (not na(k) and not na(d) and not na(macd) and not na(signal) and not longOnly and month>=startMonth and year>=startYear)
+    if(low[2] <= low[1] and low < low[1] and (ma50 < ma50[1]) and (not useMACD or macd < macd[1]) and (not useSignal or signal < signal[1]))
+    strategy.order("HH_SE", strategy.short, when=strategy.position_size == 0, comment="HH_SE")
+    if (k > k[1])
+    strategy.order("HH_LX", strategy.long, when=strategy.position_size != 0, comment="HH_LX")
+//plot(strategy.equity, title="equity", color=color.red, linewidth=2, style=plot.style_areabr)
+Expand (41 lines)

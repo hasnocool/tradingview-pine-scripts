@@ -1,0 +1,444 @@
+Script Name: MESA + Volume + RSI Decision Points Strategy
+Author: UnknownUnicorn36161431
+Description: The WHAT
+=============>
+Combination of 3 indicators, first 2 are to get entry points, the last one (MESA) is to get exit points:
+
+1) "Koalafied Volume Extension" by @Koalafied_3 - used to detect whether current trend candles are supported by volume
+
+
+2) "Koalafied RSI Decision Points" by @Koalafied_3 - another indicator used to detect trend momentum 
+
+
+3) "Mesa...
+PineScript code:
+
+Pine Script™ strategy
+MESA + Volume + RSI Decision Points Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+// @version=5
+strategy("MESA + Volume + RSI Decision Points Strategy", shorttitle="MESA + Volume + RSI", overlay=true, process_orders_on_close = true, calc_on_order_fills = true, pyramiding = 0, default_qty_type = strategy.percent_of_equity, default_qty_value = 75, commission_type = strategy.commission.percent, commission_value = 0.04, initial_capital = 100)
+GROUP_GLOBAL_OPTIONS = "Global Options"
+GROUP_TIME_LIMITED_BACKTESTS = "Time-Limit BackTests (0 = disable)"
+GROUP_RSI_OPTIONS = "RSI Options"
+GROUP_VOLUME_OPTIONS = "Volume Extension Options"
+GROUP_VOLUME_COLOR_OPTIONS = "Volume Extension Color Options"
+GROUP_MESA = "MESA Pivots Options"
+SLPerc = input.float( 2.5, title="Stop Loss (%)", minval=0.0, step=0.1, group = GROUP_GLOBAL_OPTIONS)
+i_use_time_limited_backtesting = input.bool( false, "Use Time-Limited Backtesting", group = GROUP_TIME_LIMITED_BACKTESTS )
+startDay = input.int(0, "Start Day", minval = 0, maxval = 31, group = GROUP_TIME_LIMITED_BACKTESTS)
+startMonth = input.int(0, "Start Month", minval = 0, maxval = 12, group = GROUP_TIME_LIMITED_BACKTESTS)
+startYear = input.int(0, "Start Year", minval = 0, maxval = 2100, group = GROUP_TIME_LIMITED_BACKTESTS)
+endDay = input.int(0, "End Day", minval = 0, maxval = 31, group = GROUP_TIME_LIMITED_BACKTESTS)
+endMonth = input.int(0, "End Month", minval = 0, maxval = 12, group = GROUP_TIME_LIMITED_BACKTESTS)
+endYear = input.int(0, "End Year", minval = 0, maxval = 2100, group = GROUP_TIME_LIMITED_BACKTESTS)
+rsi_len   = input( 14, "RSI Length", group = GROUP_RSI_OPTIONS )
+rsi_showBG = input(true, 'Show RSI Background State', group = GROUP_RSI_OPTIONS)
+rsi_showlines = input(true, "Show Decision Point Levels", group = GROUP_RSI_OPTIONS)
+rsi_plot_sel = input.string(title='Plot Selection', defval='Both', options=['Both', 'Shapes', 'Candles'], group = GROUP_RSI_OPTIONS)
+rsi_transp = input.int(92, "Background Transparency", minval = 0, maxval = 100, group = GROUP_RSI_OPTIONS)
+i_show_volume_extension = input.bool( true, "Color Candles by Volume Extension", group = GROUP_VOLUME_OPTIONS )
+vol_len = input(21, "Z-Score MA Length", group = GROUP_VOLUME_OPTIONS)
+vol_MA_sel = input.string(title='MA Selection', defval='SMA', options=['SMA', 'EMA', 'WMA'], group = GROUP_VOLUME_OPTIONS)
+vol_deviation_1 = input(2.0, "Std Dev", group = GROUP_VOLUME_OPTIONS)
+vol_deviation_2 = input(3.0, "Std Dev", group = GROUP_VOLUME_OPTIONS)
+vol_rising_sel = input(false, "Colour rising volume bars", group = GROUP_VOLUME_OPTIONS)
+vol_colup_ext2 = input.color(color.lime, "Bull Extension 2", group = GROUP_VOLUME_COLOR_OPTIONS)
+vol_colup_ext1 = input.color(color.blue, "Bull Extension 1", group = GROUP_VOLUME_COLOR_OPTIONS)
+vol_coldown_ext1 = input.color(color.red, "Bear Extension 1", group = GROUP_VOLUME_COLOR_OPTIONS)
+vol_coldown_ext2 = input.color(color.purple, "Bear Extension 2", group = GROUP_VOLUME_COLOR_OPTIONS)
+vol_col_risingUP = input.color(color.white, "Rising Candle Color Up", group = GROUP_VOLUME_COLOR_OPTIONS)
+vol_col_risingDOWN = input.color(color.gray, "Rising Candle Color Down", group = GROUP_VOLUME_COLOR_OPTIONS)
+vol_col_blank = input.color(color.new(color.black,100), "Blank Candle Color", group = GROUP_VOLUME_COLOR_OPTIONS)
+i_show_mesa = input.bool( false, "Show MESA Pivots", group = GROUP_MESA )
+offsetNum = input( 0, "MESA offset", group = GROUP_MESA)
+pivot_zone_upper = input.float( 0.4, "MESA pivot zone upper", step=0.1, group = GROUP_MESA )
+pivot_zone_lower = input.float( -0.4, "MESA pivot zone lower", step=0.1, group = GROUP_MESA )
+inDateRange = true
+// Look if the close time of the current bar falls inside the date range
+if i_use_time_limited_backtesting and startDay != 0 and startMonth != 0 and startYear != 0 and endDay != 0 and endMonth != 0 and endYear != 0
+    inDateRange := ( time >= timestamp( syminfo.timezone, startYear, startMonth, startDay, 0, 0 ) ) and ( time < timestamp( syminfo.timezone, endYear, endMonth, endDay, 0, 0 ) )
+//------------------------------------------------------------------------------
+// persisting variables
+//------------------------------------------------------------------------------
+var last_trade_ts = time
+var min_trade_gap_minutes = 2
+//------------------------------------------------------------------------------
+// MESA calculations from the MESA indicator
+//------------------------------------------------------------------------------
+// Basic
+//------------------------------------------------------------------------------
+DomCycle = 15
+RealPart = 0.0
+ImagPart = 0.0
+for J = 0 to DomCycle - 1
+    Weight = (close[J] + close[J] + high[J] + low[J]) * 10000
+    if DomCycle != 0
+        RealPart := RealPart + math.cos(90 * J / DomCycle) * Weight * 2
+        ImagPart := ((ImagPart + math.sin(90 * J / DomCycle) * Weight) + (ImagPart + math.sin(180 * J / DomCycle) * Weight)) / 2
+Phase = ((math.atan(ImagPart / RealPart)) - 0.685) * 100
+//------------------------------------------------------------------------------
+//Pivot
+//------------------------------------------------------------------------------
+ph_mesa = ta.pivothigh(Phase, 1, 1)
+pl_mesa = ta.pivotlow(Phase, 1, 1)
+out_zone = Phase[2] < pivot_zone_lower or Phase[2] > pivot_zone_upper
+plotshape(i_show_mesa and ph_mesa and out_zone ? ph_mesa : na, title = "Pivot High", color=#f23737, style = shape.circle, location = location.abovebar, offset = -1, size = size.tiny)
+plotshape(i_show_mesa and pl_mesa and out_zone ? pl_mesa : na, title = "Pivot Low", color=#169788, style = shape.circle, location = location.belowbar, offset = -1, size = size.tiny)
+//------------------------------------------------------------------------------
+// RSI Decision Points indicator code
+//------------------------------------------------------------------------------
+rsi_rsi = ta.rsi(close, rsi_len)
+// Trend State
+var rsi_state = 0
+if ta.crossover(rsi_rsi, 66.67)
+    rsi_state := 1
+    rsi_state
+if ta.crossunder(rsi_rsi, 33.33)
+    rsi_state := 2
+    rsi_state
+if rsi_state == 1 and ta.crossunder(rsi_rsi, 40)
+    rsi_state := 3
+    rsi_state
+if rsi_state == 2 and ta.crossover(rsi_rsi, 60)
+    rsi_state := 3
+    rsi_state
+rsi_state := rsi_state
+// Decision Point Conditions
+rsi_pause1 = rsi_state == 3 and rsi_state[1] == 1
+rsi_pause2 = rsi_state == 3 and rsi_state[1] == 2
+rsi_mom_bull = rsi_state == 1 and rsi_state[1] == 3
+rsi_mom_bear = rsi_state == 2 and rsi_state[1] == 3
+rsi_exit_bull = rsi_state == 1 and ta.crossunder(rsi_rsi, 66.67)
+rsi_exit_bear = rsi_state == 2 and ta.crossover(rsi_rsi, 33.33)
+rsi_failure_bullrev = rsi_state == 1 and ta.crossunder(rsi_rsi[1], 66.67) and ta.crossover(rsi_rsi, 66.67)
+rsi_failure_bearrev = rsi_state == 2 and ta.crossover(rsi_rsi[1], 33.33) and ta.crossunder(rsi_rsi, 33.33)
+var float rsi_pause_bull = na
+var float rsi_pause_bear = na
+rsi_pause_bull := rsi_pause1 ? low : rsi_pause_bull[1]
+rsi_pause_bear := rsi_pause2 ? high : rsi_pause_bear[1]
+rsi_candles = rsi_plot_sel == 'Candles'
+rsi_shapes = rsi_plot_sel == 'Shapes'
+rsi_both = rsi_plot_sel == 'Both'
+// ---------- PLOTS ---------- //
+// Plot Decision Points
+plot(rsi_showlines ? rsi_pause_bull : na, title = "Bull Decision Point Level", color = color.new(color.blue, 50), style = plot.style_circles)
+plot(rsi_showlines ? rsi_pause_bear : na, title = "Bear Decision Point Level", color = color.new(color.red, 50), style = plot.style_circles)
+plotshape(rsi_shapes or rsi_both ? rsi_pause1 : na, style=shape.square, location=location.belowbar, color=color.new(color.blue, 0))
+plotshape(rsi_shapes or rsi_both ? rsi_pause2 : na, style=shape.square, location=location.abovebar, color=color.new(color.red, 0))
+plotshape(rsi_shapes or rsi_both ? rsi_mom_bull : na, style=shape.triangleup, location=location.belowbar, color=color.new(color.blue, 0))
+plotshape(rsi_shapes or rsi_both ? rsi_mom_bear : na, style=shape.triangledown, location=location.abovebar, color=color.new(color.red, 0))
+plotshape(rsi_shapes or rsi_both ? rsi_exit_bull : na, style=shape.xcross, location=location.abovebar, color=color.new(color.orange, 0))
+plotshape(rsi_shapes or rsi_both ? rsi_exit_bear : na, style=shape.xcross, location=location.belowbar, color=color.new(color.orange, 0))
+plotshape(rsi_shapes or rsi_both ? rsi_failure_bullrev : na, style=shape.triangleup, location=location.belowbar, color=color.new(color.lime, 0))
+plotshape(rsi_shapes or rsi_both ? rsi_failure_bearrev : na, style=shape.triangledown, location=location.abovebar, color=color.new(color.purple, 0))
+rsi_candle_col = rsi_pause1 or rsi_mom_bull ? color.blue : rsi_pause2 or rsi_mom_bear ? color.red : rsi_exit_bull or rsi_exit_bear ? color.orange : rsi_failure_bullrev ? color.lime : rsi_failure_bearrev ? color.purple : na
+barcolor(rsi_candles or rsi_both ? rsi_candle_col : na)
+// Trend
+rsi_state_col = rsi_state == 1 ? color.new(color.blue, rsi_transp) : rsi_state == 2 ? color.new(color.red, rsi_transp) : na
+bgcolor(rsi_showBG ? rsi_state_col : na, title='Trend State')
+// 2:1 Momentum
+rsi_BG_col = rsi_rsi > 66.67 ? color.new(color.blue, rsi_transp) : rsi_rsi < 33.33 ? color.new(color.red, rsi_transp) : na
+bgcolor(rsi_showBG ? rsi_BG_col : na, title='Trend Momentum')
+// 4:1 Momentum
+rsi_OB = rsi_rsi > 80 ? color.new(color.red, rsi_transp) : na
+rsi_OS = rsi_rsi < 20 ? color.new(color.blue, rsi_transp) : na
+bgcolor(rsi_showBG ? rsi_OB : na, title='Overbought')
+bgcolor(rsi_showBG ? rsi_OS : na, title='Oversold')
+//------------------------------------------------------------------------------
+// Volume Extension indicator code
+//------------------------------------------------------------------------------
+// ---------- FUNCTIONS ---------- //
+ 
+vol_Z_score(_src, _length, MA_sel)=>
+    _mean = MA_sel == 'SMA' ? ta.sma(_src, _length) : MA_sel == 'EMA' ? ta.ema(_src, _length) :  MA_sel == 'WMA' ? ta.wma(_src, _length) : na
+    _value = (_src - _mean) / (ta.stdev(_src-_mean, _length))
+// ---------- CALCS ---------- //
+vol_src = volume
+vol_vol = vol_Z_score(vol_src, vol_len, vol_MA_sel) 
+vol_extension_1 = vol_vol > vol_deviation_1 and vol_vol < vol_deviation_2 
+vol_extension_2 = vol_vol > vol_deviation_2 
+vol_bull = close > open
+vol_bear = close < open
+vol_rising = volume > volume[1]
+vol_rising_col = close > open and vol_rising ? vol_col_risingUP : close < open and vol_rising ? vol_col_risingDOWN : vol_col_blank
+vol_devUp2 = vol_extension_2 and vol_bull
+vol_devUp1 = vol_extension_1 and vol_bull
+vol_devDown1 = vol_extension_1 and vol_bear
+vol_devDown2 = vol_extension_2 and vol_bear
+// ---------- PLOTS ---------- //
+barcolor(i_show_volume_extension ? ( vol_devUp1 ? vol_colup_ext1 : vol_devDown1 ? vol_coldown_ext1 : na ) : na, title = "Extension 1")
+barcolor(i_show_volume_extension ? ( vol_devUp2 ? vol_colup_ext2 : vol_devDown2 ? vol_coldown_ext2 : na ) : na, title = "Extension 2")
+barcolor(i_show_volume_extension ? ( not vol_extension_1 and not vol_extension_2 and not vol_rising_sel ? vol_col_blank : not vol_extension_1 and not vol_extension_2 and vol_rising_sel ? vol_rising_col : na ) : na, title = "Rising/Falling")
+// open trades if Volume Extension and RSI Decision Point match
+if ( vol_devUp1 or vol_devUp2 ) and rsi_rsi > 66.67 and ( strategy.opentrades == 0 or strategy.opentrades.entry_id( strategy.opentrades - 1 ) != "Buy" )
+    // close any previously opened trade to the sell side
+    strategy.close( "Sell", comment = "close sell" )
+    // calculate SL
+    stopPrice = close - ( ( SLPerc / 100 ) * close )
+    // open trade
+    strategy.entry( "Buy", strategy.long, comment = "Long (SL = " + str.tostring( stopPrice ) + ")" )
+    strategy.exit( "Buy", stop = stopPrice, comment = "closed by SL " + str.tostring(SLPerc) + "%" )
+    last_trade_ts := time
+if ( vol_devDown1 or vol_devDown2 ) and rsi_rsi < 33.33 and ( strategy.opentrades == 0 or strategy.opentrades.entry_id( strategy.opentrades - 1 ) != "Sell" )
+    // close any previously opened trade to the buy side
+    strategy.close( "Buy", comment = "close buy" )
+    // calculate SL
+    stopPrice = close + ( ( SLPerc / 100 ) * close )
+    // open trade
+    strategy.entry( "Sell", strategy.short, comment = "Short (SL = " + str.tostring( stopPrice ) + ")" )
+    strategy.exit( "Sell", stop = stopPrice, comment = "closed by SL " + str.tostring(SLPerc) + "%" )
+    last_trade_ts := time
+// MESA pivot high was found - close any pending trades to the buy side
+if ph_mesa and out_zone ? ph_mesa : na and strategy.opentrades > 0 and strategy.opentrades.entry_id( strategy.opentrades - 1 ) == "Buy"
+    strategy.close( "Buy", comment = "Buy TP reached" )
+// MESA pivot low was found - close any pending trades to the buy side
+if pl_mesa and out_zone ? pl_mesa : na and strategy.opentrades > 0 and strategy.opentrades.entry_id( strategy.opentrades - 1 ) == "Sell"
+    strategy.close( "Sell", comment = "Sell TP reached" )
+// Exit open market position when date range ends
+if (not inDateRange)
+    strategy.close_all()
+Expand (243 lines)

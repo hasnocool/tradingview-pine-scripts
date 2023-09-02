@@ -1,0 +1,269 @@
+Script Name: [XRP][1h] Chanu Delta inspired — Breakeven Strategy
+Author: pggo88
+Description: Hello, this is my first TV contribution. I usually don't publish anything but the script is a quick review of an other contributor (Chanu Delta V3 script  ) 
+I reverse engineered this indicator today as I wanted to test it on other contracts. The original version (which aims to be traded on BTC)  has been ported to XRP (as btc and xrp prices are narrowly...
+PineScript code:
+
+Pine Script™ strategy
+[XRP][1h] Chanu Delta inspired — Breakeven Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+//@version=5
+// Chanu Delta review by @pggo88
+// TRADING INPUTS ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+var int PyramidingAmount = 1
+var int Leverage = 5 
+var int EquityPerc = 10
+var int PositionQuantityInEquity    = Leverage * EquityPerc
+var float Ticks                     = input.float(title="Trailing Offset ticks", minval=1, step=1, defval=2, group="Trading")
+var bool BreakEven                  = input(title="Breakeven SL if reach TP1", defval=true, group="Trading")
+var float LongTP1Perc               = input.float(title="Long Take Profit 1 (%)", minval=0.0, step=0.1, defval=4.8, group="Trading") 
+var float LongTP2Perc               = input.float(title="Long Take Profit 2 (%)", minval=0.0, step=0.1, defval=6.1, group="Trading") 
+var float LongSLPerc                = input.float(title="Long Stop Loss (%)", minval=0.0, step=0.1, defval=11.2, group="Trading")
+var float LongTP1EquityPerc         = input.float(title="Long Sell Postion Size % @ TP1", defval=25, step=1, group="Trading", tooltip="Example: 50 closing 50% of the position once TP1 is reached")/100
+var float ShortTP1Perc              = input.float(title="Short Take Profit 1 (%)", minval=0.0, step=0.1, defval=3.2, group="Trading") 
+var float ShortTP2Perc              = input.float(title="Short Take Profit 2 (%)", minval=0.0, step=0.1, defval=6.2, group="Trading") 
+var float ShortSLPerc               = input.float(title="Short Stop Loss (%)", minval=0.0, step=0.1, defval=7.8, group="Trading")
+var float ShortTP1EquityPerc        = input.float(title="Short Sell Postion Size % @ TP1", defval=30, step=1, group="Trading", tooltip="Example: 50 closing 50% of the position once TP1 is reached")/100
+var float Pips                      = Ticks * syminfo.mintick
+// Plotting capitalized scripts vars so they become available in script scope to be passed to third party
+plot(EquityPerc,                    title="EquityPerc", display=display.none)
+plot(Leverage,                      title="Leverage", display=display.none)
+plot(Pips,                          title="Pips", display=display.none)
+plot(LongSLPerc,                    title="LongSLPerc", display=display.none)
+plot(LongTP1Perc,                   title="LongTP1Perc", display=display.none)
+plot(LongTP2Perc,                   title="LongTP2Perc", display=display.none)
+plot(ShortSLPerc,                   title="ShortSLPerc", display=display.none)
+plot(ShortTP1Perc,                  title="ShortTP1Perc", display=display.none)
+plot(ShortTP2Perc,                  title="ShortTP2Perc", display=display.none)
+plot(LongTP1EquityPerc,             title="LongTP1EquityPerc", display=display.none)
+plot(ShortTP1EquityPerc,            title="ShortTP1EquityPerc", display=display.none)
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+strategy(title='XRP DELTA 1h',
+         use_bar_magnifier = true,
+         process_orders_on_close=true,
+         precision=8,
+         currency=currency.USD,
+         backtest_fill_limits_assumption=5,
+         slippage=1,
+         overlay=true,
+         pyramiding=PyramidingAmount,
+         max_bars_back=5000,
+         commission_type=strategy.commission.percent,
+         commission_value=0.02,
+         default_qty_type=strategy.percent_of_equity,
+         default_qty_value=PositionQuantityInEquity,
+         margin_long = 1./Leverage*50,
+         margin_short = 1./Leverage*50,
+         initial_capital=1000)
+// indicator("XRP 1H" overlay=false)
+// INDICATOR INPUTS /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+normalized_delta_bull               = input.float(title='Minimal delta Bull', defval=21.2, minval=0.1, step=0.1, group="Indicator")
+normalized_delta_bear               = input.float(title='Minimal delta Bear', defval=-14.2, maxval=-0.1, step=0.1, group="Indicator")
+src                                 = input(title='Source', defval=close, group="Indicator")
+tf                                  = input.timeframe(title='resolution', defval='', group="Indicator")
+usd_symbol                          = input.symbol(title="Instrument USD Symbol", defval="INDEX:BTCUSD", group="Indicator")
+usdt_symbol                         = input.symbol(title="Instrument USDT Symbol", defval="BYBIT:BTCUSDT", group="Indicator")
+// handle backtest without biases and expected real time bar display
+_NRPrt(sym, tf, src) =>
+    request.security(sym, tf, src[barstate.isrealtime ? 1 : 0], barmerge.gaps_off)[barstate.isrealtime ? 0 : 1]
+// DATA /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+usd = _NRPrt(usd_symbol, tf, src)
+usdt = _NRPrt(usdt_symbol, tf, src)
+delta = usd - usdt
+normalized_delta = (delta / usd) * 100000
+// CALCULATIONS /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+buyBias = ta.crossover(normalized_delta, normalized_delta_bull)
+sellBias = ta.crossunder(normalized_delta, normalized_delta_bear)
+buy = buyBias[1] and not sellBias
+sell = sellBias[1] and not buyBias
+plotshape(buyBias, "buyBias")
+plotshape(sellBias, "sellBias")
+plotshape(buy, "buy")
+plotshape(sell, "sell")
+// BACKTEST /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+_asPts(pcnt) =>
+    strategy.position_size != 0 ? math.round(pcnt / 100.0 * strategy.position_avg_price / syminfo.mintick) : float(na)
+current_position_size = math.abs(strategy.position_size)
+initial_position_size = math.abs(ta.valuewhen(strategy.position_size[1] == 0.0, strategy.position_size, 0))   
+    
+LongTP1     = strategy.position_avg_price + _asPts(LongTP1Perc) * syminfo.mintick * strategy.position_size / math.abs(strategy.position_size)
+LongTP2     = strategy.position_avg_price + _asPts(LongTP2Perc) * syminfo.mintick * strategy.position_size / math.abs(strategy.position_size)
+LongSL      = strategy.position_avg_price - _asPts(LongSLPerc) * syminfo.mintick * strategy.position_size / math.abs(strategy.position_size)
+ShortTP1    = strategy.position_avg_price + _asPts(ShortTP1Perc) * syminfo.mintick * strategy.position_size / math.abs(strategy.position_size)
+ShortTP2    = strategy.position_avg_price + _asPts(ShortTP2Perc) * syminfo.mintick * strategy.position_size / math.abs(strategy.position_size)
+ShortSL     = strategy.position_avg_price - _asPts(ShortSLPerc) * syminfo.mintick * strategy.position_size / math.abs(strategy.position_size)
+long = strategy.position_size > 0
+short = strategy.position_size < 0
+var longTakeProfitExecuted = false
+var longStopLossExecuted = false
+var shortTakeProfitExecuted = false
+var shortStopLossExecuted = false
+longTakeProfitExecuted := long and (longTakeProfitExecuted[1] or 
+                         strategy.position_size < strategy.position_size[1] or 
+                         (strategy.position_size[1] == 0 and high >= LongTP1)) 
+shortTakeProfitExecuted := short and (shortTakeProfitExecuted[1] or 
+                         strategy.position_size > strategy.position_size[1] or 
+                         (strategy.position_size[1] == 0 and low <= ShortTP1)) 
+breakeven = BreakEven ? strategy.position_avg_price : na
+if  buy 
+    strategy.entry('Long', strategy.long)
+if sell 
+    strategy.entry('Short', strategy.short)
+if long
+    if BreakEven
+        strategy.exit("TP1", from_entry="Long", qty = initial_position_size * LongTP1EquityPerc, stop=LongSL, limit = LongTP1, comment="SL/TP1")
+        strategy.exit("TP2", from_entry="Long", limit = LongTP2, stop=(longTakeProfitExecuted ? breakeven : LongSL), comment="SL-BE/TP2") 
+    else
+        strategy.exit("TP1", from_entry="Long", qty = initial_position_size * LongTP1EquityPerc, stop=LongSL, limit = LongTP1, comment="SL/TP1")
+        strategy.exit("TP2", from_entry="Long", limit = LongTP2, stop=LongSL, comment="SL/TP2")
+if short 
+    if BreakEven
+        strategy.exit("TP1", from_entry="Short", qty = initial_position_size * ShortTP1EquityPerc, stop=ShortSL, limit = ShortTP1, comment="SL/TP1")
+        strategy.exit("TP2", from_entry="Short", limit = ShortTP2, stop=(shortTakeProfitExecuted ? breakeven : ShortSL), comment="SL-BE/TP2")
+    else
+        strategy.exit("TP1", from_entry="Short", qty = initial_position_size * ShortTP1EquityPerc, stop=ShortSL, limit = ShortTP1, comment="SL/TP1")
+        strategy.exit("TP2", from_entry="Short", limit = ShortTP2, stop=ShortSL, comment="SL/TP2")
+// ALERTS /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// alertcondition(buy, title="LONG", message='LONG Pips offset: {{plot("Pips")}} - leverage: {{plot("Leverage")}} - equity: {{plot("EquityPerc")}} - sl: {{plot("LongSLPerc")}} - tp1: {{plot("LongTP1Perc")}} - tp2: {{plot("LongTP2Perc")}} - tp1equity: {{plot("LongTP1EquityPerc")}}')
+// alertcondition(sell, title="SHORT", message='SHORT Pips offset: {{plot("Pips")}} - leverage: {{plot("Leverage")}} - equity: {{plot("EquityPerc")}} - sl: {{plot("ShortSLPerc")}} - tp1: {{plot("ShortTP1Perc")}} - tp2: {{plot("ShortTP2Perc")}} - tp1equity: {{plot("ShortTP1EquityPerc")}}')
+Expand (140 lines)

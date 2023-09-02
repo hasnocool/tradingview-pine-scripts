@@ -1,0 +1,120 @@
+Script Name: Marubozu Forex Price action
+Author: SoftKill21
+Description: Hi, today I bring you a price action strategy/indicator for Forex, made out for Marubozu candle type.
+
+For the entries of it check if we have a long or a short marubozu.
+
+For exit we have for long  when the actual candle is green and the last previous two were red.
+For exit we have for short, when the actual candle is red and the last previous two were green.
+
+
+If...
+PineScript code:
+
+Pine Script™ strategy
+Marubozu Forex Price action
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+//@version=4
+strategy(title="Marubozu", shorttitle="Marubozu", overlay=true, initial_capital = 1000, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent , commission_value=0 )
+C_Len = 14 // ema depth for bodyAvg
+C_ShadowPercent = 5.0 // size of shadows
+C_ShadowEqualsPercent = 100.0
+C_DojiBodyPercent = 5.0
+C_Factor = 2.0 // shows the number of times the shadow dominates the candlestick body
+C_BodyHi = max(close, open)
+C_BodyLo = min(close, open)
+C_Body = C_BodyHi - C_BodyLo
+C_BodyAvg = ema(C_Body, C_Len)
+C_SmallBody = C_Body < C_BodyAvg
+C_LongBody = C_Body > C_BodyAvg
+C_UpShadow = high - C_BodyHi
+C_DnShadow = C_BodyLo - low
+C_HasUpShadow = C_UpShadow > C_ShadowPercent / 100 * C_Body
+C_HasDnShadow = C_DnShadow > C_ShadowPercent / 100 * C_Body
+C_WhiteBody = open < close
+C_BlackBody = open > close
+C_Range = high-low
+C_IsInsideBar = C_BodyHi[1] > C_BodyHi and C_BodyLo[1] < C_BodyLo
+C_BodyMiddle = C_Body / 2 + C_BodyLo
+C_ShadowEquals = C_UpShadow == C_DnShadow or (abs(C_UpShadow - C_DnShadow) / C_DnShadow * 100) < C_ShadowEqualsPercent and (abs(C_DnShadow - C_UpShadow) / C_UpShadow * 100) < C_ShadowEqualsPercent
+C_IsDojiBody = C_Range > 0 and C_Body <= C_Range * C_DojiBodyPercent / 100
+C_Doji = C_IsDojiBody and C_ShadowEquals
+patternLabelPosLow = low - (atr(30) * 0.6)
+patternLabelPosHigh = high + (atr(30) * 0.6)
+C_MarubozuWhiteBullishNumberOfCandles = 1
+C_MarubozuShadowPercentWhite = 5.0
+C_MarubozuWhiteBullish = C_WhiteBody and C_LongBody and C_UpShadow <= C_MarubozuShadowPercentWhite/100*C_Body and C_DnShadow <= C_MarubozuShadowPercentWhite/100*C_Body and C_WhiteBody
+alertcondition(C_MarubozuWhiteBullish, title = "Marubozu White", message = "New Marubozu White - Bullish pattern detected.")
+if C_MarubozuWhiteBullish
+    var ttBullishMarubozuWhite = "Marubozu White\nA Marubozu White Candle is a candlestick that does not have a shadow that extends from its candle body at either the open or the close. Marubozu is Japanese for “close-cropped” or “close-cut.” Other sources may call it a Bald or Shaven Head Candle."
+    label.new(bar_index, patternLabelPosLow, text="MW", style=label.style_label_up, color = color.blue, textcolor=color.white, tooltip = ttBullishMarubozuWhite)
+bgcolor(highest(C_MarubozuWhiteBullish?1:0, C_MarubozuWhiteBullishNumberOfCandles)!=0 ? color.blue : na, offset=-(C_MarubozuWhiteBullishNumberOfCandles-1))
+C_MarubozuBlackBearishNumberOfCandles = 1
+C_MarubozuShadowPercentBearish = 5.0
+C_MarubozuBlackBearish = C_BlackBody and C_LongBody and C_UpShadow <= C_MarubozuShadowPercentBearish/100*C_Body and C_DnShadow <= C_MarubozuShadowPercentBearish/100*C_Body and C_BlackBody
+alertcondition(C_MarubozuBlackBearish, title = "Marubozu Black", message = "New Marubozu Black - Bearish pattern detected.")
+if C_MarubozuBlackBearish
+    var ttBearishMarubozuBlack = "Marubozu Black\nThis is a candlestick that has no shadow, which extends from the red-bodied candle at the open, the close, or even at both. In Japanese, the name means “close-cropped” or “close-cut.” The candlestick can also be referred to as Bald or Shaven Head."
+    label.new(bar_index, patternLabelPosHigh, text="MB", style=label.style_label_down, color = color.red, textcolor=color.white, tooltip = ttBearishMarubozuBlack)
+bgcolor(highest(C_MarubozuBlackBearish?1:0, C_MarubozuBlackBearishNumberOfCandles)!=0 ? color.red : na, offset=-(C_MarubozuBlackBearishNumberOfCandles-1))
+strategy.entry("short",1,when= C_MarubozuBlackBearish)
+strategy.entry("long",0,when=C_MarubozuWhiteBullish)
+strategy.close("long",when= close[1] < open[1]and close[2] < open[2] and close > open)
+strategy.close("short",when= close[1] > open[1]and close[2] > open[2] and close < open)
+Expand (56 lines)

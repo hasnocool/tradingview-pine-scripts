@@ -1,0 +1,102 @@
+Script Name: PlanB Quant Investing 101 v2
+Author: fillippone
+Description: This script has been Inspired by PlanB Article Quant Investing 101.
+
+With this script, I implemented Plan B strategy outlined in that article, trying to reproduce his findings independently and allowing TradeView Users to do the same.
+
+PlabB is aware of this effort, and he's positive about it, via Twitter commenting, liking and sharing of this resource .
+
+Trading...
+PineScript code:
+
+Pine Script™ strategy
+PlanB Quant Investing 101 v2
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © fillippone
+//@version=4
+strategy("PlanB Quant Investing 101", shorttitle="PlanB RSI Strategy", overlay=true,calc_on_every_tick=false,pyramiding=0, default_qty_type=strategy.cash,default_qty_value=1000, currency=currency.USD, initial_capital=1000,commission_type=strategy.commission.percent, commission_value=0.0)
+r=rsi(close,14)
+//SELL CONDITION
+//RSI was above 90% last six months AND drops below 65%
+//RSI above 90% last six month
+selllevel = input(90)
+maxrsi = highest(rsi(close,14),6)[1]
+rsisell = maxrsi > selllevel 
+//RSIdrops below 65%
+drop = input(65)
+rsidrop= r < drop
+//sellsignal
+sellsignal = rsisell and rsidrop 
+//BUY CONDITION
+//IF (RSI was below 50% last six months AND jumps +2% from the low) THEN buy, ELSE hold.
+//RSI was below 50% last six months
+buylevel = input(50)
+minrsi = lowest(rsi(close,14),6)[1]
+rsibuy = minrsi < buylevel 
+//IF (RSI jumps +2% from the low) THEN buy, ELSE hold.
+rsibounce= r > (minrsi + 2)
+//buysignal=buyrsi AND rsidrop
+//buysignal
+buysignal = rsibuy and rsibounce 
+//Strategy
+strategy.entry("Buy Signal",strategy.long, when = buysignal)
+strategy.entry("Sell Signal",strategy.short, when = sellsignal)
+Expand (57 lines)

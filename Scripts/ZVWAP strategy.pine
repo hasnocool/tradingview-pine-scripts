@@ -1,0 +1,129 @@
+Script Name: ZVWAP strategy
+Author: mohanee
+Description: This strategy is based on Z distance from VWAP indicator by  LazyBear
+
+I have added few filters to utilize the indicator ...
+
+BUY Rule
+=======
+1. fast ema   is   above slow  ema
+2. zvwap is dipped below oversold area  (default set to  -0.5)
+3. after the dip , while crossing above zero  --- BUY
+
+Note , when the above criteria is met , bar color is changed to...
+PineScript code:
+
+Pine Script™ strategy
+ZVWAP strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mohanee
+//@version=4
+//This is based on Z distance from VWAP by Lazybear
+strategy(title="ZVWAP[LB] strategy", overlay=false,pyramiding=2, default_qty_type=strategy.fixed, default_qty_value=3,    initial_capital=10000, currency=currency.USD)
+length=input(13,"length")
+calc_zvwap(pds, source1) =>
+    mean = sum(volume*source1,pds)/sum(volume,pds)
+    vwapsd = sqrt(sma(pow(source1-mean, 2), pds) )
+    (close-mean)/vwapsd
+upperTop=2.5  //input(2.5)
+upperBottom=2.0  //input(2.0)
+lowerTop=-0.5  //input(-0.5)
+lowerBottom=-2.0 //input(-2.0)
+buyLine=input(-0.5, title="OverSold Line",minval=-2, maxval=3)
+sellLine=input(2.0, title="OverBought Line",minval=-2, maxval=3)
+fastEma=input(13, title="Fast EMA",minval=1, maxval=50)
+slowEma=input(55, title="Slow EMA",minval=10, maxval=200)
+stopLoss =input(5, title="Stop Loss",minval=1) 
+hline(0, title="Middle Line", linestyle=hline.style_dotted, color=color.green)
+ul1=plot(upperTop, "OB High")
+ul2=plot(upperBottom, "OB Low")
+fill(ul1,ul2, color=color.red)
+ll1=plot(lowerTop, "OS High")
+ll2=plot(lowerBottom, "OS Low")
+fill(ll1,ll2, color=color.green)
+zvwapVal=calc_zvwap(length,close)
+plot(zvwapVal,title="ZVWAP",color=color.purple, linewidth=2)
+longEmaVal=ema(close,slowEma)
+shortEmaVal=ema(close,fastEma)  
+vwapVal=vwap(hlc3)
+zvwapDipped=false
+for i = 1 to 10
+    zvwapDipped := zvwapDipped or zvwapVal[i]<=buyLine
+longCondition=  shortEmaVal > longEmaVal  and zvwapDipped and  crossover(zvwapVal,0)
+barcolor(longCondition ? color.yellow: na)
+strategy.entry(id="ZVWAPLE", long=true,  when= longCondition  and strategy.position_size<1) 
+//Add
+strategy.entry(id="ZVWAPLE", comment="Add", long=true,  when= strategy.position_size>1 and close<strategy.position_avg_price and crossover(zvwapVal,0)) 
+//calculate stop Loss
+stopLossVal =  strategy.position_avg_price -  (strategy.position_avg_price*stopLoss*0.01)
+strategy.close(id="ZVWAPLE",comment="SL Exit",    when=close<stopLossVal)   //close all on stop loss
+strategy.close(id="ZVWAPLE",comment="TPExitAll",    qty=strategy.position_size ,   when= crossunder(zvwapVal,sellLine))   //close all      zvwapVal>sellLine
+Expand (67 lines)

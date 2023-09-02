@@ -1,0 +1,177 @@
+Script Name: Linear Cross Trading Strategy
+Author: stocktechbot
+Description: Linear Cross Trading Strategy
+
+The Linear Cross trading strategy is a technical analysis strategy that uses linear regression to predict the future price of a stock. The strategy is based on the following principles:
+
+    The price of a stock tends to follow a linear trend over time.
+    The slope of the linear trend can be used to predict the future price of the...
+PineScript code:
+
+Pine Script™ strategy
+Linear Cross Trading Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © stocktechbot
+//@version=5
+strategy("Linear Cross", overlay=true, margin_long=100, margin_short=0)
+//Linear Regression
+vol = volume
+// Function to calculate linear regression
+linregs(y, x, len) =>
+    ybar = math.sum(y, len)/len
+    xbar = math.sum(x, len)/len
+    b = math.sum((x - xbar)*(y - ybar),len)/math.sum((x - xbar)*(x - xbar),len)
+    a = ybar - b*xbar
+    [a, b]
+// Historical stock price data
+price = close
+// Length of linear regression
+len = input(defval = 21, title = 'Strategy Length')
+linearlen=input(defval = 9, title = 'Linear Lookback')
+[a, b] = linregs(price, vol, len)
+// Calculate linear regression for stock price based on volume
+//eps = request.earnings(syminfo.ticker, earnings.actual)
+//MA For double confirmation
+out = ta.sma(close, 200)
+outf = ta.sma(close, 50)
+outn = ta.sma(close, 90)
+outt = ta.sma(close, 21)
+outthree = ta.sma(close, 9)
+// Predicted stock price based on volume
+predicted_price = a + b*vol
+// Check if predicted price is between open and close
+is_between = open < predicted_price and predicted_price < close
+//MACD
+//[macdLine, signalLine, histLine] = ta.macd(close, 12, 26, 9)
+// Plot predicted stock price
+plot(predicted_price, color=color.rgb(65, 59, 150), linewidth=2, title="Predicted Price")
+plot(ta.sma(predicted_price,linearlen), color=color.rgb(199, 43, 64), linewidth=2, title="MA Predicted Price")
+//offset = input.int(title="Offset", defval=0, minval=-500, maxval=500)
+plot(out, color=color.blue, title="MA200")
+[macdLine, signalLine, histLine] = ta.macd(predicted_price, 12, 26, 9)
+//BUY Signal
+longCondition=false
+mafentry =ta.sma(close, 50) > ta.sma(close, 90)
+//matentry = ta.sma(close, 21) > ta.sma(close, 50)
+matwohun = close > ta.sma(close, 200)
+twohunraise = ta.rising(out, 2)
+twentyrise = ta.rising(outt, 2)
+macdrise = ta.rising(macdLine,2)
+macdlong = ta.crossover(predicted_price, ta.wma(predicted_price,linearlen))  and (signalLine < macdLine)
+if macdlong and macdrise
+    longCondition := true
+if (longCondition)
+    strategy.entry("My Long Entry Id", strategy.long)
+//Sell Signal
+lastEntryPrice = strategy.opentrades.entry_price(strategy.opentrades - 1)
+daysSinceEntry = len
+daysSinceEntry := int((time - strategy.opentrades.entry_time(strategy.opentrades - 1)) / (24 * 60 * 60 * 1000))
+percentageChange = (close - lastEntryPrice) / lastEntryPrice * 100
+//trailChange = (ta.highest(close,daysSinceEntry) - close) / close * 100
+//label.new(bar_index, high, color=color.black, textcolor=color.white,text=str.tostring(int(trailChange)))
+shortCondition=false
+mafexit =ta.sma(close, 50) < ta.sma(close, 90)
+matexit = ta.sma(close, 21) < ta.sma(close, 50)
+matwohund = close < ta.sma(close, 200)
+twohunfall = ta.falling(out, 3)
+twentyfall = ta.falling(outt, 2)
+shortmafall = ta.falling(outthree, 1)
+macdfall = ta.falling(macdLine,1)
+macdsell = macdLine < signalLine
+if macdfall and macdsell and (macdLine < signalLine) and ta.falling(low,2)
+    shortCondition := true
+if (shortCondition)
+    strategy.entry("My Short Entry Id", strategy.short)
+Expand (91 lines)

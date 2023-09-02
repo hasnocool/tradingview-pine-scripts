@@ -1,0 +1,162 @@
+Script Name: Pyramiding Entries On Early Trends (by Coinrule)
+Author: Coinrule
+Description: Pyramiding the entries in a trading strategy may be risky but at the same time very profitable with a proper risk management approach. This strategy seeks to spot early signs of uptrends and increase the position's size while the right conditions persist.  
+
+Each trade comes with its stop-loss and take-profit to enforce a proportional risk/reward profile. 
+
+The...
+PineScript code:
+
+Pine Script™ strategy
+Pyramiding Entries On Early Trends (by Coinrule)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+    // © Coinrule
+    
+//@version=3
+strategy(shorttitle='Pyramiding Entry On Early Trends',title='Pyramiding Entry On Early Trends (by Coinrule)', overlay=false, pyramiding= 7, initial_capital = 1000, default_qty_type = strategy.percent_of_equity, default_qty_value = 20, commission_type=strategy.commission.percent, commission_value=0.1)
+    
+    
+//Backtest dates
+fromMonth = input(defval = 1,  title = "From Month")     
+fromDay   = input(defval = 10,    title = "From Day")       
+fromYear  = input(defval = 2020, title = "From Year")       
+thruMonth = input(defval = 1,    title = "Thru Month")     
+thruDay   = input(defval = 1,    title = "Thru Day")     
+thruYear  = input(defval = 2112, title = "Thru Year")       
+    
+showDate  = input(defval = true, title = "Show Date Range")
+    
+start     = timestamp(fromYear, fromMonth, fromDay, 00, 00)        // backtest start window
+finish    = timestamp(thruYear, thruMonth, thruDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+    
+    
+//MA inputs and calculations
+inSignal=input(9, title='MAfast')
+inlong1=input(100, title='MAslow')
+inlong2=input(200, title='MAlong')
+    
+MAfast= sma(close, inSignal)
+MAslow= sma(close, inlong1)
+MAlong= sma(close, inlong2)
+    
+    
+Bullish = crossover(close, MAfast) 
+    
+longsignal = (Bullish and MAfast > MAslow and MAslow < MAlong and window())
+    
+//set take profit
+    
+ProfitTarget_Percent = input(3)
+Profit_Ticks = (close * (ProfitTarget_Percent / 100)) / syminfo.mintick
+    
+//set take profit
+    
+LossTarget_Percent = input(3)
+Loss_Ticks = (close * (LossTarget_Percent / 100)) / syminfo.mintick
+    
+    
+//Order Placing
+    
+strategy.entry("Entry 1", strategy.long, when = (strategy.opentrades == 0) and longsignal)
+    
+strategy.entry("Entry 2", strategy.long, when = (strategy.opentrades == 1) and longsignal)
+        
+strategy.entry("Entry 3", strategy.long, when = (strategy.opentrades == 2) and longsignal)
+    
+strategy.entry("Entry 4", strategy.long, when = (strategy.opentrades == 3) and longsignal)
+    
+strategy.entry("Entry 5", strategy.long, when = (strategy.opentrades == 4) and longsignal)
+        
+strategy.entry("Entry 6", strategy.long, when = (strategy.opentrades == 5) and longsignal)
+        
+strategy.entry("Entry 7", strategy.long, when = (strategy.opentrades == 6) and longsignal)
+    
+    
+    
+if (strategy.position_size > 0)
+    strategy.exit(id="Exit 1", from_entry = "Entry 1", profit = Profit_Ticks, loss = Loss_Ticks)
+    strategy.exit(id="Exit 2", from_entry = "Entry 2", profit = Profit_Ticks, loss = Loss_Ticks)
+    strategy.exit(id="Exit 3", from_entry = "Entry 3", profit = Profit_Ticks, loss = Loss_Ticks)
+    strategy.exit(id="Exit 4", from_entry = "Entry 4", profit = Profit_Ticks, loss = Loss_Ticks)
+    strategy.exit(id="Exit 5", from_entry = "Entry 5", profit = Profit_Ticks, loss = Loss_Ticks)
+    strategy.exit(id="Exit 6", from_entry = "Entry 6", profit = Profit_Ticks, loss = Loss_Ticks)
+    strategy.exit(id="Exit 7", from_entry = "Entry 7", profit = Profit_Ticks, loss = Loss_Ticks)
+     
+Expand (75 lines)

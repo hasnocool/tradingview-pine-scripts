@@ -1,0 +1,83 @@
+Script Name: Simple Ema_ATR Strategy HulkTrading
+Author: TheHulkTrading
+Description: Simple EMA strategy, based on ema55+ema21 and ATR(Average True Range) and it enters a deal from ema55 when the other entry conditions are met
+
+Basically long and short conditions
+
+If long: 
+1) close must be less than open (because we are searching for a pullback)
+2) emaFast(21) must be bigger than emaSlow(55) - for a trend detection
+3) Difference between emaFast...
+PineScript code:
+
+Pine Script™ strategy
+Simple Ema_ATR Strategy HulkTrading
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © TheHulkTrading
+// Simple EMA strategy, based on ema55+ema21 and ATR(Average True Range) and it enters a deal from ema55 when the other entry conditions are met
+//@version=4
+strategy("Simple Ema_ATR Strategy HulkTrading", overlay=true)
+atr_multiplier = input(2, minval=1, title="ATR Multiplier") // ATR Multiplier. Recommended values between 1..4
+emaFast=ema(close,21)
+emaSlow=ema(close,55)
+//Basically long and short conditions
+//If long: 
+// 1) close must be less than open (because we are searching for a pullback)
+// 2) emaFast(21) must be bigger than emaSlow(55) - for a trend detection
+// 3) Difference between emaFast and emaSlow must be greater than ATR(14) - for excluding flat
+longCond = close < open and emaFast > emaSlow and abs(emaSlow-emaFast) > atr(14)  
+//For short conditions are opposite
+shortCond = close > open and emaFast < emaSlow and abs(emaSlow-emaFast) > atr(14) 
+//Stop levels and take profits, based on ATR multiplier
+stop_level_long = strategy.position_avg_price - atr_multiplier*atr(14)
+take_level_long = strategy.position_avg_price + atr_multiplier*atr(14)
+stop_level_short = strategy.position_avg_price + atr_multiplier*atr(14)
+take_level_short = strategy.position_avg_price - atr_multiplier*atr(14)
+//Entries and exits 
+strategy.entry("Long", strategy.long, when=longCond, limit = emaSlow)
+strategy.exit("Stop Loss/TP","Long", stop=stop_level_long, limit = take_level_long)
+strategy.entry("Short", strategy.short, when=shortCond, limit = emaSlow)
+strategy.exit("Stop Loss/TP","Short", stop=stop_level_short, limit = take_level_short)
+Expand (41 lines)

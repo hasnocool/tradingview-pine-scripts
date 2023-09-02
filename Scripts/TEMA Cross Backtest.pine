@@ -1,0 +1,104 @@
+Script Name: TEMA Cross Backtest
+Author: Seltzer_
+Description: A simple strategy backtest using two Triple Exponential Moving Averages (TEMA) crossing up and down. The default is a 20 TEMA crossing above 60 TEMA generates a long signal. Short signals are turned off by default, but included in the code at the last 2 lines (remove the '//').
+
+ Parts of script borrowed from other public scripts.
+PineScript code:
+
+Pine Script™ strategy
+TEMA Cross Backtest
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Seltzer_
+//@version=4
+strategy(title="TEMA Cross Backtest", shorttitle="TEMA_X_BT", overlay=true, commission_type=strategy.commission.percent, commission_value=0, initial_capital = 1000,  default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+// Backtest inputs
+FromMonth = input(defval=1, title="From Month", minval=1, maxval=12)
+FromDay = input(defval=1, title="From Day", minval=1, maxval=31)
+FromYear = input(defval=2020, title="From Year", minval=2010)
+ToMonth = input(defval=1, title="To Month", minval=1, maxval=12)
+ToDay = input(defval=1, title="To Day", minval=1, maxval=31)
+ToYear = input(defval=9999, title="To Year", minval=2017)
+// Define backtest timewindow
+start = timestamp(FromYear, FromMonth, FromDay, 00, 00)  // backtest start window
+finish = timestamp(ToYear, ToMonth, ToDay, 23, 59)  // backtest finish window
+window() =>  // create function "within window of time"
+    time >= start and time <= finish ? true : false
+//TEMA Section
+xLength = input(20, minval=1, title="Fast Length")
+xPrice = close
+xEMA1 = ema(xPrice, xLength)
+xEMA2 = ema(xEMA1, xLength)
+xEMA3 = ema(xEMA2, xLength)
+xnRes = (3 * xEMA1) - (3 * xEMA2) + xEMA3
+xnResP = plot(xnRes, color=color.green, linewidth=2, title="TEMA1")
+yLength = input(60, minval=1, title="Slow Length")
+yPrice = close
+yEMA1 = ema(yPrice, yLength)
+yEMA2 = ema(yEMA1, yLength)
+yEMA3 = ema(yEMA2, yLength)
+ynRes = (3 * yEMA1) - (3 * yEMA2) + yEMA3
+ynResP = plot(ynRes, color=color.red, linewidth=2, title="TEMA2")
+fill(xnResP, ynResP, color=xnRes > ynRes ? color.green : color.red, transp=75, editable=true)
+// Buy and Sell Triggers
+LongEntryAlert = xnRes > ynRes
+LongCloseAlert = xnRes < ynRes
+ShortEntryAlert = xnRes < ynRes
+ShortCloseAlert = xnRes > ynRes
+// Entry & Exit signals
+strategy.entry("Long", strategy.long, when = xnRes > ynRes and window()) 
+strategy.close("Long", when = xnRes < ynRes)
+//strategy.entry("Short", strategy.short, when = xnRes < ynRes and window())
+//strategy.close("Short", when = xnRes > ynRes)
+Expand (51 lines)

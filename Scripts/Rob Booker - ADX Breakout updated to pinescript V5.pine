@@ -1,0 +1,170 @@
+Script Name: Rob Booker - ADX Breakout updated to pinescript V5
+Author: Powerscooter
+Description: Rob Booker - ADX Breakout. The strategy remains unchanged but the code has been updated to pinescript V5. This enables compatibility with all new Tradingview features. Additonally, indicators have been made more easily visible, default cash settings as well as input descriptions have been added.
+
+Rob Booker - ADX Breakout: (Directly taken from the official...
+PineScript code:
+
+Pine Script™ strategy
+Rob Booker - ADX Breakout updated to pinescript V5
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+//Developer: Andrew Palladino. 
+//Creator: Rob Booker.
+//Date: 9/29/2017
+//@version=5
+//Date: 08/10/2022
+//Updated to V5 from V1, default cash settings added and indicators made more easily visible by:
+// @ Powerscooter
+strategy("Rob Booker - ADX Breakout", shorttitle="ADX Breakout V5", overlay=true, default_qty_type = strategy.cash, default_qty_value = 100000, initial_capital = 100000)
+adxSmoothPeriod = input(14, title="ADX Smoothing Period", group = "ADX Settings")
+adxPeriod = input(14, title="ADX Period", group = "ADX Settings")
+adxLowerLevel = input(18, title="ADX Lower Level", group = "ADX Settings")
+boxLookBack = input(20, title="BreakoutBox Lookback Period", group = "BreakoutBox")
+profitTargetMultiple = input(1.0, title="Profit Target Box Width Multiple", group = "Take Profit and Stop Loss")
+stopLossMultiple = input(0.5, title="Stop Loss Box Width Multiple", group = "Take Profit and Stop Loss")
+enableDirection = input(0, title="Both(0), Long(1), Short(-1)", group = "Trade Direction")
+// When the ADX drops below threshold limit, then we consider the pair in consolidation. 
+// Set Box around highs and lows of the last 20 candles. with upper and lower boundaries. 
+// When price breaks outside of box, a trade is taken. (on close or on touch?)
+// Stop is placed, default 50%, of the size of the box. So if box is 200 pips, stop is at 100 pips. 
+// Profit target is 100% of the size of the box. Default. User can set a profit target of 0.5, 1 full size, 2 or 3. 
+dirmov(len) =>
+    up = ta.change(high)
+    down = -ta.change(low)
+    truerange = ta.rma(ta.tr, len)
+    plus = fixnan(100 * ta.rma(up > down and up > 0 ? up : 0, len) / truerange)
+    minus = fixnan(100 * ta.rma(down > up and down > 0 ? down : 0, len) / truerange)
+    [plus, minus]
+adx(dilen, adxlen) => 
+    [plus, minus] = dirmov(dilen)
+    sum = plus + minus
+    adx = 100 * ta.rma(math.abs(plus - minus) / (sum == 0 ? 1 : sum), adxlen)
+adxHigh(dilen, adxlen) => 
+    [plus, minus] = dirmov(dilen)
+    plus
+    
+adxLow(dilen, adxlen) => 
+    [plus, minus] = dirmov(dilen)
+    minus
+    
+sig = adx(adxSmoothPeriod, adxPeriod)
+//sigHigh = adxHigh(dilen, adxlen)
+//sigLow = adxLow(dilen, adxlen)
+isADXLow = sig < adxLowerLevel
+//boxUpperLevel = ta.highest(high, boxLookBack)[1]
+//boxLowerLevel = ta.lowest(low, boxLookBack)[1]
+var float boxUpperLevelCarry = 0
+var float boxLowerLevelCarry = 0
+boxUpperLevel = strategy.position_size == 0 ? ta.highest(high, boxLookBack)[1] : boxUpperLevelCarry
+boxUpperLevelCarry := boxUpperLevel
+boxLowerLevel = strategy.position_size == 0 ? ta.lowest(low, boxLookBack)[1] : boxLowerLevelCarry
+boxLowerLevelCarry := boxLowerLevel
+boxWidth = boxUpperLevel - boxLowerLevel
+profitTarget = strategy.position_size > 0  ? strategy.position_avg_price + profitTargetMultiple*boxWidth : strategy.position_size < 0 ?  strategy.position_avg_price - profitTargetMultiple*boxWidth : na
+stopLoss = strategy.position_size > 0 ? strategy.position_avg_price - stopLossMultiple*boxWidth : strategy.position_size < 0 ? strategy.position_avg_price + stopLossMultiple*boxWidth : na
+plot(strategy.position_size == 0 ? boxUpperLevel : na, color=color.white, style = plot.style_linebr)
+plot(strategy.position_size == 0 ? boxLowerLevel : na, color=color.white, style = plot.style_linebr)
+bgcolor(isADXLow ? color.purple : na, transp=72, title = "ADX limit")
+plot(stopLoss, color=color.red, linewidth=2, style = plot.style_linebr, title="StopLossLine")
+plot(profitTarget, color=color.blue, linewidth=2, style = plot.style_linebr, title="ProfitTargetLine")
+isBuyValid = strategy.position_size == 0 and ta.cross(close, boxUpperLevel) and isADXLow
+//Long Entry Condition
+strategy.exit("close_long", from_entry="open_long", limit = profitTarget, stop = stopLoss)
+if isBuyValid and strategy.opentrades == 0 and (enableDirection == -1 or enableDirection == 0)
+    strategy.entry("open_long", strategy.long)
+isSellValid = strategy.position_size == 0 and ta.cross(close, boxLowerLevel) and isADXLow
+//Short Entry condition
+strategy.exit(id="close_short", from_entry="open_short", limit = profitTarget, stop = stopLoss)
+if isSellValid and strategy.opentrades == 0 and (enableDirection == 1 or enableDirection == 0)
+    strategy.entry("open_short", strategy.short)
+Expand (90 lines)

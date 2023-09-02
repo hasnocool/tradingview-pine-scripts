@@ -1,0 +1,349 @@
+Script Name: FTB Strategy (Automated)
+Author: ZenAndTheArtOfTrading
+Description: Hey traders!
+
+This is a profitable strategy script I created to teach my students how to automate their scripts using 3rd party APIs (more info available in my profile link at the bottom of this page).
+
+ What Is This? 
+
+This strategy is called the "Follow The Bear" strategy.
+
+It's a forex trading strategy designed for one purpose and one purpose only: to take...
+PineScript code:
+
+Pine Script™ strategy
+FTB Strategy (Automated)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ZenAndTheArtOfTrading
+// Last Updated: 10th March 2022
+// @version=5
+strategy("FTB Strategy", shorttitle="FTB", overlay=true, calc_on_order_fills=true, initial_capital=10000)
+// Risk Settings
+var g_risk      = "Risk Settings"
+pips            = input.float(title="Stop Pips", defval=2.0, group=g_risk, tooltip="How many pips above high to put stop loss")
+rr              = input.float(title="Risk:Reward", defval=1.0, group=g_risk, tooltip="This determines the risk:reward profile of the setup")
+// Filters
+var g_filter    = "Filter Settings"
+timezone        = input.session(title="Timezone", defval="0200-0700", group=g_filter, tooltip="Which timezone to search for FTB signals in")
+useRsiFilter    = input.bool(title="RSI OB/OS?", defval=true, group=g_filter, tooltip="If true then the RSI must be considered overbought before a signal is valid")
+useCloseFilter  = input.bool(title="Previous Bar Must Be Bullish?", defval=false, group=g_filter, tooltip="If true then the previous bar must have closed bullish")
+useHighFilter   = input.bool(title="High Filter", defval=false, group=g_filter, tooltip="If true then the signal bar must be the highest bar over X bars")
+highLookback    = input.int(title="High Lookback", defval=10, group=g_filter, tooltip="This is for setting the High Filter lookback distance")
+fib             = input.float(title="Candle Close %", defval=0.5, group=g_filter, tooltip="For identifying shooting star candles (0.5 = must close <= 50% mark of candle size)")
+rsiLen          = input.int(title="RSI Length", defval=3, group=g_filter, tooltip="RSI length")
+rsiOB           = input.float(title="RSI OB", defval=70.0, group=g_filter, tooltip="RSI overbought threshold")
+var g_days      = "Day Filter"
+d_monday        = input.bool(title="Monday", defval=true, group=g_days, tooltip="Take trades on this day?", inline="days")
+d_tuesday       = input.bool(title="Tuesday", defval=true, group=g_days, tooltip="Take trades on this day?", inline="days")
+d_wednesday     = input.bool(title="Wednesday", defval=true, group=g_days, tooltip="Take trades on this day?", inline="days")
+d_thursday      = input.bool(title="Thursday", defval=true, group=g_days, tooltip="Take trades on this day?", inline="days")
+d_friday        = input.bool(title="Friday", defval=true, group=g_days, tooltip="Take trades on this day?", inline="days")
+var g_tester    = "Backtester Settings"
+startBalance    = input.float(title="Starting Balance", defval=10000.0, group=g_tester, tooltip="Your starting balance for the inbuilt tester system")
+riskPerTrade    = input.float(title="Risk Per Trade", defval=1.0, group=g_tester, tooltip="Your desired % risk per trade (as a whole number)")
+drawTester      = input.bool(title="Draw Backtester", defval=true, group=g_tester, tooltip="Turn on/off inbuilt backtester display")
+// PineConnector Settings
+var g_pc        = "PineConnector Settings"
+pc_id           = input.string(title="License ID", defval="ID", group=g_pc, tooltip="This is your PineConnector license ID")
+pc_risk         = input.float(title="Risk Per Trade", defval=1, step=0.5, group=g_pc, tooltip="This is how much to risk per trade (% of balance or lots)")
+pc_prefix       = input.string(title="MetaTrader Prefix", defval="", group=g_pc, tooltip="This is your broker's MetaTrader symbol prefix")
+pc_suffix       = input.string(title="MetaTrader Suffix", defval="", group=g_pc, tooltip="This is your broker's MetaTrader symbol suffix")
+pc_spread       = input.float(title="Spread", defval=0.5, group=g_pc, tooltip="Enter your average spread for this pair (used for offsetting limit order)")
+pc_limit        = input.bool(title="Use Limit Order?", defval=true, group=g_pc, tooltip="If true a limit order will be used, if false a market order will be used")
+// Generate PineConnector alert string
+var symbol = pc_prefix + syminfo.ticker + pc_suffix
+var limit = pc_limit ? "limit" : ""
+pc_entry_alert(direction, sl, tp) =>
+    price = pc_limit ? "price=" + str.tostring(pc_spread) + "," : ""
+    pc_id + "," + direction + limit + "," + symbol + "," + price + "sl=" + str.tostring(sl) + ",tp=" + str.tostring(tp) + ",risk=" + str.tostring(pc_risk)
+// Get RSI filter
+rsiValue = ta.rsi(close, rsiLen)
+rsiFilter = not useRsiFilter or rsiValue >= rsiOB
+// Check high & close filter
+highFilter = not useHighFilter or high == ta.highest(high, highLookback)
+closeFilter = not useCloseFilter or close[1] > open[1]
+// InSession() determines if a price bar falls inside the specified session (and day)
+days = d_monday ? "2" : ""
+days := days + (d_tuesday ? "3" : "")
+days := days + (d_wednesday ? "4" : "")
+days := days + (d_thursday ? "5" : "")
+days := days + (d_friday ? "6" : "")
+inSession(sess) => na(time(timeframe.period, sess + ":" + days)) == false
+// Calculate 50% mark of candle size
+bearFib = (high - low) * fib + low
+// Check filters
+filters = inSession(timezone) and closeFilter and high > high[1] and rsiFilter and highFilter and open != close
+// Detect valid shooting star pinbar pattern
+var takenTradeAlready = false
+star = filters and close < bearFib and open < bearFib and not takenTradeAlready and strategy.position_size == 0
+// Calculate stops & targets
+shortStopPrice = high + (syminfo.mintick * pips * 10)
+shortStopDistance = shortStopPrice - close
+shortTargetPrice = close - (shortStopDistance * rr)
+// Save stops & targets for the current trade
+var t_stop = 0.0
+var t_target = 0.0
+var t_entry = 0.0
+// If we detect a valid shooting star, save our stops & targets, enter short and generate alert
+if star and barstate.isconfirmed
+    t_stop := shortStopPrice
+    t_target := shortTargetPrice
+    t_entry := close
+    takenTradeAlready := true
+    positionSize = math.floor((strategy.equity * (riskPerTrade/100)) / (t_stop - close))
+    strategy.entry(id="Short", direction=strategy.short, qty=positionSize, when=strategy.position_size == 0)
+    alertString = pc_entry_alert("sell", t_stop, t_target)  
+    alert(alertString, alert.freq_once_per_bar_close)
+// If price has exceeded target then cancel limit order if it's still active    
+if pc_limit and low <= t_target and strategy.position_size == 0 and takenTradeAlready
+    alert(pc_id + ",cancelshort," + symbol, alert.freq_once_per_bar_close)
+// If we have exited the FTB session then reset our takenTradeAlready flag for the next session
+if not inSession(timezone) and inSession(timezone)[1]
+    takenTradeAlready := false
+// Draw stops & targets
+plot(star or strategy.position_size != 0 ? t_stop : na, color=color.red, style=plot.style_linebr, title="SL")
+plot(star or strategy.position_size != 0 ? t_target : na, color=color.green, style=plot.style_linebr, title="TP")
+// Draw short signals
+plotshape(star ? 1 : na, style=shape.triangledown, color=color.red)
+// Change background color to highlight detection zone
+bgcolor(color=inSession(timezone) ? color.new(color.red,80) : na, title="Session")
+// Exit trade whenever our stop or target is hit
+strategy.exit(id="Short Exit", from_entry="Short", limit=t_target, stop=t_stop, when=strategy.position_size != 0)
+// =============================================================================
+// START BACKTEST CODE
+// =============================================================================
+// Import Zen library
+import ZenAndTheArtOfTrading/ZenLibrary/5 as zen
+// Declare balance tracking variables (for backtester simulation)
+var balance = startBalance
+var drawdown = 0.0
+var maxDrawdown = 0.0
+var maxBalance = 0.0
+var totalPips = 0.0
+// Increase profit for wins
+wonTrade = strategy.wintrades != strategy.wintrades[1]
+if wonTrade
+    balance += riskPerTrade / 100 * balance * rr
+    totalPips += zen.toWhole(math.abs(t_entry - t_target))
+    if balance > maxBalance
+        maxBalance := balance
+// Decrease profit for losses
+lostTrade = strategy.losstrades != strategy.losstrades[1]
+if lostTrade
+    balance -= riskPerTrade / 100 * balance
+    totalPips -= zen.toWhole(math.abs(t_stop - t_entry))
+    // Update drawdown
+    drawdown := balance / maxBalance - 1
+    if drawdown < maxDrawdown
+        maxDrawdown := drawdown
+// Declare error tracking variables (for identifying how many "questionable" trades were detected)
+var questionableTrades = 0
+flagQuestionableTrade = false
+// If price has hit both TP & SL on the same bar, flag it for further investigation
+if ((wonTrade or lostTrade) and high >= t_stop and low <= t_target)
+    questionableTrades += 1
+    flagQuestionableTrade := true
+// Highlight questionable trades
+bgcolor(flagQuestionableTrade ? color.new(color.purple,50) : na)
+// Prepare stats table
+var table testTable = table.new(position.top_right, 5, 2, border_width=1)
+f_fillCell(_table, _column, _row, _title, _value, _bgcolor, _txtcolor) =>
+    _cellText = _title + "\n" + _value
+    table.cell(_table, _column, _row, _cellText, bgcolor=_bgcolor, text_color=_txtcolor)
+// Draw stats table
+var bgcolor = color.black
+if barstate.islastconfirmedhistory
+    if drawTester
+        dollarReturn = balance - startBalance
+        f_fillCell(testTable, 0, 0, "Total Trades:", str.tostring(strategy.closedtrades) + " [*" + str.tostring(questionableTrades) + "]", bgcolor, color.white)
+        f_fillCell(testTable, 0, 1, "Win Rate:", str.tostring(zen.truncate(strategy.wintrades / strategy.closedtrades * 100)) + "%", bgcolor, color.white)
+        f_fillCell(testTable, 1, 0, "Starting:", "$" + str.tostring(startBalance), bgcolor, color.white)
+        f_fillCell(testTable, 1, 1, "Ending:", "$" + str.tostring(zen.truncate(balance)), bgcolor, color.white)
+        f_fillCell(testTable, 2, 0, "Return:", "$" + str.tostring(zen.truncate(dollarReturn)), bgcolor, dollarReturn > 0 ? color.green : color.red)
+        f_fillCell(testTable, 2, 1, "Pips:", (totalPips > 0 ? "+" : "") + str.tostring(zen.truncate(totalPips)), bgcolor, color.white)
+        f_fillCell(testTable, 3, 0, "Return:", (dollarReturn > 0 ? "+" : "") + str.tostring(zen.truncate(dollarReturn / startBalance * 100)) + "%", dollarReturn > 0 ? color.green : color.red, color.white)
+        f_fillCell(testTable, 3, 1, "Max DD:", str.tostring(zen.truncate(maxDrawdown * 100)) + "%", color.red, color.white)
+// =============================================================================
+// END BACKTEST CODE
+// =============================================================================
+Expand (179 lines)

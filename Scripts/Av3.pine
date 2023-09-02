@@ -1,0 +1,49 @@
+Script Name: Av3
+Author: SeaSide420
+Description: Based on the ANNE EA v3 for MT4. For use on FOREX. 
+if ATR is greater than ATR average taken from last 5 candles, then market considered as trending, and so Open(0)>Close(1)=buy Open(0)Close(1)=sell Open(0)<Close(1)=buy.
+If trending, then buy high & sell low, if consolidation then buy low sell high.
+Exit is by trail and Take Profit.
+ PM me for edit or MT4 version info.
+PineScript code:
+
+Pine Script™ strategy
+Av3
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+//@version=4
+strategy("Av3",overlay=true,default_qty_type=strategy.percent_of_equity,default_qty_value=100)
+TrailingStop=input(defval=500,title="Trailing Stop (pips)",minval=1)
+TakeProfit=input(defval=500,title="Take Profit ($)",minval=1)
+atr=atr(7)[0]
+atrav=((atr(7)[1]+atr(7)[2]+atr(7)[3]+atr(7)[4]+atr(7)[5])/5)
+if(atr>atrav)
+    if (open>close[1])
+        strategy.order("BUY", strategy.long)
+    if (open<close[1])
+        strategy.order("SELL", strategy.short)
+if(atr<atrav)
+    if (open<close[1])
+        strategy.order("BUY", strategy.long)
+    if (open>close[1])
+        strategy.order("SELL", strategy.short)
+strategy.close_all(when=strategy.openprofit>TakeProfit,alert_message="Close- TakeProfit")
+strategy.exit("TrailStop",trail_points=TrailingStop,trail_offset=1,alert_message="Close- TrailStop")    
+Expand (18 lines)

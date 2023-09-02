@@ -1,0 +1,439 @@
+Script Name: Bollinger Bands - Breakout Strategy
+Author: TheSocialCryptoClub
+Description: The Bollinger Bands - Breakout Strategy is a trend-following optimized for short-term trading in the crypto market. This strategy employs the Bollinger Bands, a widely recognized technical indicator, as its primary instrument for pinpointing potential trades. It is capable of executing both long and short positions, depending on whether the market is in a spot or...
+PineScript code:
+
+Pine Script™ strategy
+Bollinger Bands - Breakout Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+//@version=5
+strategy("Bollinger Bands - Breakout Strategy",overlay=true, 
+         initial_capital=10000, 
+         default_qty_type=strategy.percent_of_equity, default_qty_value=10,
+         slippage=1, backtest_fill_limits_assumption=1, use_bar_magnifier=true,
+         commission_type=strategy.commission.percent, commission_value=0.025
+         )
+// Define the length of the Bollinger Bands
+bbLengthInput = input.int (15,title="Length", group="Bollinger Bands", inline="BB")
+bbDevInput = input.float (2.0,title="StdDev", group="Bollinger Bands", inline="BB")
+// Define the settings for the Trend Filter
+trendFilterInput = input.bool(false, title="Above/Below", group = "Trend Filter", inline="Trend")
+trendFilterPeriodInput = input(223,title="", group = "Trend Filter", inline="Trend")
+trendFilterType = input.string (title="", defval="EMA",options=["EMA","SMA","RMA", "WMA"], group = "Trend Filter", inline="Trend")
+volatilityFilterInput = input.bool(true,title="StdDev", group = "Volatility Filter", inline="Vol")
+volatilityFilterStDevLength = input(15,title="",group = "Volatility Filter", inline="Vol")
+volatilityStDevMaLength = input(15,title=">MA",group = "Volatility Filter", inline="Vol")
+// ROC Filter
+// f_security function by LucF for PineCoders available here: https://www.tradingview.com/script/cyPWY96u-How-to-avoid-repainting-when-using-security-PineCoders-FAQ/
+f_security(_sym, _res, _src, _rep) => request.security(_sym, _res, _src[not _rep and barstate.isrealtime ? 1 : 0])[_rep or barstate.isrealtime ? 0 : 1]
+high_daily = f_security(syminfo.tickerid, "D", high, false)
+roc_enable = input.bool(false, "", group="ROC Filter from CloseD", inline="roc")
+roc_threshold = input.float(1, "Treshold", step=0.5, group="ROC Filter from CloseD", inline="roc")
+closed = f_security(syminfo.tickerid,"1D",close, false)
+roc_filter= roc_enable ? (close-closed)/closed*100  > roc_threshold : true
+// Trade Direction Filter
+tradeDirectionInput = input.string("Auto",options=["Auto", "Long&Short","Long Only", "Short Only"], title="Trade", group="Direction Filter", tooltip="Auto: if a PERP is detected (in the symbol description), trade long and short\n Otherwise as per user-input")
+tradeDirection = switch tradeDirectionInput
+    "Auto" => str.contains(str.lower(syminfo.description), "perp") or str.contains(str.lower(syminfo.description), ".p") ? strategy.direction.all : strategy.direction.long
+    "Long&Short" => strategy.direction.all
+    "Long Only" => strategy.direction.long
+    "Short Only" => strategy.direction.short
+    => strategy.direction.all
+strategy.risk.allow_entry_in(tradeDirection)
+// Calculate and plot the Bollinger Bands
+[bbMiddle, bbUpper, bbLower] = ta.bb (close, bbLengthInput, bbDevInput)
+plot(bbMiddle, "Basis", color=color.orange)
+bbUpperPlot = plot(bbUpper, "Upper", color=color.blue)
+bbLowerrPlot = plot(bbLower, "Lower", color=color.blue)
+fill(bbUpperPlot, bbLowerrPlot, title = "Background", color=color.new(color.blue, 95))
+// Calculate and view Trend Filter
+float tradeConditionMa = switch trendFilterType
+    "EMA" => ta.ema(close, trendFilterPeriodInput)
+    "SMA" => ta.sma(close, trendFilterPeriodInput)
+    "RMA" => ta.rma(close, trendFilterPeriodInput)
+    "WMA" => ta.wma(close, trendFilterPeriodInput)
+    // Default used when the three first cases do not match.
+    => ta.wma(close, trendFilterPeriodInput)
+trendConditionLong  = trendFilterInput ? close > tradeConditionMa : true
+trendConditionShort = trendFilterInput ? close < tradeConditionMa : true
+plot(trendFilterInput ? tradeConditionMa : na, color=color.yellow)
+// Calculate and view Volatility Filter
+stdDevClose = ta.stdev(close,volatilityFilterStDevLength)
+volatilityCondition = volatilityFilterInput ? stdDevClose > ta.sma(stdDevClose,volatilityStDevMaLength) : true
+bbLowerCrossUnder =  ta.crossunder(close, bbLower)
+bbUpperCrossOver =  ta.crossover(close, bbUpper)
+bgcolor(volatilityCondition ? na : color.new(color.red, 95))
+// Date Filter
+start = input.time(timestamp("2017-01-01"), "Start", group="Date Filter")
+finish = input.time(timestamp("2050-01-01"), "End", group="Date Filter")
+date_filter = time >= start and time <= finish ? true : false
+// Entry and Exit Conditions
+entryLongCondition = bbUpperCrossOver and trendConditionLong and volatilityCondition and date_filter and roc_filter
+entryShortCondition = bbLowerCrossUnder and trendConditionShort and volatilityCondition and date_filter and roc_filter
+exitLongCondition = bbLowerCrossUnder
+exitShortCondition = bbUpperCrossOver
+// Orders
+if entryLongCondition
+    strategy.entry("EL", strategy.long)
+if entryShortCondition
+    strategy.entry("ES", strategy.short)
+if exitLongCondition
+    strategy.close("EL")
+if exitShortCondition
+    strategy.close("ES")
+// Long SL/TP/TS
+xl_ts_percent      = input.float(2,step=0.5, title= "TS", group="Exit Long", inline="LTS", tooltip="Trailing Treshold %")
+xl_to_percent      = input.float(0.5, step=0.5, title= "TO", group="Exit Long", inline="LTS", tooltip="Trailing Offset %")
+xl_ts_tick = xl_ts_percent * close/syminfo.mintick/100
+xl_to_tick = xl_to_percent * close/syminfo.mintick/100
+xl_sl_percent      = input.float (2, step=0.5, title="SL",group="Exit Long", inline="LSLTP") 
+xl_tp_percent      = input.float(9, step=0.5, title="TP",group="Exit Long", inline="LSLTP")
+xl_sl_price = strategy.position_avg_price * (1-xl_sl_percent/100)
+xl_tp_price = strategy.position_avg_price * (1+xl_tp_percent/100)
+strategy.exit("XL+SL/TP", "EL", stop=xl_sl_price, limit=xl_tp_price, trail_points=xl_ts_tick, trail_offset=xl_to_tick,comment_loss= "XL-SL", comment_profit = "XL-TP",comment_trailing = "XL-TS")
+// Short SL/TP/TS
+xs_ts_percent      = input.float(2,step=0.5, title= "TS",group="Exit Short", inline ="STS", tooltip="Trailing Treshold %")
+xs_to_percent      = input.float(0.5, step=0.5, title= "TO",group="Exit Short", inline ="STS", tooltip="Trailing Offset %")
+xs_ts_tick = xs_ts_percent * close/syminfo.mintick/100
+xs_to_tick = xs_to_percent * close/syminfo.mintick/100
+xs_sl_percent      = input.float (2, step=0.5, title="SL",group="Exit Short", inline="ESSLTP", tooltip="Stop Loss %") 
+xs_tp_percent      = input.float(9, step=0.5, title="TP",group="Exit Short",  inline="ESSLTP", tooltip="Take Profit %")
+xs_sl_price = strategy.position_avg_price * (1+xs_sl_percent/100)
+xs_tp_price = strategy.position_avg_price * (1-xs_tp_percent/100)
+strategy.exit("XS+SL/TP", "ES", stop=xs_sl_price, limit=xs_tp_price, trail_points=xs_ts_tick, trail_offset=xs_to_tick,comment_loss= "XS-SL", comment_profit = "XS-TP",comment_trailing = "XS-TS")
+max_intraday_loss = input.int(10, title="Max Intraday Loss (Percent)", group="Risk Management")
+strategy.risk.max_intraday_loss(max_intraday_loss, strategy.percent_of_equity)
+// Monthly Returns table, modified from QuantNomad. Please put calc_on_every_tick = true to plot it. 
+monthly_table(int results_prec, bool results_dark) =>
+    new_month = month(time) != month(time[1])
+    new_year  = year(time)  != year(time[1])
+    
+    eq = strategy.equity
+    
+    bar_pnl = eq / eq[1] - 1
+    
+    cur_month_pnl = 0.0
+    cur_year_pnl  = 0.0
+    
+    // Current Monthly P&L
+    cur_month_pnl := new_month ? 0.0 : 
+                     (1 + cur_month_pnl[1]) * (1 + bar_pnl) - 1 
+    
+    // Current Yearly P&L
+    cur_year_pnl := new_year ? 0.0 : 
+                     (1 + cur_year_pnl[1]) * (1 + bar_pnl) - 1  
+    
+    // Arrays to store Yearly and Monthly P&Ls
+    var month_pnl  = array.new_float(0)
+    var month_time = array.new_int(0)
+    
+    var year_pnl  = array.new_float(0)
+    var year_time = array.new_int(0)
+    
+    last_computed = false
+    
+    if (not na(cur_month_pnl[1]) and (new_month or barstate.islast))
+        if (last_computed[1])
+            array.pop(month_pnl)
+            array.pop(month_time)
+            
+        array.push(month_pnl , cur_month_pnl[1])
+        array.push(month_time, time[1])
+    
+    if (not na(cur_year_pnl[1]) and (new_year or barstate.islast))
+        if (last_computed[1])
+            array.pop(year_pnl)
+            array.pop(year_time)
+            
+        array.push(year_pnl , cur_year_pnl[1])
+        array.push(year_time, time[1])
+    
+    last_computed := barstate.islast ? true : nz(last_computed[1])
+    
+    // Monthly P&L Table    
+    var monthly_table = table(na)
+    
+    cell_hr_bg_color = results_dark ? #0F0F0F : #F5F5F5
+    cell_hr_text_color = results_dark ? #D3D3D3 : #555555
+    cell_border_color = results_dark ? #000000 : #FFFFFF
+    // ell_hr_bg_color = results_dark ? #0F0F0F : #F5F5F5
+    // cell_hr_text_color = results_dark ? #D3D3D3 : #555555
+    // cell_border_color = results_dark ? #000000 : #FFFFFF
+    if (barstate.islast)
+        monthly_table := table.new(position.bottom_right, columns = 14, rows = array.size(year_pnl) + 1, bgcolor=cell_hr_bg_color,border_width=1,border_color=cell_border_color)
+    
+        table.cell(monthly_table, 0,  0, syminfo.tickerid + " " + timeframe.period,     text_color=cell_hr_text_color, bgcolor=cell_hr_bg_color)
+        table.cell(monthly_table, 1,  0, "Jan",  text_color=cell_hr_text_color, bgcolor=cell_hr_bg_color)
+        table.cell(monthly_table, 2,  0, "Feb",  text_color=cell_hr_text_color, bgcolor=cell_hr_bg_color)
+        table.cell(monthly_table, 3,  0, "Mar",  text_color=cell_hr_text_color, bgcolor=cell_hr_bg_color)
+        table.cell(monthly_table, 4,  0, "Apr",  text_color=cell_hr_text_color, bgcolor=cell_hr_bg_color)
+        table.cell(monthly_table, 5,  0, "May",  text_color=cell_hr_text_color, bgcolor=cell_hr_bg_color)
+        table.cell(monthly_table, 6,  0, "Jun",  text_color=cell_hr_text_color, bgcolor=cell_hr_bg_color)
+        table.cell(monthly_table, 7,  0, "Jul",  text_color=cell_hr_text_color, bgcolor=cell_hr_bg_color)
+        table.cell(monthly_table, 8,  0, "Aug",  text_color=cell_hr_text_color, bgcolor=cell_hr_bg_color)
+        table.cell(monthly_table, 9,  0, "Sep",  text_color=cell_hr_text_color, bgcolor=cell_hr_bg_color)
+        table.cell(monthly_table, 10, 0, "Oct",  text_color=cell_hr_text_color, bgcolor=cell_hr_bg_color)
+        table.cell(monthly_table, 11, 0, "Nov",  text_color=cell_hr_text_color, bgcolor=cell_hr_bg_color)
+        table.cell(monthly_table, 12, 0, "Dec",  text_color=cell_hr_text_color, bgcolor=cell_hr_bg_color)
+        table.cell(monthly_table, 13, 0, "Year", text_color=cell_hr_text_color, bgcolor=cell_hr_bg_color)
+    
+        for yi = 0 to array.size(year_pnl) - 1
+            table.cell(monthly_table, 0,  yi + 1, str.tostring(year(array.get(year_time, yi))), text_color=cell_hr_text_color, bgcolor=cell_hr_bg_color)
+            
+            y_color = array.get(year_pnl, yi) > 0 ? color.lime :  array.get(year_pnl, yi) < 0 ? color.red : color.gray
+            table.cell(monthly_table, 13, yi + 1, str.tostring(math.round(array.get(year_pnl, yi) * 100, results_prec)), bgcolor = y_color)
+            
+        for mi = 0 to array.size(month_time) - 1
+            m_row   = year(array.get(month_time, mi))  - year(array.get(year_time, 0)) + 1
+            m_col   = month(array.get(month_time, mi)) 
+            m_color = array.get(month_pnl, mi) > 0 ? color.lime : array.get(month_pnl, mi) < 0 ? color.red : color.gray
+            
+            table.cell(monthly_table, m_col, m_row, str.tostring(math.round(array.get(month_pnl, mi) * 100, results_prec)), bgcolor = m_color)
+results_prec = input(2, title = "Precision", group="Results Table")
+results_dark = input.bool(defval=true, title="Dark Mode", group="Results Table")
+monthly_table(results_prec, results_dark)
+Expand (244 lines)

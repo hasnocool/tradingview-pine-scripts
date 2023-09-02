@@ -1,0 +1,180 @@
+Script Name: CCI & EMA strategy by Tradeswithashish
+Author: tradeswithashish
+Description: This strategy is extremely useful for positional traders or traders using timeframe 15-minute of higher. It uses following combo of values:
+VWAP, CCI, Volume and Moving average (simple and exponential) 
+
+Caution: 
+ 
+ 
+  Avoid taking trade if candle size is greater than twice the average candle size. for that wait for the retracement to near trailing stoploss
+PineScript code:
+
+Pine Script™ strategy
+CCI & EMA strategy by Tradeswithashish
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//This strategy is excellent in timeperiod above 15min. So use it carefully
+//@version=5
+//This strategy can be used for daily entry for positional trading
+strategy('CCI & EMA strategy by Tradeswithashish', shorttitle='CC-EMA by tradeswithashish', overlay=true, default_qty_type=strategy.percent_of_equity, initial_capital=1000000)
+emalen = input.int(title='Smooth EMA length', defval=100, minval=50, maxval=200, step=10)
+Return = input.float(title='Return (%)', defval=5, minval=5, maxval=100, step=5)
+Risk = input.float(title='Risk (%)', defval=3, minval=1, maxval=10, step=1)
+ema = ta.ema(close, emalen)
+emasmooth = ta.ema(ema, emalen)
+ema2 = ta.ema(close, 50)
+emasmooth2 = ta.ema(ema2, 50)
+volMA = ta.sma(volume, 20)
+volcheck = volume > volMA
+//fidning CCI-100 and CCI-20 values value
+ma1 = ta.sma(hlc3, 100)
+cci100 = (hlc3 - ma1) / (0.015 * ta.dev(hlc3, 100))
+ma2 = ta.sma(hlc3, 20)
+cci20 = (hlc3 - ma2) / (0.015 * ta.dev(hlc3, 20))
+//conditions for short and long entries
+BuyCond = close > emasmooth and close > open and volcheck and cci100 > 0 and cci20 > 100 and close > ta.vwap and barstate.isconfirmed and (close - low) / (high - low) > 0.6 and volume > volume[1]
+SellCond = close < emasmooth and close < open and volcheck and cci100 < 0 and cci20 < -100 and close < ta.vwap and barstate.isconfirmed and (close - low) / (high - low) < 0.4 and volume > volume[1]
+//Buy and Sell Signals
+Buysignal = BuyCond and strategy.position_size == 0 and barstate.isconfirmed
+Sellsignal = SellCond and strategy.position_size == 0 and barstate.isconfirmed
+//settingup stoploss
+sllong = math.max(ema2, emasmooth)
+slshort = math.min(ema2, emasmooth)
+//Setting up Targets
+longtarget = ohlc4 * (1 + Return / 100)
+shorttarget = ohlc4 * (1 - Return / 100)
+//Save SLs and Target prices
+var StopPrice = 0.0
+var TargetPrice = 0.0
+var EntryPrice = 0.0
+//Detect Valid long setup and trigger alerts
+if Buysignal
+    StopPrice := sllong
+    EntryPrice := ohlc4
+    TargetPrice := longtarget
+    TargetPrice
+if Sellsignal
+    StopPrice := slshort
+    TargetPrice := shorttarget
+    EntryPrice := ohlc4
+    EntryPrice
+//Trailing Stoplosses
+if strategy.position_size > 0
+    StopPrice := math.max(StopPrice, ema2, emasmooth)
+    StopPrice
+if strategy.position_size < 0
+    StopPrice := math.min(StopPrice, ema2, emasmooth)
+    StopPrice
+//enter trades whenever there is signal
+strategy.entry(id='BUY', direction=strategy.long, when=Buysignal, alert_message='Buy signal given')
+strategy.entry(id='SELL', direction=strategy.short, when=Sellsignal, alert_message='Sell signal given')
+//Exit entries
+if cci100 < 0 or close < emasmooth or close < ema2
+    strategy.exit(id='Exit', from_entry='BUY', limit=TargetPrice, stop=StopPrice, when=strategy.position_size > 0, alert_message='Long entry closed')
+if cci100 > 0 or close > emasmooth or close > ema2
+    strategy.exit(id='Exit', from_entry='SELL', limit=TargetPrice, stop=StopPrice, when=strategy.position_size < 0, alert_message='Short entry closed')
+//Draw trade data
+stoplong = plot(strategy.position_size > 0 or Buysignal or Sellsignal ? StopPrice : na, title='Trailing stoploss long', color=color.new(color.red, 80), style=plot.style_linebr, linewidth=1)
+stopshort = plot(strategy.position_size < 0 or Sellsignal ? StopPrice : na, title='Trailing stoploss short', color=color.new(color.red, 80), style=plot.style_linebr, linewidth=1)
+candlenearest = plot(strategy.position_size < 0 ? high : strategy.position_size > 0 ? low : na, title='Candle nearest point', color=color.new(color.green, 80), style=plot.style_linebr, linewidth=1)
+fill(stoplong, candlenearest, color=color.new(color.green, 80))
+fill(stopshort, candlenearest, color=color.new(color.red, 80))
+//Draw Price action arrow
+plotshape(Buysignal ? 1 : na, style=shape.triangleup, location=location.belowbar, color=color.new(color.green, 0), title='Bullish setup', size=size.small)
+plotshape(Sellsignal ? 1 : na, style=shape.triangledown, location=location.abovebar, color=color.new(color.red, 0), title='Bearish setup', size=size.small)
+//Plot emasmooth and vwap
+plot(ta.vwap, title='VWAP', color=color.new(color.black, 0), linewidth=2, show_last=75)
+Expand (93 lines)

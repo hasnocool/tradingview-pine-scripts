@@ -1,0 +1,117 @@
+Script Name: AlphaTrend For ProfitView
+Author: treigen
+Description: This strategy is based on the AlphaTrend indicator by  KivancOzbilgic     A full description of this algorithm functionality may be found by clicking the linked image above. 
+Changes and/or additions:
+ 
+ It is now a backtestable strategy
+ Updated alert trigger logic
+ Easy integration with ProfitView to use this algorithm for automated trading
+ 
+
+When you create an...
+PineScript code:
+
+Pine Script™ strategy
+AlphaTrend For ProfitView
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// author © KivancOzbilgic
+// developer © KivancOzbilgic
+// pv additions, simplification and strategy conversion @ treigen
+//@version=5
+strategy('AlphaTrend For ProfitView', overlay=true, calc_on_every_tick=true, process_orders_on_close=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent, commission_value=0.1, initial_capital=1000)
+coeff = input.float(1.5, 'Multiplier', step=0.1)
+AP = input(15, 'Common Period')
+ATR = ta.sma(ta.tr, AP)
+novolumedata = input(title='Change calculation (no volume data)?', defval=false)
+canshort = input.bool(true, title="Allow shorting")
+i_startTime = input.time(defval = timestamp("01 Jan 2014 00:00 +0000"), title = "Backtesting Start Time", inline="timestart", group='Backtesting')
+i_endTime = input.time(defval = timestamp("01 Jan 2100 23:59 +0000"), title = "Backtesting End Time", inline="timeend", group='Backtesting')
+timeCond = (time > i_startTime) and (time < i_endTime)
+pv_ex = input.string('', title='Exchange', tooltip='Leave empty to use the chart ticker instead (Warning: May differ from actual market name in some instances)', group='PV Settings')
+pv_sym = input.string('', title='Symbol', tooltip='Leave empty to use the chart ticker instead (Warning: May differ from actual market name in some instances)', group='PV Settings')
+pv_acc = input.string("", title="Account", group='PV Settings')
+pv_alert_long = input.string("", title="PV Alert Name Longs", group='PV Settings')
+pv_alert_short = input.string("", title="PV Alert Name Shorts", group='PV Settings')
+pv_alert_test = input.bool(false, title="Test Alerts", tooltip="Will immediately execute the alerts, so you may see what it sends. The first line on these test alerts will be excluded from any real alert triggers" ,group='PV Settings')
+upT = low - ATR * coeff
+downT = high + ATR * coeff
+AlphaTrend = 0.0
+AlphaTrend := (novolumedata ? ta.rsi(close, AP) >= 50 : ta.mfi(hlc3, AP) >= 50) ? upT < nz(AlphaTrend[1]) ? nz(AlphaTrend[1]) : upT : downT > nz(AlphaTrend[1]) ? nz(AlphaTrend[1]) : downT
+k1 = plot(AlphaTrend, color=color.new(#0022FC, 0), linewidth=3)
+k2 = plot(AlphaTrend[2], color=color.new(#FC0400, 0), linewidth=3)
+buySignalk = ta.crossover(AlphaTrend, AlphaTrend[2])
+sellSignalk = ta.crossunder(AlphaTrend, AlphaTrend[2])
+var exsym = ""
+if barstate.isfirst
+    exsym := pv_ex == "" ? "" : "ex=" + pv_ex + ","
+    exsym := pv_sym == "" ? exsym : exsym + "sym=" + pv_sym + ","
+if barstate.isconfirmed and timeCond 
+    if strategy.position_size <= 0 and buySignalk
+        strategy.entry("Long", strategy.long)
+        alert(pv_alert_long + "(" + exsym + "acc=" + pv_acc + ")", alert.freq_once_per_bar_close)
+    if strategy.position_size >= 0 and sellSignalk
+        strategy.entry("Short", strategy.short, when=canshort)
+        strategy.close("Long", when=not canshort)
+        alert(pv_alert_short + "(" + exsym + "acc=" + pv_acc + ")", alert.freq_once_per_bar_close)
+//  Only used for testing/debugging alert messages
+if pv_alert_test
+    alert("<![Alert Test]!>\n" + pv_alert_long + "(" + exsym + "acc=" + pv_acc + ")", alert.freq_once_per_bar)
+    alert("<![Alert Test]!>\n" + pv_alert_short + "(" + exsym + "acc=" + pv_acc + ")", alert.freq_once_per_bar)
+Expand (56 lines)

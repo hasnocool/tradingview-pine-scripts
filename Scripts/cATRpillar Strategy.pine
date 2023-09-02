@@ -1,0 +1,114 @@
+Script Name: cATRpillar Strategy
+Author: Obi-wanClintobe
+Description: **This is my first strategy on the Pine editor, any tips or tricks from the community would be awesome!
+
+This strategy was developed from my indicator "cATRpillar". it uses the ATR range values to determine entry, and uses EMA values to determine an exit if the market goes against it.
+PineScript code:
+
+Pine Script™ strategy
+cATRpillar Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © cwagoner78
+//@version=4
+strategy("cATRpillar", overlay=true, default_qty_value=100000, default_qty_type=strategy.percent_of_equity, initial_capital=10000, currency=currency.USD)
+//------------
+//inputs
+lookback = input(title="Periods", type=input.integer, defval=4)
+atrMult = input(title="Range Multiplier", type=input.float, defval=.1)
+takeProfit = input(title="Take Profit", type=input.float, defval=300)
+stopLoss = input(title="Stop Loss", type=input.float, defval=100)
+lots = input(title="Lots to Trade", type=input.float, defval=1)
+//------------
+//indicators
+atr=atr(lookback)*atrMult
+sma=sma(close, lookback)
+ema=ema(close,lookback*2)
+rangeLo=sma-atr
+rangeHi=sma+atr
+//------------
+//draw objects
+p0 =plot(close, title="Close", color=#26A69A, linewidth=0, transp=80,style=plot.style_stepline)
+p1 =plot(rangeHi, title="High", color=color.fuchsia, linewidth=0, transp=80,style=plot.style_stepline)
+p2 =plot(rangeLo, title="Low", color=color.lime, linewidth=0, transp=80,style=plot.style_stepline)
+p3 =plot(ema, title="EMA", color=color.white, linewidth=0, transp=80, style=plot.style_stepline)
+fill(p1, p0, color=color.fuchsia)
+fill(p0, p2, color=color.lime)
+//------------
+//Trading
+atrShort=open[1] > rangeHi and open < rangeLo
+atrLong=open[1] < rangeLo and open > rangeHi
+exitLong=open>rangeLo
+exitShort=open<rangeHi
+//Long
+longCondition=atrLong and open>ema+atr
+strategy.entry(id="cATRpillar-Buy", long=true, when=longCondition)
+longCloseCondition=exitLong
+strategy.exit(id="cATRpillar-Exit", qty=lots, profit=takeProfit, loss=stopLoss)
+//Short
+shortCondition=atrShort and open<ema-atr
+strategy.entry(id="cATRpillar-Sell", long=false, when=shortCondition)
+shortCloseCondition=exitShort
+strategy.exit(id="cATRpillar-Exit",  qty=lots, profit=takeProfit, loss=stopLoss)
+plotshape(shortCondition,  title= "Short", location=location.belowbar, color=color.fuchsia, transp=80, style=shape.triangledown, size=size.tiny)
+plotshape(longCondition,  title= "Long", location=location.abovebar, color=color.lime, transp=80, style=shape.triangleup, size=size.tiny)
+//------------
+Expand (58 lines)

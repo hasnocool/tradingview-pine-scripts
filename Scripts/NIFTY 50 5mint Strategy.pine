@@ -1,0 +1,226 @@
+Script Name: NIFTY 50 5mint Strategy
+Author: uday14viru
+Description: This is an intraday strategy for NIFTY50 Based First candle High and Low breakout.
+
+The strategy takes user inputs for the start and end dates, start and end months, and start and end years, which define the time range to trade. The user can also specify the maximum number of trades to take during the time range and the length of the Exponential Moving Average (...
+PineScript code:
+
+Pine Script™ strategy
+NIFTY 50 5mint Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+//@version=5
+strategy("NIFTY 50 5mint Strategy", overlay = true)
+//Backtest Date 
+start_date = input.time(title="Start Date", defval=timestamp("01 Jan 2022 00:00:00"), group="Backtest Specific Range")
+end_date = input.time(title="End Date", defval=timestamp("01 Dec 2023 23:59:59"))
+//session input
+sess = input.session("0915-1515", title="Session Time/Intraday Time", group = "Indian Session")
+sess1 = input.session("0915-0916",  title="Breakout Candle Time", group = "Indian Session")
+//stoploss and target for Long
+usestopLossCE = input(true, "Use Stoploss Fixed Points for BUY/CE?", group="StopLoss and Target For Long")
+stopLoss = usestopLossCE ? input(20, "Stop Loss", group="StopLoss and Target For Long"): na
+useTargetCE = input(true, "Use Target Fixed Points for BUY/CE?", group="StopLoss and Target For Long")
+target = useTargetCE? input(150, "Target", group="StopLoss and Target For Long"): na
+//stoploss and target for Short
+usestopLossPE = input(true, "Use Stoploss Fixed Points For SELL/PE?", group="StopLoss and Target For Short")
+stopLoss1 = usestopLossPE ? input(20, "Stop Loss", group="StopLoss and Target For Short"): na
+useTargetPE = input(true, "Use Target Fixed Points for SELL/PE?", group="StopLoss and Target For Short")
+target1 = useTargetPE? input(150, "Target", group="StopLoss and Target For Short"): na
+//Option to take either Long and Short
+tradeDirection = input.string(title="Trade Direction ", options=["Long", "Short", "Both"], defval="Both", group = "Trade Direction")
+//number of trades
+max_trades_call = input.int(1, minval=1, title="Max Trades buy/CE", group = "Maximum Numbers of Trades")
+max_trades_put = input.int(1, minval=1, title="Max Trades sell/PE", group = "Maximum Numbers of Trades")
+//session
+t=time(timeframe.period, sess1 + ":1234567")
+tt = time(timeframe.period, sess + ":1234567")
+is_newbar(res) => ta.change(time(res)) != 0
+session = not na(t)
+at_opening  = session and not session[1]
+timerange=not na(tt)
+inDateRange = ((time >= start_date)  and timerange ) and ((time  <= end_date)and timerange)
+limit_session = time("D")
+// Define the trade counter
+var counter_call = 0
+var counter_put = 0
+// Execute trades based on signals
+if (limit_session != limit_session[1])
+    counter_call := 0
+    counter_put  := 0
+//First candle high and Low calculation
+First_high = float(na)
+First_low = float(na)
+if at_opening 
+    First_high := high
+    First_low := low
+else
+    First_high := First_high[1]
+    First_low := First_low[1]
+if high > First_high and session
+    First_high := high
+if low < First_low and session
+    First_low := low
+CEX=First_high
+PEX=First_low
+// stoploss 
+entryPrice = strategy.opentrades.entry_price(strategy.opentrades - 1)
+//stop and target based on entry price
+StopCE=entryPrice - stopLoss
+StopPE= entryPrice + stopLoss1
+targetCE= entryPrice + target
+targetPE=entryPrice - target1
+use5mint_stopLoss = input(true, "Use High Breakout of 1st candle as Sl?", group="StopLoss and Target For Long")
+stopLoss5min = use5mint_stopLoss ? CEX: na
+use5mint_stopLoss1 = input(true, "Use Low Breakout of 1st candle as Sl?", group="StopLoss and Target For Short")
+stopLoss5min1 = use5mint_stopLoss1 ? PEX: na
+//Long trade condition
+buy_signal = close > First_high and close[1]< First_high[1] and is_newbar("1") 
+stopC=(close<stopLoss5min and is_newbar("1"))  or close < StopCE or close > targetCE
+//Short trade condition
+sell_signal = close < First_low and close[1] > First_low[1] and is_newbar("1") 
+stopP=(close > stopLoss5min1 and is_newbar("1")) or close > StopPE or close < targetPE
+longOK  = (tradeDirection == "Long") or (tradeDirection == "Both")
+shortOK = (tradeDirection == "Short") or (tradeDirection == "Both")
+// Track the number of trades taken
+// Submit buy/sell orders based on signals and maximum trades
+if buy_signal and inDateRange and counter_call < max_trades_call and longOK
+    strategy.entry('Buy', strategy.long,  comment= "buy/CE")
+    counter_call := counter_call + 1
+if  (inDateRange  and stopC ) 
+    strategy.close('Buy',comment= "close")
+   
+if sell_signal and inDateRange and counter_put < max_trades_put and shortOK 
+    strategy.entry('Sell', strategy.short, comment= "sell/PE")
+    counter_put := counter_put + 1
+if  ( inDateRange and stopP )
+    strategy.close('Sell',comment= "close")
+    
+//Plot High and Low
+plot(First_high, style=plot.style_line, color=First_high[1] != First_high ? na : color.green, title="First High")
+plot(First_low, style=plot.style_line, color=First_low[1] != First_low ? na : color.red, title="First Low")
+if (not inDateRange )
+    strategy.close_all()  
+Expand (123 lines)

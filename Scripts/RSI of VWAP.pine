@@ -1,0 +1,113 @@
+Script Name: RSI of VWAP
+Author: mohanee
+Description: This strategy  inputs  the vwap as source   to RSI  indicator.
+
+ENTRY
+When RSIofVwap   crossover 70 and price is above ema200
+
+partial exits
+when RSIofVwap reaches 90 level   take a portion of profit 
+
+Exit
+When RSIofVwap  crossdown  30
+
+stoploss
+defaulated to 5%
+
+Risk Level
+Defaulted to 10%.   Based on this  startegy calcuclates hiw many units can be purchased...
+PineScript code:
+
+Pine Script™ strategy
+RSI of VWAP
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mohanee
+//@version=4
+strategy(title="RSI of VWAP", overlay=true, pyramiding=1,     default_qty_type=strategy.percent_of_equity,  default_qty_value=20, initial_capital=10000, currency=currency.USD)  //default_qty_value=10, default_qty_type=strategy.fixed,
+rsiLength=input(14,title="RSI Length", minval=1, maxval=50)
+buyLine=input(70,title="RSI Buy Line", minval=30, maxval=100)
+exitLine=input(90,title="RSI Exit Line", minval=0, maxval=100)
+riskCapital = input(title="Risk % of capital", defval=10, minval=1)
+stopLoss=input(5,title="Stop Loss",minval=1)
+partialExit=input(true,title="Allow Partial exit / take profits")
+myVwap=vwap
+vwapRsi=rsi(vwap,rsiLength)
+ema200=ema(close,200)
+plot(ema200, title="EMA 200", color=color.orange,  transp=25)
+plot(myVwap, title="VWAP", color=color.purple,  transp=25)
+//plot(close)
+//Entry--
+//Echeck how many units can be purchased based on risk manage ment and stop loss
+qty1 = (strategy.equity  * riskCapital / 100 ) /  (close*stopLoss/100)  
+//check if cash is sufficient  to buy qty1  , if capital not available use the available capital only
+qty1:= (qty1 * close >= strategy.equity ) ? (strategy.equity / close) : qty1
+//more than 80%
+strategy.entry(id="LE", comment="Entry", long=true, qty=qty1, when=crossover(vwapRsi,buyLine) and close>ema200 )
+//stoploss
+stopLossVal=  strategy.position_size>=1 ?  (strategy.position_avg_price * (1-(stopLoss*0.01) )) : 0.00
+//draw initil stop loss
+plot(strategy.position_size>=1 ? stopLossVal : na, color = color.purple , style=plot.style_linebr,  linewidth = 2, title = "stop loss")
+bgcolor(strategy.position_size>=1?color.blue:na, transp=80)
+if(partialExit==true)
+    strategy.close(id="LE",comment="TP points="+tostring(close - strategy.position_avg_price, "####.##"),qty=strategy.position_size/3, when=crossover(vwapRsi,99) )  //and close>ema200
+    
+strategy.close_all(comment="Exit All points="+tostring(close - strategy.position_avg_price, "####.##"), when=crossunder(vwapRsi,exitLine) )  //and close>ema200
+//close all on stop loss
+strategy.close_all(comment="Exit points="+tostring(close - strategy.position_avg_price, "####.##"), when=close<stopLossVal )  //and close>ema200
+Expand (55 lines)

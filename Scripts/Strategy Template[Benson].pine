@@ -1,0 +1,88 @@
+Script Name: Strategy Template[Benson]
+Author: bensonsuntw
+Description: A strategy template with following user inputs:
+
+1. backtest start date
+2. tp% and stop loss%
+3. trail stop price and trail stop offset
+
+The long and short condition is ma crossover and corssunder by default. 
+You can change the logic with your own.
+PineScript code:
+
+Pine Script™ strategy
+Strategy Template[Benson]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © bensonsuntw
+strategy("Strategy Template[Benson]", pyramiding=1, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+backtest_year = input(2019, type=input.integer, title='backtest_year')
+backtest_month = input(01, type=input.integer, title='backtest_month', minval=1, maxval=12)
+backtest_day = input(01, type=input.integer, title='backtest_day', minval=1, maxval=31)
+start_time = timestamp(backtest_year, backtest_month, backtest_day, 00, 00)
+stop_loss_and_tp = input(title="Enable Stop Loss and Take Profit", type=input.bool, defval=true)
+trail_stop = input(title="Enable Trail Stop", type=input.bool, defval=true)
+buy_stop_loss = input(0.2, type=input.float, title='buy_stop_loss')
+sell_stop_loss = input(0.1, type=input.float, title='sell_stop_loss')
+buy_tp = input(0.4, type=input.float, title='buy_tp')
+sell_tp =input(0.2, type=input.float, title='sell_tp')
+trail_stop_long = input(1.1, type=input.float, title='trail_stop_long')
+trail_stop_short = input(0.9, type=input.float, title='trail_stop_short')
+trail_stop_long_offset = input(0.05, type=input.float, title='trail_stop_long_offset')
+trail_stop_short_offset = input(0.05, type=input.float, title='trail_stop_short_offset')
+// you can set your own logic here
+shortCondition = crossunder(sma(close,7),sma(close,14))
+longCondition = crossover(sma(close,7),sma(close,14))
+strategy.entry("Buy", strategy.long, when=longCondition and time >= start_time )
+strategy.close("Buy", when=shortCondition)
+strategy.exit("Close Buy","Buy", limit= stop_loss_and_tp?strategy.position_avg_price * (1+buy_tp):na, stop = stop_loss_and_tp?strategy.position_avg_price * (1-buy_stop_loss):na,trail_price=trail_stop?strategy.position_avg_price *trail_stop_long:na,trail_offset=trail_stop?-strategy.position_avg_price *trail_stop_long_offset:na)
+strategy.entry("Sell", strategy.short, when=shortCondition and time>=start_time)
+strategy.close("Sell", when=longCondition)
+strategy.exit("Close Sell","Sell", limit= stop_loss_and_tp?strategy.position_avg_price * (1-sell_tp):na, stop = stop_loss_and_tp?strategy.position_avg_price * (1+sell_stop_loss):na,trail_price=trail_stop?strategy.position_avg_price *trail_stop_short:na,trail_offset=trail_stop?strategy.position_avg_price *trail_stop_short_offset:na)
+net_profit = strategy.netprofit + strategy.openprofit
+plot(net_profit, title="Net Profit", linewidth=2, style=plot.style_area, transp=50, color=net_profit >= 0 ? #26A69A : color.red)
+Expand (43 lines)

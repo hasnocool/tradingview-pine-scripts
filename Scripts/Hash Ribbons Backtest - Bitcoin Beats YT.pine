@@ -1,0 +1,335 @@
+Script Name: Hash Ribbons Backtest - Bitcoin Beats YT
+Author: BitcoinBeats
+Description: Hello Hello Hello and welcome back to Bitcoin Beats!
+
+This is a script written by capriole_charles
+Go check out the original!
+
+I have added leverage and stoploss % but also made it a strategy so we can look back at past trades to see patterns and profit.
+Personally I feel this is not enough data to trade off as BTC is such a young asset. However I have seen other...
+PineScript code:
+
+Pine Script™ strategy
+Hash Ribbons Backtest - Bitcoin Beats YT
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+//@version=4
+strategy("hash ribbons backtest - Bitcoin Beats YT", precision = 8, initial_capital = 1000)
+// NOTES
+// The "Spring" is the confirmed Miner capitulation period:
+// - The 1st "gray" circle is the start of Capitulation (1 month Hash Rate crosses UNDER 2 month Hash Rate)
+// - Last "green" circle is the end of Capitulation (1 month Hash Rate crosses OVER 2 month Hash Rate)
+// - The "greener" the spring gets (up until blue) represents Hash Rate recovery (it is increasing)
+// - The "blue" circle is the first instance of positive momentum following recovery of Hash Rate (1m HR > 2m HR). This is historically a rewarding place to buy with limited downside.
+// INPUTS
+type = input('Ribbons',options=['Ribbons','Oscillator'],title="Plot Type")
+len_s = input(30,"Hash Rate Short SMA (days).")
+len_l = input(60,"Hash Rate Long SMA (days).")
+signals = input(true, "Plot Signals")
+plot_halvings = input(true,"Plot Halvings")
+raw = input(false, "Plot Raw Hash Rate")
+//===inputs===
+trade_leverage = input(1, title = "Trade - Leverage", step = 0.25)
+trade_stop     = input(20, title = "Trade - Stop Loss Percent", type = input.float, step = 0.1, minval = 0.1)
+trade_risk     = input(100, title = "Trade - Risk Percent", type = input.float, step = 0.1, minval = 0.1, maxval = 100)
+// === INPUT BACKTEST RANGE ===
+FromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+FromDay   = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+FromYear  = input(defval = 2015, title = "From Year", minval = 2012)
+ToMonth   = input(defval = 1, title = "To Month", minval = 1, maxval = 12)
+ToDay     = input(defval = 1, title = "To Day", minval = 1, maxval = 31)
+ToYear    = input(defval = 9999, title = "To Year", minval = 2017)
+// === FUNCTION EXAMPLE ===
+start     = timestamp(FromYear, FromMonth, FromDay, 00, 00)  // backtest start window
+finish    = timestamp(ToYear, ToMonth, ToDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false // create function "within window of time"
+// Functions
+get_round(value, precision) => round(value * (pow(10, precision))) / pow(10, precision)
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// HASH RATE MA
+// HR on TV only has "yesterday's" value --> use "lookahead_on" when running live (on current bar), to pull forward yesterdays data
+live_HR_raw = security("QUANDL:BCHAIN/HRATE", "D", close,gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+live_HR_short = security("QUANDL:BCHAIN/HRATE", "D", sma(close,len_s),gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+live_HR_long = security("QUANDL:BCHAIN/HRATE", "D", sma(close,len_l),gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on) 
+hist_HR_raw = security("QUANDL:BCHAIN/HRATE", "D", close,gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+hist_HR_short = security("QUANDL:BCHAIN/HRATE", "D", sma(close,len_s),gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off) 
+hist_HR_long = security("QUANDL:BCHAIN/HRATE", "D", sma(close,len_l),gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off) 
+daily_s10 = security(syminfo.tickerid, "D", sma(close,10),gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off) 
+daily_s20 = security(syminfo.tickerid, "D", sma(close,20),gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off) 
+// DAILY TIMEFRAME MGMT
+is_newbar(res) =>
+    t = time(res) // res calculated below \/
+    change(t) != 0 ? true : false
+// Check how many bars are in our upper (otf) timeframe
+since_new_bar = barssince(is_newbar("D")) //1-360 for minutes, D = Daily, W = Weekly, M = Monthly
+D_total_bars = int(na)
+D_total_bars := since_new_bar == 0 ? since_new_bar[1] : D_total_bars[1] // calculates the total number of current time frame bars in the OTF 
+// INDICATORS
+HR_short = float(na)
+HR_long = float(na)
+HR_raw = float(na)
+s10 = float(na) 
+s20 = float(na)
+HR_short := barstate.isrealtime ? live_HR_short : hist_HR_short 
+HR_long := barstate.isrealtime ? live_HR_long : hist_HR_long 
+HR_raw := barstate.isrealtime ? live_HR_raw : hist_HR_raw 
+s10 := barstate.isrealtime ? (since_new_bar == D_total_bars ? daily_s10 : s10[1]) : daily_s10
+s20 := barstate.isrealtime ? (since_new_bar == D_total_bars ? daily_s20 : s20[1]) : daily_s20
+capitulation = crossunder(HR_short,HR_long)
+miner_capitulation = HR_short<HR_long 
+recovering = HR_short > HR_short[1] and HR_short > HR_short[2] and HR_short > HR_short[3] and miner_capitulation
+recovered = crossover(HR_short,HR_long)
+// HASH BOTTOM + PA SIGNAL
+buy = false
+buy := (
+     (crossover(s10,s20) and barssince(recovered) < barssince(crossunder(s10,s20)) and barssince(recovered) < barssince(capitulation)) 
+     or 
+     (s10>s20 and crossover(HR_short,HR_long))
+     )
+     
+buy_plot = buy
+// OSCILLATOR
+delta = HR_short-HR_long
+diff = (delta/HR_short)*100
+// PLOT - DEFAULT
+plot(raw ? HR_raw : na, color = color.green, linewidth = 1, style = plot.style_line, title='HR Raw') 
+p1=plot(type=='Ribbons'? HR_long : na, color = color.gray, linewidth = 2, style = plot.style_line,title='HR SMA Long') 
+p2=plot(type=='Ribbons'? HR_short : na, color = (HR_short<HR_long? color.red : color.lime), linewidth = 2, style = plot.style_line,title = 'HR SMA Short')
+fill(p1,p2,color=(HR_short<HR_long?color.red:na),transp=30)
+// PLOT - OSCILLATOR
+plot(type=='Oscillator' ? diff : na,style=plot.style_columns,color=(diff<0?color.red:color.blue),title='Oscillator')
+// PLOT - SIGNALS
+plotshape(signals ? capitulation :na,style=shape.circle,location=location.top,color=color.gray,size=size.normal,transp=50,text='Capitulation',textcolor=color.black,title='Capitulation')
+plotshape(signals ? miner_capitulation : na,style=shape.circle,location=location.top,color=color.green,size=size.normal,transp=90,title='Miner Capitulation') 
+plotshape(signals ? recovering : na,style=shape.circle,location=location.top,color=color.green,size=size.normal,transp=50,title='Recovering') 
+plotshape(signals ? recovered : na,style=shape.circle,location=location.top,color=color.lime,size=size.normal,transp=0,textcolor=color.white,title='Recovered') 
+plotshape(signals ? buy_plot: na,style=shape.circle,location=location.top,color=color.blue,size=size.normal,transp=0,text="Buy",textcolor=color.blue,title='Buy') 
+// HALVINGS
+halving_1 = timestamp(2012,11,28,0,0)
+halving_2 = timestamp(2016,7,9,0,0)
+halving_3 = timestamp(2020,4,30,0,0) // projected! https://www.bitcoinclock.com/
+h1_range = time >= halving_1 - 3*(24*60*60*1000) and time <= halving_1 + 3*(24*60*60*1000) //adds 3 day either side for chart visibility
+h2_range = time >= halving_2 - 3*(24*60*60*1000) and time <= halving_2 + 3*(24*60*60*1000) //adds 3 day either side for chart visibility
+h3_range = time >= halving_3 - 3*(24*60*60*1000) and time <= halving_3 + 3*(24*60*60*1000) //adds 3 day either side for chart visibility
+bgcolor(h1_range and plot_halvings? color.red : na, transp = 20)
+bgcolor(h2_range and plot_halvings? color.red : na, transp = 20)
+bgcolor(h3_range and plot_halvings? color.red : na, transp = 20)
+//ALERTS
+alertcondition(capitulation, title='Alert - Capitulation')
+alertcondition(recovered, title='Alert - Recovered')
+alertcondition(buy and not(buy[1]), title='Alert - Buy')
+//Strategy
+// Conditions
+enter_long_condition  = (crossover(s10,s20) and barssince(recovered) < barssince(crossunder(s10,s20)) and barssince(recovered) < barssince(capitulation) 
+     or 
+     (s10>s20 and crossover(HR_short,HR_long))
+     )
+enter_short_condition = capitulation
+exit_condition  = capitulation
+position_signal = 0
+position_signal := 
+     enter_long_condition ? 1 :
+     enter_short_condition ? -1 :
+     exit_condition ? 0 :
+     position_signal[1]
+// Positions
+if (strategy.opentrades == 0)
+    contracts = get_round((strategy.equity * trade_leverage / close) * (trade_risk / 100), 4)
+    
+    strategy.entry(
+         "LONG", 
+         strategy.long, 
+         qty = contracts,
+         when =window() and enter_long_condition)
+stop_difference = (strategy.position_avg_price / trade_leverage) * (trade_stop / 100)
+in_long  = strategy.position_size > 0
+ 
+long_stop  = in_long ? strategy.position_avg_price - stop_difference : na
+strategy.exit("S/L", "LONG",
+     stop = long_stop, 
+     qty = abs(get_round(strategy.position_size, 4)))
+strategy.close_all(when = exit_condition or abs(change(position_signal)) > 0)
+Expand (184 lines)

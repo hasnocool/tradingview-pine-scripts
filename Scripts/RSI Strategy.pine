@@ -1,0 +1,136 @@
+Script Name: RSI Strategy
+Author: sonnyparlin
+Description: This RSI strategy is different than most in that it doesn't pick a buy signal based on the RSI rising above a specific number (usually 30). Instead, it creates a 14 day exponential moving average of the Relative Strength Index and uses the following two conditions together to trigger a buy:
+
+Entry conditions:
+ 
+  Condition1: Rising of the RSI's moving average for...
+PineScript code:
+
+Pine Script™ strategy
+RSI Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+//@version=5
+// Author: Sonny Parlin
+// 10/24/2021 updated settings for chart
+strategy(shorttitle='RSI+Strategy', title='RSI+Strat', 
+     overlay=true, 
+     commission_type=strategy.commission.percent, 
+     currency=currency.USD, 
+     commission_value=0.075,
+     slippage=2, initial_capital=10000)
+// Inputs and variables
+orderStake = input.int(90, 'Order Stake (%)', minval=0, step=1) / 100
+var float entryPrice = na
+rsiRising = input.int(5, minval=1, title="RSI's Moving Average is rising for x candles")
+myRSI = ta.ema(ta.rsi(close,14),14)
+cond1 = ta.rising(myRSI,rsiRising)
+rsiLessThan = input.int(80,step=1,title="RSI Must be lower than x")
+cond2 = ta.rsi(close,14) < rsiLessThan
+enterLong = cond1 and cond2
+orderSize = strategy.equity * orderStake / close 
+if orderSize > 1000000000
+    orderSize := 1000000000
+// Trailing Stoploss
+i_activationPct = input.float(2.45, title='Trailing Stop is activated after price moves x% from Entry', step=0.1) / 100
+i_trailOffset = input.float(153560, title='Trailing Stop in ticks', minval=1, step=10)
+var float activationLevel = na  // The price needs to pass this price in order to activate the trailing Stop Loss
+i_sl = input.float(8.5, title='Stop Loss (%)', step=0.1) / 100
+var float stopLossPrice = na
+// Enter long
+var float ticks = na
+if enterLong and strategy.opentrades == 0
+    entryPrice := close
+    stopLossPrice := entryPrice * (1 - i_sl)
+    strategy.entry('Open Long Position', strategy.long, orderSize, when=strategy.position_size <= 0, comment='Long')
+    activationLevel := entryPrice + entryPrice * i_activationPct
+    strategy.exit('Open Long Position', stop=stopLossPrice, trail_price=activationLevel, trail_offset=i_trailOffset, comment='Long Stop')
+// Plots
+var tstop = float(na)
+if close > activationLevel and strategy.opentrades > 0
+    tstop := math.max(high - i_trailOffset * syminfo.mintick, nz(tstop[1]))
+    tstop
+else
+    tstop := na
+    tstop
+useSellSignal = input(true, title='Use Sell Signal')
+sellSignalProfit = input.float(0.6, minval=0, step=0.1, title="Sell with at least x% profit")/100
+exitWithProfit = (close - entryPrice) / close > sellSignalProfit
+exitCond = myRSI < myRSI[1]
+if useSellSignal
+    if exitCond and close < activationLevel and exitWithProfit
+        strategy.close('Open Long Position', comment='Sell Signal')
+showPlots = input(defval=true, title='Show Plots')
+plot(showPlots ? entryPrice : na, 'entryPrice', style=plot.style_linebr, color=color.new(color.purple, 0))
+plot(showPlots ? activationLevel : na, 'activationLevel', style=plot.style_linebr, color=color.new(color.blue, 0))
+plot(showPlots ? stopLossPrice : na, 'stoploss', style=plot.style_linebr, color=color.new(color.red, 0))
+plot(showPlots ? tstop : na, 'Trailing Stoploss', style=plot.style_linebr, color=color.new(color.white, 0))
+//plot(syminfo.mintick, title="mintick")
+Expand (67 lines)

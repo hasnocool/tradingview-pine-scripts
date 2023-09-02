@@ -1,0 +1,184 @@
+Script Name: Trading the Equity Curve Position Sizing Example
+Author: shardison
+Description: "Trading the equity curve" as a risk management method is the process of acting on trade signals depending on whether a system’s performance is indicating the strategy is in a profitable or losing phase. 
+
+The point of managing equity curve is to minimize risk in trading when the equity curve is in a downtrend. This strategy has two modes to determine the equity...
+PineScript code:
+
+Pine Script™ strategy
+Trading the Equity Curve Position Sizing Example
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © shardison
+//@version=5
+//EXPLANATION
+//"Trading the equity curve" as a risk management method is the 
+//process of acting on trade signals depending on whether a system’s performance
+//is indicating the strategy is in a profitable or losing phase.
+//The point of managing equity curve is to minimize risk in trading when the equity curve is  in a downtrend. 
+//This strategy has two modes to determine the equity curve downtrend:
+//By creating two simple moving averages of a portfolio's equity curve - a short-term
+//and a longer-term one - and acting on their crossings. If the fast SMA is below
+//the slow SMA, equity downtrend is detected (smafastequity < smaslowequity).
+//The second method is by using the crossings of equity itself with the longer-period SMA (equity < smasloweequity).
+//When "Reduce size by %" is active, the position size will be reduced by a specified percentage
+//if the equity is "under water" according to a selected rule. If you're a risk seeker, select "Increase size by %"
+//- for some robust systems, it could help overcome their small drawdowns quicker.
+strategy("Use Trading the Equity Curve Postion Sizing", shorttitle="TEC", default_qty_type = strategy.percent_of_equity, default_qty_value = 10, initial_capital = 100000)
+//TRADING THE EQUITY CURVE INPUTS
+useTEC           = input.bool(true, title="Use Trading the Equity Curve Position Sizing")
+defulttraderule  = useTEC ? false: true
+initialsize      = input.float(defval=10.0, title="Initial % Equity")
+slowequitylength = input.int(25, title="Slow SMA Period")
+fastequitylength = input.int(9, title="Fast SMA Period")
+seedequity = 100000 * .10
+if strategy.equity == 0
+    seedequity
+else
+    strategy.equity
+slowequityseed   = strategy.equity > seedequity ? strategy.equity : seedequity
+fastequityseed   = strategy.equity > seedequity ? strategy.equity : seedequity
+smaslowequity    = ta.sma(slowequityseed, slowequitylength)
+smafastequity    = ta.sma(fastequityseed, fastequitylength)
+equitycalc       = input.bool(true, title="Use Fast/Slow Avg", tooltip="Fast Equity Avg is below Slow---otherwise if unchecked uses Slow Equity Avg below Equity")
+sizeadjstring    = input.string("Reduce size by (%)", title="Position Size Adjustment", options=["Reduce size by (%)","Increase size by (%)"])
+sizeadjint       = input.int(50, title="Increase/Decrease % Equity by:")
+equitydowntrendavgs = smafastequity < smaslowequity
+slowequitylessequity = strategy.equity < smaslowequity
+equitymethod = equitycalc ? equitydowntrendavgs : slowequitylessequity
+if sizeadjstring == ("Reduce size by (%)")
+    sizeadjdown = initialsize * (1 - (sizeadjint/100))
+else
+    sizeadjup = initialsize * (1 + (sizeadjint/100))
+c = close
+qty = 100000 * (initialsize / 100) / c
+if useTEC and equitymethod
+    if sizeadjstring == "Reduce size by (%)"
+        qty := (strategy.equity * (initialsize / 100) * (1 - (sizeadjint/100))) / c
+    else
+        qty := (strategy.equity * (initialsize / 100) * (1 + (sizeadjint/100))) / c
+    
+//EXAMPLE TRADING STRATEGY INPUTS
+CMO_Length = input.int(defval=9, minval=1, title='Chande Momentum Length')
+CMO_Signal = input.int(defval=10, minval=1, title='Chande Momentum Signal')
+chandeMO = ta.cmo(close, CMO_Length)
+cmosignal = ta.sma(chandeMO, CMO_Signal)
+SuperTrend_atrPeriod = input.int(10, "SuperTrend ATR Length")
+SuperTrend_Factor = input.float(3.0, "SuperTrend Factor", step = 0.01)
+Momentum_Length = input.int(12, "Momentum Length")
+price = close
+mom0 = ta.mom(price, Momentum_Length)
+mom1 = ta.mom( mom0, 1)
+[supertrend, direction] = ta.supertrend(SuperTrend_Factor, SuperTrend_atrPeriod)
+stupind = (direction < 0 ? supertrend : na)
+stdownind = (direction < 0? na : supertrend)
+//TRADING CONDITIONS
+longConditiondefault = ta.crossover(chandeMO, cmosignal) and (mom0 > 0 and mom1 > 0 and close > stupind) and defulttraderule
+if (longConditiondefault)
+    strategy.entry("DefLong", strategy.long, qty=qty)
+shortConditiondefault = ta.crossunder(chandeMO, cmosignal) and (mom0 < 0 and mom1 < 0 and close < stdownind) and defulttraderule
+if (shortConditiondefault)
+    strategy.entry("DefShort", strategy.short, qty=qty)
+    
+longCondition = ta.crossover(chandeMO, cmosignal) and (mom0 > 0 and mom1 > 0 and close > stupind) and useTEC
+if (longCondition)
+    strategy.entry("AdjLong", strategy.long, qty = qty)
+shortCondition = ta.crossunder(chandeMO, cmosignal) and (mom0 < 0 and mom1 < 0 and close < stdownind) and useTEC
+if (shortCondition)
+    strategy.entry("AdjShort", strategy.short, qty = qty)
+plot(strategy.equity)
+plot(smaslowequity, color=color.new(color.red, 0))
+plot(smafastequity, color=color.new(color.green, 0))
+Expand (92 lines)

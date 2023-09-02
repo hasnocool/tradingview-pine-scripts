@@ -1,0 +1,102 @@
+Script Name: Ranged Volume Strategy - evo
+Author: EvoCrypto
+Description: This is the strategy version for the ranged volume indicator I published a few days ago. 
+
+ Long : First yellow break-out after red
+ Short : First red break-out after yellow
+
+Because this is volume, you want to be using this on an exchange with high volume for the best results. Default settings are not optimized but work great on bitcoins daily chart.
+
+A short...
+PineScript code:
+
+Pine Script™ strategy
+Ranged Volume Strategy - evo
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © EvoCrypto
+//@version=4
+strategy("Ranged Volume Strategy - evo", shorttitle="Ranged Volume", format=format.volume)
+// INPUTS {
+Range_Length    =   input(5,        title="Range Length",                       minval=1)
+Heikin_Ashi     =   input(true,     title="Heikin Ashi Colors")
+Display_Bars    =   input(true,     title="Show Bar Colors")
+Display_Break   =   input(true,     title="Show Break-Out")
+Display_Range   =   input(true,     title="Show Range")
+// }
+// SETTINGS {
+Close           =   Heikin_Ashi ? security(heikinashi(syminfo.tickerid), timeframe.period, close)    : close
+Open            =   Heikin_Ashi ? security(heikinashi(syminfo.tickerid), timeframe.period, open)     : open
+Positive        =    volume
+Negative        =   -volume
+Highest         =   highest(volume, Range_Length)
+Lowest          =   lowest(-volume, Range_Length)
+Up              =   Highest > Highest[1] and Close > Open
+Dn              =   Highest > Highest[1] and Close < Open
+Volume_Color    =   
+ Display_Break and Up   ? color.new(#ffeb3b, 0)     : 
+ Display_Break and Dn   ? color.new(#f44336, 0)     : 
+ Close > Open           ? color.new(#00c0ff, 60)    : 
+ Close < Open           ? color.new(#000000, 60)    : na 
+// }
+//PLOTS {
+plot(Positive,                      title="Positive Volume",    color=Volume_Color,             style=plot.style_histogram,  linewidth=4)
+plot(Negative,                      title="Negative Volume",    color=Volume_Color,             style=plot.style_histogram,  linewidth=4)
+plot(Display_Range ? Highest : na,  title="Highest",            color=color.new(#000000, 0),    style=plot.style_line,       linewidth=2)
+plot(Display_Range ? Lowest  : na,  title="Lowest",             color=color.new(#000000, 0),    style=plot.style_line,       linewidth=2)
+barcolor(Display_Bars ? Volume_Color : na)
+// }
+if (Up)
+    strategy.entry("Long Entry", strategy.long)
+if (Dn)
+    strategy.entry("Short Entry", strategy.short)
+Expand (49 lines)

@@ -1,0 +1,316 @@
+Script Name: KAMA Strategy - Kaufman's Adaptive Moving Average
+Author: BenHampson
+Description: This strategy combines Kaufman's Adaptive Moving Average for entry with optional KAMA, PSAR, and Trailing ATR stops for exits. 
+
+Kaufman's Adaptive Moving Average is, in my opinion, a gem among the plethora of indicators. It is underrated considering it offers a solution that intuitively makes a lot of sense. When I first read about it, it was a real 'aha!'...
+PineScript code:
+
+Pine Script™ strategy
+KAMA Strategy - Kaufman's Adaptive Moving Average
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+//@version=5
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © BenHampson
+// Credit to:
+// - ChuckBanger for much of the KAMA code
+// - cheatcountry for the KAMA Filter code
+// - millerrh for much of the ATR Stop code
+// - racer8 for much of the Position Sizing code
+// I have combined aspects of their work and built upon it to form a strategy I like. 
+// The KAMA, with its filter, is used for entry.
+// An ATR trailing stop loss, PSAR, and the KAMA can all optionally be used as exits, or you can use a combination of the three.
+strategy(title='KAMA Strategy - Kaufman\'s Adaptive Moving Average', shorttitle='KAMA Strategy', overlay=true, default_qty_value=100, default_qty_type=strategy.percent_of_equity, initial_capital=10000, max_bars_back=1000)
+src = input(title='Source', defval=close)
+// Exits
+KAMA1SL = input(title='KAMA 1 Stop Loss', defval=true)
+ATRTSL = input(title='ATR Trailing Stop Loss', defval=false)
+PSARSL = input(title='PSAR Stop Loss', defval=false)
+// KAMA 1 (Fastest)
+length1 = input(title='KAMA 1: Length', defval=14)
+fastLength1 = input(title='KAMA 1: Fast KAMA Length', defval=2)
+slowLength1 = input(title='KAMA 1: Slow KAMA Length', defval=20)
+length2 = input(title='KAMA 2: Length 2', defval=15)
+fastLength2 = input(title='KAMA 2: Fast KAMA Length', defval=3)
+slowLength2 = input(title='KAMA 2: Slow KAMA Length', defval=22)
+length3 = input(title='KAMA 3: Length 3', defval=16)
+fastLength3 = input(title='KAMA 3: Fast KAMA Length', defval=4)
+slowLength3 = input(title='KAMA 3: Slow KAMA Length', defval=24)
+length4 = input(title='KAMA 4: Length', defval=17)
+fastLength4 = input(title='KAMA 4: Fast KAMA Length', defval=5)
+slowLength4 = input(title='KAMA 4: Slow KAMA Length', defval=26)
+// KAMA 5 (Medium)
+length5 = input(title='KAMA 5: Length', defval=18)
+fastLength5 = input(title='KAMA 5: Fast KAMA Length', defval=6)
+slowLength5 = input(title='KAMA 5: Slow KAMA Length', defval=28)
+length6 = input(title='KAMA 6: Length', defval=19)
+fastLength6 = input(title='KAMA 6: Fast KAMA Length', defval=7)
+slowLength6 = input(title='KAMA 6: Slow KAMA Length', defval=30)
+length7 = input(title='KAMA 7: Length', defval=20)
+fastLength7 = input(title='KAMA 7: Fast KAMA Length', defval=8)
+slowLength7 = input(title='KAMA 7: Slow KAMA Length', defval=32)
+// KAMA 8 (Slowest)
+length8 = input(title='KAMA 8: Length', defval=21)
+fastLength8 = input(title='KAMA 8: Fast KAMA Length', defval=9)
+slowLength8 = input(title='KAMA 8: Slow KAMA Length', defval=34)
+// Kaufman's Adaptive Moving Average
+getKAMA(src, length1, fastLength1, slowLength1) =>
+    mom = math.abs(ta.change(src, length1))
+    volatility = math.sum(math.abs(ta.change(src)), length1)
+    // Efficiency Ratio
+    er = volatility != 0 ? mom / volatility : 0
+    fastAlpha = 2 / (fastLength1 + 1)
+    slowAlpha = 2 / (slowLength1 + 1)
+    // KAMA Alpha
+    sc = math.pow(er * (fastAlpha - slowAlpha) + slowAlpha, 2)
+    kama = 0.0
+    kama := sc * src + (1 - sc) * nz(kama[1])
+    kama
+kama1 = getKAMA(src, length1, fastLength1, slowLength1)
+kama2 = getKAMA(src, length2, fastLength2, slowLength2)
+kama3 = getKAMA(src, length3, fastLength3, slowLength3)
+kama4 = getKAMA(src, length4, fastLength4, slowLength4)
+kama5 = getKAMA(src, length5, fastLength5, slowLength5)
+kama6 = getKAMA(src, length6, fastLength6, slowLength6)
+kama7 = getKAMA(src, length7, fastLength7, slowLength7)
+kama8 = getKAMA(src, length8, fastLength8, slowLength8)
+//If the kama1 has increased...
+kama1delta = kama1[0] - kama1[1]
+kama3delta = kama3[0] - kama3[1]
+kama8delta = kama8[0] - kama8[1]
+// KAMA Plots
+plot(kama1, title='KAMA 1', color=color.new(#e91e63, 0), display=display.all, linewidth=2)
+plot(kama2, title='KAMA 2', color=color.new(color.red, 0), display=display.all)
+plot(kama3, title='KAMA 3', color=color.new(color.red, 0), display=display.all)
+plot(kama4, title='KAMA 4', color=color.new(color.orange, 0), display=display.all)
+plot(kama5, title='KAMA 5', color=color.new(color.orange, 0), display=display.all)
+plot(kama6, title='KAMA 6', color=color.new(color.yellow, 0), display=display.all)
+plot(kama7, title='KAMA 7', color=color.new(color.yellow, 0), display=display.all)
+plot(kama8, title='KAMA 8', color=color.new(color.white, 0), display=display.all)
+//========================================= KAMA FILTER ===========================================
+// Copyright (c) 2019-present, Franklin Moormann (cheatcountry)
+// Moving Average Adaptive Filter [CC] script may be freely distributed under the MIT license.
+entryFilter = input.float(title='KAMA Entry Filter', defval=1, minval=0.01)
+exitFilter = input.float(title='KAMA Exit Filter', defval=0.5, minval=0.01)
+entryMAAF = entryFilter * ta.stdev(kama1delta, length1)
+exitMAAF = exitFilter * ta.stdev(kama1delta, length1)
+srcEma = ta.ema(src, length1)
+//========================================= TRAILING ATR STOP ====================================
+// The following is an adaptation of Trailing ATR Stops by @millerrh
+// He based it on scripts by @garethyeo & @SimpleCryptoLife
+// Inputs
+atrLookback = input(defval=14, title='Trailing ATR Lookback Period')
+multiplier = input.float(defval=3, title='Trailing ATR Multiplier', step=0.1, minval=0.5, maxval=4)
+trailMode = input.string(title='Trail Mode', defval='Trailing', options=['Running', 'Trailing'])
+trigInput = input.string(title='Trigger Trailing Stop On', defval='Wick', options=['Close', 'Wick'])
+// Calculate ATR
+atrValue = ta.atr(atrLookback)
+atrMultiplied = atrValue * multiplier
+// Plot the price minus the ATR
+atrLow = low - atrMultiplied
+// Calculate the low trailing ATRs every time. The trailing stop loss never goes down.
+// Set them to something to start with
+trailAtrLow = atrLow
+// If the ATR Low has gone up AND it has gone above the trail, the low trailing ATR should also go up. If the ATR Low has gone up or down, but not below the trail, the ATR trail stays where it is
+trailAtrLow := na(trailAtrLow[1]) ? trailAtrLow : atrLow >= trailAtrLow[1] ? atrLow : trailAtrLow[1]
+// Trigger stop based on candle close or low
+trigSupport = trigInput == 'Close' ? close : trigInput == 'Wick' ? low : na
+// Determine if price is below support
+supportHit = trigSupport <= trailAtrLow
+// If price is below support, reset the trailing ATR
+trailAtrLow := supportHit ? atrLow : trailAtrLow
+// Plot Lines
+plotLow = ATRTSL ? trailAtrLow : na
+plot(plotLow, title='ATR Low', color=color.new(color.white, 50), style=plot.style_linebr, linewidth=1, display=display.all)
+//====================================== PSAR STOP ==========================================
+start = input(0.02, 'PSAR Start')
+increment = input(0.02, 'PSAR Increment')
+maximum = input(0.2, 'PSAR Max Value')
+psar = ta.sar(start, increment, maximum)
+psarPlot = PSARSL ? psar : na
+plot(psarPlot, 'Parabolic SAR', style=plot.style_cross, color=color.new(#3A6CA8, 0), display=display.all)
+//========================================= ENTRY & EXITS =====================================================
+// Entry
+long = kama1delta > 0 and kama1delta > entryMAAF
+strategy.entry('Buy', strategy.long, when=long)
+// Close
+longClose = (PSARSL ? ta.crossunder(close, psar) : na) or (KAMA1SL ? kama1delta < 0 and math.abs(kama1delta) > exitMAAF : na) or (ATRTSL ? supportHit : na)
+strategy.close('Buy', when=longClose, comment='Sell')
+Expand (178 lines)

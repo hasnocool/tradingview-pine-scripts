@@ -1,0 +1,438 @@
+Script Name: PROSTRATS Pine Script for Swing Trading
+Author: andrew_allen
+Description: This is a simple script for swing trading. It uses my 2 favorite indicators; the Choppiness Index as well as Fibonacci Retracement. This script is meant to run on the 4 hour time frame, in my case I use BTCUSD. It will buy when 2 conditions are met. The first is that the Choppiness Index is above 54.5 on the Daily Time frame, which means the price has potential to...
+PineScript code:
+
+Pine Script™ strategy
+PROSTRATS Pine Script for Swing Trading
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+//@version=4
+strategy("PROSTRATS", overlay=true, default_qty_type = strategy.percent_of_equity, default_qty_value = 10, initial_capital = 1000)
+//CI
+length = input(14, minval=1)
+ci = 100 * log10(sum(atr(1), length) / (highest(length) - lowest(length))) / log10(length)
+ci_d = security(syminfo.tickerid, "D", ci)
+ci_buy = false
+ci_sell = false
+if ci_d >=55
+    ci_buy := true
+else
+    ci_buy := false
+    
+// while ci_d <=38.2
+//     ci_sell := true
+//FIB
+// pivots threshold
+threshold_multiplier = input(title="Deviation", type=input.float, defval=3, minval=0)
+dev_threshold = atr(14) / close * 100 * threshold_multiplier
+depth = input(title="Depth", type=input.integer, defval=14, minval=1)
+var extendLeft = input(false, "Extend Lines Left")
+var extendRight = input(true, "Extend Lines Right")
+var extending = extend.none
+if extendLeft and extendRight
+    extending := extend.both
+if extendLeft and not extendRight
+    extending := extend.left
+if not extendLeft and extendRight
+    extending := extend.right
+reverse = input(false, "Reverse")
+prices = input(true, "Prices")
+levels = input(true, "Levels")
+levelsFormat = input("Values", "Levels Format", options = ["Values", "Percent"])
+labelsPosition = input("Left", "Labels Position", options = ["Left", "Right"])
+var line lineLast = na
+var int iLast = 0
+var int iPrev = 0
+var float pLast = 0
+var isHighLast = false // otherwise the last pivot is a low pivot
+pivots(src, length, isHigh) =>
+    l2 = length * 2
+    c = nz(src[length])
+    ok = true
+    for i = 0 to l2
+        if isHigh and src[i] > c
+            ok := false
+        if not isHigh and src[i] < c
+            ok := false
+    if ok
+        [bar_index[length], c]
+    else
+        [int(na), float(na)]
+[iH, pH] = pivots(high, depth / 2, true)
+[iL, pL] = pivots(low, depth / 2, false)
+calc_dev(base_price, price) =>
+    100 * (price - base_price) / price
+pivotFound(dev, isHigh, index, price) =>
+    if isHighLast == isHigh and not na(lineLast)
+        // same direction
+        if isHighLast ? price > pLast : price < pLast
+            line.set_xy2(lineLast, index, price)
+            [lineLast, isHighLast]
+        else
+            [line(na), bool(na)]
+    else // reverse the direction (or create the very first line)
+        if abs(dev) > dev_threshold
+            // price move is significant
+            id = line.new(iLast, pLast, index, price, color=color.gray, width=1, style=line.style_dashed)
+            [id, isHigh]
+        else
+            [line(na), bool(na)]
+if not na(iH)
+    dev = calc_dev(pLast, pH)
+    [id, isHigh] = pivotFound(dev, true, iH, pH)
+    if not na(id)
+        if id != lineLast
+            line.delete(lineLast)
+        lineLast := id
+        isHighLast := isHigh
+        iPrev := iLast
+        iLast := iH
+        pLast := pH
+else
+    if not na(iL)
+        dev = calc_dev(pLast, pL)
+        [id, isHigh] = pivotFound(dev, false, iL, pL)
+        if not na(id)
+            if id != lineLast
+                line.delete(lineLast)
+            lineLast := id
+            isHighLast := isHigh
+            iPrev := iLast
+            iLast := iL
+            pLast := pL
+_draw_line(price, col) =>
+    var id = line.new(iLast, price, bar_index, price, color=col, width=1, extend=extending)
+    if not na(lineLast)
+        line.set_xy1(id, line.get_x1(lineLast), price)
+        line.set_xy2(id, line.get_x2(lineLast), price)
+_draw_label(price, txt, txtColor) =>
+    x = labelsPosition == "Left" ? line.get_x1(lineLast) : not extendRight ? line.get_x2(lineLast) : bar_index
+    labelStyle = labelsPosition == "Left" ? label.style_label_right : label.style_label_left
+    align = labelsPosition == "Left" ? text.align_right : text.align_left
+    labelsAlignStrLeft = txt + '\n [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F] \n'
+    labelsAlignStrRight = '       ' + txt + '\n [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F]  [U+200F] \n'
+    labelsAlignStr = labelsPosition == "Left" ? labelsAlignStrLeft : labelsAlignStrRight
+    var id = label.new(x=x, y=price, text=labelsAlignStr, textcolor=txtColor, style=labelStyle, textalign=align, color=#00000000)
+    label.set_xy(id, x, price)
+    label.set_text(id, labelsAlignStr)
+    label.set_textcolor(id, txtColor)
+_wrap(txt) =>
+    "(" + tostring(txt, "#.##") + ")"
+_label_txt(level, price) =>
+    l = levelsFormat == "Values" ? tostring(level) : tostring(level * 100) + "%"
+    (levels ? l : "") + (prices ? _wrap(price) : "")
+_crossing_level(sr, r) =>
+    (r > sr and r < sr[1]) or (r < sr and r > sr[1])
+startPrice = reverse ? line.get_y1(lineLast) : pLast
+endPrice = reverse ? pLast : line.get_y1(lineLast)
+iHL = startPrice > endPrice
+diff = (iHL ? -1 : 1) * abs(startPrice - endPrice)
+level_0 = input(true, "0")
+color_0 = input(#787b86, "0 Level Color")
+float m = 0
+r = startPrice + diff * m
+if level_0
+    _draw_line(r, color_0)
+    _draw_label(r, _label_txt(m, r), color_0)
+// alertcondition(_crossing_level(close, r), "Autofib 0 crossing!", "Autofib: {{ticker}} crossing level 0.")
+fib_sell_stop = crossunder(close, r)
+stop_price = r
+level_0236 = input(true, "0.236")
+color_0236 = input(#f44336, "0.236 Level Color")
+m := 0.236
+r := startPrice + diff * m
+if level_0236
+    _draw_line(r, color_0236)
+    _draw_label(r, _label_txt(m, r), color_0236)
+// alertcondition(_crossing_level(close, r), "Autofib 0.236 crossing!", "Autofib: {{ticker}} crossing level 0.236.")
+level_0382 = input(true, "0.382")
+color_0382 = input(#81c784, "0.382 Level Color")
+m := 0.382
+r := startPrice + diff * m
+if level_0382
+    _draw_line(r, color_0382)
+    _draw_label(r, _label_txt(m, r), color_0382)
+// alertcondition(_crossing_level(close, r), "Autofib 0.382 crossing!", "Autofib: {{ticker}} crossing level 0.382.")
+level_05 = input(true, "0.5")
+color_05 = input(#4caf50, "0.5 Level Color")
+m := 0.5
+r := startPrice + diff * m
+if level_05
+    _draw_line(r, color_05)
+    _draw_label(r, _label_txt(m, r), color_05)
+// alertcondition(_crossing_level(close, r), "Autofib 0.5 crossing!", "Autofib: {{ticker}} crossing level 0.5.")
+level_0618 = input(true, "0.618")
+color_0618 = input(#009688, "0.618 Level Color")
+m := 0.618
+r := startPrice + diff * m
+if level_0618
+    _draw_line(r, color_0618)
+    _draw_label(r, _label_txt(m, r), color_0618)
+// alertcondition(_crossing_level(close, r), "Autofib 0.618 crossing!", "Autofib: {{ticker}} crossing level 0.618.")
+level_0786 = input(true, "0.786")
+color_0786 = input(#64b5f6, "0.786 Level Color")
+m := 0.786
+r := startPrice + diff * m
+if level_0786
+    _draw_line(r, color_0786)
+    _draw_label(r, _label_txt(m, r), color_0786)
+// alertcondition(_crossing_level(close, r), "Autofib 0.786 crossing!", "Autofib: {{ticker}} crossing level 0.786.")
+level_1 = input(true, "1")
+color_1 = input(#787b86, "1 Level Color")
+m := 1
+r := startPrice + diff * m
+if level_1
+    _draw_line(r, color_1)
+    _draw_label(r, _label_txt(m, r), color_1)
+// alertcondition(_crossing_level(close, r), "Autofib 1 crossing!", "Autofib: {{ticker}} crossing level 1.")
+fib_buy = crossover(close, r)
+buy_price = r
+level_1618 = input(true, "1.618")
+color_1618 = input(#2196f3, "1.618 Level Color")
+m := 1.618
+r := startPrice + diff * m
+if level_1618
+    _draw_line(r, color_1618)
+    _draw_label(r, _label_txt(m, r), color_1618)
+// alertcondition(_crossing_level(close, r), "Autofib 1.618 crossing!", "Autofib: {{ticker}} crossing level 1.618.")
+fib_sell_profit = crossover(close, r)
+profit_price = r
+if  (buy_price > stop_price) and (profit_price > buy_price) and (fib_buy)
+    fib_buy := true
+else
+    fib_buy := false
+    
+strategy.entry(syminfo.tickerid, strategy.long, when=ci_buy == true and fib_buy)
+strategy.close(syminfo.tickerid, when=fib_sell_profit or fib_sell_stop)
+Expand (231 lines)

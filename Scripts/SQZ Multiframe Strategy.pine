@@ -1,0 +1,360 @@
+Script Name: SQZ Multiframe Strategy
+Author: SayMyNameWW
+Description: This is a first attempt to automate what my current strategy when trading is.
+It uses 2 timeframes: the one you are currently using to see the chart and an "anchor trend" which is a higher order frame.
+Supported timeframes are: 1m, 5m, 15m, 30m, 1H, 4H, 1D, 1W
+
+The Strategy relies on two indicators:
+ 
+  Squeeze Momentum Indicator  
+  CMF
+ 
+
+How does it works?
+It...
+PineScript code:
+
+Pine Script™ strategy
+SQZ Multiframe Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+//@version=4
+strategy("SQZ Multiframe Strategy", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=10)
+fast_ema_len = input(11, minval=5, title="Fast EMA")
+slow_ema_len = input(34, minval=20, title="Slow EMA")
+sqm_lengthKC = input(20, title="SQM KC Length")
+kauf_period = input(20, title="Kauf Period")
+kauf_mult = input(2,title="Kauf Mult factor")
+min_profit_sl = input(5, minval=0.01, maxval=100.0, title="Min profit to start moving SL [%]")
+longest_sl = input(10, minval=0.01, maxval=100.0, title="Maximum possible of SL [%]")
+sl_step = input(0.5, minval=0.0, maxval=1.0, title="Take profit factor")
+// ADMF
+CMF_length = input(11, minval=1, title="CMF length") // EMA27 = SMMA/RMA14 ~ lunar month
+show_plots = input(true, title="Show plots")
+lower_resolution = timeframe.period=='1'?'5':timeframe.period=='5'?'15':timeframe.period=='15'?'30':timeframe.period=='30'?'60':timeframe.period=='60'?'240':timeframe.period=='240'?'D':timeframe.period=='D'?'W':'M'
+sp_close = close[barstate.isrealtime ? 1 : 0]
+sp_high = high[barstate.isrealtime ? 1 : 0]
+sp_low = low[barstate.isrealtime ? 1 : 0]
+sp_volume = volume[barstate.isrealtime ? 1 : 0]
+// Calculate Squeeze Momentum
+sqm_val = linreg(sp_close - avg(avg(highest(sp_high, sqm_lengthKC), lowest(sp_low, sqm_lengthKC)),sma(sp_close,sqm_lengthKC)), sqm_lengthKC,0)
+close_low = security(syminfo.tickerid, lower_resolution, sp_close, lookahead=barmerge.lookahead_on)
+high_low = security(syminfo.tickerid, lower_resolution, sp_high, lookahead=barmerge.lookahead_on)
+low_low = security(syminfo.tickerid, lower_resolution, sp_low, lookahead=barmerge.lookahead_on)
+sqm_val_low = linreg(close_low - avg(avg(highest(high_low, sqm_lengthKC), lowest(low_low, sqm_lengthKC)),sma(close_low,sqm_lengthKC)), sqm_lengthKC,0)
+// CMF 
+ad = sp_close==sp_high and sp_close==sp_low or sp_high==sp_low ? 0 : ((2*sp_close-sp_low-sp_high)/(sp_high-sp_low))*sp_volume
+money_flow = sum(ad, CMF_length) / sum(sp_volume, CMF_length)
+// Entry conditions
+low_condition_long  = (sqm_val_low > sqm_val_low[1])
+low_condition_short = (sqm_val_low < sqm_val_low[1])
+money_flow_min = (money_flow[4] > money_flow[2]) and (money_flow[3] > money_flow[2]) and (money_flow[2] < money_flow[1])  and (money_flow[2] < money_flow)
+money_flow_max = (money_flow[4] < money_flow[2]) and (money_flow[3] < money_flow[2]) and (money_flow[2] > money_flow[1])  and (money_flow[2] > money_flow)
+condition_long = ((sqm_val > sqm_val[1]))  and money_flow_min and lowest(sqm_val, 5) < 0 //and (money_flow[2] < 0)
+condition_short = ((sqm_val < sqm_val[1])) and money_flow_max and highest(sqm_val, 5) > 0 //and (money_flow[2] > 0)
+enter_long = low_condition_long and condition_long
+enter_short = low_condition_short and condition_short
+// Stop conditions
+var current_target_price = 0.0
+var current_sl_price = 0.0 // Price limit to take profit
+var current_target_per = 0.0
+var current_profit_per = 0.0
+set_targets(isLong, min_profit, current_target_per, current_profit_per) =>
+    target = 0.0
+    sl = 0.0
+    if isLong
+        target := sp_close * (1.0 + current_target_per)
+        sl := sp_close * (1.0 - (longest_sl/100.0)) // Longest SL
+    else
+        target := sp_close * (1.0 - current_target_per)
+        sl := sp_close * (1.0 + (longest_sl/100.0)) // Longest SL
+    [target, sl]
+target_reached(isLong, min_profit, current_target_per, current_profit_per) =>
+    target = 0.0
+    sl = 0.0
+    profit_per = 0.0
+    target_per = 0.0
+    if current_profit_per == 0
+        profit_per := (min_profit*sl_step) / 100.0
+    else
+        profit_per := current_profit_per +  ((min_profit*sl_step) / 100.0)
+    target_per := current_target_per + (min_profit / 100.0) 
+    if isLong
+        target := strategy.position_avg_price * (1.0 + target_per)
+        sl := strategy.position_avg_price * (1.0 + profit_per)
+    else
+        target := strategy.position_avg_price * (1.0 - target_per)
+        sl := strategy.position_avg_price * (1.0 - profit_per)
+    [target, sl, profit_per, target_per]
+hl_diff = sma(sp_high - sp_low, kauf_period)
+stop_condition_long = 0.0
+new_stop_condition_long = sp_low - (hl_diff * kauf_mult)
+if (strategy.position_size > 0) 
+    if (sp_close > current_target_price)
+        [target, sl, profit_per, target_per] = target_reached(true, min_profit_sl, current_target_per, current_profit_per)
+        current_target_price := target
+        current_sl_price := sl
+        current_profit_per := profit_per
+        current_target_per := target_per
+        
+        
+    stop_condition_long := max(stop_condition_long[1], current_sl_price)
+else
+    stop_condition_long := new_stop_condition_long
+stop_condition_short = 99999999.9
+new_stop_condition_short = sp_high + (hl_diff * kauf_mult)
+if (strategy.position_size < 0) 
+    if (sp_close < current_target_price)
+        [target, sl, profit_per, target_per] = target_reached(false, min_profit_sl, current_target_per, current_profit_per)
+        current_target_price := target
+        current_sl_price := sl
+        current_profit_per := profit_per
+        current_target_per := target_per
+    stop_condition_short := min(stop_condition_short[1], current_sl_price)
+else
+    stop_condition_short := new_stop_condition_short
+    
+// Submit entry orders
+if (enter_long and (strategy.position_size <= 0))
+    if (strategy.position_size < 0)
+        strategy.close(id="SHORT")
+    current_target_per := (min_profit_sl / 100.0)
+    current_profit_per := 0.0
+    [target, sl] = set_targets(true, min_profit_sl, current_target_per, current_profit_per)
+    current_target_price := target
+    current_sl_price := sl
+    strategy.entry(id="LONG", long=true)
+    if show_plots
+        label.new(bar_index, sp_high, text=tostring("LONG\nSL: ") + tostring(stop_condition_long), style=label.style_labeldown, color=color.green)
+if (enter_short and (strategy.position_size >= 0))
+    if (strategy.position_size > 0)
+        strategy.close(id="LONG")
+    current_target_per := (min_profit_sl / 100.0)
+    current_profit_per := 0.0
+    [target, sl] = set_targets(false, min_profit_sl, current_target_per, current_profit_per)
+    current_target_price := target
+    current_sl_price := sl
+    strategy.entry(id="SHORT", long=false)
+    if show_plots
+        label.new(bar_index, sp_high, text=tostring("SHORT\nSL: ") + tostring(stop_condition_short), style=label.style_labeldown, color=color.red)
+    
+if (strategy.position_size > 0)
+    strategy.exit(id="EXIT LONG", stop=stop_condition_long)
+    
+if (strategy.position_size < 0)
+    strategy.exit(id="EXIT SHORT", stop=stop_condition_short)
+    
+// Plot anchor trend
+plotshape(low_condition_long, style=shape.triangleup,
+                 location=location.abovebar, color=color.green)
+plotshape(low_condition_short, style=shape.triangledown,
+                 location=location.abovebar, color=color.red)
+                 
+plotshape(condition_long, style=shape.triangleup,
+                 location=location.belowbar, color=color.green)
+plotshape(condition_short, style=shape.triangledown,
+                 location=location.belowbar, color=color.red)
+ 
+//plotshape((close < profit_target_short) ? profit_target_short : na, style=shape.triangledown,
+//                 location=location.belowbar, color=color.yellow)                
+plotshape(enter_long, style=shape.triangleup,
+                 location=location.bottom, color=color.green)
+plotshape(enter_short, style=shape.triangledown,
+                 location=location.bottom, color=color.red)
+                 
+// Plot emas
+plot(ema(close, 20), color=color.blue, title="20 EMA")
+plot(ema(close, 50), color=color.orange, title="50 EMA")
+plot(sma(close, 200), color=color.red, title="MA 200")
+// Plot stop loss values for confirmation
+plot(series=(strategy.position_size > 0) and show_plots ? stop_condition_long : na,
+     color=color.green, style=plot.style_linebr,
+     title="Long Stop")
+plot(series=(strategy.position_size < 0) and show_plots ? stop_condition_short : na,
+     color=color.green, style=plot.style_linebr,
+     title="Short Stop")
+plot(series=(strategy.position_size < 0) and show_plots ? current_target_price : na,
+     color=color.yellow, style=plot.style_linebr,
+     title="Short TP")
+plot(series=(strategy.position_size > 0) and show_plots ? current_target_price : na,
+     color=color.yellow, style=plot.style_linebr,
+     title="Long TP")
+//plot(series=(strategy.position_size < 0) ? profit_sl_short : na,
+//     color=color.gray, style=plot.style_linebr,
+//     title="Short Stop")
+Expand (176 lines)

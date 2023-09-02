@@ -1,0 +1,539 @@
+Script Name: Open Price Strategy
+Author: REV0LUTI0N
+Description: This strategy is based on the idea of buying off the open price and then holding until the end of the trading day. It will however swap if price crosses over the open price line.
+
+It will plot a line based on the open price at the time you select for it to search for the open price.  You can also select the open price source and time frame.
+
+Next select your entry...
+PineScript code:
+
+Pine Script™ strategy
+Open Price Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © REV0LUTI0N
+//@version=4
+//------------------------------------------------------------------------------  
+// Strategy
+strategy("Open Price Strategy", overlay=true, initial_capital = 10000, default_qty_value = 10000, default_qty_type = strategy.cash)
+notes = input("", title="Note For Your Reference Only")
+//------------------------------------------------------------------------------  
+// Strategy Backtesting
+startDate  = input(timestamp("2021-10-01T00:00:00"), type = input.time, title='Backtesting Start Date', group="Backtesting")
+finishDate = input(timestamp("9999-12-31T00:00:00"), type = input.time, title='Backtesting End Date', group="Backtesting")
+time_cond  = time >= startDate and time <= finishDate
+//------------------------------------------------------------------------------  
+//Time Restriction Settings
+firsttradetime = input("0930-0931", title='Time Frame For Enter ASAP', group="Time Restriction")
+startendtime = input("0930-1555", title='Time Frame For Wait To Enter', group="Time Restriction")
+endtime = input("0930-1555", title='Time Frame To Exit Trades', group="Time Restriction")
+enableclose = input(true, title='Enable Close Trade At End Of Exit Time Frame', group="Time Restriction")
+firsttradetimetobuy = (time(timeframe.period, firsttradetime))
+timetobuy = (time(timeframe.period, startendtime))
+timetoclose = na(time(timeframe.period, endtime))
+//------------------------------------------------------------------------------  
+// Contrarian Settings
+nocontrarian = input(true, title="Trade Regular Signals", inline="1", group="Contrarian Settings")
+usecontrarian = input(false, title="Trade Contrarian Signals", inline="1", group="Contrarian Settings")
+//------------------------------------------------------------------------------  
+// Open Price Code
+openpricetime = input('0930-0931', title="Time To Get Open Price", group="Strategy Settings")
+opencondition = input(open, title="Open Price Source", group="Strategy Settings")
+entrycondition = input(close, title="Entry Price Source", group="Strategy Settings")
+OpenValueTime = time("1", openpricetime)
+var OpenPA = 0.0
+if OpenValueTime
+    if not OpenValueTime[1]
+        OpenPA := opencondition
+plot(not OpenValueTime ? OpenPA : na, title="Open Price", color=color.red, linewidth=2, style=plot.style_linebr)
+//------------------------------------------------------------------------------  
+// EMA Open Line Cross Condition (Wait To Enter)
+enterasap = input(true, title="Enter Trade ASAP", inline="1", group="Wait To Enter Settings")
+waittoenter = input(false, title="Wait For EMA To Cross Open Line", inline="1", group="Wait To Enter Settings")
+wait_ema_length = input(defval=15, minval=1, title="EMA Length", group="Wait To Enter Settings")
+wait_emasrc = input(close, title="EMA Source", group="Wait To Enter Settings")
+wait_ema = ema(wait_emasrc, wait_ema_length)
+plot(waittoenter ? wait_ema : na, "EMA - Wait To Enter", style=plot.style_linebr, color=#2962ff, linewidth=1)
+emacrossup = crossover(wait_ema, OpenPA)
+emacrossdown = crossunder(wait_ema, OpenPA)
+//------------------------------------------------------------------------------  
+// EMA Filter (Enter ASAP)
+noemafilter_asap = input(true, title="No EMA Filter", inline="1", group="EMA Filter (Enter ASAP)")
+useemafilter_asap = input(false, title="Use EMA Filter", inline="1", group="EMA Filter (Enter ASAP)")
+ema_length_asap = input(defval=15, minval=1, title="EMA Length", group="EMA Filter (Enter ASAP)")
+emasrc_asap = input(close, title="EMA Source", group="EMA Filter (Enter ASAP)")
+ema_asap = ema(emasrc_asap, ema_length_asap)
+//plot(ema_asap, "EMA (Enter ASAP)", style=plot.style_linebr, color=#cad850, linewidth=2)
+plot(useemafilter_asap ? ema_asap : na, "EMA (Enter ASAP)", style=plot.style_linebr, color=#cad850, linewidth=2)
+//------------------------------------------------------------------------------  
+// EMA Filter (Wait To Enter)
+noemafilter = input(true, title="No EMA Filter", inline="1", group="EMA Filter (Wait To Enter)")
+useemafilter = input(false, title="Use EMA Filter", inline="1", group="EMA Filter (Wait To Enter)")
+ema_length = input(defval=15, minval=1, title="EMA Length", group="EMA Filter (Wait To Enter)")
+emasrc = input(close, title="EMA Source", group="EMA Filter (Wait To Enter)")
+ema = ema(emasrc, ema_length)
+//plot(ema, "EMA (Wait To Enter)", style=plot.style_linebr, color=#cad850, linewidth=2)
+plot(useemafilter ? ema : na, "EMA (Wait To Enter)", style=plot.style_linebr, color=#cad850, linewidth=2)
+//------------------------------------------------------------------------------  
+// CMF Filter (Enter ASAP)
+nocmffilter_asap = input(true, title="No CMF Filter", inline="1", group="CMF Filter (Enter ASAP)")
+usecmffilter_asap = input(false, title="Use CMF Filter", inline="1", group="CMF Filter (Enter ASAP)")
+mflength_asap = input(title="CMF length", group="CMF Filter (Enter ASAP)", type=input.integer, defval=20)
+ad_asap = close==high and close==low or high==low ? 0 : ((2*close-low-high)/(high-low))*volume
+mf_asap = sum(ad_asap, mflength_asap) / sum(volume, mflength_asap)
+//------------------------------------------------------------------------------  
+// CMF Filter (Wait To Enter)
+nocmffilter = input(true, title="No CMF Filter", inline="1", group="CMF Filter (Wait To Enter)")
+usecmffilter = input(false, title="Use CMF Filter", inline="1", group="CMF Filter (Wait To Enter)")
+mflength = input(title="CMF length", group="CMF Filter (Wait To Enter)", type=input.integer, defval=20)
+ad = close==high and close==low or high==low ? 0 : ((2*close-low-high)/(high-low))*volume
+mf = sum(ad, mflength) / sum(volume, mflength)
+//------------------------------------------------------------------------------  
+// EMA For Cross Over Open Line Stop Loss
+openlineclose = input(false, title='Exit When Stop Loss EMA Crosses Open Line', group="Open Line As Stop Loss")
+stop_ema_length = input(defval=15, minval=1, title="EMA Length", group="Open Line As Stop Loss")
+stop_emasrc = input(close, title="EMA Source", group="Open Line As Stop Loss")
+stop_ema = ema(stop_emasrc, stop_ema_length)
+//plot(stop_ema, "EMA - Wait To Enter", style=plot.style_linebr, color=#2962ff, linewidth=1)
+plot(openlineclose ? stop_ema : na, "EMA - Wait To Enter", style=plot.style_linebr, color=#2962ff, linewidth=1)
+pricecrossup = crossover(stop_ema, OpenPA)
+pricecrossdown = crossunder(stop_ema, OpenPA)
+//------------------------------------------------------------------------------  
+// Stop Loss & Take Profit % Based
+enablesltp = input(false, title='Enable Stop Loss & Take Profit', group="% Stop Loss & Take Profit")
+stopTick = input(2.0, title='Stop Loss %', group="% Stop Loss & Take Profit", type=input.float, step=0.1) / 100
+takeTick = input(4.0, title='Take Profit %', group="% Stop Loss & Take Profit", type=input.float, step=0.1) / 100
+longStop = strategy.position_avg_price * (1 - stopTick)
+shortStop = strategy.position_avg_price * (1 + stopTick)
+shortTake = strategy.position_avg_price * (1 - takeTick)
+longTake = strategy.position_avg_price * (1 + takeTick)
+plot(strategy.position_size > 0 and enablesltp ? longStop : na, style=plot.style_linebr, color=color.red, linewidth=1, title="Long Stop Loss")
+plot(strategy.position_size < 0 and enablesltp ? shortStop : na, style=plot.style_linebr, color=color.red, linewidth=1, title="Short Stop Loss")
+plot(strategy.position_size > 0 and enablesltp ? longTake : na, style=plot.style_linebr, color=color.green, linewidth=1, title="Long Take Profit")
+plot(strategy.position_size < 0 and enablesltp ? shortTake : na, style=plot.style_linebr, color=color.green, linewidth=1, title="Short Take Profit")
+//------------------------------------------------------------------------------  
+// Alert messages
+message_enterlong  = input("", title="Long Entry message", group="Alert Messages")
+message_entershort = input("", title="Short Entry message", group="Alert Messages")
+message_closelong = input("", title="Close Long message", group="Alert Messages")
+message_closeshort = input("", title="Close Short message", group="Alert Messages")
+//------------------------------------------------------------------------------  
+// Strategy Execution
+//------------------------------------------------------------------------------  
+// Entry Alerts - No EMA or CMF
+if entrycondition > OpenPA and time_cond and firsttradetimetobuy and noemafilter_asap and nocmffilter_asap and enterasap and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if entrycondition < OpenPA and time_cond and firsttradetimetobuy and noemafilter_asap and nocmffilter_asap and enterasap and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+// Entry Alerts (Wait To Enter) - No EMA or CMF
+if emacrossup and time_cond and timetobuy and noemafilter and nocmffilter and waittoenter and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if emacrossdown and time_cond and timetobuy and noemafilter and nocmffilter and waittoenter and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+//------------------------------------------------------------------------------  
+// Contrarian - Entry Alerts - No EMA or CMF
+if entrycondition > OpenPA and time_cond and firsttradetimetobuy and noemafilter_asap and nocmffilter_asap and enterasap and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if entrycondition < OpenPA and time_cond and firsttradetimetobuy and noemafilter_asap and nocmffilter_asap and enterasap and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+// Contrarian - Entry Alerts (Wait To Enter) - No EMA or CMF
+if emacrossup and time_cond and timetobuy and noemafilter and nocmffilter and waittoenter and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if emacrossdown and time_cond and timetobuy and noemafilter and nocmffilter and waittoenter and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+//------------------------------------------------------------------------------  
+// Entry Alerts - Use EMA but No CMF
+if entrycondition > OpenPA and close > ema_asap and time_cond and firsttradetimetobuy and useemafilter_asap and nocmffilter_asap and enterasap and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if entrycondition < OpenPA and close < ema_asap and time_cond and firsttradetimetobuy and useemafilter_asap and nocmffilter_asap and enterasap and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+// Entry Alerts (Wait To Enter)  - Use EMA but No CMF
+if emacrossup and close > ema and time_cond and timetobuy and useemafilter and nocmffilter and waittoenter and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if emacrossdown and close < ema and time_cond and timetobuy and useemafilter and nocmffilter and waittoenter and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+//------------------------------------------------------------------------------  
+// Contrarian - Entry Alerts - Use EMA but No CMF
+if entrycondition > OpenPA and close > ema_asap and time_cond and firsttradetimetobuy and useemafilter_asap and nocmffilter_asap and enterasap and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if entrycondition < OpenPA and close < ema_asap and time_cond and firsttradetimetobuy and useemafilter_asap and nocmffilter_asap and enterasap and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+// Contrarian - Entry Alerts (Wait To Enter)  - Use EMA but No CMF
+if emacrossup and close > ema and time_cond and timetobuy and useemafilter and nocmffilter and waittoenter and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if emacrossdown and close < ema and time_cond and timetobuy and useemafilter and nocmffilter and waittoenter and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+//------------------------------------------------------------------------------  
+// Entry Alerts - Use CMF but No EMA
+if entrycondition > OpenPA and mf_asap > 0 and time_cond and firsttradetimetobuy and noemafilter_asap and usecmffilter_asap and enterasap and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if entrycondition < OpenPA and mf_asap < 0 and time_cond and firsttradetimetobuy and noemafilter_asap and usecmffilter_asap and enterasap and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+// Entry Alerts (Wait To Enter) - Use CMF but No EMA
+if emacrossup and mf > 0 and time_cond and timetobuy and noemafilter and usecmffilter and waittoenter and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if emacrossdown and mf < 0 and time_cond and timetobuy and noemafilter and usecmffilter and waittoenter and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+//------------------------------------------------------------------------------  
+// Contrarian - Entry Alerts - Use CMF but No EMA
+if entrycondition > OpenPA and mf_asap > 0 and time_cond and firsttradetimetobuy and noemafilter_asap and usecmffilter_asap and enterasap and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if entrycondition < OpenPA and mf_asap < 0 and time_cond and firsttradetimetobuy and noemafilter_asap and usecmffilter_asap and enterasap and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+// Contrarian - Entry Alerts (Wait To Enter) - Use CMF but No EMA
+if emacrossup and mf > 0 and time_cond and timetobuy and noemafilter and usecmffilter and waittoenter and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if emacrossdown and mf < 0 and time_cond and timetobuy and noemafilter and usecmffilter and waittoenter and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+//------------------------------------------------------------------------------  
+// Entry Alerts - Use EMA and CMF
+if entrycondition > OpenPA and close > ema_asap and mf_asap > 0 and time_cond and firsttradetimetobuy and useemafilter_asap and usecmffilter_asap and enterasap and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if entrycondition < OpenPA and close < ema_asap and mf_asap < 0 and time_cond and firsttradetimetobuy and useemafilter_asap and usecmffilter_asap and enterasap and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+// Entry Alerts (Wait To Enter) - Use EMA and CMF
+if emacrossup and close > ema and mf > 0 and time_cond and timetobuy and useemafilter and usecmffilter and waittoenter and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if emacrossdown and close < ema and mf < 0 and time_cond and timetobuy and useemafilter and usecmffilter and waittoenter and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+//------------------------------------------------------------------------------  
+// Contrarian - Entry Alerts - Use EMA and CMF
+if entrycondition > OpenPA and close > ema_asap and mf_asap > 0 and time_cond and firsttradetimetobuy and useemafilter_asap and usecmffilter_asap and enterasap and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if entrycondition < OpenPA and close < ema_asap and mf_asap < 0 and time_cond and firsttradetimetobuy and useemafilter_asap and usecmffilter_asap and enterasap and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+// Contrarian - Entry Alerts (Wait To Enter) - Use EMA and CMF
+if emacrossup and close > ema and mf > 0 and time_cond and timetobuy and useemafilter and usecmffilter and waittoenter and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if emacrossdown and close < ema and mf < 0 and time_cond and timetobuy and useemafilter and usecmffilter and waittoenter and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+//------------------------------------------------------------------------------  
+// Hours exits
+if strategy.position_size > 0 and timetoclose and enableclose 
+    strategy.close_all(alert_message = message_closelong)
+if strategy.position_size < 0 and timetoclose and enableclose
+    strategy.close_all(alert_message = message_closeshort)
+    
+//------------------------------------------------------------------------------  
+// Open Line exits
+if strategy.position_size > 0 and pricecrossdown and openlineclose
+    strategy.close_all(alert_message = message_closelong)
+if strategy.position_size < 0 and pricecrossup and openlineclose
+    strategy.close_all(alert_message = message_closeshort)
+//------------------------------------------------------------------------------      
+// % TP and SL exits    
+if strategy.position_size > 0 and enablesltp and time_cond
+    strategy.exit(id="Close Long", stop=longStop, limit=longTake, alert_message = message_closelong)
+if strategy.position_size < 0 and enablesltp and time_cond
+    strategy.exit(id="Close Short", stop=shortStop, limit=shortTake, alert_message = message_closeshort)
+Expand (280 lines)

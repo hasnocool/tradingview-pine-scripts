@@ -1,0 +1,83 @@
+Script Name: Ichimoku Cloud Strategy v2.0
+Author: iamskrv
+Description: Trend following trading strategy “Ichimoku Crossover” is a popular Ichimoku trading strategy that uses the cloud and crossover of two base lines to define the market reverse point. Ichimoku crossover trading strategy has appeared to be a profitable trading strategy.
+
+
+The indicator has 5 base lines and to read Ichimoku indicator it is required to understand the...
+PineScript code:
+
+Pine Script™ strategy
+Ichimoku Cloud Strategy v2.0
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © iamskrv
+//@version=4
+strategy("Ichimoku Cloud Strategy v2.0", overlay=true)
+//@version=4
+// study(title="Ichimoku Cloud", shorttitle="Ichimoku", overlay=true)
+conversionPeriods = input(9, minval=1, title="Conversion Line Periods"),
+basePeriods = input(26, minval=1, title="Base Line Periods")
+laggingSpan2Periods = input(52, minval=1, title="Lagging Span 2 Periods"),
+displacement = input(26, minval=1, title="Displacement")
+donchian(len) => avg(lowest(len), highest(len))
+conversionLine = donchian(conversionPeriods)
+baseLine = donchian(basePeriods)
+leadLine1 = avg(conversionLine, baseLine)
+leadLine2 = donchian(laggingSpan2Periods)
+plot(conversionLine, color=#0496ff, title="Conversion Line")
+plot(baseLine, color=#991515, title="Base Line")
+plot(close, offset = -displacement + 1, color=#459915, title="Lagging Span")
+p1 = plot(leadLine1, offset = displacement - 1, color=color.green,
+ title="Lead 1")
+p2 = plot(leadLine2, offset = displacement - 1, color=color.red, 
+ title="Lead 2")
+fill(p1, p2, color = leadLine1 > leadLine2 ? color.green : color.red)
+// Strategy
+longCondition = crossover(conversionLine,baseLine)
+if (longCondition)
+    strategy.entry("Buy", strategy.long)
+shortCondition = crossover(baseLine, conversionLine)
+if (shortCondition)
+    strategy.entry("Short", strategy.short)
+Expand (41 lines)

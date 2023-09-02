@@ -1,0 +1,133 @@
+Script Name: Shorting when Bollinger Band Above Price with RSI (by Coinrule)
+Author: Coinrule
+Description: The Bollinger Bands are among the most famous and widely used indicators. A Bollinger Band is a technical analysis tool defined by a set of trendlines plotted two standard deviations (positively and negatively) away from a simple moving average ( SMA ) of a security's price, but which can be adjusted to user preferences. They can suggest when an asset is oversold...
+PineScript code:
+
+Pine Script™ strategy
+Shorting when Bollinger Band Above Price with RSI (by Coinrule)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+//@version=5
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Coinrule
+strategy("Bollinger Band Below Price with RSI",
+         overlay=true,
+         initial_capital=1000,
+         process_orders_on_close=true,
+         default_qty_type=strategy.percent_of_equity,
+         default_qty_value=70,
+         commission_type=strategy.commission.percent,
+         commission_value=0.1)
+showDate = input(defval=true, title='Show Date Range')
+timePeriod = time >= timestamp(syminfo.timezone, 2022, 1, 1, 0, 0)
+notInTrade = strategy.position_size <= 0
+//Bollinger Bands Indicator
+length = input.int(20, minval=1)
+src = input(close, title="Source")
+mult = input.float(2.0, minval=0.001, maxval=50, title="StdDev")
+basis = ta.sma(src, length)
+dev = mult * ta.stdev(src, length)
+upper = basis + dev
+lower = basis - dev
+offset = input.int(0, "Offset", minval = -500, maxval = 500)
+plot(basis, "Basis", color=#FF6D00, offset = offset)
+p1 = plot(upper, "Upper", color=#2962FF, offset = offset)
+p2 = plot(lower, "Lower", color=#2962FF, offset = offset)
+fill(p1, p2, title = "Background", color=color.rgb(33, 150, 243, 95))
+// RSI inputs and calculations
+lengthRSI = 14
+RSI = ta.rsi(close, lengthRSI)
+// Configure trail stop level with input options
+longTrailPerc = input.float(title='Trail Long Loss (%)', minval=0.0, step=0.1, defval=3) * 0.01
+shortTrailPerc = input.float(title='Trail Short Loss (%)', minval=0.0, step=0.1, defval=3) * 0.01
+// Determine trail stop loss prices
+//longStopPrice = 0.0
+shortStopPrice = 0.0
+//longStopPrice := if strategy.position_size > 0
+    //stopValue = close * (1 - longTrailPerc)
+    //math.max(stopValue, longStopPrice[1])
+//else
+    //0
+shortStopPrice := if strategy.position_size < 0
+    stopValue = close * (1 + shortTrailPerc)
+    math.min(stopValue, shortStopPrice[1])
+else
+    999999
+//Entry and Exit
+strategy.entry(id="short", direction=strategy.short, when=ta.crossover(close, upper) and RSI < 70 and timePeriod and notInTrade)
+if (ta.crossover(upper, close) and RSI > 70 and timePeriod)
+    strategy.exit(id='close', limit = shortStopPrice)
+Expand (74 lines)

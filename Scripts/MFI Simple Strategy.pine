@@ -1,0 +1,65 @@
+Script Name: MFI Simple Strategy
+Author: OztheWoz
+Description: Here I've made a simple strategy based off a simple moving average of an MFI length.
+Back tested on a BYBIT:BTCUSDT 30m chart.
+
+Conditions:
+---When the price is above the golden SMA of 200 bars---
+ - Buy: when MFI is moving up
+ - Sell: when MFI is moving down
+ - Stop: golden SMA of 200 bars
+
+
+If you would like alerts:
+ 1.) Add the strategy to your chart,
+ 2.) Go...
+PineScript code:
+
+Pine Script™ strategy
+MFI Simple Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © OztheWoz
+//@version=5
+strategy("MFI Simple Strategy", overlay=false)
+len = input(18, "Length")
+mfi = ta.sma(ta.mfi(close, len), len)
+mfiup = (mfi[1] < mfi) and (mfi[2] < mfi[1])
+mfidn = (mfi[1] > mfi) and (mfi[2] < mfi[1])
+goldsma = ta.sma(close, 200)
+if goldsma < close
+    strategy.entry("Long", strategy.long, when=mfiup)
+strategy.exit("Long", stop=goldsma)
+strategy.close("Long", when=mfidn)
+a = plot(mfi)
+b = plot(80, color=color.gray)
+c = plot(20, color=color.gray)
+fillclr = color.new(color.blue, 70)
+fill(a, b, color=(mfi > 80) ? fillclr : na)
+// fill(a, c)
+Expand (25 lines)

@@ -1,0 +1,104 @@
+Script Name: Joseph Nemeth Heiken Ashi Renko MTF Strategy
+Author: SparkyFlary
+Description: For Educational Purposes. Results can differ on different markets and can fail at any time. Profit is not guaranteed. This only works in a few markets and in certain situations. Changing the settings can give better or worse results for other markets.
+
+Nemeth is a forex trader that came up with a multi-time frame heiken ashi  based strategy that he showed to an...
+PineScript code:
+
+Pine Script™ strategy
+Joseph Nemeth Heiken Ashi Renko MTF Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// Joseph Nemeth Heiken Ashi Renko MTF Strategy
+// by SparkyFlary
+//For Educational Purposes
+//Results can differ on different markets and can fail at any time. Profit is not guaranteed.
+strategy(title="Joseph Nemeth Heiken Ashi Renko MTF Strategy", shorttitle="Nemeth Strategy", overlay=true)
+res1 = input("60", title="Middle time frame")
+res2 = input("D", title="Higher time frame")
+renkoSize = input(1.0, title="Renko size")
+renkoType = input("ATR", title="Renko type", options=["ATR", "Traditional"])
+//withRecovery = input(false, title="with trade recovery?")
+//renko
+renko_tickerid = renko(syminfo.tickerid, renkoType, renkoSize)
+renko_close = security(renko_tickerid, timeframe.period, close)
+renko_open = security(renko_tickerid, timeframe.period, open)
+renkoGreen = renko_close>renko_open
+renkoRed = renko_close<renko_open
+//heiken ashi
+ha_id = heikinashi(syminfo.tickerid)
+//middle time frame
+haopen1 = security(ha_id, resolution=res1, expression=open)
+haclose1 = security(ha_id, resolution=res1, expression=close)
+green1 = haclose1 > haopen1
+red1 = haclose1 < haopen1
+ema1 = security(syminfo.tickerid, resolution=res1, expression=ema(close, 20))
+slopeUp1 = ema1 > ema1[1]
+slopeDown1 = ema1 < ema1[1]
+//higher time frame
+haopen2 = security(ha_id, resolution=res2, expression=open)
+haclose2 = security(ha_id, resolution=res2, expression=close)
+green2 = haclose2 > haopen2
+red2 = haclose2 < haopen2
+//Strategy
+buy = green1 and green2 and slopeUp1 and renkoGreen //and abs(strategy.position_size[1])==0
+sell = red1 or red2 or slopeDown1 or renkoRed //and (strategy.openprofit>0)
+short = red1 and red2 and slopeDown1 and renkoRed //and abs(strategy.position_size[1])==0
+cover = green1 or green2 or slopeUp1 or renkoGreen //and (strategy.openprofit>0) 
+strategy.entry(id="enter long", long=true, when=buy)
+strategy.close(id="enter long", comment="exit long", when=sell)
+strategy.entry(id="enter short", long=false, when=short)
+strategy.close(id="enter short", comment="exit short", when=cover)
+Expand (51 lines)

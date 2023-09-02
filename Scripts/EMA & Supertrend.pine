@@ -1,0 +1,186 @@
+Script Name: EMA & Supertrend
+Author: bhavikmota
+Description: Strategy has been built based on the crossover of 21 EMA (EMA 1) and 55 EMA (EMA 2). Along with with strategy, user can alter the period of EMA 1 & EMA 2 based on their suitability.
+
+When EMA 1 crossover EMA2 or when prices closes above EMA 1 and EMA 1 is greater than EMA 2, strategy will generate Buy signal.
+
+Position gets closed when price closes below EMA...
+PineScript code:
+
+Pine Script™ strategy
+EMA & Supertrend
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © bhavikmota
+//@version=4
+strategy("EMA & Supertrend", overlay = true)
+//length = input(9, minval=1)
+//ema1 = ema(close, length)
+//ema2 = ema(ema1, length)
+//ema3 = ema(ema2, length)
+//shortest = ema(close, 20)
+//short = ema(close, 50)
+//longer = ema(close, 100)
+//longest = ema(close, 200)
+//for Ema1
+len1 = input(21, minval=1)
+//src1 = input(close)
+ema1 = ema(close,len1)
+plot(ema1, color=color.red, linewidth=1)
+//for Ema2
+len2 = input(55, minval=1)
+//src2 = input(close)
+ema2 = ema(close,len2)
+plot(ema2, color=color.green, linewidth=1)
+//for Ema3
+len3 = input(200, minval=1)
+//src3 = input(close)
+ema3 = ema(close,len3)
+plot(ema3, color=color.blue, linewidth=1)
+//for Ema4
+len4 = input(233, minval=1)
+//src4 = input(close)
+ema4 = ema(close,len4)
+plot(ema4, color=color.black, linewidth=1)
+Periods = input(title="ATR Period", type=input.integer, defval=10)
+src = input(hl2, title="Source")
+Multiplier = input(title="ATR Multiplier", type=input.float, step=0.1, defval=3.0)
+changeATR= input(title="Change ATR Calculation Method ?", type=input.bool, defval=true)
+showsignals = input(title="Show Buy/Sell Signals ?", type=input.bool, defval=true)
+highlighting = input(title="Highlighter On/Off ?", type=input.bool, defval=true)
+atr2 = sma(tr, Periods)
+atr= changeATR ? atr(Periods) : atr2
+up=src-(Multiplier*atr)
+up1 = nz(up[1],up)
+up := close[1] > up1 ? max(up,up1) : up
+dn=src+(Multiplier*atr)
+dn1 = nz(dn[1], dn)
+dn := close[1] < dn1 ? min(dn, dn1) : dn
+trend = 1
+trend := nz(trend[1], trend)
+trend := trend == -1 and close > dn1 ? 1 : trend == 1 and close < up1 ? -1 : trend
+upPlot = plot(trend == 1 ? up : na, title="Up Trend", style=plot.style_linebr, linewidth=2, color=color.green)
+buySignal = trend == 1 and trend[1] == -1
+plotshape(buySignal ? up : na, title="UpTrend Begins", location=location.absolute, style=shape.circle, size=size.tiny, color=color.green, transp=0)
+plotshape(buySignal and showsignals ? up : na, title="Buy", text="Buy", location=location.absolute, style=shape.labelup, size=size.tiny, color=color.green, textcolor=color.white, transp=0)
+dnPlot = plot(trend == 1 ? na : dn, title="Down Trend", style=plot.style_linebr, linewidth=2, color=color.red)
+sellSignal = trend == -1 and trend[1] == 1
+plotshape(sellSignal ? dn : na, title="DownTrend Begins", location=location.absolute, style=shape.circle, size=size.tiny, color=color.red, transp=0)
+plotshape(sellSignal and showsignals ? dn : na, title="Sell", text="Sell", location=location.absolute, style=shape.labeldown, size=size.tiny, color=color.red, textcolor=color.white, transp=0)
+mPlot = plot(ohlc4, title="", style=plot.style_circles, linewidth=0)
+longFillColor = highlighting ? (trend == 1 ? color.green : color.white) : color.white
+shortFillColor = highlighting ? (trend == -1 ? color.red : color.white) : color.white
+fill(mPlot, upPlot, title="UpTrend Highligter", color=longFillColor)
+fill(mPlot, dnPlot, title="DownTrend Highligter", color=shortFillColor)
+alertcondition(buySignal, title="SuperTrend Buy", message="SuperTrend Buy!")
+alertcondition(sellSignal, title="SuperTrend Sell", message="SuperTrend Sell!")
+changeCond = trend != trend[1]
+alertcondition(changeCond, title="SuperTrend Direction Change", message="SuperTrend has changed direction!")
+//Trading logic
+Enterlong = crossover(ema1,ema2) or (close>ema1 and close>ema2 and ema1>ema2) and close>ema4// positive ema crossover
+Exitlong = crossunder(close,ema2) // candle closes below supertrend
+Entershort = crossunder(ema1,ema2) or (close<ema1 and close<ema2 and ema2<ema1) and close<ema4// negative ema crossover
+Exitshort = crossover(close,ema2) // candle closes above supertrend
+//Execution Logic - Placing Order
+start = timestamp(2008,1,1,0,0)
+if time>= start
+    strategy.entry("long", strategy.long, 100, when=Enterlong)
+    strategy.close("long",when=Exitlong)
+//strategy.entry("short",strategy.short,100,when=Entershort)
+//strategy.close("short",when=Exitshort)
+Expand (95 lines)

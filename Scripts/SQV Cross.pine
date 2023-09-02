@@ -1,0 +1,70 @@
+Script Name: SQV Cross
+Author: tbernache
+Description: This strategy is used to find tickers that do well when SPY and QQQ are up and VIX is down. This uses EMA's on the user defined resolution to define direction of each ticker. Trades are entered upon crossover. EMAs are user defined as well.
+PineScript code:
+
+Pine Script™ strategy
+SQV Cross
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © tbernache
+//@version=4
+strategy("SQV Cross", overlay=true, margin_long=100, margin_short=100)
+slow = input(5, title="Fast EMA", minval=0, maxval=100)
+fast = input(35, title="Slow EMA", minval=0, maxval=500)
+//res = input("10", title="Resolution")
+res = timeframe.period
+spy  = security("SPY", res, close)
+spy_fast = ema(spy, fast)
+spy_slow = ema(spy, slow)
+spy_up = spy_fast > spy_slow and spy_slow > spy_slow[1]
+vix  = security("VIX", res, close)
+vix_fast = ema(vix, fast)
+vix_slow = ema(vix, slow)
+vix_down = vix_slow > vix_fast and vix_slow[1] > vix_slow
+qqq  = security("QQQ", res, close)
+qqq_fast = ema(qqq, fast)
+qqq_slow = ema(qqq, slow)
+qqq_up = qqq_fast > qqq_slow and qqq_slow > qqq_slow[1]
+xUp = spy_up and qqq_up and vix_down
+plotchar(xUp, "Long",  "▲", location.bottom, color.lime, size = size.tiny)
+if (xUp)
+    strategy.entry("long", strategy.long)
+    strategy.exit ("Exit Long","long",  trail_points = 10,trail_offset = 50, loss =70) 
+Expand (36 lines)

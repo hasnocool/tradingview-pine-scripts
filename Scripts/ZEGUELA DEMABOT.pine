@@ -1,0 +1,498 @@
+Script Name: ZEGUELA DEMABOT
+Author: zeguela
+Description: Swing trading bot strategy. This indicator uses Dema 8 and Dema 24 crosses to throw buy and sell signals. You can also se take profit and stop loss parameters
+PineScript code:
+
+Pine Script™ strategy
+ZEGUELA DEMABOT
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// This code is based on the study you can find here: https://kodify.net/tradingview/indicators/dema/
+// ©zeguela
+//@version=4
+strategy(title="ZEGUELA DEMABOT", commission_value=0.070, commission_type=strategy.commission.percent, initial_capital=100, default_qty_value=90, default_qty_type=strategy.percent_of_equity, overlay=true, process_orders_on_close=true)
+// Step 1. Script settings
+// Input options
+srcData = input(title="Source Data", type=input.source, defval=close)
+// Length settings
+len1 = input(title="Length DEMA #1", type=input.integer, defval=8, minval=1)
+len2 = input(title="Length DEMA #2", type=input.integer, defval=21, minval=0)
+len3 = input(title="Length DEMA #3", type=input.integer, defval=0, minval=0)
+// Step 2. Calculate indicator values
+// Function that calculates the DEMA
+DEMA(series, length) =>
+    if (length > 0)
+        emaValue = ema(series, length)
+        2 * emaValue - ema(emaValue, length)
+    else
+        na
+// Calculate the DEMA values
+demaVal1 = DEMA(srcData, len1)
+demaVal2 = DEMA(srcData, len2)
+demaVal3 = DEMA(srcData, len3)
+// Step 3. Determine indicator signals
+// See if there's a DEMA crossover
+demaCrossover = if (len2 > 0) and (len3 > 0)
+    crossover(demaVal1, demaVal2) and (demaVal3 > demaVal3[1])
+else
+    if (len2 > 0) and (len3 == 0)
+        crossover(demaVal1, demaVal2)
+    else
+        if (len3 > 0) and (len2 == 0)
+            crossover(demaVal1, demaVal3)
+        else
+            crossover(close, demaVal1)
+// Check if there's a DEMA crossunder
+demaCrossunder = if (len2 > 0) and (len3 > 0)
+    crossunder(demaVal1, demaVal2) and (demaVal3 < demaVal3[1])
+else
+    if (len2 > 0) and (len3 == 0)
+        crossunder(demaVal1, demaVal2)
+    else
+        if (len3 > 0) and (len2 == 0)
+            crossunder(demaVal1, demaVal3)
+        else
+            crossunder(close, demaVal1)
+// Step 4. Output indicator data
+// Plot DEMAs on the chart
+plot(series=demaVal1, color=color.green, linewidth=2, title="DEMA #1")
+plot(series=demaVal2, color=color.red, linewidth=2, title="DEMA #2")
+plot(series=demaVal3, color=color.fuchsia, linewidth=2, title="DEMA #3")
+// Step 5. Trailing Stop, Stop Loss and Take Profit calculation
+//TRAILING STOP CODE
+a = input(title="Usar Trailing Stop?", type=input.bool, defval=false)
+stopPerlong = input(10.0, title='Stop Loss Long %', type=input.float, group="Stop Loss & Take Profit Settings") / 100
+stopPershort = input(5.0, title='Stop Loss Short %', type=input.float, group="Stop Loss & Take Profit Settings") / 100
+take1Perlong = input(40.0, title='Take Profit Long % 1', type=input.float, group="Stop Loss & Take Profit Settings") / 100
+take1Pershort = input(10.0, title='Take Profit Short % 1', type=input.float, group="Stop Loss & Take Profit Settings") / 100
+// Determine stop loss price
+longStopPrice  = strategy.position_avg_price * (1 - stopPerlong)
+shortStopPrice = strategy.position_avg_price * (1 + stopPershort)
+longTake1Price = strategy.position_avg_price * (1 + take1Perlong)
+shortTake1Price = strategy.position_avg_price * (1 - take1Pershort)
+// Determine trail stop loss prices
+longStopPriceTrail = 0.0
+longStopPriceTrail := if (strategy.position_size > 0)
+    stopValue = close * (1 - stopPerlong)
+    max(stopValue, longStopPriceTrail[1])
+else
+    0
+// Determine trailing short price
+shortStopPriceTrail = 0.0
+shortStopPriceTrail := if (strategy.position_size < 0)
+    stopValue = close * (1 + stopPershort)
+    min(stopValue, shortStopPriceTrail[1])
+else
+    999999
+//Calculate wich stop to use
+longStop = a ? longStopPriceTrail : longStopPrice
+shortStop = a ? shortStopPriceTrail : shortStopPrice
+//Calculate SL and TP value to throw through alert
+longStopEntrada = close  * (1 - stopPerlong)
+shortStopEntrada = close  * (1 + stopPershort) 
+longTPEntrada = close * (1 + take1Perlong)
+shortTPEntrada = close * (1 - take1Pershort)
+//Save the SL and TP price for furter results calculation
+price_entryL = 0.0
+price_entryL := na(price_entryL) ? na : price_entryL[1]
+price_entryS = 0.0
+price_entryS := na(price_entryS) ? na : price_entryS[1]
+stopL = 0.0
+stopL := na(stopL) ? na : stopL[1]
+stopS = 0.0
+stopS := na(stopS) ? na : stopS[1]
+takeL = 0.0
+takeL := na(takeL) ? na : takeL[1]
+takeS = 0.0
+takeS := na(takeS) ? na : takeS[1]
+if (demaCrossover)
+    price_entryL := close
+    stopL := close  * (1 - stopPerlong)
+    takeL := close * (1 + take1Perlong)
+    
+if (demaCrossunder)
+    price_entryS := close
+    stopS := close  * (1 + stopPershort)
+    takeS := close * (1 - take1Pershort)
+//Calculate P&L results
+resultadoL = ((close - price_entryL)/price_entryL) * 100
+resultadoLexit = "(SL = 1% e TP = 0,5%)"
+resultadoS = ((price_entryS - close)/price_entryS) * 100
+resultadoSexit = "(SL = 1% e TP = 0,5)%"
+// Step 6. Strategy setup
+// Make input options that configure backtest date range
+_startDate = input(title="Start Date", type=input.integer,
+     defval=1, minval=1, maxval=31, group="BackTest Period")
+_startMonth = input(title="Start Month", type=input.integer,
+     defval=4, minval=1, maxval=12, group="BackTest Period")
+_startYear = input(title="Start Year", type=input.integer,
+     defval=2021, minval=1800, maxval=2100, group="BackTest Period")
+_endDate = input(title="End Date", type=input.integer,
+     defval=31, minval=1, maxval=31, group="BackTest Period")
+_endMonth = input(title="End Month", type=input.integer,
+     defval=12, minval=1, maxval=12, group="BackTest Period")
+_endYear = input(title="End Year", type=input.integer,
+     defval=2031, minval=1800, maxval=2100, group="BackTest Period")
+// Look if the close time of the current bar
+// falls inside the date range
+_inDateRange = (time >= timestamp(syminfo.timezone, _startYear,
+         _startMonth, _startDate, 0, 0)) and
+     (time < timestamp(syminfo.timezone, _endYear, _endMonth, _endDate, 0, 0))
+  
+//Alert configuration     
+_alertMessageOpenLong="OpenLong"
+_alertMessageCloseLong="CloseLong"
+_alertmessageExitLong="ExitLong"
+_alertmessageTPLong="TakeProfitLong"
+_alertMessageOpenShort="OpenShort"
+_alertMessageCloseShort="CloseShort"
+_alertMessageTPShort="TakeProfitShort"
+_alertMessageExitShort="ExitShort"
+// Step 7. Strategy Execution
+if (_inDateRange)
+    //ENTER SOME SETUP TRADES FOR TSL EXAMPLE
+    if (demaCrossover)
+        strategy.entry("LONG", strategy.long, comment = "OPEN LONG", alert_message=_alertMessageOpenLong)
+        strategy.exit(id="Close Long TP1", stop=stopL, limit=takeL, comment="CLOSE LONG", alert_message=_alertmessageExitLong)
+    if (demaCrossunder)
+        strategy.entry("SHORT", strategy.short, comment = "OPEN SHORT", alert_message=_alertMessageOpenShort)
+        strategy.exit(id="Close Short TP1", stop=stopS, limit=takeS, comment="CLOSE SHORT", alert_message=_alertMessageExitShort)
+    //EXIT TRADE @ TSL
+    if strategy.position_size > 0
+        strategy.exit("TP/SL", "LONG", stop=longStop, limit=longTake1Price, comment="EXIT LONG", alert_message=_alertmessageExitLong)
+    if strategy.position_size < 0
+        strategy.exit("TP/SL", "SHORT", stop=shortStop, limit=shortTake1Price, comment ="EXIT SHORT", alert_message=_alertMessageExitShort)
+// Step 8. Chart look and feel
+//Look & Feel - Plot stop loss and take profit areas
+p1=plot(strategy.position_avg_price, color=color.blue, style=plot.style_linebr, linewidth=1, title="Entry Price")
+p2=plot(series=strategy.position_size > 0 ? longStop : na, color=color.red, style=plot.style_linebr, linewidth=1, title="Long Stop")
+p3=plot(series=strategy.position_size > 0 ? longTake1Price : na, color=color.green, style=plot.style_linebr, linewidth=1, title="Long TP")
+p4=plot(series=strategy.position_size < 0 ? shortStop : na, color=color.red, style=plot.style_linebr, linewidth=1, title="Short Stop")
+p5=plot(series=strategy.position_size < 0 ? shortTake1Price : na, color=color.green, style=plot.style_linebr, linewidth=1, title="Short TP")
+fill(p1, p2, color=color.red)
+fill(p1, p3, color=color.green)
+fill(p1, p4, color=color.red)
+fill(p1, p5, color=color.green)
+// Insert label with value
+stopLossOnLong = "Stop Loss = " + tostring(longStop)
+stopLossOnShort = "Stop Loss = " + tostring(shortStop)
+takeprofitOnLong = "Take Profit = " + tostring(longTake1Price)
+takeprofitOnShort = "Take Profit = " + tostring(shortTake1Price)
+precoentrada = "Entry Price = " + tostring(strategy.position_avg_price)
+var label FinalLabelpriceL = na
+var label FinalLabelpriceS = na
+var label slFinalLabelL = na
+var label slFinalLabelS = na
+var label slFinalLabelTPL = na
+var label slFinalLabelTPS = na
+//Draw entry and stop loss lines and labels
+if strategy.position_size > 0   
+    
+    //write the price above the end of the stoploss line
+    slFinalLabelL := label.new(bar_index, longStop, stopLossOnLong, style=label.style_none, size=size.normal, textcolor=color.red)
+    slFinalLabelTPL := label.new(bar_index, longTake1Price, takeprofitOnLong, style=label.style_none, size=size.normal, textcolor=color.green)
+    FinalLabelpriceL := label.new(bar_index, strategy.position_avg_price, precoentrada, style=label.style_none, size=size.normal, textcolor=color.blue)
+    
+    // Delete previous label when there is a consecutive new high, as there's no line plot in that case.
+    if strategy.position_size > 0[1]
+        label.delete(slFinalLabelL[1])
+        label.delete(slFinalLabelTPL[1])
+        label.delete(FinalLabelpriceL[1])
+if strategy.position_size < 0   
+    
+    //write the price above the end of the stoploss line
+    slFinalLabelS := label.new(bar_index, shortStop, stopLossOnShort, style=label.style_none, size=size.normal, textcolor=color.red)
+    slFinalLabelTPS := label.new(bar_index, shortTake1Price, takeprofitOnShort, style=label.style_none, size=size.normal, textcolor=color.green)
+    FinalLabelpriceS := label.new(bar_index, strategy.position_avg_price, precoentrada, style=label.style_none, size=size.normal, textcolor=color.blue)
+    
+    // Delete previous label when there is a consecutive new high, as there's no line plot in that case.
+    if strategy.position_size < 0[1]
+        label.delete(slFinalLabelS[1])
+        label.delete(slFinalLabelTPS[1]) 
+        label.delete(FinalLabelpriceS[1])
+    
+// Exit open market position when date range ends
+if (not _inDateRange)
+    strategy.close_all()
+//Plot the box with position and P&L
+posColor = color.new(color.green, 75)
+negColor = color.new(color.red, 75)
+dftColor = color.new(color.blue, 75)
+posProfit= (strategy.position_size > 0) ? (close * 100 / strategy.position_avg_price - 100) : strategy.position_size < 0 ? (strategy.position_avg_price * 100 / close - 100) : 0.0
+posDir   = (strategy.position_size  > 0) ? "long" : strategy.position_size < 0 ? "short" : "flat"
+posCol   = (posProfit > 0) ? posColor : (posProfit < 0) ? negColor : dftColor
+var label lb = na
+label.delete(lb)
+lb := label.new(bar_index, max(high, highest(4)[1]), textcolor=color.white,
+   color=posCol,
+   text="Pos: "+ posDir +
+      "\nPnL: "+tostring(posProfit, "#.##")+"%" +
+      "\nAvg Price: "+tostring(strategy.position_avg_price, "#.####") +
+      "\nClose: "+tostring(close, "#.####"))
+Expand (266 lines)

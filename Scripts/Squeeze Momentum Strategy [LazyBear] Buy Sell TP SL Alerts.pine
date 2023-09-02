@@ -1,0 +1,257 @@
+Script Name: Squeeze Momentum Strategy [LazyBear] Buy Sell TP SL Alerts
+Author: mtahreemalam
+Description: -Modified version of Squeeze Momentum Indicator by @LazyBear. 
+-Converted to version 5, 
+-Taken inspiration from @KivancOzbilgic for its buy sell calculations,
+-Used @Bunghole strategy template with Take Profit, Stop Loss and Enable/Disable Toggles
+-Added Custom Date Backtesting...
+PineScript code:
+
+Pine Script™ strategy
+Squeeze Momentum Strategy [LazyBear] Buy Sell TP SL Alerts
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+//@version=5
+//@mtahreemalam
+strategy(title = 'Squeeze Momentum Strategy with TP & SL, v2',
+         shorttitle = 'SQM Strategy, v2',
+         overlay = true,
+         pyramiding = 0,
+         default_qty_type = strategy.percent_of_equity,
+         default_qty_value = 100,
+         initial_capital = 100000,
+         commission_type=strategy.commission.percent, 
+         commission_value=0.0,
+         process_orders_on_close=false,
+         use_bar_magnifier=false)
+import jason5480/time_filters/5 as tif
+gp0 = "Backtesting Settings"
+gp1 = "Squeeze Momentum Settings"
+gp2 = "Strategy Settings"
+type1 = "Buy@ Mom Up/ Sell@ Mom Dn"
+type2 = "Buy@ Mom Up & below 0/ Sell@ Mom Dn & above 0"
+type3 = "Longs Only below 0/ Shorts Only above 0"
+type4 = "Long@ Mom above 0/ Short@ Mom below 0"
+usefromDate = input.bool(defval = true, title = 'From', inline = 'From Date', group = gp0)
+fromDate = input.time(defval = timestamp('1 Jan 2023 00:00'), title = '', inline = 'From Date', group = gp0)
+usetoDate = input.bool(defval = false, title = 'To ', inline = 'To Date', group = gp0)
+toDate = input.time(defval = timestamp('31 Jul 2024 00:00'), title = '', inline = 'To Date', group = gp0)
+bool dateFilterApproval = tif.is_in_date_range(usefromDate, fromDate, usetoDate, toDate)
+strategy_logic = input.string(type2, "Switch Strategy Logic Type", options = [type1, type2, type3, type4], group = gp2)
+longDealsEnabled = input.bool(defval = true, title = 'Enable Longs', inline = 'Long/Short Deals', group = gp2)
+shortDealsEnabled = input.bool(defval = false, title = 'Enable Shorts', inline = 'Long/Short Deals', group = gp2)
+long_stoploss_value = input.float(defval=0.5, title='  Long SL %', minval=0.01, step=0.01,group=gp2, inline='2')//100
+long_takeprofit_value = input.float(defval=1, title='  Long TP %', minval=0.01, step=0.01,group=gp2, inline='2')//100
+short_stoploss_value = input.float(defval=0.5, title='  Short SL %', minval=0.01, step=0.01,group=gp2, inline='3')//100
+short_takeprofit_value = input.float(defval=1, title='  Short TP %', minval=0.01,step=0.01, group=gp2, inline='3')//100
+exit_tp_sl = input.bool(defval = false, title = 'Exit only when TP/SL hit', group=gp2)
+allowEntry = exit_tp_sl  ? strategy.position_size==0 : true
+long_stoploss_percentage = close * (long_stoploss_value / 100) / syminfo.mintick
+long_takeprofit_percentage = close * (long_takeprofit_value / 100) / syminfo.mintick
+short_stoploss_percentage = close * (short_stoploss_value / 100) / syminfo.mintick
+short_takeprofit_percentage = close * (short_takeprofit_value / 100) / syminfo.mintick
+length = input(20, title='BB Length', group = gp1)
+mult = input(2.0, title='BB MultFactor', group = gp1)
+lengthKC = input(20, title='KC Length', group = gp1)
+mult_kc = input(1.5, title='KC MultFactor', group = gp1)
+squeeze_filter = input.bool(true, "Take Entry only when Squeeze On", group = gp1)
+// Calculate BB
+src = ohlc4
+ma_1 = ta.sma(src, length)
+ma_2 = ta.sma(src, lengthKC)
+range_ma = ta.sma(high - low, lengthKC)
+dev = mult * ta.stdev(src, length)
+upper_bb = ma_1 + dev
+lower_bb = ma_1 - dev
+upper_kc = ma_2 + range_ma * mult_kc
+lower_kc = ma_2 - range_ma * mult_kc
+sqz_on = lower_bb > lower_kc and upper_bb < upper_kc
+sqz_off = lower_bb < lower_kc and upper_bb > upper_kc
+no_sqz = sqz_on == false and sqz_off == false
+sqz_filter = squeeze_filter ? sqz_off : true
+val = ta.linreg(src - math.avg(math.avg(ta.highest(hl2, lengthKC), ta.lowest(low, lengthKC)), ta.sma(hl2, lengthKC)), lengthKC, 0)
+iff_1 = val > nz(val[1]) ? color.lime : color.green
+iff_2 = val < nz(val[1]) ? color.red : color.maroon
+bcolor = val > 0 ? iff_1 : iff_2
+scolor = no_sqz ? color.blue : sqz_on ? color.black : color.aqua
+long_default = ta.crossover(val,nz(val[1]))
+short_default = ta.crossunder(val,nz(val[1]))
+longCondition = switch strategy_logic
+    type1 => ta.crossover(val,nz(val[1])) and sqz_filter
+    type2 => ta.crossover(val,nz(val[1])) and val<0 and sqz_filter
+    type3 => ta.crossover(val,nz(val[1])) and val<0 and sqz_filter
+    type4 => ta.crossover(val,0) and sqz_filter
+shortCondition = switch strategy_logic
+    type1 => ta.crossunder(val,nz(val[1])) and sqz_filter
+    type2 => ta.crossunder(val,nz(val[1])) and val>0 and sqz_filter
+    type3 => ta.crossunder(val,nz(val[1])) and val>0 and sqz_filter
+    type4 => ta.crossunder(val,0) and sqz_filter
+longExit = switch strategy_logic
+    type1 => ta.crossunder(val,nz(val[1]))
+    type2 => ta.crossunder(val,nz(val[1])) and val>0
+    type3 => ta.crossunder(val,nz(val[1])) and val<0
+    type4 => ta.crossunder(val,0)
+shortExit = switch strategy_logic
+    type1 => ta.crossover(val,nz(val[1]))
+    type2 => ta.crossover(val,nz(val[1])) and val<0
+    type3 => ta.crossover(val,nz(val[1])) and val>0
+    type4 => ta.crossover(val,0)
+//STRATEGY
+if longExit and (not exit_tp_sl) 
+    strategy.close('Long', comment = 'L.Close')
+if shortExit and (not exit_tp_sl)
+    strategy.close('Short', comment = 'S.Close')
+if longCondition and longDealsEnabled and dateFilterApproval and allowEntry
+    strategy.entry('Long', strategy.long)
+    strategy.exit('Long Exit', from_entry='Long', loss=long_stoploss_percentage, profit=long_takeprofit_percentage, comment_loss="Long SL", comment_profit="Long TP")
+if shortCondition and shortDealsEnabled and dateFilterApproval and allowEntry
+    strategy.entry('Short', strategy.short)
+    strategy.exit('Short Exit', from_entry='Short', loss=short_stoploss_percentage, profit=short_takeprofit_percentage, comment_loss="Short SL", comment_profit="Short TP")
+// Plot Stoploss & Take Profit Levels
+long_stoploss_price = strategy.position_avg_price * (1 - long_stoploss_value / 100)
+long_takeprofit_price = strategy.position_avg_price * (1 + long_takeprofit_value / 100)
+short_stoploss_price = strategy.position_avg_price * (1 + short_stoploss_value / 100)
+short_takeprofit_price = strategy.position_avg_price * (1 - short_takeprofit_value / 100)
+// Entries
+plot(strategy.position_size>0 ? long_stoploss_price : na, color=color.new(#ff0000, 0), style=plot.style_linebr, linewidth=1, title='Long SL Level')
+plot(strategy.position_size>0 ? long_takeprofit_price : na, color=color.new(#008000, 0), style=plot.style_linebr, linewidth=1, title='Long TP Level')
+plot(strategy.position_size<0 ? short_stoploss_price : na, color=color.new(#ff0000, 0), style=plot.style_linebr, linewidth=1, title='Short SL Level')
+plot(strategy.position_size<0 ? short_takeprofit_price : na, color=color.new(#008000, 0), style=plot.style_linebr, linewidth=1, title='Short TP Level')
+barcolor(close>=open? color.new(color.green,80):color.new(color.red,80))
+Expand (137 lines)

@@ -1,0 +1,110 @@
+Script Name: Heikin-Kaufman Non-Repaint
+Author: TradersVenue
+Description: Non-repaint version of Heikin/Kaufman strategy published by Marco ()
+PineScript code:
+
+Pine Script™ strategy
+Heikin/Kaufman Non-Repaint
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+//@version=4
+//Strategy Source: Heikin/Kaufman by Marco (https://www.tradingview.com/script/TOv4zoTc/)
+//Modified the repaint logic and converted to pine V4. Added background color basis trade
+vIndicatorName = "Heikin/Kaufman Non-Repaint"
+vIndicatorShortName = "HKU Non-Repaint"
+strategy(title = vIndicatorName, shorttitle = vIndicatorShortName, overlay = true,
+  calc_on_every_tick = true, calc_on_order_fills = true, pyramiding = 0,
+  default_qty_value = 1, default_qty_type = strategy.fixed,
+  format = format.price, initial_capital = 100000,
+  commission_type=strategy.commission.percent, commission_value=0.02) 
+  
+iResolution = input(defval = "25", title = "Heikin Ashi EMA Time Frame", type=input.resolution)
+iShiftNRP = input(defval = 1,title = "Non-Repaint Candle Shift", type = input.integer, step = 1, maxval = 50, minval = 0)
+iPeriodSMA  = input(defval = 21,title = "Slow EMA Period", type = input.integer, step = 1, maxval = 200, minval = 1)
+Length    = input(defval = 10, title = "Length", type = input.integer, step = 1, maxval = 100, minval = 1)
+iSource   = input(defval = hlc3, title = "Source", type=input.source)
+iPeriodFMA  = input(defval = 1,title = "Source Smoothing Value", type = input.integer, step = 1, maxval = 50, minval = 0)
+Fastend   = input(defval = 5, title = "Fast", type = input.float, step = 0.5, maxval = 100, minval = 1)
+Slowend   = input(defval = 20, title = "Slow", type = input.integer, step = 1, maxval = 100, minval = 1)
+iCandleType = input(defval = "HeikinAshi", title = "Choose Candle Type", options = ["HeikinAshi","Japanese"])
+jTicker   = syminfo.prefix + ":" + syminfo.ticker
+hTicker   = heikinashi(syminfo.tickerid)
+vTicker   = iCandleType == "Japanese" ? jTicker : hTicker
+xvnoise   = abs(iSource - iSource[1])
+nfastend  = 2/(Fastend + 1)
+nslowend  = 2/(Slowend + 1)
+nsignal   = abs(iSource - iSource[Length])
+nnoise    = sum(xvnoise, Length)
+nefratio  = iff(nnoise != 0, nsignal / nnoise, 0)
+nsmooth   = pow(nefratio * (nfastend - nslowend) + nslowend, 2) 
+nAMA() => 
+    nAMA = 0.0
+    nAMA := nz(nAMA[1]) + nsmooth * (iSource - nz(nAMA[1]))
+ha_t    = heikinashi(syminfo.tickerid)
+ha_close  = security(vTicker, timeframe.period, nAMA()[iShiftNRP])  //Higher TF OHLC values will be perfect when barstate is confirmed, So consider previous candle value.
+mha_close = security(vTicker, iResolution, hlc3[iShiftNRP])     //HLC3 values can fluctuate till the barstate is confirmed. So consider previous candle value.
+fma     = ema(mha_close,iPeriodFMA) //Increased the value from 1 to 2 just to reduce some noise.
+sma     = ema(ha_close,iPeriodSMA)
+golong    =  crossover(fma,sma) 
+goshort   =  crossunder(fma,sma)
+plot(fma,title="MA",color=color.black,linewidth=2,style=plot.style_line)
+plot(sma,title="SMA",color=color.red,linewidth=2,style=plot.style_line)
+strategy.entry("Buy",strategy.long,when = golong)
+strategy.entry("Sell",strategy.short,when = goshort)
+BGLightGreen = #00FF00, BGLightRed = #FF0000
+bgcolor(fma >= sma ? BGLightGreen : BGLightRed, transp = 65)
+Expand (55 lines)

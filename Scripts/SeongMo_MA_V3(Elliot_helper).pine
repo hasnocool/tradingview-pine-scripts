@@ -1,0 +1,102 @@
+Script Name: SeongMo_MA_V3(Elliot_helper)
+Author: suc1098
+Description: Made to make it easier to count Elliott waves.
+If you renew your new high price, you'll continue your new high price
+When the new low is renewed, the new low is continued.
+If you are within the range of the previous candle, use the ratio of the difference between the median value of the previous candle and the closing price of the current candle to determine...
+PineScript code:
+
+Pine Script™ strategy
+SeongMo_MA_V3(Elliot_helper)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © suc1098
+//@version=5
+strategy("SeongMo_MA_V3(Elliot_helper)",overlay = true)
+var A=close
+var B=0.0
+var C=0.0
+if high[1] < high and low[1] < low  //A new high price
+    
+    if close[1]<close // Rising Candle -> High Point
+        A:=high
+    
+    if close[1]>close // Decline candle -> median
+        A:=(high+low)/2
+if high[1] > high and low[1] > low //A new low price
+   
+    if close[1]>close // // Decline candle -> Low Point
+        A:=low
+    
+    if close[1]<close // Rising candle -> median
+        A:=(high+low)/2
+if high[1] > high and low[1] < low // Previous Candle Range
+    B:=(high[1]+low[1])/2 // After calculating the median of the previous cans
+    C:= (100*(close-B)/close)// If the absolute value is 0.06 or less, the median value
+    
+    if C >= -0.06 and C <= 0.06 
+        A:=(high+low)/2
+// High point if the closing price is large for the median value of the previous candle and fluctuations above 0.06
+    if B <= close and C >= 0.06 
+        A:=high
+// Low point if the closing price is small and changes below -0.06 for the median of the previous candle  
+    if B >= close and C <= -0.06 
+        A:=low
+//Select a reference point after comparing the high and low prices of the reported and new lows simultaneously reached, and the previous and previous candles
+if high[1] < high and low[1] > low 
+    if low[2] < low[1]
+        A:=high
+    if high[2] < high[1]
+        A:=low
+plot(A,color=color.white)
+//Update of new low price for previous candles requires fine counting
+plotshape(high[1] < high and low[1] > low and ((100*(high-low)/((high+low)/2))<= -0.6 or (100*(high-low)/((high+low)/2))>= +0.6), "", shape.arrowup,location.abovebar, color=color.rgb(230, 236, 231),  text = "Check_candle!")
+Expand (48 lines)

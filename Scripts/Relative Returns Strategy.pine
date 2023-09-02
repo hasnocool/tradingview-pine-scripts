@@ -1,0 +1,112 @@
+Script Name: Relative Returns Strategy
+Author: Trendoscope
+Description: Looks like an ultimate strategy for buy and hold investors.
+
+This is designed based on the indicator : 
+
+Converting that into strategy with little optimization yield this.  One change here is, instead of using the return percentage directly, we are using moving averages on both of them.
+
+Buy condition : Moving Average on stock return crosses over that of index...
+PineScript code:
+
+Pine Script™ strategy
+Relative Returns Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HeWhoMustNotBeNamed
+//@version=4
+strategy("Relative Returns Strategy", overlay=false, initial_capital = 100000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, pyramiding = 1, commission_value = 0.01)
+index_ticker=input("XJO")
+Loopback = input(40, step=20)
+useStopAndIndexReturns = input(true)
+useStopAndIndexReturnsMa = input(true)
+useDifference = not useStopAndIndexReturns
+MAType = input(title="Moving Average Type", defval="sma", options=["ema", "sma", "hma", "rma", "vwma", "wma"])
+MALength = input(10, minval=10,step=10)
+i_startTime = input(defval = timestamp("01 Jan 2010 00:00 +0000"), title = "Backtest Start Time", type = input.time)
+i_endTime = input(defval = timestamp("01 Jan 2099 00:00 +0000"), title = "Backtest End Time", type = input.time)
+inDateRange = time >= i_startTime and time <= i_endTime
+f_secureSecurity(_symbol, _res, _src, _offset) => security(_symbol, _res, _src[_offset], lookahead = barmerge.lookahead_on)
+f_getMovingAverage(source, MAType, length)=>
+    ma = sma(source, length)
+    if(MAType == "ema")
+        ma := ema(source,length)
+    if(MAType == "hma")
+        ma := hma(source,length)
+    if(MAType == "rma")
+        ma := rma(source,length)
+    if(MAType == "vwma")
+        ma := vwma(source,length)
+    if(MAType == "wma")
+        ma := wma(source,length)
+    ma
+index = f_secureSecurity(index_ticker, '1D', close, 0)
+stock_return = (close - close[Loopback])*100/close
+index_return = (index - index[Loopback])*100/index
+stock_return_ma = f_getMovingAverage(stock_return, MAType, MALength)
+index_return_ma = f_getMovingAverage(index_return, MAType, MALength)
+relativeReturns = stock_return - index_return
+relativeReturns_ma = f_getMovingAverage(relativeReturns, MAType, MALength)
+plot(useStopAndIndexReturns ? useStopAndIndexReturnsMa ? stock_return_ma : stock_return : na, title="StockReturn", color=color.green, linewidth=1)
+plot(useStopAndIndexReturns ? useStopAndIndexReturnsMa ? index_return_ma : index_return : na, title="IndexReturn", color=color.red, linewidth=1)
+plot(useDifference?relativeReturns:na, title="Relative-Returns", color=color.blue, linewidth=1)
+plot(useDifference?relativeReturns_ma:na, title="MA", color=color.red, linewidth=1)
+buyCondition = (useStopAndIndexReturns ? useStopAndIndexReturnsMa ? stock_return_ma > index_return_ma : stock_return > index_return : relativeReturns > relativeReturns_ma)
+closeBuyCondition = (useStopAndIndexReturns ? useStopAndIndexReturnsMa ? stock_return_ma < index_return_ma : stock_return < index_return : relativeReturns < relativeReturns_ma)
+strategy.entry("Buy", strategy.long, when=buyCondition and inDateRange, oca_name="oca", oca_type=strategy.oca.cancel)
+strategy.close("Buy", when=closeBuyCondition)
+Expand (54 lines)

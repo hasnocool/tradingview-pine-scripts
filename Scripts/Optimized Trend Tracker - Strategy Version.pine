@@ -1,0 +1,170 @@
+Script Name: Optimized Trend Tracker - Strategy Version
+Author: melihtuna
+Description: A brand new indicator from the developer of MOST (Moving Stop Loss) indicator Anıl Özekşi.
+
+Optimized Trend Tracker OTT is an indicator that provides traders to find an existing trend or in another words to ser which side of the current trend we are on.
+
+The original indicator was coded and published by Kıvanç Özbilgiç. You can access it from this link: 
+
+I...
+PineScript code:
+
+Pine Script™ strategy
+Optimized Trend Tracker - Strategy Version
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © melihtuna
+//@version=4
+strategy("Optimized Trend Tracker - Strategy Version", shorttitle="OTT-Strategy", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=10000, currency=currency.USD, commission_value=0.1, commission_type=strategy.commission.percent)
+src = input(close, title="Source")
+pds=input(1, "OTT Period", minval=1)
+percent=input(0.1, "OTT Percent", type=input.float, step=0.1, minval=0)
+condition = input(title="Condition", defval="Support Line Crossing Signals", options=["Price/OTT Crossing Signals", "Support Line Crossing Signals"])
+showsupport = input(title="Show Support Line?", type=input.bool, defval=true)
+highlight = input(title="Show OTT Color Changes?", type=input.bool, defval=true)
+highlighting = input(title="Highlighter On/Off ?", type=input.bool, defval=true)
+barcoloing = input(title="Barcolor On/Off ?", type=input.bool, defval=true)
+showlabels = input(title="Show OTT BUY/SELl Labels?", type=input.bool, defval=false)
+// === INPUT BACKTEST RANGE ===
+FromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+FromDay   = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+FromYear  = input(defval = 2020, title = "From Year", minval = 2017)
+ToMonth   = input(defval = 1, title = "To Month", minval = 1, maxval = 12)
+ToDay     = input(defval = 1, title = "To Day", minval = 1, maxval = 31)
+ToYear    = input(defval = 9999, title = "To Year", minval = 2017)
+// === FUNCTION EXAMPLE ===
+start     = timestamp(FromYear, FromMonth, FromDay, 00, 00)  // backtest start window
+finish    = timestamp(ToYear, ToMonth, ToDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false // create function "within window of time"
+alpha=2/(pds+1)
+ud1=src>src[1] ? src-src[1] : src
+dd1=src<src[1] ? src[1]-src : src
+UD=sum(ud1,9)
+DD=sum(dd1,9)
+CMO=(UD-DD)/(UD+DD)
+k= abs(CMO)
+Var=0.0
+Var:=(alpha*k*src)+(1-alpha*k)*nz(Var[1])
+fark=Var*percent*0.01
+longStop = Var - fark
+longStopPrev = nz(longStop[1], longStop)
+longStop := Var > longStopPrev ? max(longStop, longStopPrev) : longStop
+shortStop =  Var + fark
+shortStopPrev = nz(shortStop[1], shortStop)
+shortStop := Var < shortStopPrev ? min(shortStop, shortStopPrev) : shortStop
+dir = 1
+dir := nz(dir[1], dir)
+dir := dir == -1 and Var > shortStopPrev ? 1 : dir == 1 and Var < longStopPrev ? -1 : dir
+MT = dir==1 ? longStop: shortStop
+OTT=Var>MT ? MT*(200+percent)/200 : MT*(200-percent)/200 
+plot(showsupport ? Var : na, color=#0585E1, linewidth=2, title="Support Line")
+OTTC = highlight ? OTT[2] > OTT[3] ? color.green : color.red : #B800D9 
+pALL=plot(nz(OTT[2]), color=OTTC, linewidth=2, title="OTT", transp=0)
+buySignalk = window() and crossover(Var, OTT[2])
+sellSignallk = window() and crossunder(Var, OTT[2])
+buySignalc = window() and crossover(src, OTT[2])
+sellSignallc = window() and crossunder(src, OTT[2])
+plotshape(condition == "Support Line Crossing Signals" ? showlabels and buySignalk ? OTT*0.995 : na : showlabels and buySignalc ? OTT*0.995 : na, title="BUY", text="BUY", location=location.belowbar, style=shape.labelup, size=size.tiny, color=#0F18BF, textcolor=color.white, transp=0)
+plotshape(condition == "Support Line Crossing Signals" ? showlabels and sellSignallk ? OTT*1.005 : na : showlabels and sellSignallc ? OTT*1.005 : na, title="SELL", text="SELL", location=location.abovebar, style=shape.labeldown, size=size.tiny, color=#0F18BF, textcolor=color.white, transp=0)
+  
+ottBuyColor=#77DD77
+ottSellColor=#FF0000
+vColor = strategy.position_size > 0 ? ottBuyColor : ottSellColor
+if condition == "Support Line Crossing Signals"
+    strategy.entry("BUY", true, 1, when = buySignalk)
+    strategy.entry("SELL", false, 1, when = sellSignallk)
+else
+    strategy.entry("BUY", true, 1, when = buySignalc)
+    strategy.entry("SELL", false, 1, when = sellSignallc)
+mPlot = plot(close, title="", style=plot.style_circles, linewidth=0,display=display.none)
+longFillColor = highlighting ? (Var>OTT ? color.green : na) : na
+shortFillColor = highlighting ? (Var<OTT ? color.red : na) : na
+fill(mPlot, pALL, title="UpTrend Highligter", color=longFillColor)
+fill(mPlot, pALL, title="DownTrend Highligter", color=shortFillColor)
+barcolor(barcoloing ? vColor : na)
+Expand (85 lines)

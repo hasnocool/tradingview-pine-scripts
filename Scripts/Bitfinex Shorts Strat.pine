@@ -1,0 +1,94 @@
+Script Name: Bitfinex Shorts Strat
+Author: kuhoerk
+Description: Overview 
+This strat applies the data from BITFINEX:USDSHORTS to the RSI indicator in order to provide SHORT/LONG entries as the number of contracts goes up and down.  Although Bitfinex has lost relevance over the years its generally considered an exchange dominated by smart money rather than retail.  I'd like to see if any insights can be gained by following...
+PineScript code:
+
+Pine Script™ strategy
+Bitfinex Shorts Strat
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+//@version=5
+strategy("Bitfinex Shorts Strat", 
+     overlay=true,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=10, precision=2, initial_capital=1000,
+     pyramiding=2,
+     commission_value=0.05)
+//Backtest date range
+StartDate = input.time(timestamp("01 Jan 2021"), title="Start Date")
+EndDate = input.time(timestamp("01 Jan 2024"), title="Start Date")
+inDateRange = (time >= StartDate) and (time < EndDate)
+symbolInput = input.symbol(title="Bitfinex Short Symbol", defval="BITFINEX:BTCUSDSHORTS")
+Shorts = request.security(symbolInput, "", open)
+// RSI Input Settings
+length = input(title="Length", defval=7, group="RSI Settings" )
+overSold = input(title="High Shorts Threshold", defval=75, group="RSI Settings" )
+overBought = input(title="Low Shorts Threshold", defval=30, group="RSI Settings" )
+// Calculating RSI
+vrsi = ta.rsi(Shorts, length)
+RSIunder = ta.crossover(vrsi, overSold)
+RSIover = ta.crossunder(vrsi, overBought)
+// Stop Loss Input Settings
+longLossPerc = input.float(title="Long Stop Loss (%)", defval=25, group="Stop Loss Settings") * 0.01
+shortLossPerc = input.float(title="Short Stop Loss (%)", defval=25, group="Stop Loss Settings") * 0.01
+// Calculating Stop Loss
+longStopPrice  = strategy.position_avg_price * (1 - longLossPerc)
+shortStopPrice = strategy.position_avg_price * (1 + shortLossPerc)
+// Strategy Entry
+if (not na(vrsi))
+    if (inDateRange and RSIover)
+        strategy.entry("LONG", strategy.long, comment="LONG")
+    if (inDateRange and RSIunder)
+        strategy.entry("SHORT", strategy.short, comment="SHORT")
+// Submit exit orders based on calculated stop loss price
+if (strategy.position_size > 0)
+    strategy.exit(id="LONG STOP", stop=longStopPrice)
+if (strategy.position_size < 0)
+    strategy.exit(id="SHORT STOP", stop=shortStopPrice)
+Expand (46 lines)

@@ -1,0 +1,99 @@
+Script Name: RSI with Slow and Fast MA Crossing Strategy (by Coinrule)
+Author: Coinrule
+Description: This strategy utilises 3 different conditions that have to be met to buy and 1 condition to sell. This strategy works best on the ETH/USDT pair on the 4-hour timescale.
+
+In order for the strategy to enter the trade, it must meet all of the conditions listed below:
+
+ENTRY
+RSI increases by 5
+RSI is lower than 70
+MA9 crosses above MA50
+
+To exit a trade, the below...
+PineScript code:
+
+Pine Script™ strategy
+RSI with Slow and Fast MA Crossing Strategy (by Coinrule)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Coinrule
+//@version=5
+strategy("RSI with Slow and Fast MA Crossing Strategy (by Coinrule)",
+         overlay=true,
+         initial_capital=10000,
+         process_orders_on_close=true,
+         default_qty_type=strategy.percent_of_equity,
+         default_qty_value=30,
+         commission_type=strategy.commission.percent,
+         commission_value=0.1)
+showDate = input(defval=true, title='Show Date Range')
+timePeriod = time >= timestamp(syminfo.timezone, 2020, 1, 1, 0, 0)
+notInTrade = strategy.position_size <= 0
+// RSI
+length = input(14)
+vrsi = ta.rsi(close, length)
+// Moving  Averages for Buy Condition
+buyFastEMA = ta.ema(close, 9)
+buySlowEMA = ta.ema(close, 50)
+buyCondition1 = ta.crossover(buyFastEMA, buySlowEMA)
+increase = 5
+if ((vrsi > vrsi[1]+increase) and buyCondition1 and vrsi < 70 and timePeriod)
+    strategy.entry("Long", strategy.long)
+// Moving  Averages for Sell Condition
+sellFastEMA = ta.ema(close, 9)
+sellSlowEMA = ta.ema(close, 50)
+plot(request.security(syminfo.tickerid, "60", sellFastEMA), color = color.blue)
+plot(request.security(syminfo.tickerid, "60", sellSlowEMA), color = color.green)
+condition = ta.crossover(sellSlowEMA, sellFastEMA)
+//sellCondition1 = request.security(syminfo.tickerid, "60", condition)
+strategy.close('Long', when = condition and timePeriod)
+Expand (49 lines)

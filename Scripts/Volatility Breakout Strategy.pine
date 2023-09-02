@@ -1,0 +1,126 @@
+Script Name: Volatility Breakout Strategy
+Author: Dicargo_Beam
+Description: This is a strategy used by Larry R. Williams called Volatility Breakout.
+
+By identifying a strong uptrend that exceeds 'a certain level' on a daily basis as a breakout signal, enter long position, take advantage of long at the the next day's open.
+
+'a certain level (Entry Price)' is calculated by { close  + 'k' * high -low  }, and applied logarithmic...
+PineScript code:
+
+Pine Script™ strategy
+Volatility Breakout Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Dicargo_Beam
+//@version=5
+strategy("Volatility Breakout Strategy", overlay=true, default_qty_type= strategy.percent_of_equity, default_qty_value=100)
+k = input.float(0.6)
+f_security(_sym, _res, _src) => 
+    request.security(_sym, _res, _src[barstate.isrealtime ? 1 : 0])[barstate.isrealtime ? 0 : 1]
+o = f_security(syminfo.tickerid,"D",open)
+h = f_security(syminfo.tickerid,"D",high)
+l = f_security(syminfo.tickerid,"D",low)
+c = f_security(syminfo.tickerid,"D",close)
+var lp = 0.0
+var sl = 0.0
+var sp = 0.0
+var sl2 = 0.0
+if hour[1]-hour>1
+    lp := c+(h-l)*k
+    sl := (l+lp)/2
+    sp := c-(h-l)*k
+    sl2 := (h+sp)/2
+longcond = lp < high
+exit = hour[1]-hour>1 or  close < sl
+plot(lp,"Long Entry",color=color.yellow)
+plot(sl,"Long StopLoss",color=color.red)
+ 
+exit2 = hour[1]-hour>1 or close > sl2
+shortcond = sp > low
+shortopen = input.bool(false,"Short Postion Open??")
+plot(shortopen? sp : na,"Short Entry",color=color.new(color.yellow,50))
+plot(shortopen? sl2 : na,"Short StopLoss",color=color.new(color.red,50))
+trend = input.bool(false,"Trend Following?")
+longtrend = trend? lp/sl > sl2/sp : true
+shorttrend = trend? lp/sl < sl2/sp : true
+strategy.entry("Long", strategy.long,comment = "Long", when = longcond and strategy.opentrades == 0 and longtrend)
+strategy.close("Long", comment="Long Exit", when = exit)
+if shortopen
+    strategy.entry("Short", strategy.short,comment = "Short", when = shortcond and strategy.opentrades == 0 and shorttrend)
+    strategy.close("Short", comment="Short Exit", when = exit2)
+    
+var bg = 0
+if hour[1]-hour>1
+    bg := bg + 1
+bgcolor(bg/2== math.floor(bg/2) ? color.new(color.blue,95):na)
+Expand (70 lines)

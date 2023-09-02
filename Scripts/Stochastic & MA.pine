@@ -1,0 +1,88 @@
+Script Name: Stochastic & MA
+Author: saucius
+Description: This trading system comes from the experience of having a "fast" signal for entry at low prices (such as the stoscastic) and then "following" the stock with a "slower" indicator such as the exponential moving average. Both the input and output signals are filtered.
+The use of the trading system only carries out long operations and has been tested on shares and...
+PineScript code:
+
+Pine Script™ strategy
+Stochastic & MA
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+//@version=5
+// English version
+strategy(title='Stochastic & MA', calc_on_order_fills=false, calc_on_every_tick=true, max_bars_back=5000, initial_capital=20000, commission_type=strategy.commission.cash_per_order, commission_value=50, overlay=false, default_qty_type=strategy.percent_of_equity, default_qty_value=90)
+// INPUTS : all default value have already been optimized
+length = input.int(21, 'period', minval=1)
+lossp = input.int(13, 'stop loss %', minval=2, step=1)
+leverage = input.int(1, 'leverage', minval=1, step=1)
+// leverage has been introduced for modifying stop loss levels for financial instruments with leverage, like ETF 
+n = input(2, 'n days ago')
+filtro = input.int(65, 'k filter for throwbacks', minval=20, step=1)
+OverSold = input.int(25, 'Oversold value', minval=5, step=5)
+// Building indicators
+smoothK = input.int(6, 'k', minval=1)
+smoothD = input.int(4, 'd', minval=1)
+k = ta.sma(ta.stoch(close, high, low, length), smoothK)
+d = ta.sma(k, smoothD)
+//Empowerment: introducing EMA
+sma_period = input.int(38, 'periodo Sma', minval=1)
+emaf = ta.ema(close, sma_period)
+//ENTRY condition and order
+// First of all, it's better not trade shares with a quaterly loss or with a bad surprise towards to analysts' expectations or ipevaluated (P/E > 50), but on your choice
+// You entry when Stochastic's K is higher than D in Oversold area (you may personalize), applying the condition that today's close should be higher than one of n-days ago (default of the day before yesterday or 2 candles ago)
+entry1 = k > d and k <= OverSold and close >= close[n]
+strategy.entry('Long', strategy.long, comment='k basso', when=entry1)
+//EXIT CONDITIONS
+//  1) close crosses under exponential movinig average with filter that k >= fixed level (65), in order to distinguish a violent movement of prices with a possibile beginning of a trend from an almost exhausted "ordinary" throwback
+// 2) fixed stop loss on percentage
+exit1 = ta.crossunder(close, emaf) and k >= filtro
+losspel = strategy.position_avg_price * (1 - lossp / 100 * leverage)
+exit2 = close < losspel
+strategy.close('Long', when=exit1, comment='sma')
+strategy.close('Long', when=exit2, comment='stop loss')
+// plotting indicators (add Ema on your choice)
+plot(k, color=color.new(color.blue, 0), linewidth=1, title='k Stoch')
+plot(d, color=color.new(color.red, 0), linewidth=1, title='d stoch signal')
+plot(OverSold, title='Oversold', color=color.new(color.aqua, 0))
+plot(filtro, color=color.new(color.gray, 0), title='k-filter for ema')
+Expand (41 lines)

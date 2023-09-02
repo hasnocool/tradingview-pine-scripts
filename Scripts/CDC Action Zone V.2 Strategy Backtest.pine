@@ -1,0 +1,132 @@
+Script Name: CDC Action Zone V.2 Strategy Backtest
+Author: DeMindSET
+Description: Published for backtest purpose
+All credit to : CDC Action Zone V.2 by piriya33 
+ 
+จัดทำขึ้นเพื่อการดูผล Backtest เขียวซื้อแดงขาย
+
+ตัวสคริปท์มีการเพิ่ม
+- Strategy Long/Short/Both // ปรับได้ใน Setting
+- Back test range  // ปรับได้ใน Setting
+PineScript code:
+
+Pine Script™ strategy
+CDC Action Zone V.2 Strategy Backtest
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+//@version=4
+strategy("CDC Action Zone V.2", overlay=true)
+// CDC ActionZone V2 29 Sep 2016
+// CDC ActionZone is based on a simple 2MA and is most suitable for use with medium volatility market
+// 11 Nov 2016 : Ported to Trading View with minor UI enhancement
+LSB = input(title="Long/Short", defval="Long only", options=["Long only", "Short only" , "Both"])
+src = input(title="Data Array",type=input.source,defval=ohlc4)
+prd1=input(title="Short MA period", type=input.integer,defval=12)
+prd2=input(title="Long MA period",type=input.integer,defval=26)
+AP = ema(src,2)
+Fast = ema(AP,prd1)
+Slow = ema(AP,prd2)
+Bullish = Fast>Slow
+Bearish = Fast<Slow
+Green = Bullish and AP>Fast
+Red = Bearish and AP<Fast
+Yellow = Bullish and AP<Fast
+Blue = Bearish and AP>Fast
+Buy = Bullish and Bearish[1]
+Sell = Bearish and Bullish[1]
+alertcondition(Buy,"Buy Signal","Buy")
+alertcondition(Sell,"Sell Signal","Sell")
+//Plot
+l1=plot(Fast,"Fast", linewidth=1,color=color.red)
+l2=plot(Slow,"Slow", linewidth=2,color=color.blue)
+bcolor = Green ? color.lime : Red ? color.red : Yellow ? color.yellow : Blue ? color.blue : na
+barcolor(color=bcolor)
+fill(l1,l2,bcolor)
+// === INPUT BACKTEST RANGE ===
+FromYear  = input(defval = 2000, title = "From Year", minval = 1920)
+FromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+FromDay   = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+ToYear    = input(defval = 9999, title = "To Year", minval = 1921)
+ToMonth   = input(defval = 12, title = "To Month", minval = 1, maxval = 12)
+ToDay     = input(defval = 31, title = "To Day", minval = 1, maxval = 31)
+// === FUNCTION EXAMPLE ===
+start     = timestamp(FromYear, FromMonth, FromDay, 00, 00)  // backtest start window
+finish    = timestamp(ToYear, ToMonth, ToDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false // create function "within window of time"
+if LSB == "Long only" and Buy and window()
+    strategy.entry("L",true)
+if LSB == "Long only" and Sell and window()
+    strategy.close("L",qty_percent=100,comment="TP Long")
+if LSB == "Both" and Buy and window()
+    strategy.entry("L",true)
+if LSB == "Both" and Sell and window()
+    strategy.entry("S",false)
+if LSB == "Short only" and Sell and window()
+    strategy.entry("S",false)
+if LSB == "Short only" and Buy and window()
+    strategy.close("S",qty_percent=100,comment="TP Short")
+Expand (65 lines)

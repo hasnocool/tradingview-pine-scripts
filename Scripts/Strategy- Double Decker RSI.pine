@@ -1,0 +1,119 @@
+Script Name: Strategy- Double Decker RSI
+Author: Ankit_Quant
+Description: This Strategy was LIVE coded during a webinar conducted by the author on 16-Jan-21 titled Backtesting in Tradingview. The system is named " Double Decker RSI ". 
+
+The rules of this strategy are: 
+
+ 
+ LONG  -  RSI(5)>70 and RSI(14)>50 -- EXIT: RSI(5)<55
+ SHORT - RSI(5)<40 and RSI(14)<50 -- EXIT: RSI(5)>45
+ 
+
+ Instrument - BANKNIFTY - 1 HR Chart 
+
+The code is open...
+PineScript code:
+
+Pine Script™ strategy
+Strategy- Double Decker RSI
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Ankit_Quant
+//@version=4
+// ********************************************************************************************************
+// This was coded live during webinar on Backtesting in Tradingview 
+// That was held on 16-Jan-21
+// Aim of this strategy is to code a Double Decker RSI Strategy - Rules of Strategy are given in Description
+// *********************************************************************************************************
+// Identifier of strategy or an indicator (study())
+strategy(title="Strategy- Double Decker RSI",shorttitle='Strategy - Double Decker RSI',overlay=true,initial_capital=250000)
+// ********************
+// INPUTS
+// ********************
+// RSI Lookback Periods
+slowRSI=input(defval=14,title='Slow RSI Period',type=input.integer)
+fastRSI=input(defval=5,title='Fast RSI Period',type=input.integer)
+// Time Period Backtesting Input
+start_year=input(defval=2000,title='Backtest Start Year',type=input.integer)
+end_year=input(defval=2021,title='Backtest End Year',type=input.integer)
+//Specific Years to Test Starategy
+timeFilter=(year>=start_year and year<=end_year)
+// Trade Conditions and signals
+long = rsi(close,fastRSI)>70 and rsi(close,slowRSI)>50
+short = rsi(close,fastRSI)<40 and rsi(close,slowRSI)<50
+long_exit=rsi(close,fastRSI)<55
+short_exit=rsi(close,fastRSI)>45
+//positionSize - 1 Unit (also default setting)
+positionSize=1
+// Trade Firing - Entries and Exits 
+if(timeFilter)
+    if(long and strategy.position_size<=0)
+        strategy.entry(id='Long',long=strategy.long,qty=positionSize)
+    if(short and strategy.position_size>=0)
+        strategy.entry(id="Short",long=strategy.short,qty=positionSize)
+    if(long_exit and strategy.position_size>0)
+        strategy.close_all(comment='Ex')
+    if(short_exit and strategy.position_size<0)
+        strategy.close_all(comment='Ex')
+// Plot on Charts the Buy Sell Labels
+plotshape(strategy.position_size<1 and long,style=shape.labelup,location=location.belowbar,color=color.green,size=size.tiny,text='Long',textcolor=color.white)
+plotshape(strategy.position_size>-1 and short,style=shape.labeldown,location=location.abovebar,color=color.red,size=size.tiny,text='Short',textcolor=color.white)
+plotshape(strategy.position_size<0 and short_exit?1:0,style=shape.labelup,location=location.belowbar,color=color.maroon,size=size.tiny,text='ExShort',textcolor=color.white)
+plotshape(strategy.position_size>0 and long_exit?1:0,style=shape.labeldown,location=location.abovebar,color=color.olive,size=size.tiny,text='ExLong',textcolor=color.white)
+Expand (56 lines)

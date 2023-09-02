@@ -1,0 +1,332 @@
+Script Name: Pullback Strategy
+Author: maxencetajet
+Description: BTCUSD -- 5 min
+
+ BUY POSITION 
+
+ 1 : Fast ema is above medium ema and medium ema is above slow ema
+2 : The price drops below the fast ema but not the slow ema
+3 : The price rises above the fast ema 
+
+ SELL POSITION 
+
+ 1 : Fast ema is below medium ema and medium ema is below slow ema
+2 : the Price rises above fast ema but not slow ema
+3 : The price drops back...
+PineScript code:
+
+Pine Script™ strategy
+Pullback Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+//@version=5
+strategy(title="Pullback", overlay=true, initial_capital=1000, slippage=25)
+averageData = input.source(close, title="Source")
+target_stop_ratio = input.float(title="Ratio Risk/Reward", defval=2, group="Money Management")
+risk = input.float(2, title="Risk per Trade %", group="Money Management")
+_x = input.bool(true, title="do not take too small positions", group="Money Management", tooltip="This parameter is used to avoid positions that have a stoploss that is too short and that the spreads of the broker take all the gains")
+security = input.float(25, title='min of pips (00001.00) for each position', group="Money Management")
+riskt = risk / 100 + 1
+multitarget = input.bool(true, title="Multi Target (Breakeven Target 1)", group="Money Management", tooltip="This parameter is used to create 2 targets. When target 1 is reached, he closes the half position. When target 2 hits, it closes the other half")
+target1 = input.float(1.5, title='Target 1 (R:R)', group="Money Management", step=0.1)
+target2 = input.float(2.5, title='Target 2 (R:R)', group="Money Management", step=0.1)
+ema1V = input.int(25, title="Rapide", group="Ema Period")
+ema2V = input.int(100, title="Moyenne", group="Ema Period")
+ema3V = input.int(200, title="Lente", group="Ema Period")
+ema1 = ta.ema(averageData, ema1V)
+ema2 = ta.ema(averageData, ema2V)
+ema3 = ta.ema(averageData, ema3V)
+useDateFilter = input.bool(true, title="Filter Date Range of Backtest",
+     group="Backtest Time Period")
+backtestStartDate = input.time(timestamp("1 June 2022"), 
+     title="Start Date", group="Backtest Time Period",
+     tooltip="This start date is in the time zone of the exchange " + 
+     "where the chart's instrument trades. It doesn't use the time " + 
+     "zone of the chart or of your computer.")
+backtestEndDate = input.time(timestamp("1 July 2022"),
+     title="End Date", group="Backtest Time Period",
+     tooltip="This end date is in the time zone of the exchange " + 
+     "where the chart's instrument trades. It doesn't use the time " + 
+     "zone of the chart or of your computer.")
+inTradeWindow = not useDateFilter or (time >= backtestStartDate and
+     time < backtestEndDate)
+float pricePullAboveEMA_maxClose = na
+float pricePullBelowEMA_minClose = na
+if ta.crossover(close, ema1)
+    pricePullAboveEMA_maxClose := close
+  
+else
+    pricePullAboveEMA_maxClose := pricePullAboveEMA_maxClose[1]
+if close > pricePullAboveEMA_maxClose
+    pricePullAboveEMA_maxClose := close
+if ta.crossunder(close, ema1)
+    pricePullBelowEMA_minClose := close
+ 
+else
+    pricePullBelowEMA_minClose := pricePullBelowEMA_minClose[1]
+if close < pricePullBelowEMA_minClose
+    pricePullBelowEMA_minClose := close
+BuyZone = ema1 > ema2 and ema2 > ema3
+SellZone = ema1 < ema2 and ema2 < ema3
+longcondition = ta.crossover(close, ema1) and pricePullBelowEMA_minClose > ema3 and pricePullBelowEMA_minClose < ema1 
+shortcondition = ta.crossunder(close , ema1) and pricePullAboveEMA_maxClose < ema3 and pricePullAboveEMA_maxClose > ema1
+float risk_long = na
+float risk_short = na
+float stopLoss = na
+float takeProfit1 = na
+float takeProfit2 = na
+float entry_price = na
+risk_long := risk_long[1]
+risk_short := risk_short[1]
+lotB = (strategy.equity*riskt-strategy.equity)/(close - ema2)
+lotS = (strategy.equity*riskt-strategy.equity)/(ema2 - close)
+if strategy.position_size == 0 and longcondition and inTradeWindow
+    risk_long := (close - ema2) / close
+    minp = close - ema2
+    if _x 
+        if minp > security
+            strategy.entry("long", strategy.long, qty=lotB, comment="Buy " + str.tostring(close) + "")
+    else 
+        strategy.entry("long", strategy.long, qty=lotB, comment="Buy " + str.tostring(close) + "")
+    
+if strategy.position_size == 0 and shortcondition and inTradeWindow
+    risk_short := (ema2 - close) / close  
+    minp = ema2 - close
+    if _x 
+        if minp > security
+            strategy.entry("short", strategy.short, qty=lotS, comment="Sell " + str.tostring(close) + "")
+    else 
+        strategy.entry("short", strategy.short, qty=lotS, comment="Sell " + str.tostring(close) + "")
+    
+if multitarget
+    if strategy.position_size > 0
+        stopLoss := strategy.position_avg_price * (1 - risk_long)
+        takeProfit1 := strategy.position_avg_price * (1 + target1 * risk_long)
+        takeProfit2 := strategy.position_avg_price * (1 + target2 * risk_long)
+        entry_price := strategy.position_avg_price
+        strategy.exit("Exit 1", "long", qty_percent=50, stop = stopLoss, limit = takeProfit1)
+        
+        if high >= takeProfit1
+            strategy.exit("Exit 2", "long", stop = entry_price, limit = takeProfit2, qty_percent = 100)
+        else 
+            strategy.exit("Exit 1", "long", stop = stopLoss, qty_percent = 100)
+    
+    if strategy.position_size < 0
+        stopLoss := strategy.position_avg_price * (1 + risk_short)
+        takeProfit1 := strategy.position_avg_price * (1 - target1 * risk_short)
+        takeProfit2 := strategy.position_avg_price * (1 - target2 * risk_short)
+        entry_price := strategy.position_avg_price
+        strategy.exit("Exit 1", "short", stop = stopLoss, limit = takeProfit1, qty_percent = 50)
+        
+        if low <= takeProfit1
+            strategy.exit("Exit 2", "short", stop = entry_price, limit = takeProfit2, qty_percent = 100)
+        else 
+            strategy.exit("Exit 1", "short", stop = stopLoss, qty_percent = 100)
+else 
+    if strategy.position_size > 0
+        stopLoss := strategy.position_avg_price * (1 - risk_long)
+        takeProfit1 := strategy.position_avg_price * (1 + target_stop_ratio * risk_long)
+        entry_price := strategy.position_avg_price
+        strategy.exit("exit long", "long", stop = stopLoss, limit = takeProfit1)
+    
+    if strategy.position_size < 0
+        stopLoss := strategy.position_avg_price * (1 + risk_short)
+        takeProfit1 := strategy.position_avg_price * (1 - target_stop_ratio * risk_short)
+        entry_price := strategy.position_avg_price
+        strategy.exit("exit short", "short", stop = stopLoss, limit = takeProfit1)  
+    
+plot(ema1, color=color.blue, linewidth=2, title="Ema Rapide")
+plot(ema2, color=color.orange, linewidth=2, title="Ema Moyenne")
+plot(ema3, color=color.white, linewidth=2, title="Ema Lente")
+p_ep = plot(entry_price, color=color.new(color.white, 0), linewidth=2, style=plot.style_linebr, title='entry price')
+p_sl = plot(stopLoss, color=color.new(color.red, 0), linewidth=2, style=plot.style_linebr, title='stopLoss')
+p_tp2 = plot(takeProfit2, color=color.new(color.green, 0), linewidth=2, style=plot.style_linebr, title='takeProfit1')
+p_tp1 = plot(takeProfit1, color=color.new(#52F071, 0), linewidth=1, style=plot.style_linebr, title='takeProfit2')
+fill(p_sl, p_ep, color.new(color.red, transp=85))
+fill(p_tp2, p_ep, color.new(color.green, transp=85))
+fill(p_tp1, p_ep, color.new(#52F071, transp=85))
+bgcolor(BuyZone ? color.new(color.green, 95)  : na)
+bgcolor(SellZone ? color.new(color.red, 95)  : na)
+colorresult = strategy.netprofit > 0 ? color.green : color.red  
+profitprc = strategy.netprofit / strategy.initial_capital * 100
+periodzone = (backtestEndDate - backtestStartDate) / 3600 / 24 / 1000
+var tbl = table.new(position.top_right, 4, 2, border_width=3)
+table.cell(tbl, 0, 0, "Symbole",  bgcolor = #9B9B9B, width = 6, height = 6)
+table.cell(tbl, 1, 0, "Net Profit", bgcolor = #9B9B9B, width = 6, height = 6)
+table.cell(tbl, 2, 0, "Trades", bgcolor = #9B9B9B, width = 6, height = 6)
+table.cell(tbl, 3, 0, "Period",  bgcolor = #9B9B9B, width = 6, height = 6)
+    
+table.cell(tbl, 0, 1, str.tostring(syminfo.ticker),  bgcolor = #E8E8E8, width = 6, height = 6)
+table.cell(tbl, 1, 1, str.tostring(profitprc, format.mintick) + " %", bgcolor = colorresult,   width = 6, height = 6)
+table.cell(tbl, 2, 1, str.tostring(strategy.closedtrades), bgcolor = colorresult,   width = 6, height = 6)
+table.cell(tbl, 3, 1, str.tostring(periodzone) + " day", bgcolor = colorresult,   width = 6, height = 6)
+Expand (170 lines)

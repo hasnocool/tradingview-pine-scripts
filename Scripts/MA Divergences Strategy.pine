@@ -1,0 +1,379 @@
+Script Name: MA Divergences Strategy
+Author: burgercrisis
+Description: This is the Strategy version of the Study I published. It is a Moving Average that can be applied to any plot to plot divergences on any oscillator, as well as perform backtesting. You'll need a REALLY good oscillator to perform live trades using this alone, but I think it is a valuable tool and had the Strategy hanging around and for some reason didn't upload it...
+PineScript code:
+
+Pine Script™ strategy
+MA Divergences Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © tista 
+//https://www.tradingview.com/u/tista/#published-scripts
+//@version=4
+strategy(title="MA Divergences", format=format.price)
+//* Backtesting Period Selector | Component *//
+//* https://www.tradingview.com/script/eCC1cvxQ-Backtesting-Period-Selector-Component *//
+//* https://www.tradingview.com/u/pbergden/ *//
+//* Modifications made *//
+testStartYear = input(2021, "Backtest Start Year") 
+testStartMonth = input(1, "Backtest Start Month")
+testStartDay = input(1, "Backtest Start Day")
+testPeriodStart = timestamp(testStartYear,testStartMonth,testStartDay,0,0)
+testStopYear = input(999999, "Backtest Stop Year")
+testStopMonth = input(9, "Backtest Stop Month")
+testStopDay = input(26, "Backtest Stop Day")
+testPeriodStop = timestamp(testStopYear,testStopMonth,testStopDay,0,0)
+testPeriod() =>
+    time >= testPeriodStart and time <= testPeriodStop ? true : false
+/////////////// END - Backtesting Period Selector | Component ///////////////
+len = input(title="MA Period", minval=1, defval=14)
+src = input(title="MA Source", defval=close)
+lbR = input(title="Pivot Lookback Right", defval=5)
+lbL = input(title="Pivot Lookback Left", defval=5)
+rangeUpper = input(title="Max of Lookback Range", defval=600)
+rangeLower = input(title="Min of Lookback Range", defval=2)
+plotBull = input(title="Plot Bullish", defval=true)
+plotHiddenBull = input(title="Plot Hidden Bullish", defval=true)
+plotBear = input(title="Plot Bearish", defval=true)
+plotHiddenBear = input(title="Plot Hidden Bearish", defval=true)
+bearColor = color.red
+bullColor = color.green
+hiddenBullColor = color.green
+hiddenBearColor = color.red
+textColor = color.white
+noneColor = color.new(color.white, 100)
+osc = wma(src, len)
+plot(osc, title="MA", linewidth=2, color=color.yellow)
+plFound = na(pivotlow(osc, lbL, lbR)) ? false : true
+phFound = na(pivothigh(osc, lbL, lbR)) ? false : true
+_inRange(cond) =>
+    bars = barssince(cond == true)
+    rangeLower <= bars and bars <= rangeUpper
+alertcondition(osc[1] > 100.0 and osc[2] < 100.0, title="MA value crosses over 100.0", message="Check charts for a MA cross over 100.0")
+alertcondition(osc[1] < 100.0 and osc[2] > 100.0, title="MA value crosses under 100.0", message="Check charts for a MA cross under 100.0")
+alertcondition(osc[1] > -100. and osc[2] < -100.0, title="MA value crosses over -100.0", message="Check charts for a MA cross over -100.0")
+alertcondition(osc[1] < -100.0 and osc[2] > -100.0, title="MA value crosses under -100.0", message="Check charts for a MA cross under -100.0")
+//------------------------------------------------------------------------------
+// Regular Bullish
+// Osc: Higher Low
+oscHL = osc[lbR] > valuewhen(plFound, osc[lbR], 1) and _inRange(plFound[1])
+// Price: Lower Low
+priceLL = low[lbR] < valuewhen(plFound, low[lbR], 1)
+bullCond = plotBull and priceLL and oscHL and plFound
+plot(
+     plFound ? osc[lbR] : na,
+     offset=-lbR,
+     title="Regular Bullish",
+     linewidth=2,
+     color=(bullCond ? bullColor : noneColor),
+     transp=0
+     )
+plotshape(
+     bullCond ? osc[lbR] : na,
+     offset=-lbR,
+     title="Regular Bullish Label",
+     text=" Bull ",
+     style=shape.labelup,
+     location=location.absolute,
+     color=bullColor,
+     textcolor=textColor,
+     transp=0
+     )
+alertcondition(bullCond, title="Regular bullish divergence in MA found", message="Check charts for a regular bullish divergence found with MA")
+//------------------------------------------------------------------------------
+// Hidden Bullish
+// Osc: Lower Low
+oscLL = osc[lbR] < valuewhen(plFound, osc[lbR], 1) and _inRange(plFound[1])
+// Price: Higher Low
+priceHL = low[lbR] > valuewhen(plFound, low[lbR], 1)
+hiddenBullCond = plotHiddenBull and priceHL and oscLL and plFound
+plot(
+     plFound ? osc[lbR] : na,
+     offset=-lbR,
+     title="Hidden Bullish",
+     linewidth=2,
+     color=(hiddenBullCond ? hiddenBullColor : noneColor),
+     transp=0
+     )
+plotshape(
+     hiddenBullCond ? osc[lbR] : na,
+     offset=-lbR,
+     title="Hidden Bullish Label",
+     text=" H Bull ",
+     style=shape.labelup,
+     location=location.absolute,
+     color=bullColor,
+     textcolor=textColor,
+     transp=0
+     )
+alertcondition(hiddenBullCond, title="Hidden bullish divergence in MA found", message="Check charts for a hidden bullish divergence found with MA")
+//------------------------------------------------------------------------------
+// Regular Bearish
+// Osc: Lower High
+oscLH = osc[lbR] < valuewhen(phFound, osc[lbR], 1) and _inRange(phFound[1])
+// Price: Higher High
+priceHH = high[lbR] > valuewhen(phFound, high[lbR], 1)
+bearCond = plotBear and priceHH and oscLH and phFound
+plot(
+     phFound ? osc[lbR] : na,
+     offset=-lbR,
+     title="Regular Bearish",
+     linewidth=2,
+     color=(bearCond ? bearColor : noneColor),
+     transp=0
+     )
+plotshape(
+     bearCond ? osc[lbR] : na,
+     offset=-lbR,
+     title="Regular Bearish Label",
+     text=" Bear ",
+     style=shape.labeldown,
+     location=location.absolute,
+     color=bearColor,
+     textcolor=textColor,
+     transp=0
+     )
+alertcondition(bearCond, title="Regular bearish divergence in MA found", message="Check charts for a regular bearish divergence found with MA")
+//------------------------------------------------------------------------------
+// Hidden Bearish
+// Osc: Higher High
+oscHH = osc[lbR] > valuewhen(phFound, osc[lbR], 1) and _inRange(phFound[1])
+// Price: Lower High
+priceLH = high[lbR] < valuewhen(phFound, high[lbR], 1)
+hiddenBearCond = plotHiddenBear and priceLH and oscHH and phFound
+plot(
+     phFound ? osc[lbR] : na,
+     offset=-lbR,
+     title="Hidden Bearish",
+     linewidth=2,
+     color=(hiddenBearCond ? hiddenBearColor : noneColor),
+     transp=0
+     )
+plotshape(
+     hiddenBearCond ? osc[lbR] : na,
+     offset=-lbR,
+     title="Hidden Bearish Label",
+     text=" H Bear ",
+     style=shape.labeldown,
+     location=location.absolute,
+     color=bearColor,
+     textcolor=textColor,
+     transp=0
+     )
+// Alerts
+//alertcondition(bearCond or hiddenBearCond, title='Bear div', message='Bear div')
+//alertcondition(bullCond or hiddenBullCond, title='Bull div', message='Bull div')
+//alertcondition(bearCond or bullCond, title='Bull or beal div', message='Bull or bear div') 
+//alertcondition(hiddenBearCond or hiddenBullCond, title='Bull or beal div', message='Hidden Bull or bear div') 
+//alertcondition(hiddenBearCond or hiddenBullCond or bearCond or bullCond, title='Bull or beal div', message='Any Bull or bear div') 
+if testPeriod()
+    if bullCond or hiddenBullCond
+        strategy.entry("Buy", strategy.long)
+    if bearCond or hiddenBearCond
+        strategy.entry("Sell", strategy.short)
+Expand (205 lines)

@@ -1,0 +1,134 @@
+Script Name: SMA Strategy
+Author: REV0LUTI0N
+Description: SMA Strategy for going long or short when a short sma crosses a long sma. This script was published by CaptJava. I added to it the ability to select a back testing date range and choose to go long, short or swap orders. You can enter automated trading buy and sell messages in the properties and then put {{strategy.order.alert_message}} in your webhook alert...
+PineScript code:
+
+Pine Script™ strategy
+SMA Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+//@version=4
+strategy("SMA Strategy", shorttitle="SMA Strategy", overlay=true, pyramiding=0, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+// === Inputs ===
+// short ma
+maFastSource = input(defval=close, title="Fast MA Source")
+maFastLength = input(defval=3, title="Fast MA Period", minval=1)
+// long ma
+maSlowSource = input(defval=close, title="Slow MA Source")
+maSlowLength = input(defval=9, title="Slow MA Period", minval=1)
+// Trade direction
+shorting = input(defval=false, title="Short only?")
+longonly = input(defval=true, title="Long only?")
+swapping = input(defval=false, title="Swap orders?")
+// risk management
+useStop = input(defval=false, title="Use Initial Stop Loss?")
+slPoints = input(defval=25, title="Initial Stop Loss Points", minval=1)
+useTS = input(defval=false, title="Use Trailing Stop?")
+tslPoints = input(defval=120, title="Trail Points", minval=1)
+useTSO = input(defval=false, title="Use Offset For Trailing Stop?")
+tslOffset = input(defval=20, title="Trail Offset Points", minval=1)
+// Messages for buy and sell
+message_long_entry  = input("Long entry message", title="Long entry message")
+message_long_exit   = input("Long exit message", title="Long exit message")
+message_short_entry = input("Short entry message", title="Short entry message")
+message_short_exit  = input("Short exit message", title="Short exit message")
+// Calculate start/end date and time condition
+startDate  = input(timestamp("2021-01-01T00:00:00"), type = input.time)
+finishDate = input(timestamp("2021-12-31T00:00:00"), type = input.time)
+ 
+time_cond  = time >= startDate and time <= finishDate
+// === Vars and Series ===
+fastMA = sma(maFastSource, maFastLength)
+slowMA = sma(maSlowSource, maSlowLength)
+plot(fastMA, color=color.blue)
+plot(slowMA, color=color.purple)
+goLong() =>
+    crossover(fastMA, slowMA)
+killLong() =>
+    crossunder(fastMA, slowMA)
+    
+// Long only
+if longonly
+    strategy.entry("Buy", strategy.long, when=goLong() and time_cond, alert_message = message_long_entry)
+    strategy.close("Buy", when=killLong() and time_cond, alert_message = message_long_exit)
+// Short only
+if shorting
+    strategy.entry("Sell", strategy.short, when=killLong() and time_cond, alert_message = message_short_entry)
+    strategy.close("Sell", when=goLong() and time_cond, alert_message = message_short_exit)
+    
+// Order Swapping
+if swapping
+    strategy.entry("Buy", strategy.long, when=goLong() and time_cond, alert_message = message_long_entry)
+    strategy.entry("Sell", strategy.short, when=killLong() and time_cond, alert_message = message_short_entry)
+if useStop
+    strategy.exit("XLS", from_entry="Buy", stop=strategy.position_avg_price / 1.08, alert_message = message_long_exit)
+    strategy.exit("XSS", from_entry="Sell", stop=strategy.position_avg_price * 1.08, alert_message = message_short_exit)
+Expand (69 lines)

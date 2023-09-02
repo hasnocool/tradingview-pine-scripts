@@ -1,0 +1,191 @@
+Script Name: Combo Backtest 123 Reversal & Prime Number Oscillator
+Author: HPotter
+Description: This is combo strategies for get a cumulative signal. 
+
+ First strategy
+ This System was created from the Book "How I Tripled My Money In The 
+ Futures Market" by Ulf Jensen, Page 183. This is reverse type of strategies.
+ The strategy buys at market, if close price is higher than the previous close 
+ during 2 days and the meaning of 9-days Stochastic Slow...
+PineScript code:
+
+Pine Script™ strategy
+Combo Backtest 123 Reversal & Prime Number Oscillator
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+//@version=4
+////////////////////////////////////////////////////////////
+//  Copyright by HPotter v1.0 28/04/2021
+// This is combo strategies for get a cumulative signal. 
+//
+// First strategy
+// This System was created from the Book "How I Tripled My Money In The 
+// Futures Market" by Ulf Jensen, Page 183. This is reverse type of strategies.
+// The strategy buys at market, if close price is higher than the previous close 
+// during 2 days and the meaning of 9-days Stochastic Slow Oscillator is lower than 50. 
+// The strategy sells at market, if close price is lower than the previous close price 
+// during 2 days and the meaning of 9-days Stochastic Fast Oscillator is higher than 50.
+//
+// Second strategy
+// Determining market trends has become a science even though a high number or people 
+// still believe it’s a gambling game. Mathematicians, technicians, brokers and investors 
+// have worked together in developing quite several indicators to help them better understand 
+// and forecast market movements.
+//
+// Developed by Modulus Financial Engineering Inc., the prime number oscillator indicates the 
+// nearest prime number, be it at the top or the bottom of the series, and outlines the 
+// difference between that prime number and the respective series.
+//
+// WARNING:
+// - For purpose educate only
+// - This script to change bars colors.
+////////////////////////////////////////////////////////////
+Reversal123(Length, KSmoothing, DLength, Level) =>
+    vFast = sma(stoch(close, high, low, Length), KSmoothing) 
+    vSlow = sma(vFast, DLength)
+    pos = 0.0
+    pos := iff(close[2] < close[1] and close > close[1] and vFast < vSlow and vFast > Level, 1,
+             iff(close[2] > close[1] and close < close[1] and vFast > vSlow and vFast < Level, -1, nz(pos[1], 0))) 
+    pos
+PrimeNumberOscillator(price, percent) =>
+    res = 0.0
+    res1 = 0.0
+    res2 = 0.0
+    for j = price to price + (price * percent / 100)
+        res1 := j
+        for i = 2 to sqrt(price)
+            res1 := iff(j % i == 0 , 0, j)
+            if res1 == 0 
+                break
+        if res1 > 0 
+            break
+    for j = price to price - (price * percent / 100)
+        res2 := j
+        for i = 2 to sqrt(price)
+            res2 := iff(j % i == 0 , 0, j)
+            if res2 == 0 
+                break
+        if res2 > 0 
+            break
+    res := iff(res1 - price < price - res2,  res1 - price, res2 - price)
+    res := iff(res == 0, res[1], res)
+    res
+    
+PNO(percent) =>
+    pos = 0.0
+    xPNO = PrimeNumberOscillator(close, percent)
+    pos:= iff(xPNO > 0, 1,
+           iff(xPNO < 0, -1, nz(pos[1], 0))) 
+    pos
+strategy(title="Combo Backtest 123 Reversal & Prime Number Oscillator", shorttitle="Combo", overlay = true)
+line1 = input(true, "---- 123 Reversal ----")
+Length = input(14, minval=1)
+KSmoothing = input(1, minval=1)
+DLength = input(3, minval=1)
+Level = input(50, minval=1)
+//-------------------------
+line2 = input(true, "---- Prime Number Oscillator ----")
+percent = input(5, minval=0.01, step = 0.01, title="Tolerance Percentage")
+reverse = input(false, title="Trade reverse")
+posReversal123 = Reversal123(Length, KSmoothing, DLength, Level)
+posPNO = PNO(percent)
+pos = iff(posReversal123 == 1 and posPNO == 1 , 1,
+       iff(posReversal123 == -1 and posPNO == -1, -1, 0)) 
+possig = iff(reverse and pos == 1, -1,
+          iff(reverse and pos == -1 , 1, pos))     
+if (possig == 1 ) 
+    strategy.entry("Long", strategy.long)
+if (possig == -1 )
+    strategy.entry("Short", strategy.short)  
+if (possig == 0) 
+    strategy.close_all()
+barcolor(possig == -1 ? #b50404: possig == 1 ? #079605 : #0536b3 )
+Expand (89 lines)

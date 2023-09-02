@@ -1,0 +1,153 @@
+Script Name: Chandelier Exit - Strategy
+Author: melihtuna
+Description: I created a strategy version for the  Chandelier Exit  indicator, originally owned by  @everget . With the strategy I prepared, you can try both short-long and stop loss - trailing stop and take profit rates. I have also added a date filter feature so that you can test the strategy in the date range you want.
+
+
+Orjinali  @everget 'e ait olan  Chandelier Exit ...
+PineScript code:
+
+Pine Script™ strategy
+Chandelier Exit - Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © melihtuna
+//@version=4
+strategy("Chandelier Exit - Strategy",shorttitle="CE-STG" , overlay=true, default_qty_type=strategy.cash, default_qty_value=10000, initial_capital=10000, currency=currency.USD, commission_value=0.03, commission_type=strategy.commission.percent)
+length = input(title="ATR Period", type=input.integer, defval=22)
+mult = input(title="ATR Multiplier", type=input.float, step=0.1, defval=3.0)
+showLabels = input(title="Show Buy/Sell Labels ?", type=input.bool, defval=false)
+useClose = input(title="Use Close Price for Extremums ?", type=input.bool, defval=true)
+highlightState = input(title="Highlight State ?", type=input.bool, defval=true)
+atr = mult * atr(length)
+longStop = (useClose ? highest(close, length) : highest(length)) - atr
+longStopPrev = nz(longStop[1], longStop) 
+longStop := close[1] > longStopPrev ? max(longStop, longStopPrev) : longStop
+shortStop = (useClose ? lowest(close, length) : lowest(length)) + atr
+shortStopPrev = nz(shortStop[1], shortStop)
+shortStop := close[1] < shortStopPrev ? min(shortStop, shortStopPrev) : shortStop
+var int dir = 1
+dir := close > shortStopPrev ? 1 : close < longStopPrev ? -1 : dir
+var color longColor = color.green
+var color shortColor = color.red
+longStopPlot = plot(dir == 1 ? longStop : na, title="Long Stop", style=plot.style_linebr, linewidth=2, color=longColor)
+buySignal = dir == 1 and dir[1] == -1
+plotshape(buySignal ? longStop : na, title="Long Stop Start", location=location.absolute, style=shape.circle, size=size.tiny, color=longColor, transp=0)
+plotshape(buySignal and showLabels ? longStop : na, title="Buy Label", text="Buy", location=location.absolute, style=shape.labelup, size=size.tiny, color=longColor, textcolor=color.white, transp=0)
+shortStopPlot = plot(dir == 1 ? na : shortStop, title="Short Stop", style=plot.style_linebr, linewidth=2, color=shortColor)
+sellSignal = dir == -1 and dir[1] == 1
+plotshape(sellSignal ? shortStop : na, title="Short Stop Start", location=location.absolute, style=shape.circle, size=size.tiny, color=shortColor, transp=0)
+plotshape(sellSignal and showLabels ? shortStop : na, title="Sell Label", text="Sell", location=location.absolute, style=shape.labeldown, size=size.tiny, color=shortColor, textcolor=color.white, transp=0)
+midPricePlot = plot(ohlc4, title="", style=plot.style_circles, linewidth=0, display=display.none, editable=false)
+longFillColor = highlightState ? (dir == 1 ? longColor : na) : na
+shortFillColor = highlightState ? (dir == -1 ? shortColor : na) : na
+fill(midPricePlot, longStopPlot, title="Long State Filling", color=longFillColor)
+fill(midPricePlot, shortStopPlot, title="Short State Filling", color=shortFillColor)
+long_short = input(true, "Long-Short",type=input.bool, group="Strategy Settings")
+start     = input(timestamp("2019-01-01"), "Date", type=input.time, group="Strategy Settings")
+finish    = input(timestamp("2025-01-01"), "Date", type=input.time, group="Strategy Settings")   
+window()  => time >= start and time <= finish ? true : false 
+slRatio=input(5, "Manuel Stop Loss Ratio", type=input.float, minval=0, group="Strategy Settings")
+tpRatio=input(20, "Take Profit Ratio", type=input.float, minval=0, group="Strategy Settings")
+tsStartRatio=input(10, "Trailing Stop Start Ratio", type=input.float, minval=0, group="Strategy Settings")
+tsRatio=input(5, "Trailing Stop Ratio", type=input.float, minval=1, group="Strategy Settings")
+lastBuyPrice = strategy.position_avg_price
+diffHiPriceRatio = (high-lastBuyPrice)/lastBuyPrice*100
+diffLoPriceRatio = (close-lastBuyPrice)/lastBuyPrice*100
+posHiRatio=0.0
+posHiRatio:= strategy.position_size > 0 ? diffHiPriceRatio > posHiRatio[1] ? diffHiPriceRatio : posHiRatio[1] : 0
+s_diffHiPriceRatio = (low-lastBuyPrice)/lastBuyPrice*100
+s_diffLoPriceRatio = (close-lastBuyPrice)/lastBuyPrice*100
+s_posHiRatio=0.0
+s_posHiRatio:= strategy.position_size < 0 ? s_diffLoPriceRatio < s_posHiRatio[1] ? s_diffLoPriceRatio : s_posHiRatio[1] : 0
+strategy.entry("LONG", strategy.long, when = window() and buySignal)
+strategy.close("LONG", when = window() and sellSignal)
+strategy.close("LONG", when = diffLoPriceRatio<(slRatio*(-1)), comment="STOP-LONG")
+strategy.close("LONG", when = diffHiPriceRatio>tpRatio, comment="TAKE-PROFIT-LONG")
+strategy.close("LONG", when = ((posHiRatio[1]>tsStartRatio) and (posHiRatio[1]-diffHiPriceRatio)>tsRatio), comment="TRAILING-STOP-LONG")
+if long_short
+    strategy.entry("SHORT", strategy.short, when = window() and sellSignal)
+    strategy.close("SHORT", when = window() and buySignal)
+    strategy.close("SHORT", when = s_diffLoPriceRatio>(slRatio), comment="STOP-SHORT")
+    strategy.close("SHORT", when = s_diffHiPriceRatio<(tpRatio*(-1)), comment="TAKE-PROFIT-SHORT")
+    strategy.close("SHORT", when = ((s_posHiRatio[1]*(-1)>tsStartRatio) and ((s_posHiRatio[1]-s_diffLoPriceRatio))*(-1)>tsRatio), comment="TRAILING-STOP-SHORT")
+Expand (80 lines)

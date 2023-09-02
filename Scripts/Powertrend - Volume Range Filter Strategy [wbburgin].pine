@@ -1,0 +1,183 @@
+Script Name: Powertrend - Volume Range Filter Strategy [wbburgin]
+Author: wbburgin
+Description: The Powertrend is a range filter that is based off of volume, instead of price. This helps the range filter capture trends more accurately than a price-based range filter, because the range filter will update itself from changes in volume instead of changes in price. In certain scenarios this means that the Powertrend will be more profitable than a normal range...
+PineScript code:
+
+Pine Script™ strategy
+Powertrend - Volume Range Filter Strategy [wbburgin]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © wbburgin
+//@version=5
+strategy("Powertrend - Volume Range Filter [wbburgin]",overlay=true,initial_capital = 1000, default_qty_type = strategy.percent_of_equity,
+ default_qty_value=10, commission_value=0.00, slippage = 0, shorttitle="Powertrend [wbburgin]")
+import wbburgin/wbburgin_utils/2 as utils
+rngfilt_volumeadj(float source1, float tethersource, float smoothrng)=>
+    rngfilt = source1
+    if tethersource > nz(tethersource[1])
+        rngfilt := (source1 - smoothrng) < nz(rngfilt[1]) ? nz(rngfilt[1]) : (source1 - smoothrng)
+    else
+        rngfilt := (source1 + smoothrng) > nz(rngfilt[1]) ? nz(rngfilt[1]) : (source1 + smoothrng)
+    rngfilt
+l = input.int(200,"Length",group="General")
+useadx = input.bool(false,"ADX Filter",group="Filters",inline="ADX")
+lengthadx = input.int(14,title="",group="Filters",inline="ADX")
+usehl = input.bool(false,"Range Supertrend",group="Filters",inline="HL")
+lengthhl = input.int(14,title="",group="Filters",inline="HL")
+showhl = input.bool(false,"Plot",group="Filters",inline="HL")
+usevwma = input.bool(false,"VWMA Filter",group="Filters",inline="VWMA")
+lengthvwma = input.int(200,title="",group="Filters",inline="VWMA")
+showvwma = input.bool(false,"Plot",group="Filters",inline="VWMA")
+highlighting = input.bool(true,"Highlighting",group="Display")
+barcolors = input.bool(true,"Bar Colors",group="Display")
+buyselllabels = input.bool(true,"Entry-Exit Labels",group="Display")
+volrng = rngfilt_volumeadj(close,volume,utils.smoothrng(close,l,3))
+smoothrng = utils.smoothrng(close,l,3)
+basetype = volrng
+hband = basetype + smoothrng
+lowband = basetype - smoothrng
+// Filters
+    // -- Built-in
+uprng = utils.trendUp(basetype)
+    // -- ADX
+[x,y,adx] = ta.dmi(lengthadx,lengthadx)
+adx_vwma = ta.vwma(adx,lengthadx)
+adx_filter = not useadx ? true : adx > adx_vwma ? true : false
+    // -- High/Low
+lowband_trendfollow = ta.lowest(lowband,lengthhl)
+highband_trendfollow = ta.highest(hband,lengthhl)
+in_general_uptrend = ta.barssince(ta.crossover(close,highband_trendfollow[1])) < ta.barssince(ta.crossunder(close,lowband_trendfollow[1]))
+igu_filter_positive = not usehl ? true : in_general_uptrend ? true : false
+igu_filter_negative = not usehl ? true : not in_general_uptrend ? true : false
+    // -- VWMA
+vwma = ta.vwma(volrng,lengthvwma)
+vwma_filter_positive = not usevwma ? true : volrng > vwma ? true : false
+//No negative needed
+b = uprng and ta.crossover(close,hband) and igu_filter_positive and adx_filter and vwma_filter_positive
+s = not uprng and ta.crossunder(close,lowband) and igu_filter_negative and adx_filter
+in_b = ta.barssince(b)[1] < ta.barssince(s)[1]
+in_s = ta.barssince(s)[1] < ta.barssince(b)[1]
+if b
+    strategy.entry("Long",strategy.long)
+    alert("Powertrend Entry",freq=alert.freq_once_per_bar)
+if s
+    strategy.close("Long")
+    alert("Powertrend Exit",freq=alert.freq_once_per_bar)
+mp=plot(basetype,color=color.white,title="Volume Range")
+hp=plot(hband,color=na,title="High Range")
+lp=plot(lowband,color=na, title="Low Range")
+bb=plot(not showhl ? na : in_general_uptrend ? lowband_trendfollow : na, color=color.lime, title="Bullish Trend Follow",style=plot.style_linebr)
+uu=plot(not showhl ? na : not in_general_uptrend ? highband_trendfollow : na,color=color.yellow,title="Bearish Trend Follow",style=plot.style_linebr)
+plot(not showvwma ? na : vwma, color = color.orange,title="VWMA")
+fill(hp,mp,color=not highlighting ? na : color.new(color.lime,88))
+fill(mp,lp,color=not highlighting ? na : color.new(color.yellow,88))
+fill(uu,hp,color=not highlighting ? na : in_general_uptrend ? na : color.new(color.red,88))
+fill(bb,lp,color=not highlighting ? na : not in_general_uptrend ? na : color.new(color.blue,88))
+plotshape(b and not in_b and buyselllabels ? lowband : na,"Buy Label",style=shape.labelup,location=location.absolute,
+ color=color.green,textcolor=color.white,text = "Buy", size=size.tiny)
+plotshape(s and not in_s and buyselllabels ? hband : na,"Sell Label",style=shape.labeldown,location=location.absolute,
+ color=color.red,textcolor=color.white,text = "Sell", size=size.tiny)
+barcolor(barcolors ? uprng ? color.lime : color.yellow : na)
+//alertcondition(b,"PT Buy")
+//alertcondition(s,"PT Sell")
+Expand (100 lines)

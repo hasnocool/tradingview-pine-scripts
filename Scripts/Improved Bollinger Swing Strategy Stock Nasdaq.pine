@@ -1,0 +1,99 @@
+Script Name: Improved Bollinger Swing Strategy Stock Nasdaq
+Author: exlux99
+Description: This is an improved bollinger band strategy adapted to Nasdaq Index/Stocks.
+
+The new update include a multiple logic calculation BB adapted for long and short, together with a risk management using movement in %.
+
+
+Rules for entry
+For long we have a crossover between the close and the lower band from the bb
+For long we have a crossover between the close and the...
+PineScript code:
+
+Pine Script™ strategy
+Improved Bollinger Swing Strategy Stock Nasdaq
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © exlux99
+//@version=4
+strategy("BB NDX strategy", overlay = true, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, calc_on_every_tick = true, commission_type = strategy.commission.percent, commission_value = 0.01)
+source = close
+length = input(25, minval=1, title="Length BB long")
+mult = input(2.9, minval=0.001, maxval=50, step=0.1, title="MULT BB long")
+length2 = input(36, minval=1, title="Length BB short")
+mult2 = input(3.2, minval=0.001, maxval=50, step=0.1, title="MULT BB short")
+basis = sma(source, length)
+dev = mult * stdev(source, length)
+dev2 = mult2 * stdev(source, length2)
+upper = basis + dev2
+lower = basis - dev
+buyEntry = crossover(source, lower)
+sellEntry = crossunder(source, upper)
+longEntry=input(true)
+shortEntry=input(true)
+g(v, p) => round(v * (pow(10, p))) / pow(10, p)
+risk     = input(100)
+leverage = input(1.0, step = 0.5)
+c = g((strategy.equity * leverage / open) * (risk / 100), 4)
+tplong=input(0.065, step=0.005, title="Take profit % for long")
+sllong=input(0.04, step=0.005, title="Stop loss % for long")
+tpshort=input(0.025, step=0.005, title="Take profit % for short")
+slshort=input(0.04, step=0.005, title="Stop loss % for short")
+if(longEntry)
+    strategy.entry("long",1,c,when=buyEntry)
+    strategy.exit("short_tp/sl", "long", profit=close * tplong / syminfo.mintick, loss=close * sllong / syminfo.mintick, comment='LONG EXIT',  alert_message = 'closeshort')
+    strategy.close("long",when=sellEntry)
+if(shortEntry)
+    strategy.entry("short",0,c,when=sellEntry)
+    strategy.exit("short_tp/sl", "short", profit=close * tpshort / syminfo.mintick, loss=close * slshort / syminfo.mintick, comment='SHORT EXIT',  alert_message = 'closeshort')
+    strategy.close("short",when=buyEntry)
+Expand (49 lines)

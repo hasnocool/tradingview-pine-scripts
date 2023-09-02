@@ -1,0 +1,216 @@
+Script Name: Two Moving Average Cross test
+Author: darkbrewery
+Description: Published for testing the tradingview strategy finder
+PineScript code:
+
+Pine Script™ strategy
+Two Moving Average Cross test
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © darkbrewery
+// @version=5
+// Huge Thank-you to SGJoe and DTKing for their help!
+// Ehlers / Kaufman Code borrowed from Franklin Moormann (cheatcountry)
+strategy("Two Moving Average Cross", "2MAX", true, default_qty_value = 100, default_qty_type = strategy.percent_of_equity, initial_capital=1000, commission_value = 0.08)
+// ---- User Inputs ----
+Timeframe   = input.timeframe( '','TimeFrame', inline='top')
+Repaint     = input(           false,'Allow Repainting', inline='top')
+MA_T1       = input.string(    "Exponential", "Fast", ["Simple","Exponential","Double Exponential","Triple Exponential","Quadruple Exponential","Weighted","Volume-weighted","Hull","Symmetrical","Arnaud Legoux","Welles Wilder","Triangular","Least Squares","Relative Strength","Ehlers Kaufman"], inline="MA", group="Moving Averages")
+MA_S1_Input = input.source(    close, "Src", inline="MA", group="Moving Averages")
+MA_L1       = input.int(       20, "Len", 1, 200, inline="MA", group="Moving Averages")
+MA_T2       = input.string(    "Exponential", "Slow", ["Simple","Exponential","Double Exponential","Triple Exponential","Quadruple Exponential","Weighted","Volume-weighted","Hull","Symmetrical","Arnaud Legoux","Welles Wilder","Triangular","Least Squares","Relative Strength","Ehlers Kaufman"], inline="MA2", group="Moving Averages")
+MA_S2_Input = input.source(    close, "Src", inline="MA2", group="Moving Averages")
+MA_L2       = input.int(       50,"Len", 1, 200, inline="MA2", group="Moving Averages")
+MA_S1       = request.security(syminfo.tickerid, Timeframe, MA_S1_Input[Repaint ? 0 : barstate.isrealtime ? 1 : 0])[Repaint ? 0 : barstate.isrealtime ? 0 : 1]
+MA_S2       = request.security(syminfo.tickerid, Timeframe, MA_S2_Input[Repaint ? 0 : barstate.isrealtime ? 1 : 0])[Repaint ? 0 : barstate.isrealtime ? 0 : 1]
+// ---- RSI Inputs ----
+RSI_Length = input.int(9, "RSI Length", inline="RSI", group="RSI")
+RSI_Source = input.source(close, "RSI Source", inline="RSI", group="RSI")
+MinRSI = input.int(39,"Min RSI", inline="RSI", group="RSI")
+MaxRSI = input.int(80,"Max RSI", inline="RSI", group="RSI")
+// ---- Strategy Inputs ----
+Stop_Perc  = input.float(10, "Stop %", inline="Strat", group="Strategy")
+Stop_Multi = (Stop_Perc - 100) * -0.01
+// ---- Calculate Moving Averages ----
+MA_1 = switch MA_T1
+    "Simple"                => ta.sma(MA_S1,MA_L1)
+    "Exponential"           => ta.ema(MA_S1,MA_L1)
+    "Double Exponential"    => 2 * ta.ema(MA_S1, MA_L1) - ta.ema(ta.ema(MA_S1, MA_L1),  MA_L1)
+    "Triple Exponential"    => 3 * (ta.ema(MA_S1, MA_L1) - ta.ema(ta.ema(MA_S1, MA_L1), MA_L1)) + ta.ema(ta.ema(ta.ema(MA_S1, MA_L1), MA_L1), MA_L1)
+    "Quadruple Exponential" => 5 * ta.ema(MA_S1,MA_L1) - 10 * ta.ema(ta.ema(MA_S1, MA_L1), MA_L1) + 10 * ta.ema(ta.ema(ta.ema(MA_S1, MA_L1), MA_L1), MA_L1) - 5 * ta.ema(ta.ema(ta.ema(ta.ema(MA_S1, MA_L1), MA_L1), MA_L1), MA_L1) + ta.ema(ta.ema(ta.ema(ta.ema(ta.ema(MA_S1, MA_L1), MA_L1), MA_L1), MA_L1), MA_L1)
+    "Weighted"              => ta.wma(MA_S1,MA_L1)
+    "Volume-weighted"       => ta.vwma(MA_S1,MA_L1)
+    "Hull"                  => ta.hma(MA_S1,MA_L1)
+    "Symmetrical"           => ta.swma(MA_S1)
+    "Arnaud Legoux"         => ta.alma(MA_S1, MA_L1, 0.85, 6)
+    "Least Squares"         => ta.linreg(MA_S1, MA_L1, 0)
+    "Relative Strength"     => ta.rma(MA_S1,MA_L1)
+    "Welles Wilder"         =>
+        Wilder_MA1 = .0
+        Wilder_MA1 := 1 / MA_L1 * MA_S1 + (1 - 1 / MA_L1) * nz(Wilder_MA1[1])
+    "Triangular"            => ta.sma(ta.sma(MA_S1,MA_L1),MA_L1)
+    "Ehlers Kaufman"        =>
+        KA_D1 = .0
+        for int i = 0 to MA_L1 - 1 by 1
+            KA_D1 += math.abs(nz(MA_S1[i]) - nz(MA_S1[i + 1]))
+        KA_EF1 = KA_D1 != 0 ? math.min(math.abs(MA_S1 - nz(MA_S1[MA_L1 - 1])) / KA_D1, 1) : 0
+        KAMA1 = .0
+        KAMA1 := (math.pow((0.6667 * KA_EF1) + 0.0645, 2) * MA_S1) + ((1 - math.pow((0.6667 * KA_EF1) + 0.0645, 2)) * nz(KAMA1[1]))
+    
+MA_2 = switch MA_T2
+    "Simple"                => ta.sma(MA_S2,MA_L2)
+    "Exponential"           => ta.ema(MA_S2,MA_L2)
+    "Double Exponential"    => 2 * ta.ema(MA_S2, MA_L2) - ta.ema(ta.ema(MA_S2, MA_L2),  MA_L2)
+    "Triple Exponential"    => 3 * (ta.ema(MA_S2, MA_L2) - ta.ema(ta.ema(MA_S2, MA_L2), MA_L2)) + ta.ema(ta.ema(ta.ema(MA_S2, MA_L2), MA_L2), MA_L2)
+    "Quadruple Exponential" => 5 * ta.ema(MA_S2,MA_L2) - 10 * ta.ema(ta.ema(MA_S2, MA_L2), MA_L2) + 10 * ta.ema(ta.ema(ta.ema(MA_S2, MA_L2), MA_L2), MA_L2) - 5 * ta.ema(ta.ema(ta.ema(ta.ema(MA_S2, MA_L2), MA_L2), MA_L2), MA_L2) + ta.ema(ta.ema(ta.ema(ta.ema(ta.ema(MA_S2, MA_L2), MA_L2), MA_L2), MA_L2), MA_L2)
+    "Weighted"              => ta.wma(MA_S2,MA_L2)
+    "Volume-weighted"       => ta.vwma(MA_S2,MA_L2)
+    "Hull"                  => ta.hma(MA_S2,MA_L2)
+    "Symmetrical"           => ta.swma(MA_S2)
+    "Arnaud Legoux"         => ta.alma(MA_S2, MA_L2, 0.85, 6)
+    "Least Squares"         => ta.linreg(MA_S2, MA_L2, 0)
+    "Relative Strength"     => ta.rma(MA_S2,MA_L2)
+    "Welles Wilder"         =>
+        Wilder_MA2 = .0
+        Wilder_MA2 := 1 / MA_L2 * MA_S2 + (1 - 1 / MA_L2) * nz(Wilder_MA2[1])
+    "Triangular"            => ta.sma(ta.sma(MA_S2,MA_L2),MA_L2)
+    "Ehlers Kaufman"        =>
+        KA_D2 = .0
+        for int i = 0 to MA_L2 - 1 by 1
+            KA_D2 += math.abs(nz(MA_S2[i]) - nz(MA_S2[i + 1]))
+        KA_EF2 = KA_D2 != 0 ? math.min(math.abs(MA_S2 - nz(MA_S2[MA_L2 - 1])) / KA_D2, 1) : 0
+        KAMA2 = .0
+        KAMA2 := (math.pow((0.6667 * KA_EF2) + 0.0645, 2) * MA_S2) + ((1 - math.pow((0.6667 * KA_EF2) + 0.0645, 2)) * nz(KAMA2[1]))
+// ---- Plot Moving Averages ----
+plot(MA_1, title="Fast MA", color=color.yellow)
+plot(MA_2, title="Slow MA", color=color.blue)
+// ---- Moving Average Crossovers ----
+Show_MA_Cross = input.bool(false, "Show Crossings")
+Bull_MA_Cross = ta.crossover(MA_1,MA_2)
+Bear_MA_Cross = ta.crossover(MA_2,MA_1)
+plotshape(Bull_MA_Cross and Show_MA_Cross, "Bullish Cross", shape.triangleup, location.belowbar, color.green, size="small")
+plotshape(Bear_MA_Cross and Show_MA_Cross, "Bearish Cross", shape.triangledown, location.abovebar, color.red, size="small")
+// ---- Strategy ----
+Longcond1 = ta.crossover(MA_1, MA_2)
+Longcond2 = ta.rsi(close,RSI_Length) > MinRSI
+Exitcond1 = ta.crossover(MA_2, MA_1)
+Exitcond2 = ta.rsi(RSI_Source,RSI_Length) < MinRSI
+Exitcond3 = ta.rsi(RSI_Source,RSI_Length) > MaxRSI
+InPos = strategy.position_size > 0
+NoPos = strategy.position_size <=0
+TimePeriod = time >= timestamp(syminfo.timezone, 2020, 1, 1, 0, 0)
+if (TimePeriod and Longcond1 and Longcond2 and NoPos)
+    strategy.entry("Long", strategy.long)
+    stoploss = low * Stop_Multi
+    strategy.exit("Exit", "Long", stop=stoploss)
+if (Exitcond1 and Exitcond2 and InPos) or (Exitcond3 and InPos)
+    strategy.close("Long")
+Expand (108 lines)

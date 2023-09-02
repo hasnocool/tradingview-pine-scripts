@@ -1,0 +1,149 @@
+Script Name: EMA Cross V1 for eth 4H
+Author: chadsadachai
+Description: For ETH in Bullish Zone (Time frame 4H)
+Condition Back test
+- 50% of Equity (for decrease max drawdown less than 15%)
+
+
+Warning : Many fake signals are in Sideway or Bearish.
+PineScript code:
+
+Pine Script™ strategy
+EMA Cross V1 for eth 4H
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © chadsadachai
+//@version=5
+strategy("EMA Cross V1", overlay= true)
+//rsi
+length = input.int(title = "Rsi Lenght" , defval=26 , minval=1, maxval=50)
+overS = input.int(title = "Rsi OVS line" , defval=30 , minval=1, maxval=40)
+overB = input.int(title = "Rsi OVB line" , defval=70 , minval=1, maxval=100)
+mLine = input.int(title = "Rsi Medium line" , defval=42 , minval=1, maxval=60)
+price = close
+vrsi = ta.rsi(price, length)
+co = vrsi >= mLine and vrsi < overB 
+cu = ta.crossunder(vrsi, overB)
+//ema
+F = input.int(title = "EMA Fast" , defval=17 , minval=1, maxval=50)
+M = input.int(title = "EMA Medium" , defval=35, minval=1, maxval=100)
+S = input.int(title = "EMA Slow" , defval=142, minval=1, maxval=200)
+emaF = ta.ema(price , F)
+emaM = ta.ema(price , M)
+emaS = ta.ema(price , S)
+//plot
+plot(emaF , color = color.green , linewidth=1)
+plot(emaM , color = color.yellow , linewidth=1)
+plot(emaS , color = color.red , linewidth=1)
+//Time Stamp
+start = timestamp(input.int(title = "Start Year" , defval=2011 , minval=2011, maxval=2025), input.int(title = "Start Month" , defval=1 , minval=1, maxval=12), input.int(title = "Start Day" , defval=1 , minval=1, maxval=31), 0, 0)
+end = timestamp(input.int(title = "End Year" , defval=2025 , minval=2011, maxval=2025), input.int(title = "End Month" , defval=1 , minval=1, maxval=12), input.int(title = "End Day" , defval=1 , minval=1, maxval=31), 0, 0)
+// years = input.int(title = "Year" , defval=2018 , minval=2011, maxval=2025)
+// months = input.int(title = "Month" , defval=1 , minval=1, maxval=12)
+// days = input.int(title = "Day" , defval=1 , minval=1, maxval=31)
+//longCondition Default
+// longCondition1 = EMA_Fast >= EMA_Slow and EMA_Fast >= EMA_Medium//ta.crossover(EMA_Fast, EMA_Slow)  EMA_Fast > EMA_Slow and EMA_Medium > EMA_Slow
+// longCondition3 = price >= EMA_Medium and price > EMA_Slow
+// longCondition2 = vrsi >= overSold and vrsi <= overBought 
+//longCondition & shortCondition ETHUSD
+// 1.price > emaF > emaM > emaS
+// 2.rsi overcross overS
+longC1 = price > emaF and price > emaM and price > emaS 
+// longC1 = ta.crossover(emaF, emaM)
+longC2 = if longC1
+    co
+// shortC1 = EMA_Fast < EMA_Medium //and EMA_Fast < EMA_Slow and EMA_Medium < EMA_Slow //and cu
+// shortC2 = overBought > vrsi //and vrsi < overBought //overSold < vrsi and vrsi < mediumLine
+// exitLong Condition
+// 1.price < emaF < emaM < emaS
+// 2.rsi overcross mediumLine
+exitLong1 = ta.crossunder(emaF, emaM) //or emaF < emaM//and price < emaM and price < emaF
+exitLong2 = ta.crossunder(vrsi,mLine)
+//exitLong3 = price < emaM
+//strategy.entry
+if time >=start and time <=end
+    strategy.entry("Buy", strategy.long , when = longC1 and longC2)
+// if(exitLong1 or exitLong2)
+strategy.close("Buy" , when = exitLong1 or exitLong2)
+    
+// exitShort1 = EMA_Fast > EMA_Medium
+// //exitShort2 = ta.crossover(vrsi , mediumLine) 
+// exitShort2 = ta.crossunder (vrsi,mediumLine)
+// strategy.close("Short" , when = exitShort1 or exitShort2)
+// //shortCondition = cu
+// //if (shortCondition1 and shortCondition2)
+//     //strategy.entry("My Short Entry Id", strategy.short)
+Expand (73 lines)

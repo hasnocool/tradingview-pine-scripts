@@ -1,0 +1,78 @@
+Script Name: Optimized RSI Strategy - Buy The Dips (by Coinrule)
+Author: Coinrule
+Description: Buy low and sell high is every trader's mantra. While this approach looks straightforward in theory, it's sometimes challenging to put into practice. That requires stress-management to buy when price drops and resolution in selling when the price is rising. RSI is a useful tool to implement long-term and effective trading strategies.  The script presents an...
+PineScript code:
+
+Pine Script™ strategy
+Optimized RSI Strategy - Buy The Dips (by Coinrule)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Coinrule
+//@version=4
+strategy(shorttitle='Optimized RSI Strategy',title='Optimized RSI Strategy - Buy The Dips (by Coinrule)', overlay=true, initial_capital = 1000, default_qty_type = strategy.percent_of_equity, default_qty_type = strategy.percent_of_equity, default_qty_value = 30, commission_type=strategy.commission.percent, commission_value=0.1)
+//Backtest dates
+fromMonth = input(defval = 1,    title = "From Month",      type = input.integer, minval = 1, maxval = 12)
+fromDay   = input(defval = 1,    title = "From Day",        type = input.integer, minval = 1, maxval = 31)
+fromYear  = input(defval = 2020, title = "From Year",       type = input.integer, minval = 1970)
+thruMonth = input(defval = 1,    title = "Thru Month",      type = input.integer, minval = 1, maxval = 12)
+thruDay   = input(defval = 1,    title = "Thru Day",        type = input.integer, minval = 1, maxval = 31)
+thruYear  = input(defval = 2112, title = "Thru Year",       type = input.integer, minval = 1970)
+showDate  = input(defval = true, title = "Show Date Range", type = input.bool)
+start     = timestamp(fromYear, fromMonth, fromDay, 00, 00)        // backtest start window
+finish    = timestamp(thruYear, thruMonth, thruDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+// RSI inputs and calculations
+lengthRSI = (14)
+RSI = rsi(close, lengthRSI)
+RSI_entry = input(35, title = 'RSI Entry', minval=1)
+RSI_exit = input(65, title = 'RSI Close', minval=1)
+//Calculate Moving Averages
+movingaverage_signal = sma(close, input(100))
+//Entry 
+strategy.entry(id="long", long = true, when = RSI< RSI_entry and close < movingaverage_signal and window())
+//Exit
+//RSI
+strategy.close("long", when = RSI > RSI_exit and window())
+plot (movingaverage_signal)
+Expand (41 lines)

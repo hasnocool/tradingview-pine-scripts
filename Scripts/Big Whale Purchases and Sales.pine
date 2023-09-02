@@ -1,0 +1,165 @@
+Script Name: Big Whale Purchases and Sales
+Author: Powerscooter
+Description: Big Whale Purchases and Sales  - plots big whale transactions on your chart!
+
+People that hold more than 1% of a crypto currencies circulating supply are considered whales and have a huge influence on price, not just because they can move the market with their huge transactions, but also because other traders often track their wallets and follow their example....
+PineScript code:
+
+Pine Script™ strategy
+Big Whale Purchases and Sales
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Powerscooter
+//@version=5
+strategy("Big Whale Purchases and Sales", "Big Whale Moves", overlay=true, initial_capital = 100, default_qty_type = strategy.cash, default_qty_value = 100, pyramiding = 5)
+UseStrategy = input.bool(false,"Strategy Mode", "Use this box to switch between strategy and indicator mode", group = "Script Settings")
+//Inputs
+StdDevs = input(2.0,"Standard Deviations", "How many Standard Deviations need to be passed to identify an outlier. 0 will show all changes in whale holdings.", group = "Inputs")
+//Chain ID
+Source = input.string(title="Blockchain", defval="BTC", options=["BTC", "ETH", "DOGE", "ADA", "MATIC", "SHIB", "UNI", "OKB", "LEO", "LINK", "LTC", "FTT", "CRO", "ALGO",
+ "QNT", "BCH", "SAND", "MANA", "FXS", "AAVE", "CHZ", "HT", "LDO", "KCS", "AXS", "MKR", "ZEC", "GRT", "FTM", "SNX", "NEXO", "CRV", "BIT", "DASH", "BAT", "ENS"], group="Inputs")
+SourceA = switch Source
+    "BTC"   => "INTOTHEBLOCK:BTC_WHALESASSETS"
+    "ETH"   => "INTOTHEBLOCK:ETH_WHALESASSETS"
+    "DOGE"  => "INTOTHEBLOCK:DOGE_WHALESASSETS"
+    "ADA"   => "INTOTHEBLOCK:ADA_WHALESASSETS"
+    "MATIC" => "INTOTHEBLOCK:MATIC_WHALESASSETS"
+    "SHIB"  => "INTOTHEBLOCK:SHIB_WHALESASSETS"
+    "UNI"   => "INTOTHEBLOCK:UNI_WHALESASSETS"
+    "OKB"   => "INTOTHEBLOCK:OKB_WHALESASSETS"
+    "LEO"   => "INTOTHEBLOCK:LEO_WHALESASSETS"
+    "LINK"  => "INTOTHEBLOCK:LINK_WHALESASSETS"
+    "LTC"   => "INTOTHEBLOCK:LTC_WHALESASSETS"
+    "FTT"   => "INTOTHEBLOCK:FTT_WHALESASSETS"
+    "CRO"   => "INTOTHEBLOCK:CRO_WHALESASSETS"
+    "ALGO"  => "INTOTHEBLOCK:ALGO_WHALESASSETS"
+    "QNT"   => "INTOTHEBLOCK:QNT_WHALESASSETS"
+    "BCH"   => "INTOTHEBLOCK:BCH_WHALESASSETS"
+    "SAND"  => "INTOTHEBLOCK:SAND_WHALESASSETS"
+    "MANA"  => "INTOTHEBLOCK:MANA_WHALESASSETS"
+    "FXS"   => "INTOTHEBLOCK:FXS_WHALESASSETS"
+    "AAVE"  => "INTOTHEBLOCK:AAVE_WHALESASSETS"
+    "CHZ"   => "INTOTHEBLOCK:CHZ_WHALESASSETS"
+    "HT"    => "INTOTHEBLOCK:HT_WHALESASSETS"
+    "LDO"   => "INTOTHEBLOCK:LDO_WHALESASSETS"
+    "KCS"   => "INTOTHEBLOCK:KCS_WHALESASSETS"
+    "AXS"   => "INTOTHEBLOCK:AXS_WHALESASSETS"
+    "MKR"   => "INTOTHEBLOCK:MKR_WHALESASSETS"
+    "ZEC"   => "INTOTHEBLOCK:ZEC_WHALESASSETS"
+    "GRT"   => "INTOTHEBLOCK:GRT_WHALESASSETS"
+    "FTM"   => "INTOTHEBLOCK:FTM_WHALESASSETS"
+    "SNX"   => "INTOTHEBLOCK:SNX_WHALESASSETS"
+    "NEXO"  => "INTOTHEBLOCK:NEXO_WHALESASSETS"
+    "CRV"   => "INTOTHEBLOCK:CRV_WHALESASSETS"
+    "BIT"   => "INTOTHEBLOCK:BIT_WHALESASSETS"
+    "DASH"  => "INTOTHEBLOCK:DASH_WHALESASSETS"
+    "BAT"   => "INTOTHEBLOCK:BAT_WHALESASSETS"
+    "ENS"   => "INTOTHEBLOCK:ENS_WHALESASSETS"
+Assets = request.security(SourceA, "D", close)
+//Define day to day change
+AssetMoves = ta.change(Assets,1)
+//Catch outliers
+var float bot=0
+var float top=0
+var float mid=0
+if StdDevs != 0
+    [mid2,top2,bot2]=ta.bb(AssetMoves,21,StdDevs)
+    mid:=mid2
+    top:=top2
+    bot:=bot2
+else
+    top:=0
+    bot:=0
+//Mark the corresponding Bars
+plotshape(AssetMoves>top and not UseStrategy,"Purchase",shape.triangleup, location.belowbar, size=size.normal, color=color.green, text = "Purchase", textcolor = color.green)
+plotshape(AssetMoves<bot and not UseStrategy,"Sale",shape.triangledown, location.abovebar, size=size.normal, color=color.red, text = "Sale", textcolor = color.red)
+//Order Conditions
+LongCondition = AssetMoves>top and UseStrategy
+ShortCondition = AssetMoves<bot and UseStrategy
+//Order Execution
+if LongCondition
+    strategy.entry("Long", strategy.long)
+if ShortCondition
+    strategy.entry("Short", strategy.short)
+Expand (81 lines)

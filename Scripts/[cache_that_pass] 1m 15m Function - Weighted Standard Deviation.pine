@@ -1,0 +1,247 @@
+Script Name: [cache_that_pass] 1m 15m Function - Weighted Standard Deviation
+Author: cache_that_pass
+Description: Tradingview Community,
+
+As I progress through my journey, I have come to the realization that it is time to give back.  This script isn't a life changer, but it has the building blocks for a motivated individual to optimize the parameters and have a production script ready to go.
+
+Credit for the indicator is due to @rumpypumpydumpy
+
+I adapted this indicator to a...
+PineScript code:
+
+Pine Script™ strategy
+[cache_that_pass] 1m 15m Function - Weighted Standard Deviation
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © rumpypumpydumpy   © cache_that_pass
+//@version=4
+strategy("[cache_that_pass] 1m 15m Function - Weighted Standard Deviation", overlay=true, pyramiding=0, default_qty_type=strategy.percent_of_equity, default_qty_value=20, initial_capital=10000, commission_type=strategy.commission.percent, commission_value=0.075)
+f_weighted_sd_from_series(_src, _weight, _n) => //{
+//  @function: Calculates weighted mean, variance, standard deviation, MSE and RMSE from time series variables
+//  @parameters:
+//      _src: time series variable of sample values
+//      _weight: time series of corresponding weight values.
+//      _n : number of samples
+    _xw = _src * _weight
+    _sum_weight = sum(_weight, _n)
+    _mean = sum(_xw, _n) / _sum_weight
+    float _sqerror_sum = 0
+    int _nonzero_n = 0
+    for _i = 0 to _n - 1
+        _sqerror_sum := _sqerror_sum + pow(_mean - _src[_i], 2) * _weight[_i]
+        _nonzero_n := _weight[_i] != 0 ? _nonzero_n + 1 : _nonzero_n
+    _variance = _sqerror_sum / ((_nonzero_n - 1) * _sum_weight / _nonzero_n)
+    _dev = sqrt(_variance)
+    _mse = _sqerror_sum / _sum_weight
+    _rmse = sqrt(_mse)
+    [_mean, _variance, _dev, _mse, _rmse]
+//}
+// -----------------------------------------------------------------------------
+f_weighted_sd_from_arrays(_a_src, _a_weight, _n) => //{
+//  @function: Calculates weighted mean, variance, standard deviation, MSE and RMSE from arrays
+//  Expects index 0 of the arrays to be the most recent sample and weight values!
+//  @parameters:
+//      _a_src: array of sample values
+//      _a_weight: array of corresponding weight values.
+//      _n : number of samples
+    float _mean = na, float _variance = na, float _dev = na, float _mse = na
+    float _rmse = na, float _sqerror_sum = na, float _sum_weight = na
+    float[] _a_xw = array.new_float(_n)
+    int _nonzero_n = 0
+    if array.size(_a_src) >= _n
+        _sum_weight := 0
+        _sqerror_sum := 0
+        for _i = 0 to _n - 1
+            array.set(_a_xw, _i, array.get(_a_src, _i) * array.get(_a_weight, _i))
+            _sum_weight := _sum_weight + array.get(_a_weight, _i)
+            _nonzero_n := array.get(_a_weight, _i) != 0 ? _nonzero_n + 1 : _nonzero_n
+        _mean := array.sum(_a_xw) / _sum_weight
+        for _j = 0 to _n - 1
+            _sqerror_sum := _sqerror_sum + pow(_mean - array.get(_a_src, _j), 2) * array.get(_a_weight, _j)
+        _variance := _sqerror_sum / ((_nonzero_n - 1) * _sum_weight / _nonzero_n)
+        _dev := sqrt(_variance)
+        _mse := _sqerror_sum / _sum_weight
+        _rmse := sqrt(_mse)
+    [_mean, _variance, _dev, _mse, _rmse]
+//}
+// -----------------------------------------------------------------------------
+// Example usage : 
+// -----------------------------------------------------------------------------
+len = input(20)
+// -----------------------------------------------------------------------------
+// From series :
+// -----------------------------------------------------------------------------
+[m, v, d, mse, rmse] = f_weighted_sd_from_series(close, volume, len)
+plot(m, color = color.blue)
+plot(m + d * 2, color = color.blue)
+plot(m - d * 2, color = color.blue)
+// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// From arrays : 
+// -----------------------------------------------------------------------------
+var float[] a_src = array.new_float()
+var float[] a_weight = array.new_float()
+if barstate.isfirst
+    for i = 1 to len
+        array.unshift(a_weight, i)
+array.unshift(a_src, close)
+if array.size(a_src) > len
+    array.pop(a_src)
+[a_m, a_v, a_d, a_mse, a_rmse] = f_weighted_sd_from_arrays(a_src, a_weight, len)
+plot(a_m, color = color.orange)
+plot(a_m + a_d * 2, color = color.orange)
+plot(a_m - a_d * 2, color = color.orange)
+// -----------------------------------------------------------------------------
+series_text = "Mean : " + tostring(m) + "\nVariance : " + tostring(v) + "\nSD : " + tostring(d) + "\nMSE : " + tostring(mse) +  "\nRMSE : " + tostring(rmse)
+array_text = "Mean : " + tostring(a_m) + "\nVariance : " + tostring(a_v) + "\nSD : " + tostring(a_d) + "\nMSE : " + tostring(a_mse) +  "\nRMSE : " + tostring(a_rmse)
+debug_text = "Volume weighted from time series : \n" + series_text + "\n\nLinearly weighted from arrays : \n" + array_text
+//debug = label.new(x = bar_index, y = close, text = debug_text, style = label.style_label_left)
+//.delete(debug[1])
+//test strategy
+if low <= (m - d * 2)
+    strategy.entry("LE", strategy.long)
+if high >= (m + d * 2)
+    strategy.entry("SE", strategy.short)
+// User Options to Change Inputs (%)
+stopPer = input(3.11, title='Stop Loss %', type=input.float) / 100
+takePer = input(7.50, title='Take Profit %', type=input.float) / 100
+// Determine where you've entered and in what direction
+longStop = strategy.position_avg_price * (1 - stopPer)
+shortStop = strategy.position_avg_price * (1 + stopPer)
+shortTake = strategy.position_avg_price * (1 - takePer)
+longTake = strategy.position_avg_price * (1 + takePer)
+if strategy.position_size > 0 
+    strategy.exit(id="Close Long", stop=longStop, limit=longTake)
+//    strategy.close("LE", when = (longStop) or (longTake), qty_percent = 100)
+if strategy.position_size < 0 
+    strategy.exit(id="Close Short", stop=shortStop, limit=shortTake)
+//    strategy.close("SE", when = (shortStop) or (shortTake), qty_percent = 100)
+Expand (128 lines)

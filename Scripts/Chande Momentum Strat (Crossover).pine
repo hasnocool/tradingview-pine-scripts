@@ -1,0 +1,100 @@
+Script Name: Chande Momentum Strat (Crossover)
+Author: burgercrisis
+Description: This is a Chande Momentum strategy that buys and sells when the line crosses the buy and sell lines. Different signal then the other Chande Momentum strategy. In my opinion they both work better at different time frames and possibly commodities.
+PineScript code:
+
+Pine Script™ strategy
+Chande Momentum Strat (Crossover)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+//@version=4
+//* Backtesting Period Selector | Component *//
+//* https://www.tradingview.com/script/eCC1cvxQ-Backtesting-Period-Selector-Component *//
+//* https://www.tradingview.com/u/pbergden/ *//
+//* Modifications made *//
+testStartYear = input(2021, "Backtest Start Year") 
+testStartMonth = input(1, "Backtest Start Month")
+testStartDay = input(10, "Backtest Start Day")
+testPeriodStart = timestamp(testStartYear,testStartMonth,testStartDay,0,0)
+testStopYear = input(999999, "Backtest Stop Year")
+testStopMonth = input(9, "Backtest Stop Month")
+testStopDay = input(26, "Backtest Stop Day")
+testPeriodStop = timestamp(testStopYear,testStopMonth,testStopDay,0,0)
+testPeriod() =>
+    time >= testPeriodStart and time <= testPeriodStop ? true : false
+/////////////// END - Backtesting Period Selector | Component ///////////////
+strategy(title="Chande Momentum Strat", shorttitle="ChandeMO Strat", format=format.price, precision=2)
+length = input(9, minval=1)
+src = input(close, "Price", type = input.source)
+momm = change(src)
+f1(m) => m >= 0.0 ? m : 0.0
+f2(m) => m >= 0.0 ? 0.0 : -m
+m1 = f1(momm)
+m2 = f2(momm)
+sm1 = sum(m1, length)
+sm2 = sum(m2, length)
+percent(nom, div) => 100 * nom / div
+chandeMO = percent(sm1-sm2, sm1+sm2)
+plot(chandeMO, "Chande MO", color=color.blue)
+hline(0, color=#C0C0C0, linestyle=hline.style_dashed, title="Zero Line")
+buyline= input(-80)
+sellline= input(80)
+hline(buyline, color=color.gray)
+hline(sellline, color=color.gray)
+if testPeriod()
+    if crossover(chandeMO, buyline)
+        strategy.entry("Long", strategy.long, alert_message="a=ABCD b=buy e=binanceus q=1.2 s=uniusd")
+    //    strategy.exit(id="Long Stop Loss", stop=strategy.position_avg_price*0.8) //20% stop loss 
+        
+    if crossunder(chandeMO, sellline)
+        strategy.entry("Short", strategy.short, alert_message="a=ABCD b=sell e=binanceus q=1.2 s=uniusd")
+    //    strategy.exit(id="Short Stop Loss", stop=strategy.position_avg_price*1.2) //20% stop loss
+//      remember to alert as    {{strategy.order.alert_message}}
+Expand (48 lines)

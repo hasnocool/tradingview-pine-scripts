@@ -1,0 +1,436 @@
+Script Name: Initial template
+Author: trading_mentalist
+Description: I have created a starting template for strategies.
+
+It allows quick control of turning on/off long and short conditions, or disabling them entirely.
+
+It includes trade filters for strategy equity and volatility. If there is not enough volatility it will not trade, or if the strategy equity is below the equity ema it will not trade.
+
+It has standard stops and...
+PineScript code:
+
+Pine Script™ strategy
+Initial template
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © TradingMentalist
+//@version=4
+strategy("Initial template",initial_capital=1000, overlay=true, pyramiding=0, commission_type=strategy.commission.percent, commission_value=0.04, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, currency = currency.USD)
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////ordercomments
+enterlongcomment    = "ENTERLONGCOMMENT"
+entershortcomment   = "ENTERSHORTCOMMENT"
+exitlongcomment     = "EXITLONGCOMMENT"
+exitshortcomment    = "EXITSHORTCOMMENT"
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////inputs
+sidein2     = input(200, step=10, title='lookback for average range (bars)')
+sidein      = input(1, title='filter trades if range is less than (%)')/100
+equityIn    = input(42, title='filter trades if equity is below ema()')
+sidewayssw  = input(false, title='sideways filter?')
+equitysw    = input(false, title='equity filter?')
+bestpricein = input(0.003,step=0.001, title='best price +/-?')/100
+//longtpin    = input(1,step=0.1, title='long TP %')/100
+//longslin    = input(0.4,step=0.1, title='long SL %')/100
+//shorttpin   = input(1,step=0.1, title='short TP %')/100
+//shortslin   = input(0.4,step=0.1, title='short SL %')/100
+longinc=input(true, title="include longs?")
+lConSw2=input(true, title="condition two?")
+lConSw3=input(true, title="condition three?")
+shotinc=input(true, title="include shorts?")
+sConSw2=input(true, title="condition two?")
+sConSw3=input(true, title="condition three?")
+percent2points(percent) =>
+    strategy.position_avg_price * percent / 100 / syminfo.mintick
+sl = percent2points(input(2, title = "stop loss %%"))
+tp1 = percent2points(input(3, title = "take profit 1 %%"))
+tp2 = percent2points(input(7, title = "take profit 2 %%"))
+tp3 = percent2points(input(22, title = "take profit 3 %%"))
+activateTrailingOnThirdStep = input(true, title = "trail on stage 3? tp3=amount tp2=offset")
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////filters
+side1       = (close[1] + close[sidein2]) / 2
+side2       = close[1] - close[sidein2] 
+side3       = side2 / side1
+notsideways = side3 > sidein
+equityMa    = equitysw ? ema(strategy.equity, equityIn) : 0
+equityCon   = strategy.equity >= equityMa
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////functions
+longatm     = strategy.position_size[0] > 0
+shortatm    = strategy.position_size[0] < 0
+bought      = strategy.opentrades[0] == 1 and strategy.position_size[0] > strategy.position_size[1]
+sold        = strategy.opentrades[0] == 1 and strategy.position_size[0] < strategy.position_size[1]
+var longconmet  = false
+var shortconmet = false
+if strategy.position_size[1] > 0 and strategy.position_size[0] == 0
+    longconmet:=false
+if strategy.position_size[1] < 0 and strategy.position_size[0] == 0
+    shortconmet:=false
+exitcomment = longatm ? exitlongcomment : shortatm ? exitshortcomment : ""
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////indicators
+ma1 = ema(close, 9)
+ma2 = ema(close, 21)
+ma3 = ema(close, 50)
+plot(ma1, color=color.new(#E8B6B0,50))
+plot(ma2, color=color.new(#B0E8BE,50))
+plot(ma3, color=color.new(#00EEFF,50))
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////conditions
+longConditionTrigger  = crossover(ma2,ma3)
+shortConditionTrigger = crossover(ma3,ma2)
+if longConditionTrigger
+    longconmet:=true
+if shortConditionTrigger
+    shortconmet:=true
+bestpricel = valuewhen(longconmet,open,0) * (1-bestpricein)
+bestprices = valuewhen(shortconmet,open,0) * (1+bestpricein)
+longCondition1  = longconmet == true
+longCondition2  = close[1] <= bestpricel
+longCondition3  = true
+shortCondition1 = shortconmet == true
+shortCondition2 = close[1] >= bestprices
+shortCondition3 = true
+closelong       = shortCondition1
+closeshort      = longCondition1
+longCondition1in  = longCondition1
+longCondition2in  = lConSw2 ? longCondition2 : true
+longCondition3in  = lConSw3 ? longCondition3 : true
+shortCondition1in = shortCondition1
+shortCondition2in = sConSw2 ? shortCondition2: true
+shortCondition3in = sConSw3 ? shortCondition3: true
+longConditions    = longCondition1in and longCondition2in and longCondition3in
+shortConditions   = shortCondition1in and shortCondition2in and shortCondition3in
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////execution
+long            = sidewayssw ? notsideways and equityCon and longConditions : equityCon and longConditions
+short           = sidewayssw ? notsideways and equityCon and shortConditions : equityCon and shortConditions
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////risk
+//longtplevel     = strategy.position_avg_price * (1 + longtpin)
+//longsllevel     = strategy.position_avg_price * (1 - longslin)
+//shorttplevel    = strategy.position_avg_price * (1 - shorttpin)
+//shortsllevel    = strategy.position_avg_price * (1 + shortslin)
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////timeframe
+startyear   = 2000
+startmonth  = 1
+startday    = 1
+stopyear    = 9999
+stopmonth   = 12
+stopday     = 31
+//(leave as is)
+startperiod = timestamp(startyear,startmonth,startday,0,0)
+periodstop  = timestamp(stopyear,stopmonth,stopday,0,0)
+timeframe()    =>
+    time >= startperiod and time <= periodstop ? true : false
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////exiting::::::::::credit to creator::::::::::adolgov::::::::::https://www.tradingview.com/script/jjhUHcje-Stepped-trailing-strategy-example::::::::::
+curProfitInPts() =>
+    if strategy.position_size > 0
+        (high - strategy.position_avg_price) / syminfo.mintick
+    else if strategy.position_size < 0
+        (strategy.position_avg_price - low) / syminfo.mintick
+    else
+        0
+        
+calcStopLossPrice(OffsetPts) =>
+    if strategy.position_size > 0
+        strategy.position_avg_price - OffsetPts * syminfo.mintick
+    else if strategy.position_size < 0
+        strategy.position_avg_price + OffsetPts * syminfo.mintick
+    else
+        na
+        
+calcProfitTrgtPrice(OffsetPts) =>
+    calcStopLossPrice(-OffsetPts)
+getCurrentStage() =>
+    var stage = 0
+    if strategy.position_size == 0 
+        stage := 0
+    if stage == 0 and strategy.position_size != 0
+        stage := 1
+    else if stage == 1 and curProfitInPts() >= tp1
+        stage := 2
+    else if stage == 2 and curProfitInPts() >= tp2
+        stage := 3
+    stage
+calcTrailingAmountLevel(points) =>
+    var float level = na
+    level := calcProfitTrgtPrice(points)
+    if not na(level)
+        if strategy.position_size > 0
+            if not na(level[1])
+                level := max(level[1], level)
+            if not na(level)
+                level := max(high, level)
+        else if strategy.position_size < 0
+            if not na(level[1])
+                level := min(level[1], level)
+            if not na(level)
+                level := min(low, level)
+calcTrailingOffsetLevel(points, offset) =>
+    float result = na
+    amountLevel = calcTrailingAmountLevel(points)
+    if strategy.position_size > 0
+        trailActiveDiff = amountLevel - calcProfitTrgtPrice(points)
+        if trailActiveDiff > 0
+            result := trailActiveDiff + calcProfitTrgtPrice(offset)
+    else if strategy.position_size < 0
+        trailActiveDiff = calcProfitTrgtPrice(points) - amountLevel
+        if trailActiveDiff > 0
+            result := calcProfitTrgtPrice(offset) - trailActiveDiff
+    result
+float stopLevel = na
+float trailOffsetLevel = na
+float profitLevel = activateTrailingOnThirdStep ? calcTrailingAmountLevel(tp3) : calcProfitTrgtPrice(tp3)
+trailOffsetLevelTmp = calcTrailingOffsetLevel(tp3, tp2)
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////orders
+if timeframe()
+    if longinc
+        if strategy.position_size == 0 or strategy.position_size > 0 
+            strategy.entry(id="long", long=true, when=long, comment=enterlongcomment)
+    if shotinc
+        if strategy.position_size == 0 or strategy.position_size < 0 
+            strategy.entry(id="short", long=false, when=short, comment = entershortcomment)
+curStage = getCurrentStage()
+if curStage == 1
+    stopLevel := calcStopLossPrice(sl)
+    strategy.exit("x", loss = sl, profit = tp3, comment = exitcomment)
+else if curStage == 2
+    stopLevel := calcStopLossPrice(0)
+    strategy.exit("x", stop = stopLevel, profit = tp3, comment = exitcomment)
+else if curStage == 3
+    stopLevel := calcStopLossPrice(-tp1)
+    if activateTrailingOnThirdStep
+        trailOffsetLevel := trailOffsetLevelTmp
+        strategy.exit("x", stop = stopLevel, trail_points = tp3, trail_offset = tp3-tp2, comment = exitcomment)
+    else
+        strategy.exit("x", stop = stopLevel, profit = tp3, comment = exitcomment)
+else
+    strategy.cancel("x")
+plot(stopLevel, style = plot.style_linebr, color = color.red)
+plot(profitLevel, style = plot.style_linebr, color = color.blue)
+plot(trailOffsetLevel, style = plot.style_linebr, color = color.green)
+//strategy.exit("stop","long", limit=longtplevel, stop=longsllevel,comment=" ")
+//strategy.close(id="long", when=closelong, comment = " ")
+//strategy.exit("stop","short", limit=shorttplevel, stop=shortsllevel,comment = " ")
+//strategy.close(id="short", when=closeshort, comment = " ")
+Expand (226 lines)

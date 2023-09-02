@@ -1,0 +1,354 @@
+Script Name: Super Momentum Strategy
+Author: burgercrisis
+Description: This is a strategy utilizing multiple of Evergets RMI (thanks to him for permission to publish) and a Chance Momentum.
+
+It buys when 4 of the RMIs are below their thresholds and sells when they are above. There is a 5th one I added last night that works in Reverse - buy when its above and sell when below, which should work better for pyramiding strats by using it...
+PineScript code:
+
+Pine Script™ strategy
+Super Momentum Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+//@version=4
+strategy(title="Super Momentum Strat", shorttitle="SMS", format=format.price, precision=2)
+//* Backtesting Period Selector | Component *//
+//* https://www.tradingview.com/script/eCC1cvxQ-Backtesting-Period-Selector-Component *//
+//* https://www.tradingview.com/u/pbergden/ *//
+//* Modifications made *//
+testStartYear = input(2021, "Backtest Start Year") 
+testStartMonth = input(1, "Backtest Start Month")
+testStartDay = input(1, "Backtest Start Day")
+testPeriodStart = timestamp(testStartYear,testStartMonth,testStartDay,0,0)
+testStopYear = input(999999, "Backtest Stop Year")
+testStopMonth = input(9, "Backtest Stop Month")
+testStopDay = input(26, "Backtest Stop Day")
+testPeriodStop = timestamp(testStopYear,testStopMonth,testStopDay,0,0)
+testPeriod() =>
+    time >= testPeriodStart and time <= testPeriodStop ? true : false
+/////////////// END - Backtesting Period Selector | Component ///////////////
+src = input(close, "Price", type = input.source)
+highlightBreakouts = input(title="Highlight Overbought/Oversold Breakouts ?", type=input.bool, defval=true)
+CMOlength = input(9, minval=1, title="Alpha Chande Momentum Length")
+//CMO
+momm = change(src)
+f1(m) => m >= 0.0 ? m : 0.0
+f2(m) => m >= 0.0 ? 0.0 : -m
+m1 = f1(momm)
+m2 = f2(momm)
+sm1 = sum(m1, CMOlength)
+sm2 = sum(m2, CMOlength)
+percent(nom, div) => 100 * nom / div
+chandeMO = percent(sm1-sm2, sm1+sm2)+50
+plot(chandeMO, "Chande MO", color=color.blue)
+obLevel = input(75, title="Chande Sellline")
+osLevel = input(25, title="Chande Buyline")
+hline(obLevel, color=#0bc4d9)
+hline(osLevel, color=#0bc4d9)
+///
+///RMIS 
+//
+// Copyright (c) 2018-present, Alex Orekhov (everget)
+// Relative Momentum Index script may be freely distributed under the MIT license.
+//
+///
+///
+//RMI1
+length1 = input(title="RMI1 Length", type=input.integer, minval=1, defval=8)
+momentumLength1 = input(title="RMI1 Momentum ", type=input.integer, minval=1, defval=3)
+up1 = rma(max(change(src, momentumLength1), 0), length1)
+down1 = rma(-min(change(src, momentumLength1), 0), length1)
+rmi1 = down1 == 0 ? 100 : up1 == 0 ? 0 : 100 - (100 / (1 + up1 / down1))
+obLevel1 = input(57, title="RMI1 Sellline")
+osLevel1 = input(37, title="RMI1 Buyline")
+rmiColor1 = rmi1 > obLevel1 ? #0ebb23 : rmi1 < osLevel1 ? #ff0000 : #ffe173
+plot(rmi1, title="RMI 1", linewidth=2, color=rmiColor1, transp=0)
+hline(obLevel1, color=#0b57d9)
+hline(osLevel1, color=#0b57d9)
+//RMI2
+length2 = input(title="RMI2 Length", type=input.integer, minval=1, defval=12)
+momentumLength2 = input(title="RMI2 Momentum ", type=input.integer, minval=1, defval=3)
+up2 = rma(max(change(src, momentumLength2), 0), length2)
+down2 = rma(-min(change(src, momentumLength2), 0), length2)
+rmi2 = down2 == 0 ? 100 : up1 == 0 ? 0 : 100 - (100 / (1 + up2 / down2))
+obLevel2 = input(72, title="RMI2 Sellline")
+osLevel2 = input(37, title="RMI2 Buyline")
+rmiColor2 = rmi1 > obLevel1 ? #0ebb23 : rmi2 < osLevel2 ? #ff0000 : #c9ad47
+plot(rmi2, title="RMI 2", linewidth=2, color=rmiColor2, transp=0)
+hline(obLevel2, color=#5a0bd9)
+hline(osLevel2, color=#5a0bd9)
+//RMI3
+length3 = input(title="RMI3 Length", type=input.integer, minval=1, defval=30)
+momentumLength3 = input(title="RMI3 Momentum ", type=input.integer, minval=1, defval=53)
+up3 = rma(max(change(src, momentumLength3), 0), length3)
+down3 = rma(-min(change(src, momentumLength3), 0), length3)
+rmi3 = down3 == 0 ? 100 : up3 == 0 ? 0 : 100 - (100 / (1 + up3 / down3))
+obLevel3 = input(46, title="RMI3 Sellline")
+osLevel3 = input(24, title="RMI3 Buyline")
+rmiColor3 = rmi3 > obLevel3 ? #0ebb23 : rmi3 < osLevel3 ? #ff0000 : #967d20
+plot(rmi3, title="RMI 3", linewidth=2, color=rmiColor3, transp=0)
+hline(obLevel3, color=#cf0bd9)
+hline(osLevel3, color=#cf0bd9)
+//RMI4
+length4 = input(title="RMI4 Length", type=input.integer, minval=1, defval=520)
+momentumLength4 = input(title="RMI4 Momentum ", type=input.integer, minval=1, defval=137)
+up4 = rma(max(change(src, momentumLength4), 0), length4)
+down4 = rma(-min(change(src, momentumLength4), 0), length4)
+rmi4 = down4 == 0 ? 100 : up4 == 0 ? 0 : 100 - (100 / (1 + up4 / down4))
+obLevel4 = input(0, title="RMI4 Sellline")
+osLevel4 = input(100, title="RMI4 Buyline")
+rmiColor4 = rmi4 > obLevel4 ? #0ebb23 : rmi4 < osLevel4 ? #ff0000 : #7a630b
+plot(rmi4, title="RMI 4", linewidth=2, color=rmiColor4, transp=0)
+hline(obLevel4, color=#bd1150)
+hline(osLevel4, color=#bd1150)
+//RMI5
+length5 = input(title="RMI5 Length", type=input.integer, minval=1, defval=520)
+momentumLength5 = input(title="RMI5 Momentum ", type=input.integer, minval=1, defval=137)
+up5 = rma(max(change(src, momentumLength5), 0), length5)
+down5 = rma(-min(change(src, momentumLength5), 0), length5)
+rmi5 = down5 == 0 ? 100 : up4 == 0 ? 0 : 100 - (100 / (1 + up5 / down5))
+buy5 = input(0, title="RMI5 Buy Above")
+sell5 = input(100, title="RMI5 Sell Below")
+rmiColor5 = rmi5 > buy5 ? #0ebb23 : rmi5 < sell5 ? #ff0000 : #7a630b
+plot(rmi5, title="RMI 5", linewidth=2, color=rmiColor5, transp=0)
+hline(buy5, color=#bd1150)
+hline(sell5, color=#bd1150)
+///
+///END RMIS 
+//
+// 
+// Relative Momentum Index script may be freely distributed under the MIT license.
+//
+///
+///
+hline(50, color=#C0C0C0, linestyle=hline.style_dashed, title="Zero Line")
+//Conditions
+longcondition1 = crossover(chandeMO, osLevel)
+shortcondition1 = crossunder(chandeMO, obLevel)
+longcondition2 = rmi5>buy5 and rmi4<osLevel4 and rmi3<osLevel3 and rmi2<osLevel2 and rmi1<osLevel1 and longcondition1
+shortcondition2 =  rmi5<sell5 and rmi4>obLevel4 and rmi3>obLevel3 and rmi2>obLevel2 and rmi1>obLevel1 and shortcondition1
+commission=input(0.1)
+comms=(100+commission)/100
+//StopLosses
+stopLossFear=input(100.0, step=0.2, title="Hard Stop Loss")
+sl1=(100-stopLossFear)/100
+stopLossSafe=input(100.0, step=0.2, title="Soft Stop Loss")
+sl2=(100-stopLossSafe)/100
+stopLossSafest=input(100.0, step=0.2, title="Safe Stop Loss")
+sl3=(100-stopLossSafest)/100
+//TakeProfits
+TakeProfit1=input(100.0, step=0.2, title="Hard Take Profit")
+tp1=(100+TakeProfit1)/100*comms
+TakeProfit2=input(100.0, step=0.2, title="Soft Take Profit")
+tp2=(100+TakeProfit2)/100*comms
+TakeProfit3=input(0.0, step=0.2, title="Minimum Sale Profit")
+tp3=(100+TakeProfit3)/100*comms
+if testPeriod()
+    if longcondition2
+        strategy.entry(id="EL", comment="Buy", long=true)
+    if shortcondition2 and ((strategy.position_avg_price*tp3 < high) or (strategy.position_avg_price*tp3 < close))
+        strategy.entry("Profit", strategy.short)
+    if (strategy.position_avg_price*sl1 > close)
+        strategy.close(id="EL", comment="Hard Stop Loss")
+    if (strategy.position_avg_price*sl2 > close) and shortcondition1
+        strategy.close(id="EL", comment="Soft Stop Loss")
+    if (strategy.position_avg_price*sl3 > close) and shortcondition2
+        strategy.close(id="EL", comment="Safe Stop Loss")
+    if ((strategy.position_avg_price*tp1 < high) or (strategy.position_avg_price*tp1 < close))
+        strategy.close(id="EL", comment="Hard Take Profit")
+    if ((strategy.position_avg_price*tp2 < high) or (strategy.position_avg_price*tp2 < close)) and shortcondition1
+        strategy.close(id="EL", comment="Soft Take Profit")
+//    if ((strategy.position_avg_price*tp3 < high) or (strategy.position_avg_price*tp3 < close)) and shortcondition2
+//        strategy.close(id="EL", comment="Safe Take Profit")
+Expand (193 lines)

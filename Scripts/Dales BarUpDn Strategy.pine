@@ -1,0 +1,97 @@
+Script Name: Dales BarUpDn Strategy
+Author: dalerennie24
+Description: long and short buy orders. the option to connect a 3commas bot to it with just the settings box
+PineScript code:
+
+Pine Script™ strategy
+Dales BarUpDn Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+//@version=4
+strategy("Dales BarUpDn Strategy", overlay=true, default_qty_type = strategy.percent_of_equity, default_qty_value = 10)
+//get user input
+rsisource = input(title="rsi source", type=input.source, defval=close)
+rsilength = input(title="rsi length", type=input.integer, defval=14)
+rsioverbought = input(title="rsi overbought level", type=input.integer, defval=60)
+rsioversold = input(title="rsi oversold level", type=input.integer, defval=40)
+emalength1 = input(title="ema length 1", type=input.integer, defval=10)
+emalength2 = input(title="ema length 2", type=input.integer, defval=24)
+//get ema
+ema1 = (ema(close,10))
+ema2 = (ema(close,24))
+//plot ema
+plot(ema1, color=color.yellow)
+plot(ema2, color=color.blue)
+//get filters
+longfilter = close > ema1 and (ema1 > ema2 or ema2 == 0) 
+shortfilter = close < ema1 and (ema1 < ema2 or ema2 ==0)
+// alerts
+message_long_entry = input("long entry message")
+message_long_exit = input("long exit message")
+message_short_entry = input("short enrty message")
+message_short_exit = input("short exit message")
+//get rsi value
+rsivalue = rsi(rsisource, rsilength)
+isrsiob = rsivalue >= rsioverbought
+isrsios = rsivalue <= rsioversold
+//detect entry signals
+longentry = longfilter and close > open[1] and open[2] > close[2]
+longexit = isrsiob and longfilter and close <= open[1]
+shortentry = shortfilter and close < open[1] and open[2] < close[2]
+shortexit = isrsios and shortfilter and close <= open[1]
+//plot signals
+plotshape(longentry, style=shape.arrowup, color=color.green, location=location.belowbar)
+plotshape(longexit, style=shape.cross, color=color.green, location=location.belowbar)
+plotshape(shortentry, style=shape.arrowdown, color=color.red, location=location.abovebar)
+plotshape(shortexit, style=shape.cross, color=color.red, location=location.abovebar)
+//plot(strategy.equity, title="equity", color=color.red, linewidth=2, style=plot.style_areabr)
+Expand (50 lines)

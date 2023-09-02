@@ -1,0 +1,657 @@
+Script Name: All in One Strategy
+Author: Solutions1978
+Description: True improvement over my previous script. This script adds in all of the complementary indicators, makes it truly easy to adjust the inputs, and has produced a real world net gain using the TradingView bots paired with any broker's API that is supported.
+
+It has a selection for which strategy you'd like to use and due to limitations in Pine I cannot program in...
+PineScript code:
+
+Pine Script™ strategy
+All in One Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//@version=4
+// ██████╗██████╗ ███████╗ █████╗ ████████╗███████╗██████╗     ██████╗ ██╗   ██╗    
+//██╔════╝██╔══██╗██╔════╝██╔══██╗╚══██╔══╝██╔════╝██╔══██╗    ██╔══██╗╚██╗ ██╔╝                       
+//██║     ██████╔╝█████╗  ███████║   ██║   █████╗  ██║  ██║    ██████╔╝ ╚████╔╝                        
+//██║     ██╔══██╗██╔══╝  ██╔══██║   ██║   ██╔══╝  ██║  ██║    ██╔══██╗  ╚██╔╝                         
+//╚██████╗██║  ██║███████╗██║  ██║   ██║   ███████╗██████╔╝    ██████╔╝   ██║                          
+// ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═════╝     ╚═════╝    ╚═╝                          
+                                                                                                     
+//███████╗ ██████╗ ██╗     ██╗   ██╗████████╗██╗ ██████╗ ███╗   ██╗███████╗ ██╗ █████╗ ███████╗ █████╗ 
+//██╔════╝██╔═══██╗██║     ██║   ██║╚══██╔══╝██║██╔═══██╗████╗  ██║██╔════╝███║██╔══██╗╚════██║██╔══██╗
+//███████╗██║   ██║██║     ██║   ██║   ██║   ██║██║   ██║██╔██╗ ██║███████╗╚██║╚██████║    ██╔╝╚█████╔╝
+//╚════██║██║   ██║██║     ██║   ██║   ██║   ██║██║   ██║██║╚██╗██║╚════██║ ██║ ╚═══██║   ██╔╝ ██╔══██╗
+//███████║╚██████╔╝███████╗╚██████╔╝   ██║   ██║╚██████╔╝██║ ╚████║███████║ ██║ █████╔╝   ██║  ╚█████╔╝
+//╚══════╝ ╚═════╝ ╚══════╝ ╚═════╝    ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝ ╚═╝ ╚════╝    ╚═╝   ╚════╝ 
+                                                                                                     
+strategy(shorttitle='Ain1v4',title='All in One Strategy', overlay=true, scale=scale.left, initial_capital = 1000, process_orders_on_close=true, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type=strategy.commission.percent, commission_value=0.18, calc_on_every_tick=true)
+kcolor = color.new(#0094FF, 60)
+dcolor = color.new(#FF6A00, 60)
+// -----------------  Strategy Inputs -------------------------------------------------------------
+//Backtest dates with auto finish date of today
+start = input(defval = timestamp("22 June 2021 00:00 -0500"), title = "Start Time", type = input.time)
+finish = input(defval = timestamp("31 December 2021 00:00 -0600"), title = "End Time", type = input.time)
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+// Strategy Selection - Long, Short, or Both
+stratinfo = input(true, "Long/Short for Mixed Market, Long for Bull, Short for Bear")
+strat = input(title="Trade Types", defval="Long/Short", options=["Long Only", "Long/Short", "Short Only"])
+strat_val = strat == "Long Only" ? 1 : strat == "Long/Short" ? 0 : -1
+// Risk Management Inputs
+sl= input(10.0, "Stop Loss %", minval = 0, maxval = 100, step = 0.01)
+stoploss = sl/100
+tp = input(20.0, "Target Profit %", minval = 0, maxval = 100, step = 0.01)
+TargetProfit = tp/100
+ld = input(2, "Stop Trading After This Many Losing Days", type=input.integer, minval=0, maxval=100, step=1)
+strategy.risk.max_cons_loss_days(count=ld)
+ml = input(10, "Maximum % of Equity Lost to Halt Trading", type=input.integer, minval=1, maxval=100, step=1)
+strategy.risk.max_drawdown(value=ml, type=strategy.percent_of_equity)
+useXRSI = input(false, "Use RSI crossing back, select only one strategy")
+useCRSI = input(false, "Use Tweaked Connors RSI, select only one")
+RSIInfo = input(true, "These are the RSI Strategy Inputs, RSI Length applies to MACD, set OB and OS to 45 for using Stoch and EMA strategies.")
+length = input(14, "RSI Length", minval=1)
+overbought= input(62, "Overbought")
+oversold= input(35, "Oversold")
+cl1 = input(3, "Connor's MA Length 1", minval=1, step=1)
+cl2 = input(20, "Connor's MA Lenght 2", minval=1, step=1)
+cl3 = input(50, "Connor's MA Lenght 3", minval=1, step=1)
+// MACD and EMA Inputs
+useMACD = input(false, "Use MACD Only, select only one strategy")
+useEMA  = input(false, "Use EMA Only, select only one strategy (EMA uses Stochastic inputs too)")
+MACDInfo=input(true, "These are the MACD strategy variables")
+fastLength = input(5, minval=1, title="EMA Fast Length")
+slowLength = input(10, minval=1, title="EMA Slow Length")
+ob_min = input(52, "Overbought Lookback Minimum Value", minval=0, maxval=200)
+ob_lb = input(25, "Overbought Lookback Bars", minval=0, maxval=100)
+os_min = input(50, "Oversold Lookback Minimum Value", minval=0, maxval=200)
+os_lb = input(35, "Oversold Lookback Bars", minval=0, maxval=100)
+source = input(title="Source", type=input.source, defval=close)
+RSI = rsi(source, length)
+// Price Movement Inputs
+PriceInfo = input(true, "Price Change Percentage Cross Check Inputs for all Strategies, added logic to avoid early sell. This is different from setting of max loss in risk management.")
+lkbk = input(5,"Max Lookback Period")
+// EMA and SMA Background Inputs
+useStoch    = input(false, "Use Stochastic Strategy, choose only one")
+StochInfo   = input(true, "Stochastic Strategy Inputs")
+smoothK     = input(3, "K", minval=1)
+periodK     = input(14, "K Period", minval=1)
+periodD     = input(3, "D Period", minval=1)
+k_mode      = input("SMA", "K Mode", options=["SMA", "EMA", "WMA"])
+high_source = input(high,"High Source")
+low_source= input(low,"Low Source")
+// Selections to show or hide the overlays
+showZones = input(true, title="Show Bullish/Bearish Zones")
+showStoch = input(true, title="Show Stochastic Overlays")
+showRSIBS = input(true, title="Show RSI Buy Sell Zones")
+showMACD = input(true, title="Show MACD")
+color_bars=input(true, "Color Bars")
+// ----------------------- Dynamic RSI --------------------------------------
+// Define f_print function to show key recommendations for RSI
+f_print(_text) =>
+    // Create label on the first bar.
+    var _label = label(na),
+    label.delete(_label), 
+    _label := label.new(
+     time + (time-time[1]), 
+     ohlc4,
+     _text,
+     xloc.bar_time,
+     yloc.price,
+     color(na),
+     label.style_none,
+     color.gray,
+     size.large,
+     text.align_left
+     )
+    
+    
+// Display highest and lowest RSI values
+AvgHigh(src,cnt,val) =>
+    total = 0.0
+    count = 0
+    for i = 0 to cnt
+        if src[i] > val
+            count := count + 1
+            total := total + src[i]
+    round(total / count)
+    
+RSI_high = AvgHigh(RSI, ob_lb, ob_min)
+AvgLow(src,cnt,val) =>
+    total = 0.0
+    count = 0
+    for i = 5 to cnt by 5
+        if src[i] < val
+            count := count + 1
+            total := total + src[i]
+    round(total / count)
+RSI_low = AvgLow(RSI, os_lb, os_min)
+f_print("Recommended RSI Settings:" + "\nOverbought = " + tostring(RSI_high) + "\nOversold = " + tostring(RSI_low))
+// Plot Oversold and Overbought Lines
+over = hline(oversold, title="Oversold", color=color.green)
+under = hline(overbought, title="Overbought", color=color.red)
+fillcolor = color.new(#9915FF, 90)
+fill(over, under, fillcolor, title="Band Background")
+// ------------------ Background Colors based on EMA Indicators -----------------------------------
+rsi_ema = ema(RSI, length)
+emaA = ema(rsi_ema, fastLength)                                     
+emaFast = 2 * emaA - ema(emaA, fastLength)
+emaB = ema(rsi_ema, slowLength)                                     
+emaSlow = 2 * emaB - ema(emaB, slowLength) 
+// New Bullish and Bearish Signal Rule logic check
+out = ema(RSI, length)
+// bullish signal rule: 
+bullishRule =emaFast > emaSlow and out >=out[1]
+// bearish signal rule: 
+bearishRule =emaFast < emaSlow and out <= out[1]
+EMAShortSell = crossunder(rsi_ema, emaFast) and crossunder(rsi_ema, emaSlow) and bearishRule and window()
+EMAShortBuy = crossover(rsi_ema, emaFast) and crossover(rsi_ema, emaSlow) and bullishRule and window()
+EMALongBuy = crossover(rsi_ema, emaSlow) and crossover(rsi_ema, emaFast) and bullishRule and window()
+EMALongSell = crossunder(emaFast, emaSlow) and bearishRule and window()
+// current trading State
+ruleState = 0
+ruleState := bullishRule ? 1 : bearishRule ? -1 : nz(ruleState[1])
+ruleColor = ruleState==1 ? color.new(color.blue, 90) : ruleState == -1 ? color.new(color.red, 90) : ruleState == 0 ? color.new(color.gray, 90) : na
+bgcolor(showZones ? ruleColor : na, title="Bullish/Bearish Zones")
+// ------------------  Price Percentage Change Calculation ---------------------------------------
+perc_change(lkbk) =>
+    overall_change = ((close[0] - open[lkbk]) / open[lkbk]) * 100
+    highest_high = 0.0
+    lowest_low = 0.0
+    for i = lkbk to 0
+        highest_high := i == lkbk ? high : high[i] > high[(i + 1)] ? high[i] : highest_high[1]
+        lowest_low := i == lkbk ? low : low[i] < low[(i + 1)] ? low[i] : lowest_low[1]
+    
+    start_to_high = ((highest_high - open[lkbk]) / open[lkbk]) * 100
+    start_to_low = ((lowest_low - open[lkbk]) / open[lkbk]) * 100
+    previous_to_high = ((highest_high - open[1])/open[1])*100
+    previous_to_low = ((lowest_low-open[1])/open[1])*100
+    previous_bar = ((close[1]-open[1])/open[1])*100
+    
+    [overall_change, start_to_high, start_to_low, previous_to_high, previous_to_low, previous_bar]
+    
+// Call the function    
+[overall, to_high, to_low, last_high, last_low, last_bar] = perc_change(lkbk)
+// Plot the function
+//plot(overall*50, color=color.white, title='Overall Percentage Change', linewidth=3)
+//plot(to_high*50, color=color.green,title='Percentage Change from Start to High', linewidth=2)
+//plot(to_low*50, color=color.red, title='Percentage Change from Start to Low', linewidth=2)
+//plot(last_high*100, color=color.teal, title="Previous to High", linewidth=2)
+//plot(last_low*100, color=color.maroon, title="Previous to Close", linewidth=2)
+//plot(last_bar*100, color=color.orange, title="Previous Bar", linewidth=2)
+//hline(0, title='Center Line', color=color.orange, linewidth=2)
+true_dip = overall < 0 and to_high > 0 and to_low < 0 and last_high > 0 and last_low < 0 and last_bar < 0
+true_peak = overall > 0 and to_high > 0 and to_low > 0 and last_high > 0 and last_low < 0 and last_bar > 0
+// ------------------  Stochastic Indicator Overlay -----------------------------------------------
+// Calculation
+// Use highest highs and lowest lows
+h_high = highest(high_source ,lkbk)
+l_low = lowest(low_source ,lkbk)
+stoch = stoch(close, high_source, low_source, periodK)
+k =
+ k_mode=="EMA" ? ema(stoch, smoothK) :
+ k_mode=="WMA" ? wma(stoch, smoothK) :
+ sma(stoch, smoothK)
+d = sma(k, periodD)
+k_c = change(k)
+d_c = change(d)
+kd = k - d
+// Plot
+signalColor = k>oversold and d<overbought and k>d and k_c>0 and d_c>0 ? kcolor : 
+ k<overbought and d>oversold and k<d and k_c<0 and d_c<0 ? dcolor : na
+kp = plot(showStoch ? k : na, "K", color=kcolor)
+dp = plot(showStoch ? d : na, "D", color=dcolor)
+fill(kp, dp, color = signalColor, title="K-D")
+signalUp = showStoch ? not na(signalColor) and kd>0 : na
+signalDown = showStoch ? not na(signalColor) and kd<0 : na
+//plot(signalUp ? kd : na, "Signal Up", color=kcolor, transp=90, style=plot.style_columns)
+//plot(signalDown ? (kd+100) : na , "Signal Down", color=dcolor, transp=90, style=plot.style_columns, histbase=100)
+StochBuy = crossover(k, d) and k_c>0 and d_c>0 and k<RSI and d<RSI and window()
+StochSell = crossunder(k, d) and k_c<0 and d_c<0 and k<RSI and d<RSI and window()
+// -------------- Add Price Movement to Strategy for better visualization -------------------------
+// Calculations
+h1 = vwma(high, length)
+l1 = vwma(low, length)
+hp = h_high[1]
+lp = l_low[1]
+// Plot
+var plot_color=#353535
+var sig = 0
+if (h1 >hp)
+    sig:=1
+    plot_color:=color.lime
+else if (l1 <lp)
+    sig:=-1
+    plot_color:=color.maroon
+//plot(1,title = "Price Movement Bars", style=plot.style_columns,color=plot_color)
+//plot(sig,title="Signal 1 or -1",display=display.none)
+// --------------------------------------- RSI Plot ----------------------------------------------
+// Show RSI and EMA crosses with arrows and RSI Color (tweaked Connors RSI)
+// Improves strategy setting ease by showing where EMA 5 crosses EMA 10 from above to confirm overbought conditions or trend reversals
+// This shows where you should enter shorts or exit longs
+// Tweaked Connors RSI Calculation
+connor_ob = overbought
+connor_os = oversold
+ma1 = sma(close,cl1)
+ma2 = sma(close, cl2)
+ma3 = sma(close, cl3)
+// Buy Sell Zones using tweaked Connors RSI (RSI values of 80 and 20 for Crypto as well as ma3, ma20, and ma50 are the tweaks)
+RSI_SELL = ma1 > ma2 and open > ma3 and RSI >= connor_ob and true_peak and window()
+RSI_BUY = ma2 < ma3 and ma3 > close and RSI <= connor_os and true_dip and window()
+// Color Definition
+col = useCRSI ? (close > ma2 and close < ma3 and RSI <= connor_os ? color.lime : close < ma2 and close > ma3 and RSI <= connor_ob ? color.red : color.yellow ) : color.yellow
+// Plot colored RSI Line
+plot(RSI, title="RSI", linewidth=3, color=col)
+//------------------- MACD Strategy -------------------------------------------------
+[macdLine, signalLine, _] = macd(close, fastLength, slowLength, length)
+bartrendcolor = macdLine > signalLine and k > 50 and RSI > 50 ? color.teal : macdLine < signalLine and k < 50 and RSI < 50 ? color.maroon : macdLine < signalLine ? color.yellow : color.gray
+barcolor(color = color_bars ? bartrendcolor : na)
+MACDBuy = macdLine>signalLine and RSI<RSI_low and overall<0 and window()
+MACDSell = macdLine<signalLine and RSI>RSI_high and overall>0 and window()
+//plotshape(showMACD ? MACDBuy: na, title = "MACD Buy", style = shape.arrowup, text = "MACD Buy", color=color.green, textcolor=color.green, size=size.small)
+//plotshape(showMACD ? MACDSell: na, title = "MACD Sell", style = shape.arrowdown, text = "MACD Sell", color=color.red, textcolor=color.red, size=size.small)
+MACColor = MACDBuy ? color.new(color.teal, 50) : MACDSell ? color.new(color.maroon, 50) : na
+bgcolor(showMACD ? MACColor : na, title ="MACD Signals")
+// -------------------------------- Entry and Exit Logic ------------------------------------
+// Entry Logic
+XRSI_OB = crossunder(RSI, overbought) and overall<0 and window()
+RSI_OB = RSI>overbought and true_peak and window()
+XRSI_OS = crossover(RSI, oversold) and overall>0 and window()
+RSI_OS = RSI<oversold and true_dip and window()
+// Strategy Entry and Exit with built in Risk Management
+if(strategy.opentrades==0 and strat_val>-1)
+    OtherLong = rsi_ema > RSI and k < d 
+    GoLong = useStoch ? StochBuy : useXRSI ? OtherLong and XRSI_OS : useMACD ? OtherLong and MACDBuy : useCRSI ? OtherLong and RSI_BUY : useEMA ? EMALongBuy : RSI_OS
+    if (GoLong)
+        strategy.entry("LONG", strategy.long)
+if(strategy.opentrades==0 and strat_val<1)
+    OtherShort = rsi_ema < RSI and d < k
+    GoShort = useStoch ? StochSell : useXRSI ? OtherShort and XRSI_OB : useMACD ? OtherShort and MACDSell : useCRSI ? OtherShort and RSI_SELL : useEMA ? EMAShortSell : OtherShort and RSI_OB
+    if (GoShort) 
+        strategy.entry("SHORT", strategy.short)
+longStopPrice  = strategy.position_avg_price * (1 - stoploss)
+longTakePrice  = strategy.position_avg_price * (1 + TargetProfit)
+shortStopPrice = strategy.position_avg_price * (1 + stoploss)
+shortTakePrice = strategy.position_avg_price * (1 - TargetProfit)
+//plot(series=(strategy.position_size > 0) ? longTakePrice : na, color=color.green, style=plot.style_circles, linewidth=3, title="Long Take Profit")
+//plot(series=(strategy.position_size < 0) ? shortTakePrice : na, color=color.green, style=plot.style_circles, linewidth=3, title="Short Take Profit")
+//plot(series=(strategy.position_size > 0) ? longStopPrice : na, color=color.red, style=plot.style_cross, linewidth=2, title="Long Stop Loss")
+//plot(series=(strategy.position_size < 0) ? shortStopPrice : na, color=color.red, style=plot.style_cross, linewidth=2, title="Short Stop Loss")
+if (strategy.position_size > 0)
+    strategy.exit(id="Exit Long", from_entry = "LONG", stop = longStopPrice, limit = longTakePrice)
+    
+if (strategy.position_size < 0)
+    strategy.exit(id="Exit Short", from_entry = "SHORT", stop = shortStopPrice, limit = shortTakePrice)
+StochLong2 = strategy.position_size<0 and strat_val > -1
+OtherLong2 = strategy.position_size<0 and strat_val > -1 and rsi_ema > RSI and k < d 
+CloseShort= useStoch ? StochLong2 and StochBuy : useXRSI ? OtherLong2 and XRSI_OS : useMACD ? OtherLong2 and MACDBuy : useCRSI ? OtherLong2 and RSI_BUY : useEMA ? EMAShortBuy : RSI_OS
+StochShort2 = strategy.position_size>0 and strat_val < 1 
+OtherShort2 = strategy.position_size>0 and strat_val < 1 and rsi_ema < RSI and d < k
+CloseLong = useStoch ? StochShort2 and StochSell : useXRSI ? OtherShort2 and XRSI_OB : useMACD ? OtherShort2 and MACDSell : useCRSI ? OtherShort2 and RSI_SELL : useEMA ? EMALongSell : OtherShort2 and RSI_OB
+if(CloseLong)
+    strategy.close("LONG")
+        
+if(CloseShort)
+    strategy.close("SHORT")
+Expand (363 lines)

@@ -1,0 +1,100 @@
+Script Name: Renko Level Strategy 2
+Author: mongolor
+Description: Renko Level Strategy
+
+Main change of my previous strategy, that it look to one level of RENKO and use ATR value from each previous candle. 
+I think it is more correct than use levels that appears in first candle of new RENKO level, cause it base on current volatility, but not on volatility that was many candles ago.
+PineScript code:
+
+Pine Script™ strategy
+Renko Level Strategy 2
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+//@version=4
+strategy("Renko Level Strategy 2", shorttitle="RLS2", overlay=true, pyramiding=2, currency=currency.USD, default_qty_value=50, initial_capital=2000, default_qty_type=strategy.percent_of_equity) 
+TF = input(title='TimeFrame', type=input.resolution, defval="D")
+ATRlength = input(title="ATR length", type=input.integer, defval=14, minval=2, maxval=100)
+HIGH = security(syminfo.tickerid, TF, high)
+LOW = security(syminfo.tickerid, TF, low)
+CLOSE = security(syminfo.tickerid, TF, close)
+ATR = security(syminfo.tickerid, TF, atr(ATRlength))
+float RENKO = na
+color COLOR = na
+int BUY = na
+int SELL = na
+bool UP = na
+bool DN = na
+RENKO := na(RENKO[1]) ? close : RENKO[1]
+COLOR := na(COLOR[1]) ? color.white : COLOR[1]
+BUY := na(BUY[1]) ? 0 : BUY[1]
+SELL := na(SELL[1]) ? 0 : SELL[1]
+UP := false
+DN := false
+if(close > RENKO[1]+ATR[1])
+    UP := true
+    RENKO := close
+    COLOR := color.lime
+    SELL := 0
+    BUY := BUY+1
+if(close < RENKO[1]-ATR[1])
+    DN := true
+    RENKO := close
+    COLOR := color.red
+    BUY := 0
+    SELL := SELL+1
+    
+if(BUY[1]==1 and BUY==2)
+    strategy.entry("long", strategy.long)//, limit = RENKODN)
+if(DN)
+    strategy.cancel_all()
+    strategy.close_all(comment = "close")
+plot(RENKO, style=plot.style_line, linewidth=2, color=COLOR)
+Expand (49 lines)

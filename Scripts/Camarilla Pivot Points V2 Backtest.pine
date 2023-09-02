@@ -1,0 +1,126 @@
+Script Name: Camarilla Pivot Points V2 Backtest
+Author: HPotter
+Description: Camarilla pivot point formula is the refined form of existing classic pivot point formula. 
+ The Camarilla method was developed by Nick Stott who was a very successful bond trader. 
+ What makes it better is the use of Fibonacci numbers in calculation of levels.
+
+ Camarilla equations are used to calculate intraday support and resistance levels using 
+ the previous...
+PineScript code:
+
+Pine Script™ strategy
+Camarilla Pivot Points V2 Backtest
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+//@version=4
+////////////////////////////////////////////////////////////
+//  Copyright by HPotter v1.0 12/05/2020
+// Camarilla pivot point formula is the refined form of existing classic pivot point formula. 
+// The Camarilla method was developed by Nick Stott who was a very successful bond trader. 
+// What makes it better is the use of Fibonacci numbers in calculation of levels.
+//
+// Camarilla equations are used to calculate intraday support and resistance levels using 
+// the previous days volatility spread. Camarilla equations take previous day’s high, low and 
+// close as input and generates 8 levels of intraday support and resistance based on pivot points. 
+// There are 4 levels above pivot point and 4 levels below pivot points. The most important levels 
+// are L3 L4 and H3 H4. H3 and L3 are the levels to go against the trend with stop loss around H4 or L4 . 
+// While L4 and H4 are considered as breakout levels when these levels are breached its time to 
+// trade with the trend.
+//
+// WARNING:
+//  - For purpose educate only
+//  - This script to change bars colors.
+////////////////////////////////////////////////////////////
+strategy(title="Camarilla Pivot Points V2 Backtest", shorttitle="CPP V2", overlay = true)
+res = input(title="Resolution", type=input.resolution, defval="D")
+width = input(1, minval=1)
+SellFrom = input(title="Sell from ", defval="R1", options=["R1", "R2", "R3", "R4"])
+BuyFrom = input(title="Buu from ", defval="S1", options=["S1", "S2", "S3", "S4"])
+reverse = input(false, title="Trade reverse")
+xHigh  = security(syminfo.tickerid,res, high)
+xLow   = security(syminfo.tickerid,res, low)
+xClose = security(syminfo.tickerid,res, close)
+H4 = (0.55*(xHigh-xLow)) + xClose
+H3 = (0.275*(xHigh-xLow)) + xClose
+H2 = (0.183*(xHigh-xLow)) + xClose
+H1 = (0.0916*(xHigh-xLow)) + xClose
+L1 = xClose - (0.0916*(xHigh-xLow))
+L2 = xClose - (0.183*(xHigh-xLow))
+L3 = xClose - (0.275*(xHigh-xLow))
+L4 = xClose - (0.55*(xHigh-xLow))
+pos = 0
+S = iff(BuyFrom == "S1", H1, 
+      iff(BuyFrom == "S2", H2,
+       iff(BuyFrom == "S3", H3,
+         iff(BuyFrom == "S4", H4,0))))
+B = iff(SellFrom == "R1", L1, 
+      iff(SellFrom == "R2", L2,
+       iff(SellFrom == "R3", L3,
+         iff(SellFrom == "R4", L4,0))))
+pos := iff(close > B, 1,
+       iff(close < S, -1, nz(pos[1], 0))) 
+possig = iff(reverse and pos == 1, -1,
+          iff(reverse and pos == -1 , 1, pos))     
+if (possig == 1) 
+    strategy.entry("Long", strategy.long)
+if (possig == -1)
+    strategy.entry("Short", strategy.short)  
+if (possig == 0) 
+    strategy.close_all()
+barcolor(possig == -1 ? #b50404: possig == 1 ? #079605 : #0536b3 )
+Expand (56 lines)

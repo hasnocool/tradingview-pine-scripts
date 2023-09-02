@@ -1,0 +1,121 @@
+Script Name: Coppock Curve Strategy
+Author: RolandoSantos
+Description: This strategy makes use of a not widely known technical indicator called "Coppock Curve". 
+
+The indicator is derived by taking a weighted moving average of the rate-of-change (ROC) of a market index such as the S&P 500 or a trading equivalent such as the S&P 500 SPDR ETF.  For more info: (www.investopedia.com)
+
+This strategy uses $SPY Coppock curve as a proxy to...
+PineScript code:
+
+Pine Script™ strategy
+Coppock Curve Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © RolandoSantos
+//@version=4
+strategy(title = "Coppock Curve", shorttitle = "Copp Curve Strat", default_qty_type=strategy.cash, default_qty_value=10000, initial_capital=10000)
+//Make inputs that set the take profit % 
+longProfitPerc = input(title="Take Profit % (How much stock has to rise from entry to trigger take profit) Using tighter % will have higher win rates (try 5% as an example). Using looser will produce bigger winners w/ lower win rates.", minval=0.0, step=0.1, defval=50) / 100
+tp = input(25, "Take Profit % QTY (How much profit you want to take after take profit target is triggered)")
+// Figure out take profit price
+longExitPrice  = strategy.position_avg_price * (1 + longProfitPerc)
+//Use NYSE for Copp Curve entries and exits//
+security = input("NYA", title="Change this if you want to see Copp Curve calculated for current ticker. All Copp Curve calculations are base on NYSE Composite")
+ticker = security(security,"", close)
+///Copp Curve////
+instructions =input(title="Standard Copp settings are (10, 14, 11) however, DOUBLE these lengths as alternate settings to (20,28,22) and you will find it may produce better results, but less trades", defval="-")
+wmaLength = input(title="WMA Length (Experiment changing this to longer lengths for less trades, but higher win %)", type=input.integer, defval=10)
+longRoCLength = input(title="Long RoC Length", type=input.integer, defval=14)
+shortRoCLength = input(title="Short RoC Length", type=input.integer, defval=11)
+source = ticker
+curve = wma(roc(source, longRoCLength) + roc(source, shortRoCLength), wmaLength)
+///Lower Band Plot///
+band1 = hline(0)
+band0 = hline(100)
+band2 = hline(-100)
+fill(band1, band0, color=color.green, transp=90)
+fill(band2, band1, color=color.red, transp=90)
+copp_color = curve[1] < curve[0] ? curve[0] >= 0 ? #00ffff : #ffb74d : curve[0] >= 0 ? #009b9b : #f57c00
+plot(curve, color=copp_color, style=plot.style_histogram)
+///Trade Conditions///
+Bull = curve > 0
+Bear = curve < 0
+/// Start date
+startDate = input(title="Start Date", defval=1, minval=1, maxval=31)
+startMonth = input(title="Start Month", defval=1, minval=1, maxval=12)
+startYear = input(title="Start Year", defval=1970, minval=1800, maxval=2100)
+// See if this bar's time happened on/after start date
+afterStartDate = (time >= timestamp(syminfo.timezone, startYear, startMonth, startDate, 0, 0))
+///Entries and Exits//
+if (Bull and afterStartDate)
+    strategy.entry("Long", strategy.long, comment = "LE")
+    
+if (Bear and afterStartDate)
+    strategy.close("Long", qty_percent=100, comment="close")
+// Submit exit orders based on take profit price
+if (strategy.position_size > 0 and afterStartDate)
+    strategy.exit(id="Long Take Profit", qty_percent=tp, limit=longExitPrice)
+    
+Expand (62 lines)

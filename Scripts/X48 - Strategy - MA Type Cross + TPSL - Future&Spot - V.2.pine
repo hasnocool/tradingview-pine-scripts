@@ -1,0 +1,771 @@
+Script Name: X48 - Strategy - MA Type Cross + TPSL - Future&Spot - V.2
+Author: X4815162342
+Description: Thank You For Open Source Code, This Strategy Ref. By 1.Simple Strategy Like MA Crossover For Long/Short or Spot Trade, 2. CDC Action Zone V.2 for BarPaint
+This Strategy Mixing With MA Crossover Strategy and BarPaint By CDC Action Zone and TP/SL by Varbara 
+
+ ### How To Use Strategy : Setting EMA/SMA Crossover EMA/SMA, Any Value If You Want 
+ 
+ For Long Position :...
+PineScript code:
+
+Pine Script™ strategy
+X48 - Strategy | MA Type Cross + TPSL | Future&Spot | V.2
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © X4815162342
+// Thank You For Open Source Code, This Strategy Ref. By 1.Simple Strategy Like MA Crossover For Long/Short or Spot Trade, 2. CDC Action Zone V.2 for BarPaint
+// This Strategy Mixing With MA Crossover Strategy and BarPaint By CDC Action Zone and TP/SL by Varbara
+// and Thanks For Original Source Swing H/L by @millerrh
+// How To Use Strategy : Setting EMA/SMA Crossover EMA/SMA, Any Value If You Want
+// For Long Position : Cross Up
+// For Short Position : Cross Down
+// Can Use With Spot Trade : Cross Up = Buy, Cross Down = Sell
+// In Setting
+// Intitial Capital = Ex. 200
+// Order Size = Should Be Money Management Not Use 100% of Capital Ex. 10% of Capital (200$) = Order Size 20$
+// StopLoss and Take Profit = If You Run Trend TF 4H+ or 1D+ You Can Change TP% = 1,000% for nonlimit and Stop Loss 5 - 20% from your order size
+//  Ex. Stoploss 15% = OrderSize / 100 x %SL = 20$/100 x 15% = 3$ Loss from order size 20$ (if you not set stop loss.)
+// Base Currency = (Your Currency) # Ex. USD
+// Commission = (Your Trading Fee) # Ex. Future Fee Can Check At Binance Fee Rate > https://www.binance.com/en/fee/schedule > Choose Your Fee Type, Ex. USD M Future (Regular User) = 0.02 (Maker), 0.04 (Taker)
+// Commission Symbol Type = %     # (Ref. By Binance Fee Rate)
+// Default Setting It's Realistic From Normal Life Ex. Capital 200$ / Ordersize 20$ (10%)/ Commission 0.1% (Buy+Sell) / Slippage = 2 / TP = 1000% (nonlimit) / SL = 15%/OrderSize
+// Low Risk But High Return, Good Luck
+// if you wanna try my bot auto trade X48-3in1-bot : Contact My Line ID : x4815x
+//@version=5
+strategy('X48 - Strategy | MA Multi Type Cross + TPSL + Swing + Surfing&Diving| Future&Spot | V.3.6', overlay=true, default_qty_type=strategy.cash, default_qty_value=20, initial_capital=200, currency=currency.USD, commission_value=0.1, slippage = 0)
+// 📌📌 Spot Mode 📌📌
+SMODE = input.bool(title="SPOT MODE", defval=false, group = '= SPOT SETTING =', tooltip = 'SPOT = Disable Short Position')
+/////////// Normal Setting ////////////////
+srcstrategy = input(close, title='Source Multi MA', group = '= Multi MA SETTING =', tooltip = 'Normal Line = Close \nSmooth Line = ohlc4')
+///////////// EMA/SMA SETTING /////////////
+pricestrategy = request.security(syminfo.tickerid, timeframe.period, srcstrategy)
+fastSW = input.bool(title='Show Fast MA Line', defval=true, group = '= Multi MA SETTING =')
+slowSW = input.bool(title='Show Slow MA Line', defval=true, group = '= Multi MA SETTING =')
+ma1strategy = input(18, title='Fast MA Length', group = '= Multi MA SETTING =')
+type1strategy = input.string('EMA', 'Fast MA Type', options=['SMA', 'EMA', 'WMA', 'HMA', 'RMA', 'VWMA'], group = '= Multi MA SETTING =', tooltip = 'SMA / EMA / WMA / HMA / RMA / VWMA')
+MA2_MODE = input.bool(title="MA MIDDLE MODE", defval=false, group = '= MIDDLE 3MA SETTING =', tooltip = 'Strategy Is\nMA Fast > MA Slow = Long\nEMA Fast < MA Mid = Short')
+ma2strategy = input(24, title='Middle MA Length', group = '= MIDDLE 3MA SETTING =')
+type2strategy = input.string('EMA', 'Middle MA Type', options=['SMA', 'EMA', 'WMA', 'HMA', 'RMA', 'VWMA'], group = '= MIDDLE 3MA SETTING =', tooltip = 'SMA / EMA / WMA / HMA / RMA / VWMA')
+ma3strategy = input(34, title='Slow MA Length', group = '= Multi MA SETTING =')
+type3strategy = input.string('EMA', 'Slow MA Type', options=['SMA', 'EMA', 'WMA', 'HMA', 'RMA', 'VWMA'], group = '= Multi MA SETTING =', tooltip = 'SMA / EMA / WMA / HMA / RMA / VWMA')
+price1strategy = switch type1strategy
+    "EMA" => ta.ema(pricestrategy, ma1strategy)
+    "SMA" => ta.sma(pricestrategy, ma1strategy)
+    "WMA" => ta.wma(pricestrategy, ma1strategy)
+    "HMA" => ta.hma(pricestrategy, ma1strategy)
+    "RMA" => ta.rma(pricestrategy, ma1strategy)
+    "VWMA" => ta.vwma(pricestrategy, ma1strategy)
+    
+price2strategy = switch type2strategy
+    "EMA" => ta.ema(pricestrategy, ma2strategy)
+    "SMA" => ta.sma(pricestrategy, ma2strategy)
+    "WMA" => ta.wma(pricestrategy, ma2strategy)
+    "HMA" => ta.hma(pricestrategy, ma2strategy)
+    "RMA" => ta.rma(pricestrategy, ma2strategy)
+    "VWMA" => ta.vwma(pricestrategy, ma2strategy)
+    
+price3strategy = switch type3strategy
+    "EMA" => ta.ema(pricestrategy, ma3strategy)
+    "SMA" => ta.sma(pricestrategy, ma3strategy)
+    "WMA" => ta.wma(pricestrategy, ma3strategy)
+    "HMA" => ta.hma(pricestrategy, ma3strategy)
+    "RMA" => ta.rma(pricestrategy, ma3strategy)
+    "VWMA" => ta.vwma(pricestrategy, ma3strategy)
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+Text_Alert_Future = '{{strategy.order.alert_message}}'
+copy_Fu = input( defval= Text_Alert_Future ,    title="Alert Message for BOT", inline = '00'  ,group = '═ Bot Setting ═ \n >> If You Dont Use Bot Just Pass It' ,tooltip = 'Alert For X48-BOT > Copy and Paste To Alert Function')
+passphrase = input.string(defval='1234', title ='Bot Pass',group='═ Bot Setting ═ \n >> If You Dont Use Bot Just Pass It', tooltip = 'Passphrase Must Be Same as X48-BOT')
+leveragex  = input.int(125,title='leverage',group='═ Bot Setting ═ \n >> If You Dont Use Bot Just Pass It',tooltip='"NOTHING" to do with Position size For Command To X48-BOT Only',minval=1)
+longcommand = input.string(defval='AutoLong', title = 'Bot Long Command',group='═ Bot Setting ═ \n >> If You Dont Use Bot Just Pass It', tooltip = '1.OpenLong\n2.AutoLong\n***If AutoLong = Close(100%) First > Open Long Position Auto')
+shortcommand = input.string(defval='AutoShort', title = 'Bot Short Command',group='═ Bot Setting ═ \n >> If You Dont Use Bot Just Pass It', tooltip = '1.OpenShort\n2.AutoShort\n***If AutoShort = Close(100%) First > Open Short Position Auto')
+markettype = input.string(defval='bnfuture', title = 'Future/Spot Command',group='═ Bot Setting ═ \n >> If You Dont Use Bot Just Pass It', tooltip = '1. bnfuture = FUTURE MODE\n2. bnspot = SPOT MODE\n 3.bncombo = EZ 2in1 Order')
+//////////////// Strategy Alert For X4815162342 BOT //////////////////////
+//////// For Use Bot Can Change This Command By Your Self /////////////////////
+string Alert_OpenLong       = '{"ex":"'+markettype+'","side": "'+longcommand+'", "amount": "@{{strategy.order.contracts}}", "symbol": "{{ticker}}", "passphrase": "'+passphrase+'","leverage":"'+str.tostring(leveragex)+'"}'
+string Alert_OpenShort      = '{"ex":"'+markettype+'","side": "'+shortcommand+'", "amount": "@{{strategy.order.contracts}}", "symbol": "{{ticker}}", "passphrase": "'+passphrase+'","leverage":"'+str.tostring(leveragex)+'"}'
+//string Alert_LongTP         = '{"ex":"bnfuture","side": "CloseLong", "amount": "@{{strategy.order.contracts}}", "symbol": "{{ticker}}", "passphrase": "'+passphrase+'","leverage":"'+str.tostring(leveragex)+'"}'
+//string Alert_ShortTP        = '{"ex":"bnfuture","side": "CloseShort", "amount": "@{{strategy.order.contracts}}", "symbol": "{{ticker}}", "passphrase": "'+passphrase+'","leverage":"'+str.tostring(leveragex)+'"}'
+//var message_closelong       = '{"ex":"bnfuture","side": "CloseLong", "amount": "%100", "symbol": "{{ticker}}", "passphrase": "'+passphrase+'","leverage":"'+str.tostring(leveragex)+'"}'
+//var message_closeshort      = '{"ex":"bnfuture","side": "CloseShort", "amount": "%100", "symbol": "{{ticker}}", "passphrase": "'+passphrase+'","leverage":"'+str.tostring(leveragex)+'"}'
+string Alert_StopLosslong   = '{"ex":"'+markettype+'","side": "CloseLong", "amount": "%100", "symbol": "{{ticker}}", "passphrase": "'+passphrase+'","leverage":"'+str.tostring(leveragex)+'"}'
+string Alert_StopLossshort  = '{"ex":"'+markettype+'","side": "CloseShort", "amount": "%100", "symbol": "{{ticker}}", "passphrase": "'+passphrase+'","leverage":"'+str.tostring(leveragex)+'"}'
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////  
+RSI_MODE = input.bool(title="RSI MODE", defval=false, group = '= RSI SETTING >> COMFIRM RSI BEFORE OPEN POSITION =', tooltip = 'If Mode On = Use RSI Strategy With Long and Short\n >> RSI Confirm Before Open Position')
+//if RSI_MODE == true
+RSILength = input(14, title='RSI Length', group = '= RSI SETTING >> PLOT RSI SIGNAL OB OS =')
+OverBought = input(70, title='RSI OB', group = '= RSI SETTING >> PLOT RSI SIGNAL OB OS =', tooltip = 'Lil Cross Symbol')
+OverSold = input(30, title='RSI OS', group = '= RSI SETTING >> PLOT RSI SIGNAL OB OS =', tooltip = 'Lil Diamond Symbol')
+vrsi = ta.rsi(srcstrategy, RSILength)
+RSIUP = ta.crossover(vrsi, OverBought)
+RSIDOWN = ta.crossunder(vrsi, OverSold)
+plotshape(RSI_MODE ? RSIUP : na, title='RSIUP', text = '⏰', color=color.new(color.yellow, 100), style=shape.circle, location=location.belowbar, size=size.tiny)  //plot for buy icon
+plotshape(RSI_MODE ? RSIDOWN : na, title='RSIDOWN', text = '☀️', color=color.new(color.red, 100), style=shape.circle, location=location.abovebar, size=size.tiny)  //plot for buy icon
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////  
+MACD_MODE_SIG= input.bool(title="MACD MODE = MACD Cross Signal", defval=false, group = '= MACD SETTING =', tooltip = 'If Mode On = Use MACD Strategy for Signal When Cross Up and Cross Down')
+//if MACD_MODE_SIG == true
+MACDfastLength = input(12, title='MACD Fast', group = '= MACD SETTING =')
+MACDslowlength = input(26, title='MACD Slow', group = '= MACD SETTING =')
+MACDLength = input(18, title='MACD Length', group = '= MACD SETTING =')
+MACD = ta.ema(close, MACDfastLength) - ta.ema(close, MACDslowlength)
+aMACD = ta.ema(MACD, MACDLength)
+delta = MACD - aMACD
+macdTPl = (ta.crossover(delta, 0))
+macdTPs = (ta.crossunder(delta, 0))
+plotshape(MACD_MODE_SIG ? macdTPl : na, title='macdTPl', text = '💎', color=color.new(color.yellow, 100), style=shape.circle, location=location.belowbar, size=size.tiny)  //plot for buy icon
+plotshape(MACD_MODE_SIG ? macdTPs : na, title='macdTPs', text = '💎', color=color.new(color.red, 100), style=shape.circle, location=location.abovebar, size=size.tiny)  //plot for buy icon
+////////////////////////////////////////////////////////////////////////////////////////////////
+///////// Surfing and Diving /////////////
+SURF_DIVE_MODE = input.bool(title="SURFING&DIVING MODE", defval=false, group = '= SURF&DIVING SETTING =', tooltip = 'How To Use\n3 Dot Waves CrossUp Purple Line = Bullish Trend\n3 Dot Waves CrossDown Purple Line = Bearish Trend\n\nBig Blue Dot is Surfing Zone\nCandle Price Close > Surfing Zone = Lil Bullish\nCandle Price Clsoe < Surfing Zone = Lil Bearish')
+surfing_21 = ta.ema(close,21)
+diving_144 = ta.ema(close,144)
+diving_233 = ta.ema(close,233)
+surfing_h = ta.sma(high,34)
+surfing_c = ta.sma(close,34)
+surfing_l = ta.sma(low,34)
+surfingup = ta.crossover(close,surfing_21)
+surfingdown = ta.crossunder(close,surfing_21)
+showSurf = input(false, title='Show Surfing & Diving Signal', group = '= SURF&DIVING SETTING =', tooltip = 'Plot Symbol of Lil Trend By Surfing Man')
+plotshowSurf = SURF_DIVE_MODE == true ? showSurf : na
+plotshape(showSurf ? surfingup : na,'SurfingUp',location = location.belowbar,text = '🏄‍♂️')
+plotshape(showSurf ? surfingdown : na,'SurfingDown',location = location.abovebar,text = '🏄')
+plot(SURF_DIVE_MODE ? surfing_21 : na, 'surfing_21', color=color.new(#6EB0FF,20), linewidth = 1, style=plot.style_stepline_diamond)
+plot(SURF_DIVE_MODE ? surfing_h : na, 'surfing_h', color=color.aqua, linewidth = 1, style=plot.style_circles)
+plot(SURF_DIVE_MODE ? surfing_c : na, 'surfing_c', color=color.silver, linewidth = 1, style=plot.style_circles)
+plot(SURF_DIVE_MODE ? surfing_l : na, 'surfing_l', color=color.blue, linewidth = 1, style=plot.style_circles)
+plot(SURF_DIVE_MODE ? diving_144 : na, 'diving_144', color=color.purple, linewidth = 2, style=plot.style_line)
+plot(SURF_DIVE_MODE ? diving_233 : na, 'diving_233', color=#FF00FF, linewidth = 2, style=plot.style_line)
+///////////// Take Profit and Stop Loss Setting ////////////////////
+tpsl(percent) =>
+    strategy.position_avg_price * percent / 100 / syminfo.mintick
+mode = input.bool(title="Mode AUTO TP/SL", defval=true, group="= AUTO TP/SL =", tooltip = 'If Mode On = Use TP/SL\nIf Mode Off = Turn Off TP/SL Effect\nTP = 1000%+ for nonlimit TP Length \nSL = 1-100% if 100% Its Mean Liq. Position')
+tp_l = tpsl(input.float(0, title='TP [LONG] %', group="= AUTO TP/SL =", tooltip = 'Disable = 0 (non limit profit)'))
+tp_s = tpsl(input.float(0, title='TP [SHORT] %', group="= AUTO TP/SL =", tooltip = 'Disable = 0 (non limit profit)'))
+sl = tpsl(input.float(0, title='Auto Stop Loss %', group="= AUTO TP/SL =", tooltip = 'Disable = 0 (non limit Stop Loss)'))
+BOTrail_MODE = input.bool(defval = false, title = "🅾️ CALLBACK Trailing Stop Mode", group = "= AUTO TP/SL =", tooltip = "BreakOut Length For Who's Want Fast Trailing But This Low Profit But More Time For TP\nIt's Can Combo With Breakout and 15m")
+lengthBO = input.int(title="1️⃣ Length CallBack", minval=1, maxval=1000, defval=5, group = "= AUTO TP/SL =")
+triling_BO = input.float(title = "🅾️ BreakOut Trailing CALLBACK [%]", defval = 25, minval = 0.01, maxval = 999.99, group = "= AUTO TP/SL =", tooltip = "Binance Callback = 5%, Now You Can Customize Your Callback ><")
+upBound = ta.highest(high, lengthBO)
+downBound = ta.lowest(low, lengthBO)
+SL_LongBO = (close < (upBound-((upBound*triling_BO)/100)))
+SL_ShortBO = (close > (downBound+((downBound*triling_BO)/100)))
+calcStopLossPrice(OffsetPts) =>
+    if strategy.position_size > 0
+        strategy.position_avg_price - OffsetPts * syminfo.mintick
+    else if strategy.position_size < 0
+        strategy.position_avg_price + OffsetPts * syminfo.mintick
+    else
+        na
+calcStopLossL_AlertPrice(OffsetPts) =>
+    strategy.position_avg_price - OffsetPts * syminfo.mintick
+calcStopLossS_AlertPrice(OffsetPts) =>
+    strategy.position_avg_price + OffsetPts * syminfo.mintick
+calcTakeProfitPrice(OffsetPts) =>
+    if strategy.position_size > 0
+        strategy.position_avg_price + OffsetPts * syminfo.mintick
+    else if strategy.position_size < 0
+        strategy.position_avg_price - OffsetPts * syminfo.mintick
+    else
+        na
+calcTakeProfitL_AlertPrice(OffsetPts) =>
+    strategy.position_avg_price + OffsetPts * syminfo.mintick
+calcTakeProfitS_AlertPrice(OffsetPts) =>
+    strategy.position_avg_price - OffsetPts * syminfo.mintick
+var stoploss = 0.
+var stoploss_l = 0.
+var stoploss_s = 0.
+var takeprofit = 0.
+var takeprofit_l = 0.
+var takeprofit_s = 0.
+var takeprofit_ll = 0.
+var takeprofit_ss = 0.
+if mode == true
+    if (strategy.position_size > 0)
+        if sl > 0
+            stoploss := calcStopLossPrice(sl)
+            stoploss_l := stoploss
+        else if sl <= 0
+            stoploss := na
+        if tp_l > 0
+            takeprofit := tp_l
+            takeprofit_ll := close + ((close/100)*tp_l)
+            //takeprofit_s := na
+        else if tp_l <= 0
+            takeprofit := na
+    if (strategy.position_size < 0)
+        if sl > 0
+            stoploss := calcStopLossPrice(sl)
+            stoploss_s := stoploss
+        else if sl <= 0
+            stoploss := na
+        if tp_s > 0
+            takeprofit := tp_s
+            takeprofit_ss := close - ((close/100)*tp_s)
+            //takeprofit_l := na
+        else if tp_s <= 0
+            takeprofit := na
+    else if strategy.position_size == 0
+        stoploss := na
+        takeprofit := na
+        //takeprofit_l := calcTakeProfitL_AlertPrice(tp_l)
+        //takeprofit_s := calcTakeProfitS_AlertPrice(tp_s)
+        //stoploss_l := calcStopLossL_AlertPrice(sl)
+        //stoploss_s := calcStopLossS_AlertPrice(sl)
+//////////// INPUT BACKTEST RANGE ////////////////////////////////////////////////////
+var string BTR1         = '════════ INPUT BACKTEST TIME RANGE ════════'
+i_startTime             = input.time(defval = timestamp("01 Jan 1945 00:00 +0000"), title = "Start", inline="timestart", group=BTR1, tooltip = 'Start Backtest YYYY/MM/DD')
+i_endTime               = input.time(defval = timestamp("01 Jan 2074 23:59 +0000"), title = "End", inline="timeend", group=BTR1, tooltip = 'End Backtest YYYY/MM/DD')
+if time >= i_startTime and time <= i_endTime
+    if MA2_MODE == false
+        longCondition = ta.crossover(price1strategy, price3strategy)
+        if longCondition
+            strategy.entry('Long', strategy.long, alert_message = Alert_OpenLong, comment = "🌙")
+        
+        shortCondition = ta.crossunder(price1strategy, price3strategy)
+        if shortCondition and SMODE == true
+            strategy.close('Long', qty_percent = 100, comment = '🎃')
+        if shortCondition and SMODE == false
+            strategy.entry('Short', strategy.short, alert_message = Alert_OpenShort, comment = "👻")
+    
+    if MA2_MODE == true
+        longCondition = ta.crossover(price1strategy, price3strategy)
+        if longCondition
+            strategy.entry('Long', strategy.long, alert_message = Alert_OpenLong, comment = "🌙")
+        
+        shortCondition = ta.crossunder(price1strategy, price3strategy)
+        StopshortCondition = ta.crossunder(price1strategy, price2strategy)
+        if StopshortCondition and SMODE == true
+            strategy.close('Long', qty_percent = 100, comment = '🎃')
+        if StopshortCondition and SMODE == false
+            strategy.close('Long', qty_percent = 100, comment = '🎃')
+        if shortCondition and SMODE == false
+            strategy.entry('Short', strategy.short, alert_message = Alert_OpenShort, comment = "👻")
+////////////////// Strategy Take Profit and Stop Loss Label Here ///////////////////
+    //if mode == true
+    //    if (strategy.position_size > 0)
+    //        stoploss := calcStopLossPrice(sl)
+    //        takeprofit := tp_l
+    //    if (strategy.position_size < 0)
+    //        stoploss := calcStopLossPrice(sl)
+    //        takeprofit := tp_s
+    //    else if strategy.position_size == 0
+    //        stoploss := na
+    //        takeprofit := na
+if mode == true
+    if SMODE == false
+        if strategy.position_size > 0
+            strategy.exit("Exit",'Long', qty_percent = 100 , profit = takeprofit, stop = stoploss, comment_profit = "TP💚L", comment_loss = "SL💚L", alert_message = Alert_StopLosslong)
+        if strategy.position_size < 0
+            strategy.exit("Exit",'Short', qty_percent = 100, profit = takeprofit, stop = stoploss, comment_profit = "TP❤️️S", comment_loss = "SL❤️️S", alert_message = Alert_StopLossshort)
+    else if SMODE == true
+        if strategy.position_size > 0
+            strategy.exit("Exit",'Long', qty_percent = 100 , profit = takeprofit, stop = stoploss, comment_profit = "TP💚L", comment_loss = "SL💚L", alert_message = Alert_StopLosslong)
+if BOTrail_MODE == true
+    if SMODE == false
+        if SL_LongBO and strategy.position_size > 0
+            strategy.close("Long", qty_percent = 100, comment = "❇️CALLBACK❇️", alert_message = Alert_StopLosslong)
+        if SL_ShortBO and strategy.position_size < 0
+            strategy.close("Short", qty_percent = 100, comment = "❇️CALLBACK❇️", alert_message = Alert_StopLossshort)
+    
+    else if SMODE == true
+        if SL_LongBO and strategy.position_size > 0
+            strategy.close("Long", qty_percent = 100, comment = "❇️CALLBACK❇️", alert_message = Alert_StopLosslong)
+        //if strategy.position_size > 0
+        //    strategy.exit("Exit",'Long', profit = takeprofit, when = stoploss, alert_message = Alert_StopLosslong)
+        //  strategy.exit("Exit",'Long', profit = takeprofit, stop = stoploss, alert_message = Alert_StopLosslong)
+        //if strategy.position_size < 0
+        //    strategy.exit("Exit",'Short', profit = takeprofit, stop = stoploss, alert_message = Alert_StopLossshort)
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+srccdc = input(title='Data Array', defval=ohlc4, group="Bar Paint Color Red/Blue/Yellow/Green", tooltip = 'Just Bar Paint Only\nNo Effect For EMA/SMA Line')
+APcdc = ta.ema(srccdc, 2)
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+// ************** BarPaint ***********
+Bullish = price1strategy > price3strategy
+Bearish = price1strategy < price3strategy
+Green = Bullish and APcdc > price1strategy
+Red = Bearish and APcdc < price1strategy
+Yellow = Bullish and APcdc < price1strategy
+Blue = Bearish and APcdc > price1strategy
+Buycdc = Bullish and Bearish[1]
+Sellcdc = Bearish and Bullish[1]
+//Plot
+bcolor = Green ? color.lime : Red ? color.red : Yellow ? color.yellow : Blue ? color.blue : color.white
+barcolor(color=bcolor)
+//plot(series=price1strategy, style=plot.style_line, title='1st MA', color=color.new(color.yellow, 0), linewidth=2)
+//plot(series=price2strategy, style=plot.style_line, title='2nd MA', color=color.new(color.blue, 0), linewidth=1)
+//plot(series=price3strategy, style=plot.style_line, title='3rd MA', color=color.new(color.red, 0), linewidth=2)
+FastL = plot(fastSW ? price1strategy : na, 'Fast MA', color=color.new(color.red, 0), style = plot.style_line, linewidth=2)
+MidL = plot(MA2_MODE ? price2strategy : na, 'Middle MA', color=color.new(color.blue, 0), style = plot.style_line, linewidth=2)
+SlowL = plot(slowSW ? price3strategy : na, 'Slow MA', color=color.new(color.yellow, 0), style = plot.style_line, linewidth=2)
+fillcolor = Bullish ? color.new(color.green,90) : Bearish ? color.new(color.red,90) : color.new(color.black,90) // fillcolor = Bullish ? color.green : Bearish ? color.red : color.black
+//fill(FastL, MidL, SlowL, fillcolor) // fill(price1strategy, price2strategy, price3strategy, fillcolor, transp=90)
+//longCondition2 = ta.crossover(price1strategy, price3strategy)
+//shortCondition2 = ta.crossunder(price1strategy, price2strategy)
+//plotshape(longCondition, title='buytag', text='🌙', color=color.new(color.green, 0), style=shape.labelup, location=location.belowbar, size=size.large, textcolor=color.new(color.white, 0))  //plot for buy icon
+//plotshape(shortCondition, title='selltag', text='👻', color=color.new(color.red, 0), style=shape.labeldown, location=location.abovebar, size=size.large, textcolor=color.new(color.white, 0))  //plot for sell icon
+// Swing Plot
+Swing_MODE = input.bool(title="SWING MODE", defval=true, group = '= SWING SETTING =', tooltip = 'If Mode On = Plot Swing High and Swing Low')
+pvtLenL = input.int(6, minval=1, title='Pivot Length Left Hand Side', group = '= SWING SETTING =')
+pvtLenR = input.int(6, minval=1, title='Pivot Length Right Hand Side', group = '= SWING SETTING =')
+showStop = input(true, title='Show Recent Low Stop?', group = '= SWING SETTING =')
+// Get High and Low Pivot Points
+pvthi_ = ta.pivothigh(high, pvtLenL, pvtLenR)
+pvtlo_ = ta.pivotlow(low, pvtLenL, pvtLenR)
+// Force Pivot completion before plotting.
+Shunt = 1  //Wait for close before printing pivot? 1 for true 0 for flase
+maxLvlLen = 0  //Maximum Extension Length
+pvthi = pvthi_[Shunt]
+pvtlo = pvtlo_[Shunt]
+// Count How many candles for current Pivot Level, If new reset.
+counthi = ta.barssince(not na(pvthi))
+countlo = ta.barssince(not na(pvtlo))
+pvthis = fixnan(pvthi)
+pvtlos = fixnan(pvtlo)
+hipc = ta.change(pvthis) != 0 ? na : color.maroon
+lopc = ta.change(pvtlos) != 0 ? na : color.green
+// Display Pivot lines
+plot(Swing_MODE ? maxLvlLen == 0 or counthi < maxLvlLen ? pvthis : na : na, color=hipc, linewidth=1, offset=-pvtLenR - Shunt, title='Top Levels')
+plot(Swing_MODE ? maxLvlLen == 0 or countlo < maxLvlLen ? pvtlos : na : na, color=lopc, linewidth=1, offset=-pvtLenR - Shunt, title='Bottom Levels')
+plot(Swing_MODE ? maxLvlLen == 0 or counthi < maxLvlLen ? pvthis : na : na, color=hipc, linewidth=1, offset=0, title='Top Levels 2')
+plot(Swing_MODE ? maxLvlLen == 0 or countlo < maxLvlLen ? pvtlos : na : na, color=lopc, linewidth=1, offset=0, title='Bottom Levels 2')
+// Stop Levels
+stopLevel = ta.valuewhen(pvtlo_, low[pvtLenR], 0)
+plotStopLevel = showStop == true ? stopLevel : na
+plot(Swing_MODE  ? plotStopLevel : na, style=plot.style_linebr, color=color.new(color.orange, 50), show_last=1, linewidth=2, trackprice=true)
+//******************************************
+TRAILING_MODE = input.bool(title="TRAILING MODE", defval=false, group = '= TRAILING TP/SL SETTING =', tooltip = 'When Candle Price Close > or < Trailing Line\nShould TP or SL by Your Position')
+c480=request.security(syminfo.tickerid, "M", close, barmerge.gaps_off, barmerge.lookahead_on)
+c4801=request.security(syminfo.tickerid, "M", close[1], barmerge.gaps_off, barmerge.lookahead_on)
+c4802=request.security(syminfo.tickerid, "M", close[2], barmerge.gaps_off, barmerge.lookahead_on)
+c4803=request.security(syminfo.tickerid, "M", close[3], barmerge.gaps_off, barmerge.lookahead_on)
+c4804=request.security(syminfo.tickerid, "M", close[4], barmerge.gaps_off, barmerge.lookahead_on)
+c4805=request.security(syminfo.tickerid, "M", close[5], barmerge.gaps_off, barmerge.lookahead_on)
+h480=request.security(syminfo.tickerid, "480", high, barmerge.gaps_off, barmerge.lookahead_on)
+mc=(c480+c4801+c4802+c4803+c4804)/5
+plot(TRAILING_MODE ? mc : na, 'TrailingTP/SL', color=color.new(color.lime,0), style=plot.style_stepline, linewidth=2)
+//********* Background Paint ***********************
+BG_MODE = input.bool(title="BACKGROUND PAINT MODE", defval=true, group = '= BACKGROUND PAINT SETTING =', tooltip = 'Just Fill Background Color and Paint Line Between Space')
+prefillFast = plot(BG_MODE ? price1strategy : na, 'Fast MA', color=color.new(color.red, 100), style = plot.style_line, linewidth=2)
+prefillMid = plot(MA2_MODE ? BG_MODE ? price2strategy : na : na, 'Middle MA', color=color.new(color.blue, 100), style = plot.style_line, linewidth=2)
+prefillSlow = plot(BG_MODE ? price3strategy : na, 'Fast MA', color=color.new(color.yellow, 100), style = plot.style_line, linewidth=2)
+fcolor = price1strategy > price3strategy ? color.new(color.lime,70) : color.new(color.blue,70)
+fcolor2 = price1strategy > price2strategy ? color.new(color.lime,70) : color.new(color.red,70)
+fill(prefillFast,prefillSlow, color=fcolor, title='BACKGROUND PAINT')
+fill(prefillFast,prefillMid, color=fcolor2, title='BACKGROUND PAINT')
+// **********************************************
+//เรียกใช้  library
+import X4815162342/X48_LibaryStrategyStatus/2 as fuLi 
+//แสดงผล Backtest
+show_Net = input.bool(true,'Monitor Profit&Loss', inline = 'Lnet', group = '= PNL MONITOR SETTING =')
+position_ = input.string('bottom_center','Position', options = ['top_right','middle_right','bottom_right','top_center','middle_center','bottom_center','middle_left','bottom_left'] , inline = 'Lnet')
+size_i = input.string('auto','size', options = ['auto','tiny','small','normal'] , inline = 'Lnet') 
+color_Net = input.color(color.blue,"" , inline = 'Lnet')
+fuLi.NetProfit_Show(show_Net , position_ , size_i,  color_Net )
+Expand (407 lines)

@@ -1,0 +1,602 @@
+Script Name: Strategy Tester EMA-SMA-RSI-MACD
+Author: fikira
+Description: On Tradingview I never saw a custom adjustable strategy script yet, so this is it,
+you can change different things and see if you'll get a good strategy or not
+
+Settings:
+
+First choose the source, you can choose out of:
+close, open, high, low, ohlc4, hlc3, hl2
+
+Then choose you strategy: Long & Short, Long only or Short only
+
+Next, choose your entry "Buy/Long"...
+PineScript code:
+
+Pine Script™ strategy
+Strategy Tester EMA-SMA-RSI-MACD
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © fikira
+//@version=4
+strategy("Strategy Tester EMA-SMA-RSI-MACD", shorttitle="Strat-test", overlay=true, max_bars_back=5000, 
+ default_qty_type= strategy.percent_of_equity, calc_on_order_fills=false, calc_on_every_tick=false, 
+ pyramiding=0, default_qty_value=100, initial_capital=100)
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//                                      "&" issue when added to _L_ : 
+//L_S     = "Long & Short"                , _L_  = "Long & Only"                , _S_ = "Short Only"
+//                               no issue (initial correct working version) : 
+L_S     = "Long & Short"                , _L_  = "Long Only"                , _S_ = "Short Only"
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+Tiny     = "Tiny"
+Small    = "Small"
+Normal   = "Normal"
+Large    = "Large"
+cl      = "close" , op  = "open" , hi  = "high" , lo  = "low"
+c4      = "ohlc4" , c3  = "hlc3" , hl  = "hl2"
+co      = "xMA 1 > xMA 2" 
+cu      = "xMA 3 < xMA 4"
+co_HTF  = "xMA 1 (HTF) > xMA 2 (HTF)" 
+cu_HTF  = "xMA 3 (HTF) < xMA 4 (HTF)"
+cla     = "Close above xMA 1"         
+clu     = "Close under xMA 3"
+cla_HTF = "Close above xMA 1 (HTF)"
+clu_HTF = "Close under xMA 3 (HTF)"
+rsi     = "RSI strategy"
+notBuy  = "BUY = false"                 , none    = "NONE"
+mch     = "macd > signal"               , mcl     = "macd < signal"
+mch0    = "macd > 0"                    , mcl0    = "macd < 0"
+sgh0    = "signal > 0"                  , sgl0    = "signal < 0"
+hisbl   = "hist > hist[1]"              , hisbr   = "hist < hist[1]"
+mch_HTF = "macd (HTF) > signal (HTF)"   , mcl_HTF = "macd (HTF) < signal (HTF)"
+mch0HTF = "macd (HTF) > 0"              , mcl0HTF = "macd (HTF) < 0"
+sgh0HTF = "signal (HTF) > 0"            , sgl0HTF = "signal (HTF) < 0"
+//s       = input(cl,   "Source" , options=[cl, op, hi, lo, c4, c3, hl])
+src       = input(title="Source", type=input.source, defval=close)
+//src     =
+// s  == cl ? close :
+// s  == op ? open  :
+// s  == hi ? high  :
+// s  == lo ? low   :
+// s  == c4 ? ohlc4 :
+// s  == c3 ? hlc3  : 
+// s  == hl ? hl2   :
+// source
+__1_    = input(false, ">=< >=< [STRATEGIES] >=< >=<")
+Type    = input(_L_,  "Type Strategy", options=[L_S, _L_, _S_])
+_1a_    = input(false, ">=< >=< [BUY/LONG] >=< >=<")
+ENT     = input(co,   "Pick your poison:", options=[co, cla, rsi, mch, mch0, sgh0])
+EH      = input(0,    " if RSI >")
+EL      = input(100,  " if RSI <")
+EH_HTF  = input(0,    " if RSI (HTF) >")
+EL_HTF  = input(100,  " if RSI (HTF) <")
+EX      = input(none, " Extra argument", options=[none, mch, mch0, sgh0, hisbl])
+EX2     = input(none, " Second argument", options=[none, mch_HTF, mch0HTF, sgh0HTF, co_HTF, cla_HTF])
+_1b_    = input(false, ">=< [xMA settings (Buy/Long)] >=<")
+ma1     = input(defval="SMA", title="  xMA 1"       , options=["SMA", "EMA", "WMA", "HullMA", "VWMA", "RMA", "TEMA"])
+len1    = input(50,   "     Length"  )
+ma2     = input(defval="SMA", title="  xMA 2"       , options=["SMA", "EMA", "WMA", "HullMA", "VWMA", "RMA", "TEMA"])
+len2    = input(100,  "     Length"  )
+ma1HTF  = input(defval="SMA", title="  xMA 1 - HTF" , options=["SMA", "EMA", "WMA", "HullMA", "VWMA", "RMA", "TEMA"])
+len1HTF = input(50,   "     Length"  )
+ma2HTF  = input(defval="SMA", title="  xMA 2 - HTF" , options=["SMA", "EMA", "WMA", "HullMA", "VWMA", "RMA", "TEMA"])
+len2HTF = input(100,  "     Length"  )
+_2a_    = input(false, ">=< >=< [SELL/SHORT] >=< >=<")
+CLO     = input(cu,   "Pick your poison:", options=[notBuy, cu, clu, rsi, mcl, mcl0, sgl0])
+CH      = input(0,    " if RSI >")
+CL      = input(100,  " if RSI <")
+CH_HTF  = input(0,    " if RSI (HTF) >")
+CL_HTF  = input(100,  " if RSI (HTF) <")
+CX      = input(none, " Extra argument", options=[none, mcl, mcl0, sgl0, hisbr])
+CX2     = input(none, " Second argument", options=[none, mcl_HTF, mcl0HTF, sgl0HTF, cu_HTF, clu_HTF])
+_2b_    = input(false, ">=< [xMA settings (Sell/Short)] >=<")
+ma3     = input(defval="SMA", title="  xMA 3"       , options=["SMA", "EMA", "WMA", "HullMA", "VWMA", "RMA", "TEMA"])
+len3    = input(50,   "     Length"  )
+ma4     = input(defval="SMA", title="  xMA 4"       , options=["SMA", "EMA", "WMA", "HullMA", "VWMA", "RMA", "TEMA"])
+len4    = input(100,  "     Length"  )
+ma3HTF  = input(defval="SMA", title="  xMA 3 - HTF" , options=["SMA", "EMA", "WMA", "HullMA", "VWMA", "RMA", "TEMA"])
+len3HTF = input(50,   "     Length"  )
+ma4HTF  = input(defval="SMA", title="  xMA 4 - HTF" , options=["SMA", "EMA", "WMA", "HullMA", "VWMA", "RMA", "TEMA"])
+len4HTF = input(100,  "     Length"  )
+__3_    = input(false, ">=< >=< [RSI]  >=< >=< >=<")
+ler     = input(20 , "  RSI Length")
+__4_    = input(false, ">=< >=< [MACD] >=< >=< >=<")
+fst     = input(12, "  Fast Length")
+slw     = input(26, "  Slow Length")
+sgn     = input(9 , "  Signal Smoothing")
+sma_source = input(false, "Simple MA(Oscillator)")
+sma_signal = input(false, "Simple MA(Signal Line)")
+__5_    = input(false, ">=< >=< [HTF settings] >=< >=<")
+MA_HTF  = input("D", "  xMA HTF"  , type = input.resolution)
+RSI_HTF = input("D", "  RSI HTF"  , type = input.resolution)
+MACD_HTF= input("D", "  MACD HTF" , type = input.resolution)
+__6_    = input(false, ">=< >=< [SL/TP] >=< >=< >=<")
+SL      = input(10.0, title="  Stop Loss %"  ) / 100
+TP      = input(20.0, title="  Take Profit %") / 100
+ 
+SL_B    = strategy.position_avg_price * (1 - SL)
+TP_B    = strategy.position_avg_price * (1 + TP)
+SL_S    = strategy.position_avg_price * (1 + SL)
+TP_S    = strategy.position_avg_price * (1 - TP)
+// Limitation in time
+// (= inspired from a script of "Che_Trader")
+xox     = input(false, ">=< >=< [TIME] >=< >=< >=<")
+ystr1   = input(2010, "  Since Year" )
+ystp1   = input(2099, "  Till Year"  )
+mstr1   = input(1   , "  Since Month")
+mstp1   = input(12  , "  Till Month" )
+dstr1   = input(1   , "  Since Day"  )
+dstp1   = input(31  , "  Till Day"   )
+ 
+_Str1   = timestamp(ystr1, mstr1, dstr1,  1,  1)
+Stp1_   = timestamp(ystp1, mstp1, dstp1, 23, 59)
+TIME    = time >= _Str1 and time <= Stp1_ ? true : false
+////////////////////////////////////////////////////////////////////////////////////////////
+f_xma(type, len) => 
+  type == "SMA"    ?  sma(src,len) : 
+  type == "EMA"    ?  ema(src,len) : 
+  type == "WMA"    ?  wma(src,len) : 
+  type == "VWMA"   ? vwma(src,len) : 
+  type == "RMA"    ?  rma(src,len) :  
+  type == "HullMA" ?  wma(2*wma(src, len/2)-wma(src, len), round(sqrt(len))) : 
+  3 * (ema(src, len) - ema(ema(src, len), len)) + ema(ema(ema(src, len), len), len)
+_1     = f_xma(ma1   , len1   )
+_2     = f_xma(ma2   , len2   )
+_3     = f_xma(ma3   , len3   )
+_4     = f_xma(ma4   , len4   )
+_1b    = f_xma(ma1HTF, len1HTF)
+_2b    = f_xma(ma2HTF, len2HTF)
+_3b    = f_xma(ma3HTF, len3HTF)
+_4b    = f_xma(ma4HTF, len4HTF)
+_1_HTF = security(syminfo.tickerid, MA_HTF,  _1b  , lookahead = barmerge.lookahead_on)
+_2_HTF = security(syminfo.tickerid, MA_HTF,  _2b  , lookahead = barmerge.lookahead_on)
+_3_HTF = security(syminfo.tickerid, MA_HTF,  _3b  , lookahead = barmerge.lookahead_on)
+_4_HTF = security(syminfo.tickerid, MA_HTF,  _4b  , lookahead = barmerge.lookahead_on)
+cl_HTF = security(syminfo.tickerid, MA_HTF,  close, lookahead = barmerge.lookahead_on)
+////////////////////////////////////////////////////////////////////////////////////////////
+plot(ENT == co or ENT == cla ? _1 : na            , "xMA 1"    ,                    color.lime                                              )
+plot(ENT == co               ? _2 : na            , "xMA 2"    ,                    color.red                                               )
+plot(CLO == cu or CLO == clu ? _3 : na            , "xMA 3"    ,     _3 == _1     ? color.lime : color.yellow                               )
+plot(CLO == cu               ? _4 : na            , "xMA 4"    ,     _4 == _2     ? color.red  : color.blue  , 2, plot.style_line           )
+plot(EX2 == co_HTF or EX2 == cla_HTF ? _1_HTF : na, "xMA 1 HTF",                    color.lime               , 2, plot.style_line, false, 50)
+plot(EX2 == co_HTF                   ? _2_HTF : na, "xMA 2 HTF",                    color.red                , 2, plot.style_line, false, 50)
+plot(CX2 == cu_HTF or CX2 == clu_HTF ? _3_HTF : na, "xMA 3 HTF", _3_HTF == _1_HTF ? color.lime : color.yellow, 2, plot.style_line, false, 50)
+plot(CX2 == cu_HTF or CX2 == clu_HTF ? _3_HTF : na, "xMA 3 HTF", _3_HTF == _1_HTF ? color.lime : color.yellow, 2, plot.style_line, false, 50)
+plot(CX2 == cu_HTF                   ? _4_HTF : na, "xMA 4 HTF", _4_HTF == _2_HTF ? color.red  : color.blue  , 2, plot.style_line, false, 50)
+//plot(series, title, color, linewidth, style, trackprice, transp, histbase, offset, join, editable, show_last, display) → plot
+////////////////////////////////////////////////////////////////////////////////////////////
+// RSI
+rsi_       = rsi(src, ler)
+rsi_HTF    = security(syminfo.tickerid, RSI_HTF , rsi_  , lookahead = barmerge.lookahead_on)
+////////////////////////////////////////////////////////////////////////////////////////////
+// MACD
+fast_ma    = sma_source ? sma(src, fst)  : ema(src , fst)
+slow_ma    = sma_source ? sma(src, slw)  : ema(src , slw)
+macd       = fast_ma - slow_ma
+signal     = sma_signal ? sma(macd, sgn) : ema(macd, sgn)
+hist       = macd - signal
+macd_HTF   = security(syminfo.tickerid, MACD_HTF, macd  , lookahead = barmerge.lookahead_on)
+signal_HTF = security(syminfo.tickerid, MACD_HTF, signal, lookahead = barmerge.lookahead_on)
+////////////////////////////////////////////////////////////////////////////////////////////
+extra = 
+ EX  == none    ? true                   :
+ EX  == mch     ? macd >  signal         :
+ EX  == mch0    ? macd >  0              :
+ EX  == sgh0    ? signal >  0            :
+ EX  == hisbl   ? hist[1] < 0 
+ and    hist    > hist[1]                :
+ false
+cxtra = 
+ CX  == none    ? true                   :
+ CX  == mcl     ? macd   <= signal       :
+ CX  == mcl0    ? macd   <= 0            :
+ CX  == sgl0    ? signal <= 0            :
+ CX  == hisbr   ? hist[1] > 0 
+ and    hist    < hist[1]                :
+ false
+EXTRA = 
+ EX2 == none    ? true                   :
+ EX2 == mch_HTF ? macd_HTF >  signal_HTF :
+ EX2 == mch0HTF ? macd_HTF >  0          :
+ EX2 == sgh0HTF ? signal_HTF >  0        :
+ EX2 == co_HTF  ? _1_HTF >  _2_HTF       :
+ EX2 == cla_HTF ? cl_HTF >  _1_HTF       : 
+ false
+ 
+CXTRA =
+ CX2 == none    ? true                   :
+ CX2 == mcl_HTF ? macd_HTF <= signal_HTF :
+ CX2 == mcl0HTF ? macd_HTF <= 0          :
+ CX2 == sgl0HTF ? signal_HTF <= 0        :
+ CX2 == cu_HTF  ? _3_HTF <= _4_HTF       :
+ CX2 == clu_HTF ? cl_HTF <= _3_HTF       : 
+ false
+RSI = rsi_ > EH and rsi_ <= EL and rsi_HTF > EH_HTF and rsi_HTF <= EL_HTF
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+BUY = 
+ ENT == co    and TIME and extra and EXTRA and RSI ? _1     > _2      : 
+ ENT == cla   and TIME and extra and EXTRA and RSI ? src    > _1      : 
+ ENT == rsi   and TIME and extra and EXTRA         ? RSI              : 
+ ENT == mch   and TIME and extra and EXTRA and RSI ? macd   > signal  : 
+ ENT == mch0  and TIME and extra and EXTRA and RSI ? macd   > 0       : 
+ ENT == sgh0  and TIME and extra and EXTRA and RSI ? signal > 0       : 
+ na
+SELL = 
+ CLO == notBuy                                     ? not BUY          :                              
+ CLO == cu    and TIME and cxtra and CXTRA and RSI ? _3     <= _4     : 
+ CLO == clu   and TIME and cxtra and CXTRA and RSI ? src    <= _3     : 
+ CLO == rsi   and TIME and cxtra and CXTRA         ? RSI              :
+ CLO == mcl   and TIME and cxtra and CXTRA and RSI ? macd   <= signal : 
+ CLO == mcl0  and TIME and cxtra and CXTRA and RSI ? macd   <= 0      : 
+ CLO == sgl0  and TIME and cxtra and CXTRA and RSI ? signal <= 0      : 
+ na
+if BUY
+    if (Type == _S_)
+        strategy.close("[S]")
+    else
+        strategy.entry("[B]", strategy.long)
+if SELL
+    if (Type == _L_)
+        strategy.close("[B]")
+    else
+        strategy.entry("[S]", strategy.short)
+if SL_B
+    strategy.exit("[SL/TP]" , "[B]", stop= SL_B, limit= TP_B)
+if SL_S
+    strategy.exit("[SL/TP]" , "[S]", stop= SL_S, limit= TP_S)
+SLTP_long   = Type != _S_    and BUY [1]     and (low  <= SL_B [1] or high >= TP_B[1])
+SLTP_short  = Type != _L_    and SELL[1]     and (high >= SL_S [1] or low  <= TP_S[1])
+TP_long     = Type != _S_    and BUY [1]     and  high >= TP_B [1]
+TP_short    = Type != _L_    and SELL[1]     and  low  <= TP_S [1]
+close_long  = not SLTP_long  and Type == _L_ and  SELL and BUY [1]
+close_short = not SLTP_short and Type == _S_ and  BUY  and SELL[1]
+SLTP        = SLTP_long[1] or SLTP_short[1] 
+Long        = Type != _S_    and ((BUY       and not BUY[1] ) or (BUY  and SLTP)) and not close_short
+Short       = Type != _L_    and ((SELL      and not SELL[1]) or (SELL and SLTP)) and not close_long
+plotshape(series=Short           , title="Short"      , style=shape.triangledown, location=location.abovebar, color=color.orange, size=size.tiny )
+plotshape(series=Long            , title="Long"       , style=shape.triangleup  , location=location.belowbar, color=color.lime  , size=size.tiny )
+plotshape(series=SLTP_long       , title="SL/TP Long" , style=shape.xcross      , location=location.abovebar, color=color.lime  , size=size.tiny )
+plotshape(series=SLTP_short      , title="SL/TP Short", style=shape.xcross      , location=location.belowbar, color=color.red   , size=size.tiny )
+plotshape(series=close_long      , title="Close Long" , style=shape.square      , location=location.abovebar, color=color.lime  , size=size.tiny )
+plotshape(series=close_short     , title="Close Short", style=shape.square      , location=location.belowbar, color=color.red   , size=size.tiny )
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//                                                        Debugging                                                       //
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//plot = Type == _S_ and BUY ? 1 : Type != _S_ and BUY ? 2 : Type == _L_ and SELL ? -1 : Type != _L_ and SELL ? -2 :na
+//plot(plot)
+//plotchar(BUY, "", color=na)
+//plotchar(SL_B, "", color=na)
+//plotchar(SELL, "", color=na)
+//plotchar(SL_S, "", color=na)
+Expand (331 lines)

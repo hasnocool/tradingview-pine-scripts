@@ -1,0 +1,64 @@
+Script Name: ATR Stop Buy Strategy
+Author: phobo3s
+Description: This strategy trial is let you to giving sell and buy orders with ATR (average true range) and an coefficent for them. it is my first strategy work, needs to be upgraded. USE IT WITH YOUR OWN RISK. IT IS NOT EVEN GUARANTEED TO WORK.
+PineScript code:
+
+Pine Script™ strategy
+ATR Stop Buy Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © phobo3s
+//@version=4
+strategy("ATR Stop Buy Strategy",shorttitle="ATR-ST",initial_capital=1000, overlay = true, default_qty_type = strategy.percent_of_equity, pyramiding = 5, default_qty_value = 20, commission_type = strategy.commission.cash_per_order, commission_value = 1, calc_on_every_tick = true)
+daysBack = input(defval=120, title="Days Back", type=input.integer)
+sellCoeff = input(defval=1.5, title="Selling Coefficent For ATR", type=input.float, minval= 0.01, step=0.1)
+buyCoeff = input(defval=1.2, title = "Buying Coefficent For ATR", type=input.float, minval= 0.01, step=0.1)
+fromDate = timenow - (daysBack*24*60*60*1000)
+toDate = timenow 
+ATR = atr(14)
+stopLossPoint = ATR * sellCoeff
+buyPoint = ATR * buyCoeff
+StoplossLine =  close[1] - stopLossPoint[1]
+BuyLine = close[1] + buyPoint[1]
+if (high > BuyLine and time >= fromDate and time <= toDate )
+    strategy.entry("GG", strategy.long, comment="Gir")
+if (low < StoplossLine and strategy.position_avg_price < close and time >= fromDate and time <= toDate )
+    strategy.entry("GG", strategy.short, comment="Çık")
+//longFlags = close < StoplossLine
+//shortFlags = close > BuyLine
+//plotshape(shortFlags, style=shape.triangledown, location=location.abovebar, color=color.red)
+//plotshape(longFlags, style=shape.triangleup, location=location.belowbar, color=color.blue)
+plot(StoplossLine)
+plot(BuyLine)
+Expand (31 lines)

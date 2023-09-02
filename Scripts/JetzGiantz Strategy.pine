@@ -1,0 +1,69 @@
+Script Name: JetzGiantz Strategy
+Author: FXEngineering
+Description: The algorithm for this strategy was provided by JetzGiantz.
+
+It creates buy and sell signals based on the close and open prices of the previous 3 bars, and compares them to the lowest low, or highest high, between the last 3 and 50 bars.
+
+You can select the month and year you wish to backtest.
+You can enter the SL and TP values.
+
+There are no other inputs.
+PineScript code:
+
+Pine Script™ strategy
+JetzGiantz Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+//@version=4
+strategy("JetzGiantz Strategy", overlay=true)
+// Getting inputs
+StopTgt = input(10, minval=1, title="Stop Loss $")
+ProfTgt = input(100, minval=1, title="Profit Target $")
+//Filter backtest month and year
+startMonth = input(1, minval=1, maxval=12, title="Month")
+startYear = input(2021, minval=2000, maxval=2100, title="Year")
+//Filter funtion inputs
+//Calculations
+Low3 = lowest(low,3)
+Low50 = lowest(low,50)
+High3 = highest(high,3)
+High50 = highest(high,50)
+if (month>=startMonth and year>=startYear)
+    if(close[1] < open[1] and close > open and close > open[1] and (Low3 < Low50[1] or Low3 < Low50[2] or Low3 < Low50[3]))
+    strategy.order("BuyEntry", strategy.long, when=strategy.position_size == 0, comment="BuyEntry")
+if (month>=startMonth and year>=startYear)
+    if(close[1] > open[1] and close < open and close > open[1] and (High3 > High50[1] or High3 > High50[2] or High3 > High50[3]))
+    strategy.order("SellEntry", strategy.short, when=strategy.position_size == 0, comment="SellEntry")
+strategy.exit("bracket", loss=StopTgt, profit=ProfTgt, when=strategy.position_size > 0)
+strategy.exit("bracket", loss=StopTgt, profit=ProfTgt, when=strategy.position_size < 0)
+Expand (31 lines)

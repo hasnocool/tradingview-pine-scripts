@@ -1,0 +1,339 @@
+Script Name: SuperTrend Multi Time Frame Long and Short Trading Strategy
+Author: ranga_technologies
+Description: Hello All  
+
+This is non-repainting Supertrend Multi Time Frame script,  I got so many request on Supertrend with Multi Time Frame. This is for all of them ..I am making it open for all so you can change its coding according to your need.
+
+ How the Basic Indicator works 
+
+SuperTrend is one of the most common ATR based trailing stop indicators.
+
+In this version...
+PineScript code:
+
+Pine Script™ strategy
+SuperTrend Multi Time Frame Long and Short Trading Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ranga_trading
+//@version=5
+strategy(title='SuperTrend Multi Time Frame Long and Short Trading Strategy with Take Profit, Stop Loss and in build alerts V01', shorttitle='SuperTrend Multi Time Frame Long and Short Trading Strategy with Take Profit, Stop Loss and in build alerts V01 ', overlay=true, default_qty_value=60, initial_capital=2000, default_qty_type=strategy.percent_of_equity, pyramiding=0, process_orders_on_close=true)
+tf1 = input.timeframe('D', title='Timeframe 1')
+tf2 = input.timeframe('W', title='Timeframe 2')
+length = input(title='ATR Period', defval=22)
+mult = input.float(title='ATR Multiplier', step=0.1, defval=3.0)
+showLabels = input(title='Show Buy/Sell Labels ?', defval=true)
+useClose = input(title='Use Close Price for Extremums ?', defval=true)
+highlightState = input(title='Highlight State ?', defval=true)
+atr = mult * ta.atr(length)
+longStop = (useClose ? ta.highest(close, length) : ta.highest(length)) - atr
+longStopPrev = nz(longStop[1], longStop)
+longStop := close[1] > longStopPrev ? math.max(longStop, longStopPrev) : longStop
+shortStop = (useClose ? ta.lowest(close, length) : ta.lowest(length)) + atr
+shortStopPrev = nz(shortStop[1], shortStop)
+shortStop := close[1] < shortStopPrev ? math.min(shortStop, shortStopPrev) : shortStop
+var int dir = 1
+dir := close > shortStopPrev ? 1 : close < longStopPrev ? -1 : dir
+var color longColor = color.green
+var color shortColor = color.red
+longStopPlot = plot(dir == 1 ? longStop : na, title='Long Stop', style=plot.style_linebr, linewidth=2, color=color.new(longColor, 0))
+buySignal = dir == 1 and dir[1] == -1
+plotshape(buySignal ? longStop : na, title='Long Stop Start', location=location.absolute, style=shape.circle, size=size.tiny, color=color.new(longColor, 0))
+shortStopPlot = plot(dir == 1 ? na : shortStop, title='Short Stop', style=plot.style_linebr, linewidth=2, color=color.new(shortColor, 0))
+sellSignal = dir == -1 and dir[1] == 1
+plotshape(sellSignal ? shortStop : na, title='Short Stop Start', location=location.absolute, style=shape.circle, size=size.tiny, color=color.new(shortColor, 0))
+midPricePlot = plot(ohlc4, title='', style=plot.style_circles, linewidth=0, display=display.none, editable=false)
+longFillColor = highlightState ? dir == 1 ? longColor : na : na
+shortFillColor = highlightState ? dir == -1 ? shortColor : na : na
+fill(midPricePlot, longStopPlot, title='Long State Filling', color=longFillColor, transp=90)
+fill(midPricePlot, shortStopPlot, title='Short State Filling', color=shortFillColor, transp=90)
+// CE Function
+ce() =>
+    atr2 = mult * ta.atr(length)
+    longStop2 = (useClose ? ta.highest(close, length) : ta.highest(length)) - atr2
+    longStop2Prev = nz(longStop2[1], longStop2)
+    longStop2 := close[1] > longStop2Prev ? math.max(longStop2, longStop2Prev) : longStop2
+    shortStop2 = (useClose ? ta.lowest(close, length) : ta.lowest(length)) + atr2
+    shortStop2Prev = nz(shortStop2[1], shortStop2)
+    shortStop2 := close[1] < shortStop2Prev ? math.min(shortStop2, shortStop2Prev) : shortStop2
+    var int dir2 = 1
+    dir2 := close > shortStop2Prev ? 1 : close < longStop2Prev ? -1 : dir2
+    ce = dir2 == 1 ? longStop2 : shortStop2
+    [dir2, ce]
+[side, ce_plot] = ce()
+ce1_plot = request.security(syminfo.tickerid, tf1, ce_plot[1], barmerge.gaps_off, barmerge.lookahead_on)
+ce2_plot = request.security(syminfo.tickerid, tf2, ce_plot[1], barmerge.gaps_off, barmerge.lookahead_on)
+ce1 = request.security(syminfo.tickerid, tf1, side[1], barmerge.gaps_off, barmerge.lookahead_on)
+ce2 = request.security(syminfo.tickerid, tf2, side[1], barmerge.gaps_off, barmerge.lookahead_on)
+long = buySignal and ce1 > 0 and ce2 > 0
+short = sellSignal and ce1 < 0 and ce2 < 0
+tradeType = input.string('BOTH', title='What trades should be taken : ', options=['LONG', 'SHORT', 'BOTH'])
+// Position Management Tools
+pos = 0.0
+if tradeType == 'BOTH'
+    pos := long ? 1 : short ? -1 : pos[1]
+    pos
+if tradeType == 'LONG'
+    pos := long ? 1 : pos[1]
+    pos
+if tradeType == 'SHORT'
+    pos := short ? -1 : pos[1]
+    pos
+longCond = long and (pos[1] != 1 or na(pos[1]))
+shortCond = short and (pos[1] != -1 or na(pos[1]))
+plot(ce1_plot, title='Timeframe 1 CE', color=ce1 > 0 ? #008000 : #800000, linewidth=2)
+plot(ce2_plot, title='Timeframe 2 CE', color=ce2 > 0 ? color.green : color.red, linewidth=2)
+// EXIT FUNCTIONS //
+i_sl = input.float(5.0, title='Stop Loss %', minval=0, group='Trades')
+sl = i_sl > 0 ? i_sl / 100 : 99999
+long_entry = ta.valuewhen(longCond, close, 0)
+short_entry = ta.valuewhen(shortCond, close, 0)
+// Simple Stop Loss + 2 Take Profits
+sl_long = strategy.position_avg_price * (1 - sl)
+sl_short = strategy.position_avg_price * (1 + sl)
+// Position Adjustment
+long_sl = low < sl_long and pos[1] == 1
+short_sl = high > sl_short and pos[1] == -1
+if long_sl or short_sl
+    pos := 0
+    pos
+long_exit = sellSignal and pos[1] == 1
+short_exit = buySignal and pos[1] == -1
+if long_exit or short_exit
+    pos := 0
+    pos
+tp1percent = input.int(5, title='TP1 %', group='Trades') / 100.0
+tp2percent = input.int(10, title='TP2 %', group='Trades') / 100.0
+tp3percent = input.int(15, title='TP3 %', group='Trades') / 100.0
+tp1amt = input.int(10, title='TP1 Amount %', group='Trades')
+tp2amt = input.int(15, title='TP2 Amount %', group='Trades')
+tp3amt = input.int(20, title='TP3 Amount %', group='Trades')
+//  Strategy Backtest Limiting Algorithm
+i_startTime = input.time(defval=timestamp('01 Jun 2021 13:30 +0000'), title='Backtesting Start Time')
+i_endTime = input.time(defval=timestamp('30 Sep 2099 19:30 +0000'), title='Backtesting End Time')
+timeCond = time > i_startTime and time < i_endTime
+KeepLastPosition = input(false)
+// Make sure we are within the bar range, Set up entries and exit conditions
+strategy.entry('long', strategy.long, when=longCond == true and tradeType != 'SHORT' and timeCond)
+strategy.entry('short', strategy.short, when=shortCond == true and tradeType != 'LONG' and timeCond)
+var float Qty1 = na
+var float Qty2 = na
+var float Qty3 = na
+var float Qty4 = na
+if strategy.position_size == 0
+    equity_q = (strategy.initial_capital + strategy.netprofit) / close
+    Qty1 := equity_q * tp1amt / 100.0
+    Qty2 := equity_q * tp2amt / 100.0
+    Qty3 := equity_q * tp3amt / 100.0
+    Qty4 := equity_q - Qty1 - Qty2 - Qty3
+    Qty4
+strategy.exit('Exit1', qty=Qty1, stop=sl_long, limit=strategy.position_avg_price * (1 + tp1percent), when=strategy.position_size > 0)
+strategy.exit('Exit2', qty=Qty2, stop=sl_long, limit=strategy.position_avg_price * (1 + tp2percent), when=strategy.position_size > 0)
+strategy.exit('Exit3', qty=Qty3, stop=sl_long, limit=strategy.position_avg_price * (1 + tp3percent), when=strategy.position_size > 0)
+strategy.exit('Exit4', qty=Qty4, stop=sl_long, when=strategy.position_size > 0 and KeepLastPosition == false)
+strategy.close('long', when=long_exit, comment='CE Exit')
+strategy.exit('Exit1', qty=Qty1, stop=sl_short, limit=strategy.position_avg_price * (1 - tp1percent), when=strategy.position_size < 0)
+strategy.exit('Exit2', qty=Qty2, stop=sl_short, limit=strategy.position_avg_price * (1 - tp2percent), when=strategy.position_size < 0)
+strategy.exit('Exit3', qty=Qty3, stop=sl_short, limit=strategy.position_avg_price * (1 - tp3percent), when=strategy.position_size < 0)
+strategy.exit('Exit4', qty=Qty4, stop=sl_short, when=strategy.position_size < 0 and KeepLastPosition == false)
+strategy.close('short', when=short_exit, comment='CE Exit')
+plot(strategy.position_size > 0 ? strategy.position_avg_price * (1 + tp1percent) : na, color=color.new(color.green, 0), style=plot.style_linebr)
+plot(strategy.position_size > 0 ? strategy.position_avg_price * (1 + tp2percent) : na, color=color.new(color.green, 0), style=plot.style_linebr)
+plot(strategy.position_size > 0 ? strategy.position_avg_price * (1 + tp3percent) : na, color=color.new(color.green, 0), style=plot.style_linebr)
+plot(strategy.position_size > 0 ? sl_long : na, color=color.new(color.red, 0), style=plot.style_linebr)
+plot(strategy.position_size > 0 ? strategy.position_avg_price : na, color=color.new(color.gray, 0), style=plot.style_linebr)
+plot(strategy.position_size < 0 ? strategy.position_avg_price * (1 - tp1percent) : na, color=color.new(color.green, 0), style=plot.style_linebr)
+plot(strategy.position_size < 0 ? strategy.position_avg_price * (1 - tp2percent) : na, color=color.new(color.green, 0), style=plot.style_linebr)
+plot(strategy.position_size < 0 ? strategy.position_avg_price * (1 - tp3percent) : na, color=color.new(color.green, 0), style=plot.style_linebr)
+plot(strategy.position_size < 0 ? sl_short : na, color=color.new(color.red, 0), style=plot.style_linebr)
+plot(strategy.position_size < 0 ? strategy.position_avg_price : na, color=color.new(color.gray, 0), style=plot.style_linebr)
+Expand (189 lines)

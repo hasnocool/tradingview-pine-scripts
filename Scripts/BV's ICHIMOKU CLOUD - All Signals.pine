@@ -1,0 +1,209 @@
+Script Name: BV's ICHIMOKU CLOUD - All Signals
+Author: BVTradingJournal
+Description: hello traders, 
+
+With this script you will be able to test the different signals offered by the ichimoku cloud system. 
+ 
+ Crossover Tenkan Kijun
+Crossover Tenkan Kijun above Kumo
+Crossover Price Kijun 
+Crossover Price Kijun above Kumo
+Crossover Price Tenkan
+Crossover Prince Tenkan aboce Kumo
+Crossover price Kumo
+Kumo Color Change
+ 
+Remember to check the JPYPAIR...
+PineScript code:
+
+Pine Script™ strategy
+BV's ICHIMOKU CLOUD - All Signals
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © vuagnouxb
+//@version=4
+strategy("BV's ICHIMOKU CLOUD SIGNAL TESTER", overlay=true)
+// Signal imputs 
+signalChoice = input(title = "SIGNAL - Choose your signal", defval = "Tenkan/Kijun", options = ["Tenkan/Kijun", "Tenkan/Kijun+Kumo", "Price/Tenkan", "Price/Tenkan+Kumo", "Price/Kijun", "Price/Kijun+Kumo", "Price/Kumo", "Kumo Color"])
+JPYPair = input(type = input.bool, title = "ATR - Check if JPY Pair ", defval = false)
+//------------------------------------------------------------------------
+//----------               ICHIMOKU CLOUD Calculation          ----------- INPUT
+//------------------------------------------------------------------------
+conversionPeriods = input(9, minval=1, title="Conversion Line Periods"),
+basePeriods = input(26, minval=1, title="Base Line Periods")
+laggingSpan2Periods = input(52, minval=1, title="Lagging Span 2 Periods"),
+displacement = input(26, minval=1, title="Displacement")
+donchian(len) => avg(lowest(len), highest(len))
+conversionLine = donchian(conversionPeriods)
+baseLine = donchian(basePeriods)
+leadLine1 = avg(conversionLine, baseLine)
+leadLine2 = donchian(laggingSpan2Periods)
+plot(conversionLine, color=#0496ff, title="Conversion Line")
+plot(baseLine, color=#991515, title="Base Line")
+plot(close, offset = -displacement + 1, color=#459915, title="Lagging Span")
+p1 = plot(leadLine1, offset = displacement - 1, color=color.green,
+ title="Lead 1")
+p2 = plot(leadLine2, offset = displacement - 1, color=color.red,
+ title="Lead 2")
+fill(p1, p2, color = leadLine1 > leadLine2 ? color.green : color.red)
+kumoHigh = max(leadLine1[displacement-1], leadLine2[displacement-1])
+kumoLow = min(leadLine1[displacement-1], leadLine2[displacement-1])
+// -- Trade entry signals
+continuationSignalLong = signalChoice == "Tenkan/Kijun" ? crossover(conversionLine, baseLine) :
+   signalChoice == "Tenkan/Kijun+Kumo" ? crossover(conversionLine, baseLine) and close > kumoHigh : 
+   signalChoice == "Price/Tenkan" ? crossover(close, conversionLine) : 
+   signalChoice == "Price/Tenkan+Kumo" ? crossover(close, conversionLine) and close > kumoHigh :
+   signalChoice == "Price/Kijun" ? crossover(close, baseLine) :
+   signalChoice == "Price/Kijun+Kumo" ? crossover(close, baseLine) and close > kumoHigh : 
+   signalChoice == "Price/Kumo" ? crossover(close, kumoHigh) :
+   signalChoice == "Kumo Color" ? crossover(leadLine1, leadLine2) :
+   false
+   
+continuationSignalShort = signalChoice == "Tenkan/Kijun" ? crossunder(conversionLine, baseLine) :
+   signalChoice == "Tenkan/Kijun+Kumo" ? crossunder(conversionLine, baseLine) and close < kumoLow : 
+   signalChoice == "Price/Tenkan" ? crossunder(close, conversionLine) : 
+   signalChoice == "Price/Tenkan+Kumo" ? crossunder(close, conversionLine) and close < kumoLow :
+   signalChoice == "Price/Kijun" ? crossunder(close, baseLine) :
+   signalChoice == "Price/Kijun+Kumo" ? crossunder(close, baseLine) and close < kumoLow : 
+   signalChoice == "Price/Kumo" ? crossunder(close, kumoLow) :
+   signalChoice == "Kumo Color" ? crossunder(leadLine1, leadLine2) :
+   false
+longCondition = continuationSignalLong
+shortCondition = continuationSignalShort
+//------------------------------------------------------------------------
+//----------             ATR MONEY MANAGEMENT                 ------------
+//------------------------------------------------------------------------
+SLmultiplier = input(title = "ATR - Stop Loss Multiplier", type = input.float, defval = 1.5, step = 0.1)
+TPmultiplier = input(title = "ATR - Take Profit Multiplier", type = input.float, defval = 1.0, step = 0.1)
+pipAdjuster = JPYPair ? 1000 : 100000
+ATR = atr(14) * pipAdjuster // 1000 for jpy pairs : 100000
+SL = ATR * SLmultiplier
+TP = ATR * TPmultiplier
+//------------------------------------------------------------------------
+//----------                  TIME FILTER                     ------------
+//------------------------------------------------------------------------
+YearOfTesting = input(title = "Time - How many years of testing ?" , type = input.integer, defval = 3)
+_time = 2020 - YearOfTesting
+timeFilter = (year > _time) 
+//------------------------------------------------------------------------
+//---------                 ENTRY FUNCTIONS                    ----------- INPUT
+//------------------------------------------------------------------------
+if (longCondition and timeFilter)  
+    strategy.entry("Long", strategy.long)
+if (shortCondition and timeFilter) 
+    strategy.entry("Short", strategy.short)
+    
+//------------------------------------------------------------------------
+//---------                 EXIT  FUNCTIONS                    -----------
+//------------------------------------------------------------------------
+strategy.exit("ATR", from_entry = "Long", profit = TP, loss = SL)  
+strategy.exit("ATR", from_entry = "Short", profit = TP, loss = SL)  
+Expand (108 lines)

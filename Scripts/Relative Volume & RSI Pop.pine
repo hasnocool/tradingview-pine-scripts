@@ -1,0 +1,93 @@
+Script Name: Relative Volume & RSI Pop
+Author: gary_trades
+Description: This is a basic idea/script designed to take a breakout trade by taking advantage of volume spikes when price/strength is extended (either long or short).
+
+The script only utilises two indicators, the Relative Volume (RV) and the Relative Strength Index (RSI). The script allows the user to select a RSI value between 69 up to 100 for a long trade and between 35...
+PineScript code:
+
+Pine Script™ strategy
+Relative Volume & RSI Pop
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © gary_trades
+//This script is a basic concept to catch breakout moves utilising a spike in relative volume when the RSI is high (for longs) or when the RSI is low (for shorts).
+//Drawdown is typically low as it exits out of the trade once the RSI returns back to "normal levels".
+//@version=4
+strategy(title="Relative Volume & RSI Pop", shorttitle="VOL & RSI Pop", overlay=false, precision=2, margin_long=100, margin_short=100)
+//RSI
+RSIlength = input(14, title="RSI Period")
+RSItop = input(70, title="RSI buy", minval= 69, maxval=100)
+RSIbottom = input(35, title="RSI short", minval= 0, maxval=35)
+price = close
+vrsi = rsi(price, RSIlength)
+RSIco = crossover(vrsi, RSItop)
+RSIcu = crossunder(vrsi, RSIbottom)
+plot(vrsi, "RSI", color=color.purple)
+band1 = hline(70, "Upper Band", color=#C0C0C0)
+bandm = hline(50, "Middle Band", color=color.new(#C0C0C0, 50))
+band0 = hline(30, "Lower Band", color=#C0C0C0)
+fill(band1, band0, color=color.purple, transp=90, title="Background")
+//RELATIVE VOLUME
+RVOLlen = input(14, minval=1, title="RV Period")
+av = sma(volume, RVOLlen)
+RVOL = volume / av
+RVOLthreshold = input(1.5,title="RV Threshold", minval=0.5, maxval=10)
+//TRADE TRIGGERS
+LongCondition = RSIco and RVOL > RVOLthreshold
+CloseLong = vrsi < 69
+ShortCondition = RSIcu and RVOL > RVOLthreshold
+CloseShort = vrsi > 35
+if (LongCondition)
+    strategy.entry("Long", strategy.long)
+    
+strategy.close("Long", when = CloseLong)    
+if (ShortCondition)
+    strategy.entry("Short", strategy.short)
+    
+strategy.close("Short", when = CloseShort)   
+Expand (45 lines)

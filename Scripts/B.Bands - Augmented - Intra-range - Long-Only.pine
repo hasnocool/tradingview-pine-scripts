@@ -1,0 +1,328 @@
+Script Name: B.Bands - Augmented - Intra-range - Long-Only
+Author: JCGMarkets
+Description: Here you have the essential trading engine based on Bollinger Bands .
+The idea behind is to trade the intra-range of the bands.
+
+How is going to work?
+ 
+  Define which Bollinger Bands we want to use. Classic Bollinger Bands or Augmented Bollinger Bands . Without selecting, the algorithm doesn't show a strategy.
+  Define the length of the Moving Average and the...
+PineScript code:
+
+Pine Script™ strategy
+B.Bands | Augmented | Intra-range | Long-Only
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © JCGMarkets 
+//@version=5
+strategy("B.Bands | Augmented | Intra-range | Long-Only", shorttitle = "BB|A|IR|L", initial_capital=1000, commission_value=0.075, slippage = 0, overlay = true)
+// TODO stop loss plot add short
+// Control Panel ============================================================================================================================================================
+//Technical Indicators Data
+show_simp   = input.bool(true, title="Simple Bollinger Bands ", inline='1', group="Strategy System")
+show_augm   = input.bool(false, title="Augmented Bollinger Bands", inline='1', group="Strategy System",tooltip='Select Bollinger Band Indicator to trade Simple or Augmented') 
+periods     = input.int(20, title="Periods", minval = 2, step = 1,inline='2', group="Technical Inputs")
+std         = input.float(2, title="Std", minval=0.1 , step = 0.1, group="Technical Inputs",inline='2', tooltip='Technical inputs for indicator calculation, Periods for MA and Standard Deviation')
+// Strategy data
+entry_source    = input(close, title="Entry source", group="Strategy Inputs", inline='3')
+exit_source     = input(high, title="Exit source", group="Strategy Inputs", inline='3',tooltip='For entry: Activate signal if the source lies below (for Long) or above (for Short). For exit: When price reach target selected')
+max_spread_bb   = input.float(99999.0, title="Max Spread Tolerance Beetween Bands", step=0.1, group="Strategy Inputs",tooltip='Max. Tolerance beetween lower and upper band to allow trade for range systems')
+// Profit
+take_profit     = input.string("opposite", title = "Profit to band:", inline='4', options = ["middle", "opposite"], group="Profit Target")
+sell_profit     = input(false, title="Only sell in profit", group="Profit Target", inline='4', tooltip='Sell only if position is on profit, unless Stop Loss active')
+// Risk Management
+stop_loss       = input.float(3.00, title="Stop Loss %", inline='5',  step=0.05, group="Risk Management")
+isStopLoss      = input(true, 'Implement Stop Loss?', inline='5', group="Risk Management", tooltip='Activate Stop Loss')
+stop_perc       = input.float(6.00, title="Trailing %", step=0.125, inline='6', group="Risk Management") * 0.01
+trailing        = input(false, title="Implement trailing stop?",inline='6', group="Risk Management")
+// Position Management
+riskPerc   = input.float(title="% of available capital", maxval=100 , inline='7', group='Position Size', defval=5, step=0.25, tooltip='Use a % of the total capital selected for strategy')
+usePosSize = input.bool(title="Limit strategy capital?", defval=false, inline='7', group='Position Size', tooltip='If activated, only uses the percentage of capital selected from the properties tab. Default 1000$')
+// Backtest Range 
+start   = input.time(timestamp("2019-11-01T00:00:00"),inline='9', title="Starting Date",group="BACKTEST RANGE" )
+end     = input.time(timestamp("2023-12-12T00:00:00"), inline='9',title="Ending Date",group="BACKTEST RANGE",tooltip='Select the range for backtest and live strategy')
+// Helper Functions ============================================================================================================================================================
+// Date Condition
+In_date() => 
+    from_date = time >= start
+    to_date = time <= end
+    from_date and to_date
+position = usePosSize ? math.round((strategy.equity * (riskPerc / 100) / close) , 6) : math.round((strategy.equity / close) , 6)
+in_position = strategy.position_size > 0 
+// Initialize variables ========================================================================================================================================================
+var SL = 0.0
+var SLT= 0.0
+SLT := if in_position and In_date()
+    stop_inicial = entry_source * (1 - stop_perc)
+    math.max(stop_inicial, SLT[1])
+else
+    0
+slts = (low <= SLT) and (trailing == true)
+//Simple BB Calculation -> adapt if needed with different std for upper-lower, sma-ema, etc 
+middle_sim = ta.sma(close, periods)
+//Augmented BB Calculation -> adapt if needed with different std for upper lower, etc
+middle_augm  = ta.ema(close, periods)
+middle_upp = ta.ema(high, periods)
+middle_low = ta.ema(low, periods)
+//Multiplier
+dev      = ta.stdev(close, periods) * std
+//Upper & Lower Bands
+upper = (middle_sim + dev)
+lower = (middle_sim - dev)
+//Augmented Bands
+upper_augm = (middle_upp + dev)
+lower_augm = (middle_low - dev)
+//Bands Spread
+spread   = upper - lower
+spread_augm   = upper_augm - lower_augm
+//Trading Conditions 
+entry_long = (entry_source <= lower) and (spread < max_spread_bb)
+entry_long_augm = (entry_source <= lower_augm) and (spread_augm < max_spread_bb)
+// Simple Bollinger
+if (not in_position and show_simp and In_date())
+    if entry_long
+        // Trigger buy order
+        strategy.entry("Entry", strategy.long, qty = position )
+        SL := close * (1 - (stop_loss / 100)) // You could determine wether or not implement stop loss with bool input and if condition here.
+if in_position and show_simp and not sell_profit and In_date()
+    //Exits if not sell in profit
+    if take_profit == "middle" 
+        strategy.exit("Target", "Entry", limit = middle_sim, stop =  isStopLoss ? SL: na, comment="Exit")
+    if take_profit == "opposite"
+        strategy.exit("Target", "Entry", limit = upper, stop =  isStopLoss ? SL :na , comment="Exit")    
+if in_position and show_simp and sell_profit and In_date()
+    //Exits if sell in profit
+    if take_profit == "middle" 
+        strategy.exit("Target", "Entry", limit = (strategy.openprofit > 0 ? middle_sim: na), stop =  isStopLoss ? SL: na, comment="Exit")
+    if take_profit == "opposite"
+        strategy.exit("Target", "Entry", limit = (strategy.openprofit > 0 ? upper: na), stop =  isStopLoss ? SL : na, comment="Exit")    
+if in_position and show_simp and slts and In_date()
+    //Trailing activation
+    strategy.close("Entry", comment="SLT")
+if not In_date()
+    //Exit due out of date range
+    strategy.close("Entry", comment="Out of date range")
+// Augmented Bollinger Conditions
+if (not in_position and show_augm and In_date()) 
+    if entry_long_augm
+        // Trigger buy order
+        strategy.entry("Entry_A", strategy.long, qty = position )
+        SL := close * (1 - (stop_loss / 100) )
+if in_position and show_augm and not sell_profit and In_date()
+    //Exits and not sell in profit
+    if take_profit == "middle"
+        strategy.exit("Target", "Entry_A", limit = middle_augm, stop =  isStopLoss ? SL : na, comment="Exit")
+    if take_profit == "opposite"
+        strategy.exit("Target", "Entry_A", limit = upper_augm, stop =  isStopLoss ? SL : na, comment="Exit")            
+        
+if in_position and show_augm and sell_profit and In_date() 
+    //Exit only in profit
+    if take_profit == "middle"
+        strategy.exit("Target", "Entry_A", limit = (strategy.openprofit > 0 ? middle_augm:na), stop =  isStopLoss ? SL : na, comment="Exit")
+    if take_profit == "opposite"
+        strategy.exit("Target", "Entry_A", limit = (strategy.openprofit > 0 ? upper_augm: na) , stop =  isStopLoss ? SL : na, comment="Exit") 
+if in_position  and show_augm and slts and In_date()
+    //Trigger trailing
+    strategy.close("Entry_A", comment="SLT")
+    
+if not In_date()
+    //Out of date trigger
+    strategy.close("Entry_A", comment= "Out of date range")
+// Plotting ==========================================================================================================================
+plot(in_position ? SL > 0 ? SL : na : na , style = plot.style_circles, color = color.red, title = "Stop Loss")
+plot(in_position ? trailing ? SLT > 0 ? SLT : na : na : na , style = plot.style_circles, color = color.blue, title = "Trailing Stop" )
+s = plot(show_simp ? upper : na , color = color.aqua, title='Simple Upper Bollinger Band')
+plot(show_simp ? middle_sim : na , color=color.red, title='Simple Moving Average')
+i = plot(show_simp ? lower : na , color = color.aqua, title='Simple Lower Bollinger Band')
+fill(s,i, color=color.new(color.aqua,90))
+plot(show_augm ? middle_augm : na , color=color.blue, title='Augmented Moving Average')
+s_a = plot( show_augm ? upper_augm : na, color=color.orange, title='Augmented Upper Bollinger Band')
+i_a = plot( show_augm ? lower_augm : na, color= color.orange, title='Simple Lower Bollinger Band')
+fill(s_a,i_a, color=color.new(color.orange, 90))
+Expand (186 lines)

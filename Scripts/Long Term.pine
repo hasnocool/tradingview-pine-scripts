@@ -1,0 +1,151 @@
+Script Name: Long Term
+Author: dhimantshah23
+Description: The Strategy is to buy based on Stan which is long term strategy on stocks. This works on 30WEEK And RSI indicator which helps to understand when to enter stock and when not to.
+
+Additionally due to fast moving trades, added logic of crossover of close price above 50DMA
+PineScript code:
+
+Pine Script™ strategy
+Long Term
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+//@version=4
+//Relative Strength
+strategy("Stan my man", overlay=true)
+comparativeTickerId = input("NSE", type=input.symbol, title="Comparative Symbol")
+l = input(50, type=input.integer, minval=1, title="Period")
+baseSymbol = security(syminfo.tickerid, timeframe.period, close)
+comparativeSymbol = security(comparativeTickerId, timeframe.period, close)
+hline(0, color=color.black, linestyle=hline.style_dotted)
+res = baseSymbol / baseSymbol[l] /(comparativeSymbol / comparativeSymbol[l]) - 1
+//plot(res, title="RS", color=#1155CC)
+fastPeriod = input(title="Fast MA", type=input.integer, defval=50)
+slowPeriod = input(title="Slow MA", type=input.integer, defval=150)
+fastestperiod = input(title="Fastest MA", type=input.integer, defval=20)
+vol1 = sma(volume,20)
+ema1 = ema(close, 150)
+h1 = highest(high[1],50)
+fastEMA = ema(close, fastPeriod)
+slowEMA = ema(close, slowPeriod)
+fastestEMA = ema(close, fastestperiod)
+//trade c onditions 
+selltradecondition1  = close< 0.95 * fastEMA 
+selltradecondition2  = close< 0.90 * close[1]
+selltradecondition3  = close > 1.5 * avg(close[1],close[2],close[3],close[4],close[5]) 
+selltradecondition4  = close < fastestEMA and close < fastEMA
+//volumeCondition = selltradecondition2 ? 0 : volume> 1.5*vol1
+volumeCondition = volume> 1.5*vol1
+volumeCondition1 = volume> 2*vol1
+buytradecondition2 = close >slowEMA and res>0 and (volumeCondition) and close > h1
+buytradecondition1 = close > fastEMA  and volumeCondition
+buytradecondition3 = close > fastestEMA and volumeCondition1
+//strategy to buy 
+if(buytradecondition1)
+    strategy.entry("long",strategy.long,alert_message ="Seems ready to Buy")
+//  alert("Buy Alert Price (" + tostring(close) + ") crossed over Slow moving average",alert.freq_all)
+//  ourlabel = label.new(bar_index, y=na, text="BUY",yloc=yloc.belowbar, color=color.green,textcolor=color.white)
+    
+if(buytradecondition2)
+    strategy.entry("long",strategy.long,alert_message ="Seems ready to Buy")
+//    alert("Buy Alert Price (" + tostring(close) + ") crossed over fast moving average",alert.freq_all)
+if(buytradecondition3)
+    strategy.entry("20DMA",strategy.long,alert_message ="Seems ready to Buy")
+//    alert("Buy Alert Price (" + tostring(close) + ") crossed over 20 DMA ",alert.freq_all)    
+    
+//Strategy to sell     
+if (selltradecondition1)
+    strategy.close("long",alert_message ="Seems ready to Sell")
+    //strategy.close_all()
+//    alert("Sell Alert Price (" + tostring(close) + ") crossed down fast moving average",alert.freq_all)
+    
+if (selltradecondition2)
+    //strategy.close("long",alert_message ="Seems ready to Sell")
+    strategy.close("long",alert_message ="Seems ready to Sell")
+//    alert("Sell Alert Price (" + tostring(close) + ") crossed down 10% below open price  ",alert.freq_all)
+    
+if (selltradecondition3)
+    //strategy.close("long",alert_message ="Seems ready to Sell")
+    strategy.close("long",alert_message ="Seems ready to Sell")
+//    alert("Sell Alert Price (" + tostring(close) + ") Parabloc price above 1 week close price  ",alert.freq_all)
+if (selltradecondition4)
+    //strategy.close("long",alert_message ="Seems ready to Sell")
+    strategy.close("20DMA",alert_message ="Seems ready to Sell")
+//    alert("Sell Alert Price (" + tostring(close) + ") Parabloc price below 20 DMA  ",alert.freq_all)
+plot(fastEMA, color=color.navy)
+plot(slowEMA, color=color.fuchsia)
+plot(fastestEMA, color=color.green)
+Expand (75 lines)

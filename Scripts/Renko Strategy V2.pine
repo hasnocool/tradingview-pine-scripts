@@ -1,0 +1,188 @@
+Script Name: Renko Strategy V2
+Author: dman103
+Description: Version 2.0 of my previous renko strategy using Renko calculations, this time without using Tilson T3 and without using security for renko calculations to remove repaint!
+Seems to work nicely on cryptocurrencies on higher time frames.
+
+== Description ==
+Strategy gets Renko values and uses renko close and open to trigger signals.
+Base on these results the strategy...
+PineScript code:
+
+Pine Script™ strategy
+Renko Strategy V2
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+//@version=5
+// This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License https://creativecommons.org/licenses/by-sa/4.0/
+// © dman103
+strategy(title='Renko Strategy V2', shorttitle='Renko Strategy V2', overlay=true, precision=3, commission_value=0.025, default_qty_type=strategy.cash, default_qty_value=10000, initial_capital=10000)
+// Version 2.0 of my previous renko strategy using Renko calculations, this time without Tilson T3 and without using security with Renko to remove repaints!
+// Seems to work nicely on cryptocurrencies on higher time frames.
+//== Description ==
+// Strategy gets Renko values and uses renko close and open to trigger signals.
+// Base on these results the strategy triggers a long and short orders, where green is uptrending and red is downtrending.
+// This Renko version is based on ATR, you can Set ATR (in settings) to adjust it.
+// == Notes ==
+// Supports alerts.
+// Supports backtesting time ranges.
+// Shorts are disabled by default (can be enabled in settings).
+// Link to previous Renko strategy V1: https://www.tradingview.com/script/KeWBWLGT-Renko-Strategy-T3-V1/
+//
+// Stay tuned for version V3 in the future as i have an in progress prototype, Follow to get updated: https://www.tradingview.com/u/dman103/#published-scripts
+// === INPUT BACKTEST RANGE ===
+i_startTime = input.time(defval=timestamp('01 Jan 2020 00:00 +0000'), title='Start Time', group='Date Range')
+i_endTime = input.time(defval=timestamp('31 Dec 2023 23:59 +0000'), title='End Time', group='Date Range')
+time_cond = time >= i_startTime and time <= i_endTime
+allow_short = input.bool(false, title='Allow Short', group='Settings')
+atr_len = input.int(10, 'ATR Length', group='Settings')
+atr = ta.atr(atr_len)
+// Thanks to renko snippet calculations from @RafaelZioni  https://www.tradingview.com/script/2vKhpfVH-Renko-XZ/
+Renko1() =>
+    p1 = 0.0
+    p1 := close > nz(p1[1]) + atr ? nz(p1[1]) + atr : close < nz(p1[1]) - atr ? nz(p1[1]) - atr : nz(p1[1])
+    p1
+Renko2() =>
+    p2 = 0.0
+    Br_1 = Renko1()
+    p2 := Renko1() != Renko1()[1] ? Br_1[1] : nz(p2[1])
+    p2
+Renko3() =>
+    p3 = 0.0
+    p3 := open > nz(p3[1]) + atr ? nz(p3[1]) + atr : open < nz(p3[1]) - atr ? nz(p3[1]) - atr : nz(p3[1])
+    p3
+Renko4() =>
+    open_v = 0.0
+    Br_2 = Renko3()
+    open_v := Renko3() != Renko3()[1] ? Br_2[1] : nz(open_v[1])
+    open_v
+o2 = Renko4()
+c2 = Renko1()
+l2 = low
+h2 = high
+//=== Plotting ===
+crossPlot = 0.0
+if o2 < c2
+    crossPlot := o2
+    crossPlot
+else
+    crossPlot := o2
+    crossPlot
+// Used to make sure that even if o2 and c2 are equal, the result (short or long) will be based on previous trend.
+bars_since_up = ta.barssince(o2 < c2)
+bars_since_down = ta.barssince(o2 > c2)
+go_long = bars_since_up < bars_since_down and o2 < c2
+go_short = bars_since_up > bars_since_down and o2 > c2
+plotColor = go_long ? color.green : go_short ? color.red : color.white
+plot(crossPlot, color=plotColor, style=plot.style_circles, linewidth=2, join=true)
+changeCond = plotColor != plotColor[1]
+//=== Buy/Sell ===
+closeStatus = strategy.openprofit > 0 ? 'win' : 'lose'
+long_entry = plotColor == color.green and time_cond and changeCond
+long_exit_entry = plotColor == color.red  //or (allow_alternative_sl and close < low_result  )
+short_entry = plotColor == color.red and time_cond and changeCond
+short_exit_entry = plotColor == color.green  // or (allow_alternative_sl and close > high_result )
+strategy.entry('long', strategy.long, when=long_entry)
+strategy.close('long', when=long_exit_entry, comment=closeStatus)
+if allow_short
+    strategy.entry('short', strategy.short, when=short_entry)
+strategy.close('short', when=short_exit_entry, comment=closeStatus)
+//=== Alerts ===
+if long_entry
+    alert('Long Entry at price (' + str.tostring(close) + ')', alert.freq_once_per_bar)
+if allow_short and short_entry
+    alert('Short Entry at price (' + str.tostring(close) + ')', alert.freq_once_per_bar)
+Expand (95 lines)

@@ -1,0 +1,354 @@
+Script Name: RSI Strategy Professional Хомячело
+Author: UkraineHamster
+Description: Хз чим відрізняється. Його лекго використовувати, треба підшаманити пару параметрів і все. Використовую для ринку крипти і норм трейдиться. Індикатор дає сигнал і я зразу залітаю на всю котлєту куди він каже.
+PineScript code:
+
+Pine Script™ strategy
+RSI Strategy Professional Хомячело
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+//© профешинил хомікадзе
+//@version = 4
+//BaDuL - Бадиль - Жирний - Хомікаде - Штемп - Кєнт - SmallDickClub
+strategy("RSI Strategy Professional Хомячело TF: 2H", overlay=false)
+//RSI parameters
+length = input(14)
+overSold = input(28)
+overBought = input(67)
+//Margin and Shoulder
+possize = input(defval = 250.0, title = "Margin per 1 order NOTE: set ''Order size'' in ''Properties'' (your margin per 1 order * your shoulder)")
+posp = input(defval = 3.0, title = "Shoulder (Leverage)")
+//Strategy 2 - LONG LongOverSold LongOverBought
+LongOverSold = input(37)
+LongOverBought = input(70)
+//Strategy 2 - SHORT ShortOverSold ShortOverBought
+ShortOverSold = input(30)
+ShortOverBought = input(66)
+//Else
+price = open
+rsi = rsi(price, length)
+band1 = hline(overSold, "Over Sold", color=#ffeb3b, linestyle=hline.style_solid)
+band0 = hline(overBought, "Over Bought", color=#2962ff, linestyle=hline.style_solid)
+//RSI plot
+plot(rsi, "RSI", color=color.white) //RSI line color
+fill(band1, band0, color=color.black, transp=100, title="Background") //RSI look
+src = close // open/close position when bar closes
+a = sma(src, 1) //Actual price
+aaa = strategy.opentrades + 1 //Open trades
+//When the current price is less than the average entry price  n  then the margin will be added to the current position 
+n = input(defval = 1250.0, title = "AvgPositionPrice minus number (To add margin)") //0.0576923077
+//trend type
+bull = input(defval = false, title = "Bull market (Trend move up)")
+bear = input(defval = false, title = "Bear market (Trend move down)")
+//Strategy 1
+//Buy Signal
+if (bull == 0 and bear == 0 and bar_index > 4400)
+    buysignal = crossover(rsi, overSold) and aaa == 1
+    buysignal2 = crossover(rsi, overSold) and (a < (strategy.position_avg_price - n)) and aaa == 2
+    buysignal3 = crossover(rsi, overSold) and (a < (strategy.position_avg_price - n*2)) and aaa == 3
+    buysignal4 = crossover(rsi, overSold) and (a < (strategy.position_avg_price - n*3)) and aaa == 4
+    
+    if (not na(rsi))
+        if(buysignal)
+            strategy.entry("LONG", strategy.long, comment = tostring(a) + "\n(" + tostring(aaa) + ")1")
+        if(buysignal2)
+            strategy.entry("LONG", strategy.long, comment = tostring(a) + "\n(" + tostring(aaa) + ")2")
+        if(buysignal3)
+            strategy.entry("LONG", strategy.long, comment = tostring(a) + "\n(" + tostring(aaa) + ")3")
+        if(buysignal4)
+            strategy.entry("LONG", strategy.long, comment = tostring(a) + "\n(" + tostring(aaa) + ")4")
+//Sell Signal
+if (bear == 0 and bull == 0 and bar_index > 4400)
+    sellsignal = crossunder(rsi, overBought) and aaa == 1
+    sellsignal2 = crossunder(rsi, overBought) and (a > (strategy.position_avg_price + n)) and aaa == 2
+    sellsignal3 = crossunder(rsi, overBought) and (a > (strategy.position_avg_price + n*2)) and aaa == 3
+    sellsignal4 = crossunder(rsi, overBought) and (a > (strategy.position_avg_price + n*3)) and aaa == 4
+    
+    if (not na(rsi))
+        if(sellsignal)
+            strategy.entry("SHORT", strategy.short, comment = tostring(a) + "\n(" + tostring(aaa) + ")")
+        if(sellsignal2)
+            strategy.entry("SHORT", strategy.short, comment = tostring(a) + "\n(" + tostring(aaa) + ")")
+        if(sellsignal3)
+            strategy.entry("SHORT", strategy.short, comment = tostring(a) + "\n(" + tostring(aaa) + ")")
+        if(sellsignal4)
+            strategy.entry("SHORT", strategy.short, comment = tostring(a) + "\n(" + tostring(aaa) + ")")
+//Long haha 
+    buysignal5 = crossover(rsi, 10)
+    buysignal6 = crossover(rsi, 17)
+    if(buysignal5 and bear == 0)
+        strategy.entry("LONG", strategy.long, comment = "F*cking sh*t, TAKE LONG ON A FULL CUTLET!\n" + tostring(a))
+    if(buysignal6 and bear == 0)
+        strategy.entry("LONG", strategy.long, comment = "Oh my God, TAKE LONG ON A HALF CUTLET!\n" + tostring(a))
+//Short haha 
+    sellsignal5 = crossunder(rsi, 85)
+    sellsignal6 = crossunder(rsi, 90)    
+    if(sellsignal5 and bull == 0)
+        strategy.entry("SHORT", strategy.short, comment = "Oh my God, TAKE SHORT ON A HALF CUTLET!\n" + tostring(a))
+    if(sellsignal6 and bull == 0)
+        strategy.entry("SHORT", strategy.short, comment = "F*cking sh*t, TAKE SHORT ON A FULL CUTLET!\n" + tostring(a))
+   
+   
+  
+//Strategy 2 (Bear or Bull trend)
+//Buy Signal
+if (bull == 1 or (bear == 1 and bull == 1 and bar_index > 4400))
+    buysignal = crossover(rsi, LongOverSold) and aaa == 1
+    buysignal2 = crossover(rsi, LongOverSold) and (a < (strategy.position_avg_price - n)) and aaa == 2
+    buysignal3 = crossover(rsi, LongOverSold) and (a < (strategy.position_avg_price - n*2)) and aaa == 3
+    buysignal4 = crossover(rsi, LongOverSold) and (a < (strategy.position_avg_price - n*3)) and aaa == 4
+    buysignal5 = crossover(rsi, LongOverSold) and (a < (strategy.position_avg_price - n*4)) and aaa == 5
+    
+    if (not na(rsi))
+        if(buysignal)
+            strategy.entry("LONG", strategy.long, comment = tostring(a) + "\n(" + tostring(aaa) + ")")
+        if(buysignal2)
+            strategy.entry("LONG", strategy.long, comment = tostring(a) + "\n(" + tostring(aaa) + ")")
+        if(buysignal3)
+            strategy.entry("LONG", strategy.long, comment = tostring(a) + "\n(" + tostring(aaa) + ")")
+        if(buysignal4)
+            strategy.entry("LONG", strategy.long, comment = tostring(a) + "\n(" + tostring(aaa) + ")")
+    
+//Sell Signal
+if (bear == 1 or (bear == 1 and bull == 1 and bar_index > 4400))
+    sellsignal = crossunder(rsi, ShortOverBought) and aaa == 1
+    sellsignal2 = crossunder(rsi, ShortOverBought) and (a > (strategy.position_avg_price + n)) and aaa == 2
+    sellsignal3 = crossunder(rsi, ShortOverBought) and (a > (strategy.position_avg_price + n*2)) and aaa == 3
+    sellsignal4 = crossunder(rsi, ShortOverBought) and (a > (strategy.position_avg_price + n*3)) and aaa == 4
+    sellsignal5 = crossunder(rsi, ShortOverBought) and (a > (strategy.position_avg_price + n*4)) and aaa == 5
+    
+    if (not na(rsi))
+        if(sellsignal)
+            strategy.entry("SHORT", strategy.short, comment = tostring(a) + "\n(" + tostring(aaa) + ")")
+        if(sellsignal2)
+            strategy.entry("SHORT", strategy.short, comment = tostring(a) + "\n(" + tostring(aaa) + ")")
+        if(sellsignal3)
+            strategy.entry("SHORT", strategy.short, comment = tostring(a) + "\n(" + tostring(aaa) + ")")
+        if(sellsignal4)
+            strategy.entry("SHORT", strategy.short, comment = tostring(a) + "\n(" + tostring(aaa) + ")")
+//Statistics
+pr = round(strategy.openprofit, 2)
+ppr = round(((a / strategy.position_avg_price - 1) * 100 * posp), 2)
+spr = round(strategy.openprofit, 2)
+sppr = round((100 - (a / strategy.position_avg_price * 100)) * posp, 2)
+//Stop-Loss & Take-Profit
+//default
+DefaultClosePosition = input(defval = true, title = "Default close position")
+if(DefaultClosePosition == 1)
+    if(crossunder(rsi, LongOverBought))
+        strategy.close(id="LONG", comment = "LT\n" + tostring(a) + " " + tostring(pr) + "$ " + tostring(ppr) + "%")
+    if(crossover(rsi, ShortOverSold))
+        strategy.close(id="SHORT", comment = "ST\n" + tostring(a) + " " + tostring(spr) + "$ " + tostring(sppr) + "%")
+//RSI
+rsion = input(defval = false, title = "Close Position (RSI)")
+rcl = input(defval = 71.0, title = "RSI Take profit LONG")
+rcs = input(defval = 28.0, title = "RSI Take profit SHORT")
+//In Percents
+ut = input(defval = false, title = "Take-profit")
+tar = input(defval = 100.0, title = "In percent")
+us = input(defval = false, title = "Stop-Loss")
+stop = input(defval = 10.0, title = "In percent")
+tar:=tar / 100 / posp * a / syminfo.mintick
+stop:=stop / 100 / posp * a / syminfo.mintick
+if(ut==true and us==false)
+    strategy.exit(id="LX", from_entry = "LONG", profit = tar, comment = "TakeL\n" + tostring(a) + " " + tostring(pr) + "$ " + tostring(ppr) + "%")
+    strategy.exit(id="SX", from_entry = "SHORT", profit = tar, comment = "TakeS\n" + tostring(a) + " " + tostring(spr) + "$ " + tostring(sppr) + "%")
+if(us==true and ut==false)
+    strategy.exit(id="LX", from_entry = "LONG", loss = stop, comment = "StopL\n" + tostring(a) + " " + tostring(pr) + "$ " + tostring(ppr) + "%")
+    strategy.exit(id="SX", from_entry = "SHORT", loss = stop, comment = "StopS\n" + tostring(a) + " " + tostring(spr) + "$ " + tostring(sppr) + "%")
+    
+if(ut==true and us==true)
+    strategy.exit(id="LX", from_entry = "LONG", profit = tar, loss = stop, comment = "Take/Stop L\n" + tostring(a) + " " + tostring(pr) + "$ " + tostring(ppr) + "%")
+    strategy.exit(id="SX", from_entry = "SHORT", profit = tar, loss = stop, comment = "Take/Stop S\n" + tostring(a) + " " + tostring(spr) + "$ " + tostring(sppr) + "%")
+//Close position with RSI
+if(rsion == 1)
+    if(rsi > rcl)
+        strategy.close(id="LONG", comment = "LT\n" + tostring(a) + " " + tostring(pr) + "$ " + tostring(ppr) + "%")
+    if(rsi < rcs)
+        strategy.close(id="SHORT", comment = "ST\n" + tostring(a) + " " + tostring(spr) + "$ " + tostring(sppr) + "%")
+//BaDuL - Бадиль - Жирний - Хомікаде - Штемп - Кєнт - SmallDickClub
+Expand (185 lines)

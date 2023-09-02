@@ -1,0 +1,131 @@
+Script Name: BB KANNEMAN
+Author: samuelkanneman
+Description: Estrategia basada en las bandas de bollinger para ganer muchos SUYAI
+PineScript code:
+
+Pine Script™ strategy
+BB KANNEMAN
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © samuelkanneman
+//@version=5
+strategy('MI_BB ', overlay=true)
+i_startTime = input.time(title='Start Date Filter', defval=timestamp('01 Nov 2020 13:30 +0000'), tooltip='Date & time to begin trading from')
+i_endTime = input.time(title='End Date Filter', defval=timestamp('1 Nov 2022 19:30 +0000'), tooltip='Date & time to stop trading')
+dateFilter = time >= i_startTime and time <= i_endTime
+longitud = input(20, title='Longitud')
+Desv = input.float(2.0, title='Desvio estandar', step=0.1)
+fuente = input(close, title='Fuente')
+TakeP = input.float(5.0, title='Take Profit', step=0.1)
+StopL = input.float(1.0, title='Stop Loss', step=0.1)
+var SL = 0.0
+var TP = 0.0
+[banda_central, banda_sup, banda_inf] = ta.bb(fuente, longitud, Desv)
+comprado = strategy.position_size > 0
+vendido = strategy.position_size < 0
+if not vendido and not comprado and dateFilter
+// Short
+    if close >= banda_sup
+    //cantidad= (strategy.equity/close)
+        strategy.entry('venta', strategy.short)
+        SL := close * (1 + StopL / 100)
+        TP := close*(1-TakeP/100)
+        
+//Long
+    else if close <= banda_inf
+    //cantidad= (strategy.equity/close)
+        strategy.entry('compra', strategy.long)
+        SL := close * (1 - StopL / 100)
+        TP := close*(1+TakeP/100)
+    
+//cierrres short
+if close <= TP and vendido
+    strategy.close ("venta" , comment="Salto TP")
+if close <= banda_inf and vendido
+    strategy.close ("venta" , comment="Banda Inferior")
+if close >= SL and vendido
+    strategy.close ("venta" , comment="Salto SL")
+    
+   
+//cierre long
+if close >= TP and comprado
+    strategy.close ("compra" , comment="Salto TP")  
+if close >= banda_sup and comprado
+    strategy.close ("compra" , comment="Banda Superior")
+    
+if close <= SL and comprado
+    strategy.close ("compra" , comment="Salto SL")
+    
+p1 = plot(banda_central)
+p2 = plot(banda_sup)
+p3 = plot(banda_inf)
+fill(p2, p3, transp=90)
+Expand (68 lines)

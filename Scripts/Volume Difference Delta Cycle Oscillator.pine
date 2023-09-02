@@ -1,0 +1,208 @@
+Script Name: Volume Difference Delta Cycle Oscillator
+Author: tathal
+Description: Volume Difference Delta Cycle Oscillator indicator:
+
+Using the power of my Volume Difference Indicator and standard deviations based on Bollinger Bands and more, we present this wonderful indicator with the following features:
+
+Price Action Histogram: This is the bread and butter of this graph, if the PAH is above 0, this is considered a BULL cycle, and if below...
+PineScript code:
+
+Pine Script™ strategy
+Volume Difference Delta Cycle Oscillator
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+//// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © tathal and special thanks to oakwhiz for his porting of my custom volume indicator
+//@version=5
+strategy('Volume Difference Delta Cycle Oscillator', 'VDDC Osc', default_qty_type=strategy.percent_of_equity, default_qty_value=100, max_bars_back=5000)
+startDate = input.int(title='Start Date', defval=1, minval=1, maxval=31)
+startMonth = input.int(title='Start Month', defval=1, minval=1, maxval=12)
+startYear = input.int(title='Start Year', defval=2010, minval=1800, maxval=2100)
+endDate = input.int(title='End Date', defval=31, minval=1, maxval=31)
+endMonth = input.int(title='End Month', defval=12, minval=1, maxval=12)
+endYear = input.int(title='End Year', defval=2021, minval=1800, maxval=2100)
+// Normalize Function
+normalize(_src, _min, _max) =>
+    // Normalizes series with unknown min/max using historical min/max.
+    // _src      : series to rescale.
+    // _min, _min: min/max values of rescaled series.
+    var _historicMin = 10e10
+    var _historicMax = -10e10
+    _historicMin := math.min(nz(_src, _historicMin), _historicMin)
+    _historicMax := math.max(nz(_src, _historicMax), _historicMax)
+    _min + (_max - _min) * (_src - _historicMin) / math.max(_historicMax - _historicMin, 10e-10)
+// STEP 2:
+// Look if the close time of the current bar
+// falls inside the date range
+inDateRange = time >= timestamp(syminfo.timezone, startYear, startMonth, startDate, 0, 0) and time < timestamp(syminfo.timezone, endYear, endMonth, endDate, 0, 0)
+// Stop loss & Take Profit Section     
+l_sl_inp = input(2.0, title='Long Stop Loss %') / 100
+l_tp_inp = input(4.0, title='Long Take Profit %') / 100
+l_stop_level = strategy.position_avg_price * (1 - l_sl_inp)
+l_take_level = strategy.position_avg_price * (1 + l_tp_inp)
+s_sl_inp = input(2.0, title='Short Stop Loss %') / 100
+s_tp_inp = input(4.0, title='Short Take Profit %') / 100
+s_stop_level = strategy.position_avg_price * (1 + s_sl_inp)
+s_take_level = strategy.position_avg_price * (1 - s_tp_inp)
+src = close
+//  Volume Differnce Indicator Delta
+float change_src = ta.change(src)
+float i_obv = ta.cum(change_src > 0 ? volume : change_src < 0 ? -volume : 0 * volume)
+float i_pvt = ta.pvt
+float result = ta.change(i_obv - i_pvt)
+float nresult = ta.ema(normalize(result, -1, 1), 20)
+// Volume Differnce Indicator Delta %B
+length = input.int(20, minval=1, title='Volume Bands Length')
+mult = input.float(2.0, minval=0.001, maxval=50, title='Volume Bands StdDev')
+basis = ta.ema(nresult, length)
+dev = mult * ta.stdev(nresult, length)
+upper = basis + dev
+lower = basis - dev
+bbr = (nresult - lower) / (upper - lower)
+// Normal %B, Based on close
+l1 = input.int(20, minval=1, title='Bollinger Bands Length')
+src2 = close
+mult1 = input.float(2.0, minval=0.001, maxval=50, title='Bollinger Bands StdDev')
+basis1 = ta.sma(src2, l1)
+dev1 = mult1 * ta.stdev(src2, l1)
+upper1 = basis1 + dev1
+lower1 = basis1 - dev1
+bbr1 = (src - lower1) / (upper1 - lower1)
+/// Final Output Line
+hist = ta.ema(ta.ema(ta.ema(bbr1 - bbr, input(2, title='Hist Smoothing Factor #1')), input(2, title='Hist Smoothing Factor #2')), input(2, title='Hist Smoothing Factor #3'))
+/// Overbought / Oversold Line Creation
+oversold = input(-.1)
+overbought = input(.4)
+hline(oversold, linewidth=2, color=color.new(#81c784, 62))
+hline(overbought, linewidth=2, color=color.new(#c2185b, 38))
+/// Long & Short Conditions
+short = hist > overbought
+long = hist < oversold
+/// Colors & Plotting
+histColor = hist >= 0 ? hist[1] < hist ? #26A69A : #B2DFDB : hist[1] < hist ? #FFCDD2 : #EF5350
+plot(hist, title='Histogram', style=plot.style_columns, color=color.new(histColor, 0))
+CrossBgColor = long ? color.new(#81c784, 62) : short ? color.new(#c2185b, 38) : na
+bgcolor(color.new(CrossBgColor, 90))
+/// Strategy Methodology
+if inDateRange
+    strategy.entry('long', strategy.long, when=long, stop=l_stop_level, limit=l_take_level)
+if inDateRange and strategy.position_size > 0
+    strategy.close_all(when=short)
+if inDateRange
+    strategy.entry('short', strategy.short, when=short, stop=s_stop_level, limit=s_take_level)
+if inDateRange and strategy.position_size < 0
+    strategy.close_all(when=long)
+Expand (114 lines)

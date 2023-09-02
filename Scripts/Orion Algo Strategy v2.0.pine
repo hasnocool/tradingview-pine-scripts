@@ -1,0 +1,629 @@
+Script Name: Orion Algo Strategy v2.0
+Author: OrionAlgo
+Description: Hi everyone. 
+
+I decided to make the latest Orion Algo open to people. I don't have enough time to work on it lately, so I figured it would be best that everyone can have it to work on it. I took out some stuff from the original but it should give an idea on how things work. I made two strategies with this so far so you can use that to come up with your own. I...
+PineScript code:
+
+Pine Script™ strategy
+Orion Algo Strategy v2.0
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+// © OrionAlgo
+//          () /? | () |\|   /\ |_ (_, ()          //
+//@version=4
+version = '2.0'
+strategy("Orion Algo Strategy v"+version, shorttitle="Orion Algo Strategy v"+version, overlay=false, pyramiding=100)
+// Getting inputs --------------------------------------------------------------
+userAgreement = input(true, title='I understand that Orion Algo cannot be 100% accurate and overall performance will shift with market conditions. While Orion Algo increases my chances of entering better positions, I must use smart trade management. ', type=input.bool,group='User Agreement ─────────────',
+  tooltip='In order to use Orion Algo, you must click the checkbox to acknowledge the user agreement')
+src = close
+//smoothing inputs -------------------------------------------------------------
+//superSmooth = input(true, title='Super Smooth', inline='Super Smooth', group='Smoothing ─────────────────')
+superSmooth = true
+smoothType = 1
+superSmoothStrength = input(10, title='Super Smooth',minval = 3, inline='Super Smooth', group='Signal ────────────────────',
+  tooltip='Smooths the signal. Lower values move pivots to the left while increasing noise, higher values move pivots to the right and reduce noise. 8 is a good mix of both') // set to timeframe for decent results?
+//trendSmoothing = input(30, title='Trend Smooth',minval = 3, group='Smoothing ─────────────────') // set to timeframe for decent results?
+trendSmoothing = 30 // set to timeframe for decent results?
+showPrediction = input(false, title='Prediction', group='Signal ────────────────────',inline='prediction')
+predictionBias = input(0.45, minval = 0.,maxval=1., step=0.05, title='Bias', group='Signal ────────────────────',inline='prediction')
+showPredictionCurve = input(true, title='Curve', group='Signal ────────────────────',inline='prediction', tooltip='Prediction model that attempts to predict short range reversals (0-2 bars). Adjust Bias to change the prediction curve.')
+//momentum wave inputs ---------------------------------------------------------
+showMomentumWave = input(true, 'Momentum Wave', group='Momentum Wave ─────────────', inline='mom')
+momentumWaveLength = input(3, '', group='Momentum Wave ─────────────', inline='mom', tooltip='Secondary signal that shows medium to large movements based on the input variable. The wave will change depending on the current timeframe.')
+momentumOutside = input(true, 'Position Outside', group='Momentum Wave ─────────────', inline='mom2', tooltip='Positions the wave outside of the main signal area.')
+//visuals input-----------------------------------------------------------------
+useDarkMode = input(true, 'Dark Mode', group='Visuals ───────────────────',inline='Colors')
+// 0:backgroundlines, 1:signal, 2:bullish, 3:bearish, 4:hiddenbull, 5:hiddenbear, 6:deltav, 7:prediction, 8:predictionbull, 9:predictionbear, 10:dash, 11:mom2
+visualMode = input('Pro', 'Mode',options=['Beginner', 'Pro'] ,group='Visuals ───────────────────')
+dashOn = input(true, "Dashboard", group='Dashboard ─────────────────', inline='dash', tooltip='A dashboard with some usefual stats')
+  
+dashColor = color.new(#171a27, 100)
+showPivots = input(true, title='Signal Pivots', group='Pivots ────────────────────',inline='pivots')
+showPredictionPivots = input(false, title='Prediction Pivots', group='Pivots ────────────────────',inline='pivots')
+// Devmode
+dev_a = input(true,'a', group='DEV ────────────────────',inline='dev')
+dev_b = input(true,'b', group='DEV ────────────────────',inline='dev')
+dev_c = input(true,'c', group='DEV ────────────────────',inline='dev')
+dev_d = input(true,'d', group='DEV ────────────────────',inline='dev')
+dev_e = input(true,'e', group='DEV ────────────────────',inline='dev')
+dev_f = input(true,'f', group='DEV ────────────────────',inline='dev')
+dev_g = input(true,'g', group='DEV ────────────────────',inline='dev')
+// Functions -------------------------------------------------------------------
+f_secureSecurity(_symbol, _res, _src) => security(_symbol, _res, _src,barmerge.gaps_on, lookahead = barmerge.lookahead_on) 
+f_slope(x) =>
+    slopePeriod = 1
+    (x - x[slopePeriod]) / slopePeriod
+f_superSmooth(inputVal,smoothType) =>
+    smoothType==1? (hma(inputVal,superSmoothStrength)) :
+      smoothType==2? (ema((ema((ema(inputVal,3)),3)),superSmoothStrength)):
+      smoothType==3? linreg(inputVal,superSmoothStrength,0) : 
+      smoothType==4? (hma(inputVal,superSmoothStrength * momentumWaveLength)) : na
+f_bias(bias, min, max) =>
+    (bias * (max - min) ) + min
+f_resInMinutes() =>
+    _resInMinutes = timeframe.multiplier * (
+      timeframe.isseconds ? 1. / 60. :
+      timeframe.isminutes ? 1.       :
+      timeframe.isdaily   ? 1440.    :
+      timeframe.isweekly  ? 10080.   :
+      timeframe.ismonthly ? 43800.   : na)
+f_resFromMinutes(_minutes) =>
+    _minutes     <= 0.0167       ? "1S"  :
+      _minutes   <= 0.0834       ? "5S"  :
+      _minutes   <= 0.2500       ? "15S" :
+      _minutes   <= 0.5000       ? "30S" :
+      _minutes   <= 1            ? "1":
+      _minutes   <= 1440         ? tostring(round(_minutes)) :
+      _minutes   <= 43800        ? tostring(round(min(_minutes / 1440, 365))) + "D" :
+      tostring(round(min(_minutes / 43800, 12))) + "M"
+      
+f_volatility() =>
+    atr=atr(14)
+    stdAtr=2*stdev(atr,20)
+    smaAtr=sma(atr,20)
+    topAtrDev=smaAtr+stdAtr
+    bottomAtrDev=smaAtr-stdAtr
+    calcDev=(atr-bottomAtrDev)/(topAtrDev-bottomAtrDev)
+    percentVol=(40*calcDev+30)
+    
+f_output_signal()=>    
+    a = ((ema(close, 12) - ema(close, 26)) - ema((ema(close, 12) - ema(close, 26)), 8))/10
+    b = wpr(8)
+    c = (100 * ( close + 2*stdev( close, 21) - sma( close, 21 ) ) / ( 4 * stdev( close, 21 ) ))
+    d = (rsi(close - sma(close, 21),8)*2)-100
+    e = (rsi(fixnan(100 * rma(change(high) > change(low) and change(high) > 0 ? change(high) : 0, 1) / rma(tr, 1)) - fixnan(100 * rma(change(low) > change(high) and change(low) > 0 ? change(low) : 0, 1) / rma(tr, 1)),8)*2)-100 //causes slow down
+    f = rsi((((close-( (sum(volume, 20) - volume)/sum(volume, 20)) + (volume*close/sum(volume, 20)))/((close+( (sum(volume, 20) - volume)/sum(volume, 20)) + (volume*close/sum(volume, 20)))/2)) * 100),8)-100
+    g = (rsi(sma((close-lowest(low,14))/highest(high,14)-lowest(low,14)-0.5,2),8)*2)-100 //causes slow down
+    x = avg(dev_a? a:0,dev_b?b:0,dev_c?c:0,dev_d?d:0,dev_e?e:0,dev_f?f:0,dev_g?g:0)*2 
+    f_superSmooth(x,1)
+ 
+output_signal = f_output_signal()
+// output_signal2 = plot(f_superSmoothSlow(f_output_signal()), color=color.blue, linewidth=2)
+//Orion Signal Higher Timeframe / Momentum Wave --------------------------------
+f_momentumWave(wavelength,smooth) =>
+    currentMinutes = f_resInMinutes()
+    m = currentMinutes * wavelength //multiply current resolution by momentumWaveLength to get higher resolution
+    momentumWaveRes = f_resFromMinutes(m)
+    f_secureSecurity(syminfo.tickerid, momentumWaveRes,f_superSmooth(f_output_signal(),1))
+// Plot ------------------------------------------------------------------------
+f_color(x) =>
+    if userAgreement
+        white      = useDarkMode ? #e5e4f4 : #505050ff
+        lightgray  = useDarkMode ? #808080 : #909090ff
+        gray       = useDarkMode ? #808080 : #505050ff
+        //blue       = useDarkMode ? #007EA7 : #007EA7ff
+        blue       = useDarkMode ? #2862FFFF : #2862FFFF
+        
+        // 0:backgroundlines, 1:signal, 2:bullish, 3:bearish, 4:hiddenbull, 5:hiddenbear, 6:deltav, 7:prediction, 8:predictionbull, 9:predictionbear, 10:trendbull, 11:trendbear, 12:dash, 13:mom1, 14:mom2
+        x==0? lightgray : x==1? gray : x==2? white : x==3? blue : x==4? white : x==5? blue : x==6? blue : x==7? blue : x==8? white : x==9? blue : x==10? blue : x==11? blue : na
+// Lines -----------------------------------------------------------------------
+h1 = plot(0, "Mid Band", color=f_color(0),editable=0, transp=80)
+// Signal ----------------------------------------------------------------------
+orionSignal = plot(output_signal, title="Orion Signal Curve", style=plot.style_line,linewidth=1, transp=0, color= f_color(1), offset=0,editable=0)
+// Momentum Wave ---------------------------------------------------------------
+momWave = f_momentumWave(momentumWaveLength,1)
+p_momWave = plot(showMomentumWave? momentumOutside? (momWave/2) -150 : momWave : na, color=f_color(11), linewidth=showMomentumWave and momentumOutside ? 1 : 2, editable =0, transp=50, style=momentumOutside? plot.style_area : plot.style_line, histbase=-200) //two tone color doesnt want to work with this for some reason.
+// Divergence ------------------------------------------------------------------
+osc = output_signal
+plFound = osc > osc [1] and osc[1] < osc[2]
+phFound = osc < osc [1] and osc[1] > osc[2]
+// bullish
+plot(
+     plFound and visualMode=='Pro'?  osc[1] - 10 : na,
+     offset=0,
+     title="Regular Bullish",
+     linewidth=3,
+     color=showPivots ? f_color(2) :na,
+     transp=0,
+     style=plot.style_circles,
+     editable=0
+     )
+plotshape(
+     plFound and visualMode=='Beginner'?  osc[1] - 10 : na,
+     offset=0,
+     title="Regular Bullish",
+     size=size.tiny,
+     color=showPivots ? f_color(2) :na,
+     transp=0,
+     style=shape.labelup,
+     text = 'Buy',
+     textcolor= color.black,
+     location=location.absolute,
+     editable=0
+     )
+// bearish
+plot(
+     phFound and visualMode=='Pro'? osc[1] + 10: na,
+     offset=0,
+     title="Regular Bearish",
+     linewidth=3,
+     color=showPivots ? f_color(3):na,
+     transp=0,
+     style=plot.style_circles,
+     editable=0
+     )
+plotshape(
+     phFound and visualMode=='Beginner'? osc[1] + 10: na,
+     offset=0,
+     title="Regular Bearish",
+     size=size.tiny,
+     color=showPivots ? f_color(3):na,
+     transp=0,
+     style=shape.labeldown,
+     text = 'Sell',
+     textcolor= color.white,
+     location=location.absolute,
+     editable=0
+     )
+// Delta v ---------------------------------------------------------------------
+slope    = f_slope(output_signal)*1.5
+// Prediction from Delta v -----------------------------------------------------
+output_prediction = f_bias(predictionBias, slope, output_signal)
+prediction_bullish = output_prediction>output_prediction[1] and output_prediction[1]<output_prediction[2] ?true:false
+prediction_bearish = output_prediction<output_prediction[1] and output_prediction[1]>output_prediction[2] ?true:false
+plot(showPrediction and showPredictionCurve?output_prediction:na,title='Prediction Curve', color=f_color(7), editable=0)
+//prediction bull
+plot(showPrediction?showPredictionPivots?output_prediction>output_prediction[1] and output_prediction[1]<output_prediction[2]?showPredictionCurve?output_prediction:output_signal:na:na:na,
+  title='Prediction Bullish',color=f_color(8), style=plot.style_circles, linewidth=2, editable=0)
+//prediction bear
+plot(showPrediction?showPredictionPivots?output_prediction<output_prediction[1] and output_prediction[1]>output_prediction[2]?showPredictionCurve?output_prediction:output_signal:na:na:na,
+  title='Prediction Bearish', color=f_color(9), style=plot.style_circles, linewidth=2, editable=0)
+// User Aggreement -------------------------------------------------------------
+plotshape(userAgreement==false?0:na,title='Welcome', text='Welcome to Orion Algo! Please double click me to enable signals',textcolor=color.black,color=color.white,offset=0,size=size.huge,style=shape.labeldown,location=location.absolute, transp=0, show_last=1, editable=0)
+plotshape(userAgreement==false?0:na,title='Welcome', text='Welcome to Orion Algo! Please double click me to enable signals',textcolor=color.black,color=color.white,offset=-100,size=size.huge,style=shape.labeldown,location=location.absolute, transp=0, show_last=1, editable=0)
+// Alerts ----------------------------------------------------------------------
+alertcondition(plFound,title='1. Bullish (Big Dot)', message='Bullish Signal (Big Dot)')
+alertcondition(phFound,title='2. Bearish (Big Dot)', message='Bearish Signal (Big Dot)')
+alertcondition(prediction_bullish,title='3. Prediction Bullish (Small Dot)', message='Prediction Bullish Signal (Small Dot)')
+alertcondition(prediction_bearish,title='4. Prediction Bearish (Small Dot)', message='Prediction Bearish Signal (Small Dot)')
+// Strategy --------------------------------------------------------------------
+i_strategy = input(defval='dca long', title='strategy', options=['simple','dca long'])
+i_pyramid = input(10, 'pyramid orders')
+// Simple Strat
+if (i_strategy == 'simple')
+    longCondition = crossover(output_signal, output_signal[1])
+    if (longCondition)
+        strategy.entry("My Long Entry Id", strategy.long)
+    
+    shortCondition = crossunder(output_signal, output_signal[1])
+    if (shortCondition)
+        strategy.entry("My Short Entry Id", strategy.short)
+// DCA Strat
+i_percent_exit = input(2.0,'percent exit in profit')/100
+i_percent_drop = input(2.0,'percent drop before each entry')/100
+var entryPrice = 0.0
+var exitPrice = 0.0
+var inTrade = false
+var tradeCount = 0
+var moneyInTrade = 0.0
+if(output_signal > output_signal[1] and output_signal[1]<=output_signal[2] and i_strategy=='dca long')
+//if (true)    
+    if (inTrade==false)
+        strategy.entry('Long',long=true)
+        alert("Buy signal", alert.freq_once_per_bar)   
+        entryPrice:=close
+        moneyInTrade:=close
+        exitPrice:=entryPrice + (entryPrice*(i_percent_exit))
+        inTrade:=true
+        tradeCount := 1
+        
+    if (inTrade==true and close <= (entryPrice-(entryPrice*(i_percent_drop) )))
+        //calculate DCA //math is incorrect!!!
+        if (tradeCount <= i_pyramid)
+            tradeCount := tradeCount+1
+            entryPrice:=close
+            moneyInTrade := moneyInTrade+close
+            exitPrice2 = moneyInTrade / tradeCount
+            exitPrice := exitPrice2 + (exitPrice2 *(i_percent_exit)) 
+           
+            strategy.entry('Long',long=true)
+            alert("Buy signal", alert.freq_once_per_bar)
+            
+            
+alertcondition(output_signal > output_signal[1] and output_signal[1]<=output_signal[2] and i_strategy=='dca long' and inTrade==true and close <= (entryPrice-(entryPrice*(i_percent_drop) )) and tradeCount <= i_pyramid, 'DCA Buy','Buy zone')
+if(close >= exitPrice and inTrade==true and output_signal <= output_signal[1] and output_signal[1]>=output_signal[2] and i_strategy=='dca long')
+    inTrade:=false
+    alert("Sell signal", alert.freq_once_per_bar)   
+    strategy.close('Long')
+    
+// Dashboard -------------------------------------------------------------------
+//deltav
+deltav = slope
+//volatility
+volatility = f_volatility()
+if dashOn
+    label orionLabel = label.new(time, 0,
+     text="オリオン"
+     + "\n"
+     + "\n━━━━━━━━━"
+     + "\n"
+     + "\n Δv             " + tostring(deltav, "##.##") + "%"
+     + "\n Δv(n-1)       " + tostring(deltav[1], "##.##") + "%"
+     + "\n Δv(n-2)       " + tostring(deltav[2], "##.##") + "%"
+     + "\n"
+     + "\n rsi             " + tostring(rsi(close,14), "##.##")
+     + "\n rsi(n-1)       " + tostring(rsi(close,14)[1], "##.##")
+     + "\n rsi(n-2)       " + tostring(rsi(close,14)[2], "##.##")
+     + "\n"
+     + "\n volatility     " + tostring(volatility, "##.##") + "%"
+     + "\n"
+     + "\n━━━━━━ v"+version
+     +'\n'
+     ,
+     color=dashColor, xloc= xloc.bar_time, style=label.style_label_left, textcolor=f_color(10), textalign=text.align_left)
+    label.set_x(orionLabel, label.get_x(orionLabel) + round(change(time)*1))
+    label.delete(orionLabel[1])
+Expand (352 lines)

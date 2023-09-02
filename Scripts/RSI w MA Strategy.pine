@@ -1,0 +1,119 @@
+Script Name: RSI w MA Strategy
+Author: samovington
+Description: This strategy is mostly for cryptocurrencies, it applies a moving average to an rsi and trades based on the crossings. It includes the indicator that it is made from.
+PineScript code:
+
+Pine Script™ strategy
+RSI w MA Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+//@version=4
+strategy("RSI w MA Strategy", shorttitle="RSI w MA Strategy", overlay=false, initial_capital=10000, currency='USD',process_orders_on_close=true)
+//TIME FRAME AND BACKGROUND CONTROL/////////////////////////////////////////////
+testStartYear = input(2019, "Backtest Start Year")
+testStartMonth = input(01, "Backtest Start Month")
+testStartDay = input(01, "Backtest Start Day")
+testPeriodStart = timestamp(testStartYear, testStartMonth, testStartDay, 0, 0)
+testStopYear = input(2022, "Backtest Stop Year")
+testStopMonth = input(1, "Backtest Stop Month")
+testStopDay = input(1, "Backtest Stop Day")
+testPeriodStop = timestamp(testStopYear, testStopMonth, testStopDay, 0, 0)
+testPeriodBackground = input(title="Color Background?", type=input.bool, defval=true)
+testPeriodBackgroundColor = testPeriodBackground and time >= testPeriodStart and time <= testPeriodStop ? 
+   color.teal : na
+//bgcolor(testPeriodBackgroundColor, transp=50)
+testPeriod() =>
+    time >= testPeriodStart and time <= testPeriodStop ? true : false
+////////////////////////////////////////////////////////////////////////////////
+src = close, len = input(27, minval=1, title="Length")
+up = rma(max(change(src), 0), len)
+down = rma(-min(change(src), 0), len)
+rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+window = input(10, "RSI MA Window")
+ma = sma(rsi,window)
+plot(rsi, color=color.orange)
+colorr= ma > rsi ? color.red : color.green
+plot(ma,color=colorr)
+band1 = hline(70)
+band0 = hline(30)
+fill(band1, band0, color=color.purple, transp=90)
+diff = rsi - ma
+plot(diff,style= plot.style_columns,transp=50,color = colorr)
+plotshape(crossunder(rsi,ma)?rsi:na,title="top",style=shape.triangledown,location=location.absolute,size=size.tiny,color=color.red,transp=0)
+plotshape(crossover(rsi,ma)?rsi:na,title="bottom",style=shape.triangleup,location=location.absolute,size=size.tiny,color=color.lime,transp=0)
+buySignal = crossover(rsi,ma)
+sellSignal = crossunder(rsi,ma)
+//TRADE CONTROL/////////////////////////////////////////////////////////////////
+if testPeriod()
+    if buySignal
+        strategy.close("Short", qty_percent = 100, comment = "Close Short")
+        strategy.entry("Long", strategy.long, qty=.1)
+    if sellSignal
+        strategy.close("Long", qty_percent = 100, comment = "Close Long")
+        strategy.entry("Short", strategy.short, qty=.1)
+////////////////////////////////////////////////////////////////////////////////
+Expand (65 lines)

@@ -1,0 +1,145 @@
+Script Name: HTF High-Low Repaint Strategy
+Author: Trendoscope
+Description: Here is an another attempt to demonstrate repainting and how to avoid them. It happened few times to me that I develop a strategy which is giving immense returns - only to realize after few forward testing that it is repainting. Sometimes, it is well disguised even during forward testing.
+
+In this simple strategy, conditions are as below:
+
+ Buy :  When a 3M bar...
+PineScript code:
+
+Pine Script™ strategy
+HTF High/Low Repaint Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HeWhoMustNotBeNamed
+//@version=4
+strategy("HTF High/Low Repaint Strategy", overlay=true, initial_capital = 20000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, pyramiding = 1, commission_value = 0.01)
+i_startTime = input(defval = timestamp("01 Jan 2010 00:00 +0000"), title = "Start Time", type = input.time)
+i_endTime = input(defval = timestamp("01 Jan 2099 00:00 +0000"), title = "End Time", type = input.time)
+inDateRange = time >= i_startTime and time <= i_endTime
+resolution = input("3M", type=input.resolution)
+HTFMultiplier = input(22, minval=1, step=1)
+offset = input(0, minval=0, step=1)
+lookahead = input(true)
+gaps = false
+f_secureSecurity_on_on(_symbol, _res, _src, _offset) => security(_symbol, _res, _src[_offset], lookahead = barmerge.lookahead_on, gaps=barmerge.gaps_on)
+f_secureSecurity_on_off(_symbol, _res, _src, _offset) => security(_symbol, _res, _src[_offset], lookahead = barmerge.lookahead_on, gaps=barmerge.gaps_off)
+f_secureSecurity_off_on(_symbol, _res, _src, _offset) => security(_symbol, _res, _src[_offset], lookahead = barmerge.lookahead_off, gaps=barmerge.gaps_on)
+f_secureSecurity_off_off(_symbol, _res, _src, _offset) => security(_symbol, _res, _src[_offset], lookahead = barmerge.lookahead_off, gaps=barmerge.gaps_off)
+f_multiple_resolution(HTFMultiplier) => 
+    target_Res_In_Min = timeframe.multiplier * HTFMultiplier * (
+      timeframe.isseconds   ? 1. / 60. :
+      timeframe.isminutes   ? 1. :
+      timeframe.isdaily     ? 1440. :
+      timeframe.isweekly    ? 7. * 24. * 60. :
+      timeframe.ismonthly   ? 30.417 * 24. * 60. : na)
+    target_Res_In_Min     <= 0.0417       ? "1S"  :
+      target_Res_In_Min   <= 0.167        ? "5S"  :
+      target_Res_In_Min   <= 0.376        ? "15S" :
+      target_Res_In_Min   <= 0.751        ? "30S" :
+      target_Res_In_Min   <= 1440         ? tostring(round(target_Res_In_Min)) :
+      tostring(round(min(target_Res_In_Min / 1440, 365))) + "D"
+f_get_htfHighLow(resolution, HTFMultiplier, lookahead, gaps, offset)=>
+    derivedResolution = resolution == ""?f_multiple_resolution(HTFMultiplier):resolution
+    nhigh_on_on = f_secureSecurity_on_on(syminfo.tickerid, derivedResolution, high, offset) 
+    nlow_on_on = f_secureSecurity_on_on(syminfo.tickerid, derivedResolution, low, offset)
+    
+    nhigh_on_off = f_secureSecurity_on_off(syminfo.tickerid, derivedResolution, high, offset) 
+    nlow_on_off = f_secureSecurity_on_off(syminfo.tickerid, derivedResolution, low, offset)
+    
+    nhigh_off_on = f_secureSecurity_off_on(syminfo.tickerid, derivedResolution, high, offset) 
+    nlow_off_on = f_secureSecurity_off_on(syminfo.tickerid, derivedResolution, low, offset)
+    
+    nhigh_off_off = f_secureSecurity_off_off(syminfo.tickerid, derivedResolution, high, offset) 
+    nlow_off_off = f_secureSecurity_off_off(syminfo.tickerid, derivedResolution, low, offset)
+    
+    nhigh = lookahead and gaps ? nhigh_on_on :
+             lookahead and not gaps ? nhigh_on_off :
+             not lookahead and gaps ? nhigh_off_on :
+             not lookahead and not gaps ? nhigh_off_off : na
+    nlow = lookahead and gaps ? nlow_on_on :
+             lookahead and not gaps ? nlow_on_off :
+             not lookahead and gaps ? nlow_off_on :
+             not lookahead and not gaps ? nlow_off_off : na
+    [nhigh, nlow]
+    
+[nhigh, nlow] = f_get_htfHighLow(resolution, HTFMultiplier, lookahead, gaps, offset)
+[nhighlast, nlowlast] = f_get_htfHighLow(resolution, HTFMultiplier, lookahead, gaps, offset+1)
+plot(nhigh , title="HTF High",style=plot.style_circles, color=color.green, linewidth=1) 
+plot(nlow , title="HTF Low",style=plot.style_circles, color=color.red, linewidth=1)
+buyCondition = nhigh > nhighlast and nlow > nlowlast
+sellCondition = nhigh < nhighlast and nlow < nlowlast
+strategy.entry("Buy", strategy.long, when= buyCondition and inDateRange, oca_name="oca_buy", oca_type=strategy.oca.cancel)
+strategy.entry("Sell", strategy.short, when= sellCondition and inDateRange, oca_name="oca_sell", oca_type=strategy.oca.cancel)
+Expand (71 lines)

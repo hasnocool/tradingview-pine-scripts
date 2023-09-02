@@ -1,0 +1,92 @@
+Script Name: polynomic_stop
+Author: IntelTrading
+Description: A strategy with a trailing stop in the form of a polynomial function. The entry is made at the intersection of a simple sliding closing candle. At the moment of entering the position, it is fixed by the value of the Minimum for the period. After entering the position, a trailing stop of the form is activated: Min + D * N^a, where Min is the minimum for the period...
+PineScript code:
+
+Pine Script™ strategy
+polynomic_stop
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Alferow
+//@version=4
+strategy("polynomic_stop", overlay=true, initial_capital=1000, commission_value=0.1, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+D = input(0.1, minval = 0.0001, title = 'decrement')
+S = input(2, minval = 1.0, title = 'polynomial degree ')
+MA = input(20, title = 'period SMA')
+MN = input(20, title = 'period MIN_for')
+SMA = sma(close, MA)
+MIN = lowest(low, MN)
+var stop = 0.0
+var num = 0
+if strategy.opentrades[1] == 0 and strategy.opentrades != 0
+    stop := MIN
+    
+if  strategy.opentrades != 0
+    num := num + 1 
+    
+if  strategy.opentrades == 0
+    num := 0
+    stop := MIN
+    
+hl = stop + D * pow(num, S)
+plot(hl)
+plot(SMA, color = color.red)
+strategy.entry("buy", true, when = close[1] < SMA[1] and close > SMA)
+strategy.close("buy", when = crossover(hl, close))
+Expand (56 lines)

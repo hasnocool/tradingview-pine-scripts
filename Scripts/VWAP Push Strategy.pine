@@ -1,0 +1,98 @@
+Script Name: VWAP Push Strategy
+Author: christopher451
+Description: This strategy is unfortunately not finished yet.
+
+A pretty simple strategy. If price broke through VWAP and had three consecutive candles following the breakthroughs trend, the high of the third candle will be drawn. If this happened after a crossover of the vwap and price breaks through the high of the third candle, strategy will go long. Short will be the same...
+PineScript code:
+
+Pine Script™ strategy
+VWAP Push Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+//@version=5
+strategy(title="VWAP Push", initial_capital = 100000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, pyramiding = 0, currency = 'USD', overlay=true)
+//VWAP
+vwap = ta.vwap(close)
+plot(vwap, color=color.black, title="vwap")
+//Last 5 Closes
+closeBarPrevious5 = close[5]
+closeBarPrevious4 = close[4]
+closeBarPrevious3 = close[3]
+closeBarPrevious2 = close[2]
+closeBarPrevious1 = close[1]
+closeBarCurrent = close
+// Push up or down
+is_push_up = (closeBarCurrent > closeBarPrevious1) and (closeBarPrevious1 > closeBarPrevious2) and (closeBarPrevious2 > closeBarPrevious3) and (closeBarPrevious4 < vwap) and (closeBarPrevious3 > vwap)  
+is_push_down = (closeBarCurrent < closeBarPrevious1) and (closeBarPrevious1 < closeBarPrevious2) and (closeBarPrevious2 < closeBarPrevious3) and (closeBarPrevious4 > vwap) and (closeBarPrevious3 < vwap)  
+var float hi = na
+var float lo = na
+hi := is_push_up ? high : hi
+lo := is_push_down and (close < vwap) ? low : lo
+plot(hi, "High", color.green, 1, plot.style_circles)
+plot(lo, "Low", color.red, 1, plot.style_circles)
+// Conditions
+longCondition = ta.crossover(close,hi) and (close > vwap)
+exitLong = ta.crossunder(close,vwap)
+shortCondition = ta.crossunder(close,lo) and (close < vwap)
+exitShort = ta.crossover(close,vwap)
+// Entries Exits
+if (longCondition)
+    strategy.entry("Long", strategy.long)
+if (exitLong)
+    strategy.close("Long")
+ 
+if (shortCondition)
+    strategy.entry("Sell", strategy.short)
+if (exitShort)
+    strategy.close("Sell")
+Expand (51 lines)

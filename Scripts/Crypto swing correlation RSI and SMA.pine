@@ -1,0 +1,118 @@
+Script Name: Crypto swing correlation RSI and SMA
+Author: exlux99
+Description: This is a crypto swing strategy, designed for long term periods and correlated pairs with crypto market total(or other coins used as correlation, however I recommend total of crypto or btc)
+
+Its components are:
+
+RSI with a very length
+Correlation candles
+SMA 9
+
+
+Rules for entry:
+For long : RSI is above 51 level and going higher  and close of the candle is above...
+PineScript code:
+
+Pine Script™ strategy
+Crypto swing correlation RSI and SMA
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © exlux99
+//@version=4
+strategy(title = "Crypto swing correlation", overlay = true,  pyramiding=1,initial_capital = 1, default_qty_type= strategy.percent_of_equity, default_qty_value = 100, calc_on_order_fills=false, slippage=0,commission_type=strategy.commission.percent,commission_value=0.03)
+//time
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2010, title = "From Year", minval = 1970)
+ //monday and session 
+// To Date Inputs
+toDay = input(defval = 31, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 12, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2021, title = "To Year", minval = 1970)
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate
+useCorrelation    = input(true, title="Use Correlation candles?")
+symbol = input("CRYPTOCAP:TOTAL", type=input.symbol)
+haClose = useCorrelation ? security(symbol, timeframe.period, close) : close
+haOpen  = useCorrelation ? security(symbol, timeframe.period, open) : open
+haHigh  = useCorrelation ? security(symbol, timeframe.period, high) : high
+haLow   = useCorrelation ? security(symbol, timeframe.period, low) : low
+length = input( 50 )
+overSold = input( 51 )
+overBought = input( 49 )
+s = input(title="Source", defval="haClose", options=["haClose", "haOpen", "haHigh", "haLow"])
+price = s == "haClose" ? haClose: s == "haOpen" ? haOpen : s == "haHigh" ? haHigh : s == "haLow" ? haLow : na
+len = input(8, "Length Moving average", minval=1)
+src = price
+ma = sma(src, len)
+vrsi = rsi(price, length)
+long = crossover(vrsi, overSold) and time_cond and price > ma
+short = crossunder(vrsi, overBought) and time_cond and price < ma
+takeProfit_long=input(1.0, step=0.005)
+stopLoss_long=input(0.1, step=0.005)
+takeProfit_short=input(0.05, step=0.005)
+stopLoss_short=input(0.03, step=0.005)
+strategy.entry("long",1,when=long)
+strategy.entry("short",0,when=short)
+strategy.exit("short_tp/sl", "long", profit=close * takeProfit_long / syminfo.mintick, loss=close * stopLoss_long / syminfo.mintick, comment='LONG EXIT',  alert_message = 'closeshort')
+strategy.exit("short_tp/sl", "short", profit=close * takeProfit_short / syminfo.mintick, loss=close * stopLoss_short / syminfo.mintick, comment='SHORT EXIT',  alert_message = 'closeshort')
+Expand (58 lines)

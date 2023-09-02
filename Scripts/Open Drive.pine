@@ -1,0 +1,280 @@
+Script Name: Open Drive
+Author: Marcns_
+Description: Open Drive is a market profile concept introduced by Jim Dalton. It occurs when the price moves directionally and persistently for the first 30 minutes from the cash market open.
+
+It is necessary to use 30-minute bars as there needs to be enough time to measure an extreme move of the cash open. This means there will be fewer trades than other strategies using...
+PineScript code:
+
+Pine Script™ strategy
+Open Drive
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Marcns_
+//@version=5
+// a script that highlights open drives around cash market opens throughout the day
+// this indicator identifies the following cash open, open drives 0700 - 0715 / 0800 - 0815 / 1300 - 1315 / 1430 - 1445 
+// an open drive is when a cash market opens and price runs either up or down away from the opening price, often this will be the high or the low the remainer of the session or day
+// and often identify a trend session
+strategy("Open Drive", commission_type =  strategy.commission.cash_per_contract, commission_value = 3.8, initial_capital = 40000 )
+// open drive filter times - all times GMT
+eu_sev = time(timeframe.period, "0700-0715", "GB")
+eu_eig = time(timeframe.period, "0800-0815", "GB")
+us_one = time(timeframe.period, "1300-1315", "GB")
+us_two = time(timeframe.period, "1430-1445", "GB")
+// identify bar that opens at low and closes at high + vice versa 
+// bar needs to open at one extreme and close at another 
+TrndExThreshold_Open = 0.15
+TrndExThreshold_Close = 0.15
+// add a bar range expansion filter - range of bar correlates to volume, high volume = wider range. This script will be able to filter for a break of a 5 bar range +100% or -100%
+fbhi = ta.highest(5)
+fblo = ta.lowest(5)
+fbr = (fbhi - fblo)
+RangeEx_up = 0.0
+if high >= (fbhi[1] + fbr[1])
+    RangeEx_up := 1.0
+else
+    na
+// range ex down
+RangeEx_do = 0.0
+if low <= (fblo[1] - fbr[1]) 
+    RangeEx_do := 1.0
+else
+    na
+//#1 open within 5% of low
+OpenAtLow = 0.0 
+if (close > open) and (open-low) / (high-low) < TrndExThreshold_Open
+    OpenAtLow := 1.0
+else 
+    na 
+//#2 close within 5% of high
+    
+CloseAtHigh = 0.0
+if (close > open) and (high-close) / (high-low) < TrndExThreshold_Close
+    CloseAtHigh := 1.0
+else
+    na 
+OD_Up = 0.0
+if (OpenAtLow + CloseAtHigh + RangeEx_up == 3.0) and ( eu_sev or eu_eig or us_one or us_two)
+    OD_Up := 1
+else
+    na
+plot(OD_Up, title = "OD_up")
+OpenAtHigh = 0.0 
+if (close < open) and (high-open) / (high-low) < TrndExThreshold_Open
+    OpenAtHigh := 1.0
+else 
+    na 
+//#2 close within 5% of high
+    
+CloseAtLow = 0.0
+if (close < open) and (close-low) / (high-low) < TrndExThreshold_Close
+    CloseAtLow := 1.0
+else
+    na 
+OD_Down = 0.0
+if (OpenAtHigh + CloseAtLow + RangeEx_do == 3.0) and ( eu_sev or eu_eig or us_one or us_two)
+    OD_Down := -1
+else
+    na
+plot(OD_Down, title = "OD_down", color = color.red)
+//3sma
+ma = ta.sma(close,3)
+// one time framing - highlight bars the make a series of lower highs or higher lows to identify trend 
+// one time frame up 
+otf_u = 0.0
+if close > ma and close[1] > ma[1]
+    otf_u := 1
+else
+    na
+// one time frame down 
+otf_d = 0.0
+if close < ma and close[1] < ma[1]
+    otf_d := 1
+else
+    na
+//bgcolor(otf_u ? color.rgb(76, 175, 79, 70) : na)
+//bgcolor(otf_d ? color.rgb(255, 82, 82, 66) : na)
+// record high and low of entry bar into variable for absolute stop
+// buy stop
+bs = 0.0
+if OD_Up
+    bs := low[1]
+else
+    na
+// sell stop
+ss = 0.0
+if OD_Down
+    ss := high[1]
+else
+    na
+// strategy entry and exits 
+// long
+if OD_Up
+    strategy.entry("el", strategy.long, 2)
+if ta.barssince(OD_Up)> 3 
+    strategy.exit(id = "ex" , from_entry = "el", limit = close)
+// short 
+if OD_Down
+    strategy.entry("es", strategy.short, 2)
+if ta.barssince(OD_Down)> 3
+    strategy.exit(id = "ex" , from_entry = "es", limit = close)
+Expand (159 lines)

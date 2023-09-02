@@ -1,0 +1,153 @@
+Script Name: 365 Day High Breakout Strategy
+Author: Atma_Sakshatkar
+Description: SCRIPT NOTES
+- Strategy consists of 3 parameters :-
+1. BUY on 365 day breakout (250 days taken in back-testing instead of 365 days considering weekends and other holidays in a year)
+2. Moving averages  (Noise Filtering condition )
+3. RELATIVE STRENTH indicator (Original Author - tradingview.com ) (Noise Filtering condition )
+
+- Strategy works better on low...
+PineScript code:
+
+Pine Script™ strategy
+365 Day High Breakout Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+//@version=4
+strategy("365 Day High Breakout Strategy", overlay = true,
+     commission_type=strategy.commission.percent, commission_value= 0.15)
+//------------------------------------------------------------------------------
+// MOVING AVERAGE
+len1 = input(50, minval=1, title="MA 50")
+MA50 = sma(close, len1)
+//plot(MA50, color=#00d8ff, linewidth=1, title="MA 50")
+len2 = input(150, minval=1, title="MA 150")
+MA150 = sma(close, len2)
+//plot(MA150, color=color.purple, linewidth=1, title="MA 150")
+len3 = input(200, minval=1, title="MA 200")
+MA200 = sma(close, len3)
+//plot(MA200, color=color.white, linewidth=1, title="MA 200")
+//------------------------------------------------------------------------------
+// RELATIVE STRENGTH
+comparativeTickerId = input("NSE:NIFTY", type=input.symbol, title="Comparative Symbol")  // ANY OTHER INDEX CAN BE USED
+length = input(50, type=input.integer, minval=1, title="Comparative Period")
+baseSymbol = security(syminfo.tickerid, timeframe.period, close)
+comparativeSymbol = security(comparativeTickerId, timeframe.period, close)
+RS = baseSymbol / baseSymbol[length] / 
+   (comparativeSymbol / comparativeSymbol[length]) - 1
+//------------------------------------------------------------------------------
+// STRATEGY ENTRY / EXIT
+//------------------------------------------------------------------------------
+is_buy =  
+     close > highest(high, 250 )[1] 
+     and RS > 0
+     and MA50 > MA150 and MA150 > MA200 
+     and close > MA50 and close > MA200
+     
+//------------------------------------------------------------------------------
+//ATR Trailing Stop
+ATRPeriod = input(14)
+ATRMultip = input(3.5)
+xATR = atr(ATRPeriod)
+nLoss = ATRMultip * xATR
+xATRTrailingStop = close
+xATRTrailingStop := iff(close > nz(xATRTrailingStop[1], 0) and close[1] > nz(xATRTrailingStop[1], 0), max(nz(xATRTrailingStop[1]), close - nLoss),
+  iff(close < nz(xATRTrailingStop[1], 0) and close[1] < nz(xATRTrailingStop[1], 0), min(nz(xATRTrailingStop[1]), close + nLoss), 
+  iff(close > nz(xATRTrailingStop[1], 0), close - nLoss, close + nLoss)))
+//------------------------------------------------------------------------------
+// PROFIT %
+//longProfitPerc = input(title="Take Profit (%)", defval = 10, type = input.float ) / 100   
+//longExitPrice  = strategy.position_avg_price * (1 + longProfitPerc)
+// STOP LOSS %
+//Long_sl = input(title="Loss (%)", defval = 4, type = input.float ) /100  
+//Long_stop_level = strategy.position_avg_price * (1 - Long_sl)
+//------------------------------------------------------------------------------
+buy_close = 
+     ( close < xATRTrailingStop[1] and not is_buy[1]  ) 
+     //close > longExitPrice 
+     //or close < Long_stop_level
+//------------------------------------------------------------------------------
+strategy.entry("Long", true, when = (is_buy and strategy.opentrades==0  ) )  
+strategy.close("Long", when = buy_close )
+Expand (82 lines)

@@ -1,0 +1,86 @@
+Script Name: The Lazy Trader - Index (ETF) Trend Following Robot
+Author: TsangYouJun
+Description: 50/150 moving average, index (ETF) trend following robot. Coded for people who cannot psychologically handle dollar-cost-averaging through bear markets and extreme drawdowns (although DCA can produce better results eventually), this robot helps you to avoid bear markets. Be a fair-weathered friend of Mr Market, and only take up his offer when the sun is shining!...
+PineScript code:
+
+Pine Script™ strategy
+The Lazy Trader - Index (ETF) Trend Following Robot
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+//@version=4
+//please use on daily SPY, or other indexes only
+strategy("50-150 INDEX TREND FOLLOWING", overlay=true)
+//user input
+fastSMA = input(title="Fast Moving Average (Int)",type=input.integer,minval=1,maxval=1000,step=1,defval=50,confirm=false)
+slowSMA = input(title="Slow Moving Average (Int)",type=input.integer,minval=1,maxval=1000,step=1,defval=150,confirm=false)
+longSlopeThreshold = input(title="Bullish Slope Angle (Deg)",type=input.integer,minval=-90,maxval=90,step=1,defval=5,confirm=false)
+shortSlopeThreshold = input(title="Bearish Slope Angle (Deg)",type=input.integer,minval=-90,maxval=90,step=1,defval=-5,confirm=false)
+atrValue = input(title="Average True Range (Int)",type=input.integer,minval=1,maxval=100,step=1,defval=14,confirm=false)
+risk = input(title="Risk (%)",type=input.integer,minval=1,maxval=100,step=1,defval=100,confirm=false)
+//create indicator
+shortSMA = sma(close, fastSMA)
+longSMA = sma(close, slowSMA)
+//calculate ma slope
+angle(_source) =>
+    rad2degree=180/3.14159265359
+    ang=rad2degree*atan((_source[0] - _source[1])/atr(atrValue)) 
+shortSlope=angle(shortSMA)
+longSlope=angle(longSMA)
+//specify crossover conditions
+longCondition = (crossover(shortSMA, longSMA) and (shortSlope > longSlopeThreshold)) or ((close > shortSMA) and (shortSMA > longSMA) and (shortSlope > longSlopeThreshold))
+exitCondition = crossunder(shortSMA, longSMA) or (shortSlope < shortSlopeThreshold)
+//units to buy
+amount = (risk / 100) * (strategy.initial_capital + strategy.netprofit)
+units = floor(amount / close)
+//long trade
+if (longCondition and strategy.position_size == 0)
+    strategy.order("Long", strategy.long, units)
+//close long trade
+if (exitCondition and strategy.position_size > 0)
+    strategy.order("Exit", strategy.short, strategy.position_size)
+// Plot Moving Average's to chart
+plot(shortSMA, color=color.blue)
+plot(longSMA, color=color.green)
+Expand (43 lines)

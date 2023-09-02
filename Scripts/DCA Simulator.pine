@@ -1,0 +1,157 @@
+Script Name: DCA Simulator
+Author: lukescream
+Description: A simple yet powerful Dollar Cost Averaging (DCA) simulator.
+
+You just add the script to your chart, and you'll be able to see:
+- Every single entry with its size
+- The evolution of you average price in time (blue line)
+- The profit and loss areas (where market price < average price the DCA is at loss, and the background is colored in red. At the contrary, where...
+PineScript code:
+
+Pine Script™ strategy
+DCA Simulator
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+//@version=5
+//Made by "Liquidator", all credits for this script go to him.
+strategy('dca', overlay=true, pyramiding=10000, calc_on_every_tick=true, process_orders_on_close=true)
+fn_plot_label_below(txt, offset_x) =>
+    x = time + (time - time[1]) * offset_x
+    var label lab = na
+    label.delete(lab)
+    lab := label.new(x=x, y=0, text=txt, xloc=xloc.bar_time, yloc=yloc.belowbar, color=color.red, textcolor=color.black, size=size.normal, style=label.style_label_up)
+    label.set_x(lab, x)
+fn_plot_label_above(txt, offset_x) =>
+    x = time + (time - time[1]) * offset_x
+    var label lab = na
+    label.delete(lab)
+    lab := label.new(x=x, y=0, text=txt, xloc=xloc.bar_time, yloc=yloc.abovebar, color=color.green, textcolor=color.black, size=size.normal, style=label.style_label_down)
+    label.set_x(lab, x)
+DAILY = 'DAILY'
+WEEKLY = 'WEEKLY'
+MONTHLY = 'MONTHLY'
+month_day = input.int(15, minval=1, maxval=28)
+week_day = input.int(dayofweek.monday, options=[dayofweek.monday, dayofweek.tuesday, dayofweek.wednesday, dayofweek.thursday, dayofweek.friday, dayofweek.saturday, dayofweek.sunday])
+dca_period = input.string(MONTHLY, options=[DAILY, MONTHLY, WEEKLY])
+dca_sigle_size = input(100.0, title='sigle operation size in quote currency ( ex: USD on ticker EUR/USD )')
+dca_long = input(true)
+EXIT_NONE = 'NONE'
+EXIT_GAIN_THRESHOLD = 'GAIN THRESHOLD'
+exit_strategy = input.string(EXIT_NONE, options=[EXIT_NONE, EXIT_GAIN_THRESHOLD])
+exit_gain_threshold = input(1000.0)
+exit_close_perc = input(25)
+start = timestamp(input(2018, 'start year'), input(1, 'start month'), input(1, 'start day'), 00, 00)
+end = timestamp(input(2100, 'end year'), input(1, 'end month'), input(1, 'end day'), 00, 00)
+daily_close = request.security(ticker.new(syminfo.prefix, syminfo.ticker), 'D', close, gaps=barmerge.gaps_on)
+new_day = ta.change(dayofweek)
+is_today = year(timenow) == year(time) and month(timenow) == month(time) and dayofmonth(timenow) == dayofmonth(time)
+is_buy_day = dca_period == WEEKLY and dayofweek == week_day or dca_period == MONTHLY and month_day == dayofmonth or dca_period == DAILY
+position_cost = strategy.opentrades * dca_sigle_size
+//position_cost = strategy.position_size * strategy.position_avg_price
+position_value = strategy.position_size * close
+profit = position_value - position_cost
+float max_dd = 0
+max_dd := math.min(profit, nz(max_dd[1]))
+trigger = time > start and time < end and is_buy_day and new_day
+close_dca = time > end or is_today
+if trigger
+    strategy.entry('DCA', direction=dca_long ? strategy.long : strategy.short, qty=dca_sigle_size / close)
+    if dca_long
+        label.new(x=bar_index, y=0, yloc=yloc.belowbar, size=size.tiny, style=label.style_triangleup, color=color.green)
+    else
+        label.new(x=bar_index, y=0, yloc=yloc.abovebar, size=size.tiny, style=label.style_triangledown, color=color.red)
+if exit_strategy == EXIT_GAIN_THRESHOLD and ta.crossover(profit, exit_gain_threshold)
+    strategy.close('DCA', qty_percent=exit_close_perc)
+    label.new(x=bar_index, y=0, yloc=yloc.abovebar, size=size.tiny, style=label.style_triangledown, color=color.purple)
+if close_dca
+    strategy.close('DCA', qty_percent=100)
+plot(strategy.position_avg_price, title='average position entry price')
+bgcolor(dca_long ? close < strategy.position_avg_price ? color.red : color.green : close < strategy.position_avg_price ? color.green : color.red,transp=90)
+if ta.change(max_dd) != 0
+    fn_plot_label_below('max drowdown: ' + str.tostring(max_dd, '#.##'), 0)
+if not close_dca
+    fn_plot_label_above('profit: ' + str.tostring(profit, '#.##') + '\n' + 'cost:   ' + str.tostring(position_cost, '#.##'), 0)
+Expand (84 lines)

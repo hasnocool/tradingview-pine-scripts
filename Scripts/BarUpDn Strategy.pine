@@ -1,0 +1,46 @@
+Script Name: BarUpDn Strategy
+Author: REV0LUTI0N
+Description: This is a bar up/down strategy where you can specify how many bars up to buy and how many bars down to sell. It also has code to check and make sure the condition is still true when launching the official alert, which helps back testing and live results line up, however be sure to enter commission and slippage into the properties to accurately reflect profits. I...
+PineScript code:
+
+Pine Script™ strategy
+BarUpDn Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+//@version=4
+strategy("BarUpDn Strategy", overlay=true, initial_capital = 10000, default_qty_value = 10000, default_qty_type = strategy.cash)
+BarsUp = input(1)
+BarsDown = input(1)
+// Strategy Backesting
+startDate  = input(timestamp("2021-01-01T00:00:00"), type = input.time)
+finishDate = input(timestamp("2021-12-31T00:00:00"), type = input.time)
+time_cond  = time >= startDate and time <= finishDate
+// Messages for buy and sell
+message_buy  = input("{{strategy.order.alert_message}}", title="Buy message")
+message_sell = input("{{strategy.order.alert_message}}", title="Sell message")
+if (close > open and open > close[BarsUp]) and time_cond
+    strategy.entry("BarUp", strategy.long, stop = high + syminfo.mintick, alert_message = message_buy)
+if (close < open and open < close[BarsDown]) and time_cond
+    strategy.entry("BarDn", strategy.short, stop = low + syminfo.mintick, alert_message = message_sell)
+//plot(strategy.equity, title="equity", color=color.red, linewidth=2, style=plot.style_areabr)
+Expand (21 lines)

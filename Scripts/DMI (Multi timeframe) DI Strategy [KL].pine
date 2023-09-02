@@ -1,0 +1,192 @@
+Script Name: DMI (Multi timeframe) DI Strategy [KL]
+Author: DojiEmoji
+Description: Directional Movement Index Strategy 
+
+ Entry conditions: 
+- (a) when DI+ > DI- on timeframe #1, and 
+- (b) Confirmation: when DI+ > DI- on timeframe #2
+In the shown example, timeframe1 was same as the chart (1H) and timeframe2 was 1D.
+
+ Stop Loss:   ATR based trailing stop
+
+ About DMI 
+Can refer to  Investopedia  for general understanding.
+ Applications of DMI in...
+PineScript code:
+
+Pine Script™ strategy
+DMI (Multi timeframe) DI Strategy [KL]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © DojiEmoji
+//@version=5
+strategy("DI+/- multi TF Strat [KL]", overlay=true, pyramiding=1, initial_capital=1000000000, default_qty_type=strategy.percent_of_equity, default_qty_value=5)
+var string GROUP_ALERT    = "Alerts"
+var string GROUP_SL       = "Stop loss"
+var string GROUP_ORDER    = "Order size"
+var string GROUP_TP       = "Profit taking"
+var string GROUP_HORIZON  = "Time horizon of backtests"
+var string GROUP_IND      = "Directional IndicatorDI+ DI-"
+// ADX Indicator {
+adx_len = input(14, group=GROUP_IND, tooltip="Typically 14")
+tf1 = input.timeframe("", title="DI +/- in Timeframe 1", group=GROUP_IND, tooltip="Main: DI+ > DI-")
+tf2 = input.timeframe("1D", title="DI +/- in Timeframe 2", group=GROUP_IND, tooltip="Confirmation: DI+ > DI-")
+// adx_thres = input(20, group=GROUP_IND)   //threshold not used in this strategy
+get_ADX(_high, _close, _low) =>
+// (high, close, mid) -> [plus_DM, minus_DM]
+    // Based on TradingView user BeikabuOyaji's implementation
+    _tr = math.max(math.max(_high - _low, math.abs(_high - nz(_close[1]))), math.abs(_low - nz(_close[1])))
+    smooth_tr = 0.0
+    smooth_tr := nz(smooth_tr[1]) - nz(smooth_tr[1]) / adx_len + _tr
+    smooth_directional_mov_plus = 0.0
+    smooth_directional_mov_plus := nz(smooth_directional_mov_plus[1]) - nz(smooth_directional_mov_plus[1]) / adx_len + (_high - nz(_high[1]) > nz(_low[1]) - _low ? math.max(_high - nz(_high[1]), 0) : 0)
+    smooth_directional_mov_minus = 0.0
+    smooth_directional_mov_minus := nz(smooth_directional_mov_minus[1]) - nz(smooth_directional_mov_minus[1]) / adx_len + (nz(_low[1]) - _low > _high - nz(_high[1]) ? math.max(nz(_low[1]) - _low, 0) : 0)
+    plus_DM = smooth_directional_mov_plus / smooth_tr * 100
+    minus_DM = smooth_directional_mov_minus / smooth_tr * 100
+    // DX = math.abs(plus_DM - minus_DM) / (plus_DM + minus_DM) * 100   // DX not used in this strategy
+    [plus_DM, minus_DM]
+nrp_security(_symbol, _tf, _src) =>
+// Wrapper function around request.security() - don't use developing bars
+    request.security(_symbol, _tf, _src[barstate.isrealtime ? 1 : 0], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+// DI +/- from timeframes 1 and 2
+[plus_DM_tf1, minus_DM_tf1] = get_ADX(nrp_security(syminfo.tickerid, tf1, high), nrp_security(syminfo.tickerid, tf1, close), nrp_security(syminfo.tickerid, tf1, low))
+[plus_DM_tf2, minus_DM_tf2] = get_ADX(nrp_security(syminfo.tickerid, tf2, high), nrp_security(syminfo.tickerid, tf2, close), nrp_security(syminfo.tickerid, tf2, low))
+// } end of block: ADX Indicator
+var string ENUM_LONG      = "LONG"
+var string LONG_MSG_ENTER = input.string("Long entered", title="Alert MSG for buying (Long position)", group=GROUP_ALERT)
+var string LONG_MSG_EXIT  = input.string("Long closed", title="Alert MSG for closing (Long position)", group=GROUP_ALERT)
+backtest_timeframe_start = input.time(defval=timestamp("01 Apr 2020 13:30 +0000"), title="Backtest Start Time", group=GROUP_HORIZON)
+within_timeframe         = time >= backtest_timeframe_start
+// Signals for entry
+_uptrend_confirmed = plus_DM_tf1 > minus_DM_tf1 and plus_DM_tf2 > minus_DM_tf2
+entry_signal_long = _uptrend_confirmed
+plotshape(_uptrend_confirmed, style=shape.triangleup, location=location.bottom, color=color.green)
+plotshape(not _uptrend_confirmed, style=shape.triangledown, location=location.bottom, color=color.red)
+// Trailing stop loss ("TSL") {
+tsl_multi                 = input.float(2.0, title="ATR Multiplier for trailing stoploss", group=GROUP_SL)
+SL_buffer                 = ta.atr(input.int(14, title="Length of ATR for trailing stoploss", group=GROUP_SL)) * tsl_multi
+TSL_source_long           = low
+var stop_loss_price_long  = float(0)
+var pos_opened_long       = false
+stop_loss_price_long := pos_opened_long ? math.max(stop_loss_price_long, TSL_source_long - SL_buffer) : TSL_source_long - SL_buffer
+// MAIN: {
+if pos_opened_long and TSL_source_long <= stop_loss_price_long
+    pos_opened_long := false
+    alert(LONG_MSG_EXIT, alert.freq_once_per_bar)
+    strategy.close(ENUM_LONG, comment=close < strategy.position_avg_price ? "stop loss" : "take profit")
+// (2) Update the stoploss to latest trailing amt.
+if pos_opened_long
+    strategy.exit(ENUM_LONG, stop=stop_loss_price_long, comment="SL")
+// (3) INITIAL ENTRY:
+if within_timeframe and entry_signal_long
+    pos_opened_long := true
+    alert(LONG_MSG_ENTER, alert.freq_once_per_bar)
+    strategy.entry(ENUM_LONG, strategy.long, comment="long")
+// Plotting: 
+TSL_transp_long = pos_opened_long and within_timeframe ? 0 : 100
+plot(stop_loss_price_long, color=color.new(color.green, TSL_transp_long))
+// CLEAN UP: Setting variables back to default values once no longer in use
+if ta.change(strategy.position_size) and strategy.position_size == 0
+    pos_opened_long := false
+if not pos_opened_long
+    stop_loss_price_long := float(0)
+// } end of MAIN block
+Expand (97 lines)

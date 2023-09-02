@@ -1,0 +1,90 @@
+Script Name: Trading Inside Gap - 15 min chart
+Author: achalmeena
+Description: This code is for educational purposes.
+Following are the major takeaways from this code 
+
+1. Identify the first bar of the series.
+2. Using security function to obtain data from a higher Time frame
+3. Use of function strategy.risk.max_intraday_filled_orders
+4. closing trade at the end of the session
+
+The code is in raw form and can be refined/modified to improve results
+PineScript code:
+
+Pine Script™ strategy
+Trading Inside Gap - 15 min chart
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+// This source code is subject to the terms of the Mozilla Public License 2.0
+// © achalmeena
+// Reference E-Book - Teach Yourself Coding Indicators PineScript
+// Udemy course on Creating trade strategies backtesting using pinescript
+// The code is to trade "inside Gap up", inside Gap means open of new candle is above close of previous candle but below high of previous candle.
+// In this code "Security function" is used to get  high low of previous bar
+// time function is also used to identify first bar of the session.
+// The code can be refined by using filters to have more better results.
+//@version=4
+strategy("Trading Inside Gap - 15 min chart",overlay=true)
+maxTrades = 2
+strategy.risk.max_intraday_filled_orders(count=maxTrades)
+t = time("1440", session.regular) // 1440=60*24 is the number of minutes in a whole day. You may use "0930-1600" as second session parameter
+is_first = na(t[1]) and not na(t) or t[1] < t
+condition_H()=> (high)
+condition_L()=>(low)
+condition_R()=>(close<open)
+RedCandle = security(syminfo.tickerid,'D',condition_R())
+DayHigh = security(syminfo.tickerid,'D',condition_H())
+DayLow = security(syminfo.tickerid,'D',condition_L())
+GapUp = is_first and open > close[1]*1.005 and open < DayHigh
+t1 = time("1440", "0930-1600")
+t11 = na(t1) ? 0 : 1 
+if GapUp[1] and t11 == 1
+    //add code to mark all session bars as GapUp
+    GapUp := true
+plotshape(GapUp,style=shape.triangleup,location=location.abovebar,color=color.green)
+///take long when price near low
+NearLow = close < DayLow * 1.005
+strategy.entry("Gap Up Long",long=1,when = GapUp and NearLow and (RedCandle) and hour(time) < 15,stop=high[1])
+strategy.close("Gap Up Long", comment="Session Ends",when=hour(time)==14 and minute(time) > 30 )
+Expand (42 lines)

@@ -1,0 +1,72 @@
+Script Name: Swing Trading SPX Correlation
+Author: exlux99
+Description: This is a long timeframe script designed to benefit from the correlation with the Percentage of stocks Above 200 moving average from SPX
+
+At the same time with this percentage we are creating a weighted moving average to smooth its accuracy.
+
+The rules are simple :
+If the moving average is increasing its a long signal/short exit
+If the moving average is decreased...
+PineScript code:
+
+Pine Script™ strategy
+Swing Trading SPX Correlation
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © exlux99
+//@version=5
+strategy("Swing Trading SPX Correlation")
+S4 = 'INDEX:S5TH'//input.symbol(title='ABOVE 200', defval='INDEX:S5TH')
+P4 = request.security(S4, 'D', close)
+lengthMA = input.int(100, minval=1)
+reaction = input.int(2, minval=1, maxval=5)
+MA4 = ta.vwma(P4, lengthMA)
+direction4 = 0
+direction4 := ta.rising(MA4, reaction) ? 1 : ta.falling(MA4, reaction) ? -1 : nz(direction4[1])
+//change_direction= change(direction2,1)
+pcol4 = direction4 > 0 ? color.lime : direction4 < 0 ? color.red : na
+pula_long = direction4 > direction4[1] and direction4 > 0
+pula_short=  direction4 < direction4[1] and direction4 < 0
+plot(MA4, linewidth=4, color=pcol4)
+long = direction4 > 0 and direction4[1] < 0
+short = direction4 < 0 and direction4[1] > 0
+strategy.entry("long",strategy.long,when=long)
+strategy.close("long",when=short)
+//strategy.entry('short',strategy.short,when=short)
+Expand (36 lines)

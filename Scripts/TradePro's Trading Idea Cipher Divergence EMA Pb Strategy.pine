@@ -1,0 +1,417 @@
+Script Name: TradePro's Trading Idea Cipher Divergence EMA Pb Strategy
+Author: TradingStrategyCheck
+Description: Here I present you on of Trade Pro's Trading Idea: Cipher B+ Divergence EMA Pullback Strategy.
+
+Optimized the crypto pairBTC/USDT in the 30 minute chart.
+
+There is the possibility to switch between short and long positions.
+
+You can choose between 2 different take profit/stop loss types: The Lowest Low/ Highest High Stop Loss/ Take Profit and the ATR Take Profit/...
+PineScript code:
+
+Pine Script™ strategy
+TradePro's Trading Idea Cipher Divergence EMA Pb Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+//@version=4
+//Lowest Low/ Highest High & ATR Stop Loss/ Take Profit
+//Optimized for the 30 minutes chart
+strategy(title="TradePro's Trading Idea Cipher B+ Divergence EMA Pullback Strategy", shorttitle="WT MFI RSI EMA PB STRAT", overlay = true, pyramiding = 0, max_bars_back=5000, calc_on_order_fills = false, commission_type =  strategy.commission.percent, commission_value = 0, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, initial_capital=5000, currency=currency.USD)
+// { Time Range
+FromMonth=input(defval=1,title="FromMonth",minval=1,maxval=12)
+FromDay=input(defval=1,title="FromDay",minval=1,maxval=31)
+FromYear=input(defval=2020,title="FromYear",minval=2016)
+ToMonth=input(defval=1,title="ToMonth",minval=1,maxval=12)
+ToDay=input(defval=1,title="ToDay",minval=1,maxval=31)
+ToYear=input(defval=9999,title="ToYear",minval=2017)
+start=timestamp(FromYear,FromMonth,FromDay,00,00)
+finish=timestamp(ToYear,ToMonth,ToDay,23,59)
+window()=>time>=start and time<=finish?true:false
+// See if this bar's time happened on/after start date
+afterStartDate = time >= start and time<=finish?true:false
+zeroline = 0
+// } Time Range
+// { Wavetrend, RSI, MFI
+// WaveTrend
+cl = input(14, "Channel Length")
+al = input(10, "Average Length")
+overbought = input(53, title = 'WT Overbought Level 1', type = input.integer)
+oversold = input(-60, title = 'WT Oversold Level 1', type = input.integer)
+ap = hlc3 
+esa = ema(ap, cl)
+d = ema(abs(ap - esa), cl)
+ci = (ap - esa) / (0.015 * d)
+tci = ema(ci, al)
+ 
+wt1 = tci
+wt2 = sma(wt1,4)
+wtOs = wt2 <= oversold
+wtOb = wt2 >= overbought
+wtX = cross(wt1, wt2)
+wtUp = wt2 - wt1 <= 0
+wtDown = wt2 - wt1 >= 0
+buySignal = wtX and wtOs and wtUp
+sellSignal = wtX and wtOb and wtDown
+// RSI & MFI
+rsiMFIPosY = input(1.5, title = 'MFI Area Y Pos', type = input.float)
+rsiMFIperiod = input(71, title = 'MFI Period', type = input.integer)
+rsiMFIMultiplier = input(200, title = 'MFI Area multiplier', type = input.float)
+f_rsimfi(_period, _multiplier, _tf) => security(syminfo.tickerid, _tf, sma(((close - open) / (high - low)) * _multiplier, _period) - rsiMFIPosY)
+rsiMFI = f_rsimfi(rsiMFIperiod, rsiMFIMultiplier, timeframe.period)
+// } Wavetrend, RSI, MFI
+// { EMA
+emasrc = close
+res = input(title="EMA Timeframe", type=input.resolution, defval="30")
+len1 = input(title="EMA1 Length", type=input.integer, defval=150)
+col1 = color.yellow
+len2 = input(title="EMA2 Length", type=input.integer, defval=50)
+col2 = color.blue
+// Calculate EMA
+ema1 = ema(emasrc, len1)
+emaSmooth1 = security(syminfo.tickerid, res, ema1, barmerge.gaps_off, barmerge.lookahead_off)
+ema2 = ema(emasrc, len2)
+emaSmooth2 = security(syminfo.tickerid, res, ema2, barmerge.gaps_off, barmerge.lookahead_off)
+// Draw EMA
+plot(emaSmooth1, title="EMA1", linewidth=1, color=col1)
+plot(emaSmooth2, title="EMA2", linewidth=1, color=col2)
+// } EMA
+// { Long Entry
+enablelong = input(true, title="Enable long?")
+//Long Signal
+upcondition = close > emaSmooth1
+wavetrendlong = wt1 and wt2 < zeroline
+mfilong = rsiMFI > 0
+emapblong1 = (close > emaSmooth2) and (close[1] < emaSmooth2[1])
+emapblong2 = ((close[2] > emaSmooth2[2]) and (close[3] > emaSmooth2[3]) and (close[4] > emaSmooth2[4])) or ((close[5] > emaSmooth2[5]) and (close[6] > emaSmooth2[6]) and (close[7] > emaSmooth2[7])) or ((close[8] > emaSmooth2[8]) and (close[9] > emaSmooth2[9]) and (close[10] > emaSmooth2[10]))
+longcondition = upcondition and wavetrendlong and buySignal and mfilong and emapblong1 and emapblong2
+//strategy buy long
+if (longcondition) and (afterStartDate) and strategy.opentrades < 1 and (enablelong == true)
+    strategy.entry("long", strategy.long)
+plotshape(longcondition, style=shape.arrowup,
+                 location=location.abovebar, color=color.green)
+// } Long Entry
+// { Short Entry
+enableshort = input(true, title="Enable short?")
+//Short Signal
+downcondition = close < emaSmooth1
+wavetrendshort = wt1 and wt2 > zeroline
+mfishort = rsiMFI < 0
+emapbshort1 = (close < emaSmooth2) and (close[1] > emaSmooth2[1])
+emapbshort2 = ((close[2] < emaSmooth2[2]) and (close[3] < emaSmooth2[3]) and (close[4] < emaSmooth2[4])) or ((close[5] < emaSmooth2[5]) and (close[6] < emaSmooth2[6]) and (close[7] < emaSmooth2[7])) or ((close[8] < emaSmooth2[8]) and (close[9] < emaSmooth2[9]) and (close[10] < emaSmooth2[10]))
+shortcondition = downcondition and wavetrendshort and sellSignal and mfishort and emapbshort1 and emapbshort2
+//strategy buy short
+if (shortcondition) and (afterStartDate) and strategy.opentrades < 1 and (enableshort == true)
+    strategy.entry("short", strategy.short)
+plotshape(shortcondition, style=shape.arrowdown,
+                 location=location.belowbar, color=color.red)
+// } Short Entry
+// { Exit Conditions
+bought = strategy.position_size[1] < strategy.position_size
+sold = strategy.position_size[1] > strategy.position_size
+barsbought = barssince(bought)
+barssold = barssince(sold)
+slbuffer = input(title="SL Buffer", type=input.float, step=0.1, defval=0)
+var table exittable = table.new(position.top_right, 4, 3, bgcolor = color.gray, frame_width = 2, frame_color = color.black)
+// } Exit Conditions
+// { Lowest Low/ Highes High Exit Condition
+enablelowhigh = input(false, title="Enable lowest low/ highest high exit?")
+//Lowest Low LONG
+profitfactorlong = input(title="ProfitfactorLong", type=input.float, step=0.1, defval=2)
+loLen = input(title="Lowest Low Lookback", type=input.integer,
+  defval=60, minval=2)
+stop_level_long = lowest(low, loLen)[1]
+if enablelowhigh == true and strategy.position_size>0 and strategy.position_entry_name == "long"
+    profit_level = strategy.position_avg_price + ((strategy.position_avg_price - stop_level_long[barsbought])*profitfactorlong) + slbuffer
+    table.cell(exittable, 0, 0, "SL Long")
+    table.cell(exittable, 0, 1, "TP Long")
+    table.cell(exittable, 1, 0, tostring(stop_level_long[barsbought]))
+    table.cell(exittable, 1, 1, tostring(profit_level))
+    strategy.exit(id="TP/ SL", stop=stop_level_long[barsbought] - slbuffer, limit=profit_level)
+//Lowest Low SHORT
+profitfactorshort = input(title="ProfitfactorShort", type=input.float, step=0.1, defval=0.5)
+highLen = input(title="highest high lookback", type=input.integer,
+  defval=50, minval=2)
+stop_level_short = highest(high, highLen)[1]
+if enablelowhigh == true and strategy.position_size<0 and strategy.position_entry_name == "short"
+    profit_level = strategy.position_avg_price - ((stop_level_short[barssold] - strategy.position_avg_price)*profitfactorshort) - slbuffer
+    table.cell(exittable, 2, 0, "SL Short")
+    table.cell(exittable, 2, 1, "TP Long")
+    table.cell(exittable, 3, 0, tostring(stop_level_short[barsbought]))
+    table.cell(exittable, 3, 1, tostring(profit_level))
+    strategy.exit(id="TP/ SL", stop=stop_level_short[barssold] + slbuffer, limit=profit_level)
+// } Lowest Low/ Highest High Exit Condition
+// { ATR Take Profit/ Stop Loss
+enableatr = input(true, title="Enable ATR exit?")
+atrprofitfactorlong = input(title="ATR Profitfactor Long", type=input.float, step=0.1, defval=2)
+atrstopfactorlong = input(title="ATR Stopfactor Long", type=input.float, step=0.1, defval=4)
+atrprofitfactorshort = input(title="ATR Profitfactor Short", type=input.float, step=0.1, defval=2)
+atrstopfactorshort = input(title="ATR Stopfactor Short", type=input.float, step=0.1, defval=4)
+//ATR
+lengthATR = input(title="ATR Length", defval=11, minval=1)
+atr = atr(lengthATR)
+//LONG EXIT
+if (afterStartDate) and (enableatr == true) and (strategy.opentrades > 0) and (strategy.position_entry_name == "long")
+    profit_level = strategy.position_avg_price + (atr*atrprofitfactorlong)
+    stop_level = strategy.position_avg_price - (atr*atrstopfactorlong)
+    table.cell(exittable, 0, 0, "SL Long")
+    table.cell(exittable, 0, 1, "TP Long")
+    table.cell(exittable, 0, 2, "Last Long Position")
+    table.cell(exittable, 1, 0, tostring(stop_level[barsbought]))
+    table.cell(exittable, 1, 1, tostring(profit_level[barsbought]))
+    table.cell(exittable, 1, 2, tostring(strategy.position_avg_price))
+    strategy.exit("Take Profit/ Stop Loss", "long", stop=stop_level[barsbought], limit=profit_level[barsbought])
+profit_level_atr_long = strategy.position_avg_price + (atr*atrprofitfactorlong)
+stop_level_atr_long = strategy.position_avg_price - (atr*atrstopfactorlong)
+stop_atr_long=stop_level_atr_long[barsbought]
+profit_atr_long=profit_level_atr_long[barsbought]
+plot(profit_atr_long, title="Take Profit Long", linewidth=1, color=color.green)
+plot(stop_atr_long, title="Stop Loss Long", linewidth=1, color=color.red)
+//SHORT EXIT
+if (afterStartDate) and (enableatr == true) and (strategy.opentrades > 0) and strategy.position_entry_name == "short"
+    profit_level = strategy.position_avg_price - (atr*atrprofitfactorshort)
+    stop_level = strategy.position_avg_price + (atr*atrstopfactorshort)
+    table.cell(exittable, 2, 0, "SL Short")
+    table.cell(exittable, 2, 1, "TP Short")
+    table.cell(exittable, 2, 2, "Last Short Position")
+    table.cell(exittable, 3, 0, tostring(stop_level[barssold]))
+    table.cell(exittable, 3, 1, tostring(profit_level[barssold]))
+    table.cell(exittable, 3, 2, tostring(strategy.position_avg_price))
+    strategy.exit("Take Profit/ Stop Loss", "short", stop=stop_level[barssold], limit=profit_level[barssold])
+profit_level_atr_short = strategy.position_avg_price - (atr*atrprofitfactorshort)
+stop_level_atr_short = strategy.position_avg_price + (atr*atrstopfactorshort)
+stop_atr_short=stop_level_atr_short[barssold]
+profit_atr_short=profit_level_atr_short[barssold]
+plot(profit_atr_short, title="Take Profit Short", linewidth=1, color=color.green)
+plot(stop_atr_short, title="Stop Loss Short", linewidth=1, color=color.red)
+// } ATR Take Profit/ Stop Loss
+// { Update Calc
+//risc = input(title="Risc (0.02 = 2%)", type=input.float, step=0.1, defval=0.02)
+//capital = strategy.equity
+//quantityofcoins = (strategy.equity * risc) / ((strategy.position_avg_price - stop_level) / strategy.position_avg_price) 
+//leverage = ((strategy.position_avg_price - stop_level) / strategy.position_avg_price) / capital
+// } Update Calc
+Expand (225 lines)

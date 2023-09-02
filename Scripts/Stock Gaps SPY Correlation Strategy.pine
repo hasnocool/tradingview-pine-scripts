@@ -1,0 +1,77 @@
+Script Name: Stock Gaps SPY Correlation Strategy
+Author: exlux99
+Description: This is daytrade stock strategy, designed to take the best out of the daily gaps that are forming between the close of previous day and opening of present day.
+
+At the same time its logic has been adapted for SPY chart, in order to use correlation with the other stocks/assets/ etf which are linked with SP500 movement.
+
+Lastly it has been added 2 new confirmation...
+PineScript code:
+
+Pine Script™ strategy
+Stock Gaps SPY Correlation Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+//@version=5
+strategy("Stock Gaps SPY Correlation Strategy", overlay = true)
+open_spy = request.security("SPY", timeframe.period, open)
+high_spy = request.security("SPY", timeframe.period, high)
+low_spy = request.security("SPY", timeframe.period, low)
+close_spy = request.security("SPY", timeframe.period, close)
+minimalDeviationTooltip = "Specifies the minimal size of detected gaps, as a percentage of the average high-low range for the last 14 bars."
+minimalDeviationInput = nz(input.float(30.0, "Minimal Deviation (%)", tooltip = minimalDeviationTooltip, minval=1, maxval=100) / 100 * ta.sma(high_spy-low_spy, 14))
+sec = request.security("PCTABOVEVWAP.US", timeframe.period, close)
+sec2 = request.security("USI:ADDQ", timeframe.period, close)
+// Detect gaps.
+isGapDown = open_spy < close_spy[1] and low_spy[1] - high_spy >= minimalDeviationInput 
+isGapUp = open_spy > close_spy[1] and low_spy - high_spy[1] >= minimalDeviationInput
+t2 = time(timeframe.period, input.session("0930-1000"))
+exitt = time(timeframe.period, input.session("1430-1600"))
+long = isGapUp and t2 and ( sec2>=0) 
+short = isGapDown and t2  and ( sec <=50 and  sec2<0)
+if(long)
+    strategy.entry("long",strategy.long)
+if(short)
+    strategy.entry('short',strategy.short)
+strategy.close_all(when=exitt)
+        
+Expand (41 lines)

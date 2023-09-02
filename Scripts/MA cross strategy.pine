@@ -1,0 +1,75 @@
+Script Name: MA cross strategy
+Author: Glenn234
+Description: I created an sma (10/30) strategy.
+
+The script is under construction and can be changed, since i'm looking for a more profitable strategy.
+If you have ideas to make it more profitable, please comment.
+It is possible to change everything to your own needs.
+PineScript code:
+
+Pine Script™ strategy
+MA cross strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Glenn234
+//@version=5
+strategy("MA cross strategy", shorttitle="macs", overlay=true)
+// Create indicator's
+shortSMA = ta.sma(close, 10)
+longSMA = ta.sma(close, 30)
+rsi = ta.rsi(close, 14)
+atr = ta.atr(14)
+// Crossover conditions
+longCondition = ta.crossover(shortSMA, longSMA)
+shortCondition = ta.crossunder(shortSMA, longSMA)
+// trade conditions
+if (longCondition)
+    stopLoss = low - atr * 2
+    takeProfit = high + atr * 2
+    strategy.entry("long", strategy.long, 100, when = rsi > 50)
+    strategy.exit("exit", "long", stop=stopLoss, limit=takeProfit)
+if (shortCondition)
+    stopLoss = high + atr * 2
+    takeProfit = low - atr * 2
+    strategy.entry("short", strategy.short, 100, when = rsi < 50)
+    strategy.exit("exit", "short", stop=stopLoss, limit=takeProfit)
+// Plot SMA to chart
+plot(shortSMA, color=color.red, title="Short SMA")
+plot(longSMA, color=color.green, title="Long SMA")
+Expand (36 lines)

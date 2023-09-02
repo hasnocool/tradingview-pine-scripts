@@ -1,0 +1,270 @@
+Script Name: Ichimoku Kinko Hyo Strategy
+Author: mdeous
+Description: Strategy based on the Ishimoku Kinko Hyo system, using the different indicators it provides to build signals.
+
+This strategy could be better as it should ideally use the position of the price line compared to Chikou to determine if signals should be looked for, but I've been unable to fully implement this so far (an imperfect implementation is provided, but...
+PineScript code:
+
+Pine Script™ strategy
+Ichimoku Kinko Hyo Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mdeous
+//@version=4
+strategy(
+     title="Ichimoku Kinko Hyo Strategy", 
+     shorttitle="Ichimoku Strategy", 
+     overlay=true,
+     pyramiding=0,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=100,
+     initial_capital=1000,
+     currency="USD",
+     commission_type=strategy.commission.percent,
+     commission_value=0.0
+     )
+//
+// SETTINGS
+//
+// Ichimoku
+int TENKAN_LEN = input(title="Tenkan-Sen Length", defval=9, minval=1, step=1)
+int KIJUN_LEN = input(title="Kijun-Sen Length", defval=26, minval=1, step=1)
+int SSB_LEN = input(title="Senkou Span B Length", defval=52, minval=1, step=1)
+int OFFSET = input(title="Offset For Chikou Span / Kumo", defval=26, minval=1, step=1)
+// Strategy
+int COOLDOWN = input(title="Orders Cooldown Period", defval=5, minval=0, step=1)
+// bool USE_CHIKOU = input(title="Use Imperfect Chikou Position Detection", defval=false)
+bool USE_CHIKOU = false
+// Display
+bool SHOW_INDICATOR = input(title="Show Ichimoku Kinko Hyo Indicator", defval=true)
+//
+// HELPERS
+//
+color _red = color.red
+color _blue = color.blue
+color _lime = color.lime
+color _fuchsia = color.fuchsia
+color _silver = color.silver
+color _aqua = color.aqua
+f_donchian(_len) => avg(lowest(_len), highest(_len))
+//
+// ICHIMOKU INDICATOR
+//
+float tenkan = f_donchian(TENKAN_LEN)
+float kijun = f_donchian(KIJUN_LEN)
+float ssa = avg(tenkan, kijun)
+float ssb = f_donchian(SSB_LEN)
+plot(SHOW_INDICATOR ? tenkan : na, title="Tenkan", color=_silver)
+plot(SHOW_INDICATOR ? close : na, title="Chikou", offset=-OFFSET+1, color=_aqua)
+_ssa = plot(SHOW_INDICATOR ? ssa : na, title="SSA", offset=OFFSET-1, color=_lime)
+_ssb = plot(SHOW_INDICATOR ? ssb : na, title="SSB", offset=OFFSET-1, color=_red)
+fill(_ssa, _ssb, color=ssa > ssb ? _lime : _fuchsia, transp=90)
+//
+// STRATEGY
+//
+// Check if price is "above or below" Chikou (i.e. historic price line):
+// This detection is highly imperfect, as it can only know what was Chikou's
+// position 2*offset candles in the past, therefore if Chikou crossed the price
+// line in the last 2*offset periods it won't be detected.
+// Use of this detection is disabled by default.
+float _chikou_val = close[OFFSET*2+1]
+float _last_val = close[OFFSET+1]
+bool above_chikou = USE_CHIKOU ? _last_val > _chikou_val : true
+bool below_chikou = USE_CHIKOU ? _last_val < _chikou_val : true
+// Identify short-term trend with Tenkan
+bool _above_tenkan = min(open, close) > tenkan
+bool _below_tenkan = max(open, close) < tenkan
+// Check price position compared to Kumo
+bool _above_kumo = min(open, close) > ssa
+bool _below_kumo = max(open, close) < ssb
+// Check if Kumo is bullish or bearish
+bool bullish_kumo = ssa > ssb
+bool bearish_kumo = ssa < ssb
+// Correlate indicators to confirm the trend
+bool bullish_trend = _above_tenkan and _above_kumo and bullish_kumo
+bool bearish_trend = _below_tenkan and _below_kumo and bearish_kumo
+// Build signals
+bool buy1 = (close > open) and ((close > ssa) and (open < ssa)) // green candle crossing over SSA
+bool buy2 = bullish_kumo and bearish_kumo[1] // bullish Kumo twist
+bool sell1 = (close < open) and ((close < ssb) and (open > ssb)) // red candle crossing under SSB
+bool sell2 = bearish_kumo and bullish_kumo[1] // bearish Kumo twist
+bool go_long = below_chikou and (bullish_trend and (buy1 or buy2))
+bool exit_long = above_chikou and (bearish_trend and (sell1 or sell2))
+//
+// COOLDOWN
+//
+f_cooldown() =>
+    _cd_needed = false
+    for i = 1 to COOLDOWN by 1
+        if go_long[i]
+            _cd_needed := true
+            break
+    _cd_needed
+go_long := COOLDOWN == 0 ? go_long : (f_cooldown() ? false : go_long)
+//
+// ORDERS
+//
+strategy.entry("buy", strategy.long, when=go_long)
+strategy.close_all(when=exit_long)
+//
+// ALERTS
+//
+alertcondition(
+     condition=go_long,
+     title="Buy Signal",
+     message="{{exchange}}:{{ticker}}: A buy signal for {{strategy.position_size}} units has been detected (last close: {{close}})."
+     )
+alertcondition(
+     condition=exit_long,
+     title="Sell Signal",
+     message="{{exchange}}:{{ticker}}: A sell signal for {{strategy.position_size}} units has been detected (last close: {{close}})."
+     )
+Expand (148 lines)

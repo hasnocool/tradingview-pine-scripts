@@ -1,0 +1,362 @@
+Script Name: KD compare strategy (交易策略對照組)
+Author: Tonyder
+Description: This is a base and easy trading strategy for comparing my other strategy.
+The strategy consider K >= 80 is strong target in the last high period, 
+and consider K <=20 is the weak target in the last low period.
+
+In the strong target, the strategy may increase long at the first day when K < 50, until 2/3 max order limitation or strong target become to weak.
+In the...
+PineScript code:
+
+Pine Script™ strategy
+KD compare strategy (交易策略對照組)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Tonyder
+//@version=4
+strategy("KD base strategy", overlay=true, pyramiding=1000, process_orders_on_close=true, precision=6, max_bars_back=720)
+//strategy("KD base strategy", overlay=true, pyramiding=1000, precision=6, max_bars_back=720)
+max=input(defval=20, title="庫存上限(share)", type=input.integer)
+min=input(defval=-20, title="庫存下限(share)", type=input.integer)
+period=input(defval=9, title="KD 週期(KD period)", type=input.integer, minval=2)
+diff=input(defval=0.1, title="KD 週期(KD period)", type=input.float, minval=0.1)
+k=0.0
+rsv=0.0
+dir=0
+sum=0.0
+share2=0.0
+first=0
+up=0.0
+bottom=0.0
+k80=0.0
+k50=0.0
+k20=0.0
+k801=0.0
+k501=0.0
+k201=0.0
+show=0
+show:=0
+rate=0.0
+last=0.0
+inc=false
+dec=false
+inc:=false
+dec:=false
+clean=false
+clean:=false
+share=strategy.position_size
+rsv:=stoch(close, high, low, period)
+up:=highest(high,period)
+bottom:=lowest(low,period)
+if bar_index <= period
+    k:=rsv
+    dir:=0
+    sum:=0
+    share2:=0
+    last:=close
+else
+    k:=k[1]*2/3 + rsv/3
+    dir := dir[1]
+    sum := sum[1]
+    share2:=share2[1]
+    rate:= rate[1]
+    last:= last[1]
+// filter
+yearbegin=input(defval=1978, title="起始年 (begin year)", type=input.integer, minval=0)
+monthbegin=input(defval=1, title="起始月 (begin month)", type=input.integer, minval=0)
+dayofmonthbegin=input(defval=1, title="起始日 (begin day)", type=input.integer, minval=0)
+condition99=(year >= yearbegin) and (month >= monthbegin) and (dayofmonth > dayofmonthbegin)
+// rsv = 100 * (close - lowest(low, period)) / (highest(high, period) - lowest(low, period))
+// k=k[1]*2/3 + rsv/3
+// 3k=k[1]*2 + rsv
+// 3k-k[1]*2= 100 * (close - lowest(low, period)) / (highest(high, period) - lowest(low, period))
+// (3k-k[1]*2)/100*(highest(high, period) - lowest(low, period)) + lowest(low, period) = close
+// let k = 80, close = (3*80-k[1]*2)/100*(highest(high, period) - lowest(low, period)) + lowest(low, period)
+k80:=(3*80-k[1]*2)/100*(highest(high, period) - lowest(low, period)) + lowest(low, period)
+k50:=(3*50-k[1]*2)/100*(highest(high, period) - lowest(low, period)) + lowest(low, period)
+k20:=(3*20-k[1]*2)/100*(highest(high, period) - lowest(low, period)) + lowest(low, period)
+// tomorrow k
+k801:=(3*80-k*2)/100*(highest(high, period-1) - lowest(low, period-1)) + lowest(low, period-1)
+k501:=(3*50-k*2)/100*(highest(high, period-1) - lowest(low, period-1)) + lowest(low, period-1)
+k201:=(3*20-k*2)/100*(highest(high, period-1) - lowest(low, period-1)) + lowest(low, period-1)
+if (dir == 1 and low < k50 and close < close[1] and open > close)
+    // rule1, strong target, buy at low price
+    sum := sum + 1
+else if (dir == -1 and high > k50 and close > close[1] and open < close)
+    // rule2, weak target, sell at high price
+    sum := sum - 1
+else if (dir == 1 and k[1] > 80 and k < 80 and share > 3)
+    // rule5, end the positive order
+    sum := 1
+else if (dir == -1 and k[1] < 20 and k > 20 and share < -3)
+    // rule6, end the engitive order
+    sum := -1
+else if (dir == 1 and high > k50 and close > close[1] and rate < -diff/100 and share > 2)
+    // rule7, reduce the order when the rate is poor
+    sum := sum - 1
+else if (dir == -1 and low < k50 and close < close[1] and rate > diff/100 and share < -2)
+    // rule8, reduce the order when the rate is poor
+    sum := sum + 1
+// become to strong    
+if (k >= 80) 
+    dir := 1
+// become to weak
+if (k <= 20) 
+    dir := -1
+// rule 3, strong become to weak, clean when k < 20
+if (dir == 1 and share < 0 and close > last and k < 20)
+    clean := true
+// rule 4, weak become to strong, clean when k > 80
+if (dir == -1 and share > 0 and close < last and k > 80)
+    clean := true
+// rule 9, the first negtive order    
+if (dir == 1 and k > 80 and rate > diff/100 and share == 0)
+    inc:= true
+    sum := 1
+// rule 10, the first negtive order
+if (dir == -1 and k < 20 and rate < -diff/100 and share == 0)
+    dec:= true
+    sum := -1
+if sum > 0
+    share2 := sum
+else if sum < 0
+    share2 := sum
+else
+    share2 := 0
+if share2 > max
+    share2 := max
+if share2 < min
+    share2 := min
+    
+if (k > 80 and k[1] < 80)
+    rate:= high/last - 1
+    last:= high
+if (k < 20 and k[1] > 20)
+    rate:= low/last - 1
+    last:= low
+if (dir > 0 and low < k50 and low[1] > k50)
+    rate:= low/last - 1
+    last:= low
+if (dir < 0 and high > k50 and high[1] <k50)
+    rate:= high/last - 1
+    last:= high
+strategy.close_all(when=clean and condition99, comment="stop")
+strategy.order(id='buy', long=true, qty=share2-share, limit=k501, when=share2 > share and condition99)
+strategy.order(id="sell", long=false, qty=share-share2, limit=k501, when=share2 < share and condition99)
+strategy.order(id='increase', long=true, qty=1, when=share2 != share and inc and condition99)
+strategy.order(id="decrease", long=false, qty=1, when=share2 != share and dec and condition99)
+plot(share, "持股(share)",transp=100)
+//plot(share2, "持股(share)",transp=100)
+plot(dir, "方向(direction)",transp=100)
+plot(k80, "Strong (轉強)", color.red)
+plot(k50, "Middle (中線)", color.white)
+plot(k20, "Weak (轉弱)", color.green)
+k_color=color.black
+if k80 != k801[1]
+    k_color:=color.red
+plot(k801, "S+1", k_color, transp=100)
+k_color:=color.black
+if k50 != k501[1]
+    k_color:=color.white
+plot(k501, "M+1", k_color, transp=100)
+k_color:=color.black
+if k20 != k201[1]
+    k_color:=color.green
+plot(k201, title="W+1", color=k_color, transp=100)
+plot(k, "k",transp=100)
+// Colour background
+plotColour = rate > 0 ? color.red :
+     rate < 0 ? color.green :
+     color.yellow
+plot(series=rate*100, title="rate",color=plotColour, style=plot.style_histogram, linewidth=1, transp=100)
+//plot(last, "last",transp=100)
+Expand (189 lines)

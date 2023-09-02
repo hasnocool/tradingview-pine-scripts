@@ -1,0 +1,126 @@
+Script Name: Follow the Trend - Trade Pullbacks
+Author: SushilKothawade
+Description: Kindly follow the rules stated below for entry, exit and stop loss. Not every Buy / Sell signal will be profitable.
+
+Timeframe of the chart acts as current timeframe. You need to choose 2 more as middle and higher timeframes.
+This indicator is based on candlesticks, ATR and CCI indicators and the logic provides buy / sell signals at the pullbacks of the trend...
+PineScript code:
+
+Pine Script™ strategy
+Follow the Trend - Trade Pullbacks
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+//@version=4
+strategy("Follow the Trend - Trade Pullbacks",overlay=true)
+resHigh = input(title="Higher Time Frame", type=input.resolution, defval="30",confirm = true)
+resMiddle = input(title="Middle Time Frame", type=input.resolution, defval="15",confirm = true)
+CCI = input(20,title = "CCI")
+ATR = input(20,title = "ATR")
+Multiplier= 1
+thisCCI = cci(close, CCI)
+calcx()=> 
+    x = 0.0
+    tgtHigh= x[1]>0?x[1]:close[1] + Multiplier * nz(rma(tr,ATR))
+    tgtLow= x[1]>0?x[1]:close[1] - Multiplier * nz(rma(tr,ATR))
+    
+    if (min(low, low[1], low[2]) >= nz(x[1]) and ((close >= tgtHigh) or (low > nz(x[1]))))
+        x := min(low, low[1], low[2])
+    else if (max(high, high[1], high[2]) <= nz(x[1]) and ((close <= tgtLow) or (high < nz(x[1]))))
+        x := max(high, high[1], high[2])
+    else 
+        x := x[1]
+    x
+tempx = calcx()
+calcswap() =>
+    swap = 0.0
+    swap := (tempx>tempx[1] and thisCCI>=0)?1:(tempx<tempx[1] and thisCCI<=0)?-1:swap[1]
+    swap
+tempswap = calcswap()
+hswap=tempswap==1?color.teal:color.red
+mswap=tempswap==1?color.blue:color.orange
+//display higher timeframe's Trend
+htfx = security(syminfo.tickerid,resHigh,tempx,lookahead = barmerge.lookahead_off)
+htfHigh = security(syminfo.tickerid,resHigh,hswap,lookahead = barmerge.lookahead_off)
+plot(htfx,color=htfHigh,transp=0,linewidth=2)
+//display middle timeframe's Trend
+mtfx = security(syminfo.tickerid,resMiddle,tempx,lookahead = barmerge.lookahead_off)
+mtfMid = security(syminfo.tickerid,resMiddle,mswap,lookahead = barmerge.lookahead_off)
+plot(mtfx,color=mtfMid,transp=0,linewidth=2)
+//display current timeframe's Trend
+plot(tempx, color=hswap,transp=0,linewidth=2)
+buyLbl = "Buy"
+sellLbl = "Sell"
+plotshape( htfHigh[1] == color.red and htfHigh == color.teal ? 1 : na , style = shape.circle , color = color.teal , location = location.belowbar , size = size.small )
+plotshape( htfHigh[1] == color.teal and htfHigh == color.red ? 1 : na , style = shape.circle , color = color.red , location = location.abovebar , size = size.small)
+plotshape( mtfMid[1] == color.orange and mtfMid == color.blue ? 1 : na , style = shape.triangleup , color = color.blue , location = location.belowbar , size = size.small )
+plotshape( mtfMid[1] == color.blue and mtfMid == color.orange ? 1 : na , style = shape.triangledown , color = color.orange , location = location.abovebar , size = size.small)
+plotshape( hswap[1] == color.red and hswap == color.teal ? 1 : na , style = shape.labelup , color = color.teal , location = location.belowbar, size = size.small, text = buyLbl, textcolor=color.white)
+plotshape( hswap[1] == color.teal and hswap == color.red ? 1 : na , style = shape.labeldown , color = color.red , location = location.abovebar , size = size.small, text = sellLbl,  textcolor=color.white)
+Expand (68 lines)

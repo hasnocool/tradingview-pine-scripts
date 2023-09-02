@@ -1,0 +1,147 @@
+Script Name: Gap Absorption Strategy
+Author: noop42
+Description: Like the nature, markets don't like the void, and this is something we can take advantage of by trading gaps on some markets.
+This technique is well known, so I wanted to write a tiny script based on this strategy to get a bit more comfortable with it.
+
+ IMPORTANT:  Default parameters wont give you good trades on every markets, you need to modify these parameters...
+PineScript code:
+
+Pine Script™ strategy
+Gap Absorption Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © noop42
+//@version=5
+strategy(title="Gap Absortion Strategy", shorttitle="GAS", overlay=true)
+gap_value = 0.0
+pct_trig = input(0.5, 'trigger (% of the price corresponding to the gap amount)')
+stop_pct = input(0.25, 'StopLoss (in % of the gap)')
+target_pct = input(0.8, 'Target, (in % of the gap) (default is the whole gap value)')
+tp_color = input.color(color.green, "Target color")
+sl_color = input.color(color.red, "Stop Loss Color")
+entry_color = input.color(color.gray, "Entry color")
+var line tpl = na
+var line sll = na
+gap = close[1] > open ? close[1] - open : close[1] < open ? open - close[1] : 0
+gap_side = close[1] > open ? 1 : -1
+gap_pct = gap / close[1] * 100
+interesting_gap = gap_pct >= pct_trig
+long = interesting_gap and gap_side == 1 and strategy.position_size == 0.0
+short = interesting_gap and gap_side == -1 and strategy.position_size == 0.0
+var entry = 0.0
+var stop = 0.0
+var target = 0.0
+if gap and interesting_gap
+    if long
+        entry := open
+        target := entry + gap * target_pct
+        stop := entry - gap * stop_pct
+        stop
+    if short
+        entry := open
+        target := entry - gap * target_pct
+        stop := entry + gap * stop_pct
+        stop
+exitTP = strategy.position_size != 0.0 and (ta.cross(high, target) or ta.cross(low, target))
+exitSL = strategy.position_size != 0.0 and ta.cross(close, stop)
+exit = exitTP or exitSL
+strategy.entry('Buy', strategy.long, when=long)
+strategy.close('Buy', when=exit)
+strategy.entry('Sell', strategy.short, when=short)
+strategy.close('Sell', when=exit)
+if exit
+    entry := 0.0
+    target := 0.0
+    stop := 0.0
+    line.delete(tpl)
+    line.delete(sll)
+plotshape(long ? 1 : 0, style=shape.triangleup, size=size.tiny, location=location.bottom, color=color.new(color.lime, 0), text='Bearish gap\nBuy signal')
+plotshape(short ? 1 : 0, style=shape.triangledown, size=size.tiny, location=location.bottom, color=color.new(color.red, 0), text='Bullish gap\nSell signal')
+plotshape(exitTP ? 1 : 0, style=shape.xcross, size=size.tiny, location=location.bottom, color=color.new(color.green, 0), text='Hit TP')
+plotshape(exitSL ? 1 : 0, style=shape.xcross, size=size.tiny, location=location.bottom, color=color.new(color.orange, 0), text='Hit SL')
+var tbl = table.new(position.top_right, 2, 5)
+if target[1] == 0.0 and target != 0.0
+    tpl := line.new(bar_index[1], target, bar_index, target, extend=extend.right, color=tp_color)
+    sll := line.new(bar_index[1], stop, bar_index, stop, extend=extend.right, color=sl_color)
+table.cell(tbl, 0, 0, 'Current target', bgcolor=#cccccc)
+table.cell(tbl, 1, 0, str.tostring(target, "#.####"), bgcolor=tp_color)
+table.cell(tbl, 0, 1, 'Entry Signal', bgcolor=#cccccc)
+table.cell(tbl, 1, 1, str.tostring(entry, "#.####"), bgcolor=entry_color)
+table.cell(tbl, 0, 2, 'Stop Signal', bgcolor=#cccccc)
+table.cell(tbl, 1, 2, str.tostring(stop, "#.####"), bgcolor=sl_color)
+Expand (75 lines)

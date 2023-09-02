@@ -1,0 +1,182 @@
+Script Name: Simple RSI strategy
+Author: RafaelZioni
+Description: so this script just take it as teaching how to make easy strategy 
+many time we try complex one and we fail 
+thanks to coinrule for his very smart method of pyramid 
+i just here in this very simple rsi strategy want to show how even lame strategy like RSI can be very profitable:) 
+1. we exit by take profit
+2. we make sure that for exit by take profit the stop loss...
+PineScript code:
+
+Pine Script™ strategy
+Simple RSI strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © RafaelZioni
+strategy(title='Simple RSI strategy', overlay=false, pyramiding=5, initial_capital=10000, default_qty_type=strategy.percent_of_equity, default_qty_value=20, commission_type=strategy.commission.percent, commission_value=0.075)
+SWperiod = 1
+look = 0
+OverBought = input(80, minval=50)
+OverSold = input(25, maxval=50)
+bandmx = hline(100)
+bandmn = hline(0)
+band1 = hline(OverBought)
+band0 = hline(OverSold)
+//band50 = hline(50, color=black, linewidth=1)
+fill(band1, band0, color=color.purple, transp=98)
+src = close
+len = input(5, minval=1, title="RSI Length")
+up = rma(max(change(src), 0), len)
+down = rma(-min(change(src), 0), len)
+rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - 100 / (1 + up / down)
+p = 100
+//scale
+hh = highest(high, p)
+ll = lowest(low, p)
+scale = hh - ll
+//dynamic OHLC
+dyno = (open - ll) / scale * 100
+dynl = (low - ll) / scale * 100
+dynh = (high - ll) / scale * 100
+dync = (close - ll) / scale * 100
+//candle color
+color_1 = close > open ? 1 : 0
+//drawcandle
+hline(78.6)
+hline(61.8)
+hline(50)
+hline(38.2)
+hline(23.6)
+plotcandle(dyno, dynh, dynl, dync, title="Candle", color=color_1 == 1 ? color.green : color.red)
+plot(10, color=color.green)
+plot(55, color=color.black)
+plot(80, color=color.black)
+plot(90, color=color.red)
+long = rsi <= OverSold ? 5 : na
+//Strategy
+golong = rsi <= OverSold ? 5 : na
+longsignal = golong  
+//based on https://www.tradingview.com/script/7NNJ0sXB-Pyramiding-Entries-On-Early-Trends-by-Coinrule/
+//set take profit
+ProfitTarget_Percent = input(3)
+Profit_Ticks = close * (ProfitTarget_Percent / 100) / syminfo.mintick
+//set take profit
+LossTarget_Percent = input(10)
+Loss_Ticks = close * (LossTarget_Percent / 100) / syminfo.mintick
+//Order Placing
+strategy.entry("Entry 1", strategy.long, when=strategy.opentrades == 0 and longsignal)
+strategy.entry("Entry 2", strategy.long, when=strategy.opentrades == 1 and longsignal)
+strategy.entry("Entry 3", strategy.long, when=strategy.opentrades == 2 and longsignal)
+strategy.entry("Entry 4", strategy.long, when=strategy.opentrades == 3 and longsignal)
+strategy.entry("Entry 5", strategy.long, when=strategy.opentrades == 4 and longsignal)
+strategy.entry("Entry 6", strategy.long, when=strategy.opentrades == 5 and longsignal)
+strategy.entry("Entry 7", strategy.long, when=strategy.opentrades == 6 and longsignal)
+if strategy.position_size > 0
+    strategy.exit(id="Exit 1", from_entry="Entry 1", profit=Profit_Ticks, loss=Loss_Ticks)
+    strategy.exit(id="Exit 2", from_entry="Entry 2", profit=Profit_Ticks, loss=Loss_Ticks)
+    strategy.exit(id="Exit 3", from_entry="Entry 3", profit=Profit_Ticks, loss=Loss_Ticks)
+    strategy.exit(id="Exit 4", from_entry="Entry 4", profit=Profit_Ticks, loss=Loss_Ticks)
+    strategy.exit(id="Exit 5", from_entry="Entry 5", profit=Profit_Ticks, loss=Loss_Ticks)
+    strategy.exit(id="Exit 6", from_entry="Entry 6", profit=Profit_Ticks, loss=Loss_Ticks)
+    strategy.exit(id="Exit 7", from_entry="Entry 7", profit=Profit_Ticks, loss=Loss_Ticks)
+Expand (99 lines)

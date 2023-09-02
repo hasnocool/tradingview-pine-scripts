@@ -1,0 +1,328 @@
+Script Name: Dynamic Stop Loss Demo
+Author: Tindtily
+Description: What does this script do ? 
+This script is for pine script programmers and explains how to implement a dynamic stop-loss strategy. It is different from trailing stop-loss. Trailing stop-loss can only set the retracement value, but this script can take profit on part of the position at a fixed price and allows users to decide whether to take profit on all positions...
+PineScript code:
+
+Pine Script™ strategy
+Dynamic Stop Loss Demo
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Tindtily
+//@version=5
+strategy("Dynamic Stop Loss Demo",overlay = true,initial_capital = 20000,max_bars_back = 100, pyramiding = 1, default_qty_value = 100, default_qty_type = strategy.percent_of_equity, commission_value=0.04)
+// rsi settings
+length = input( 14, group="rsi settings" )
+overSold = input( 30, group="rsi settings")
+overBought = input( 70, group="rsi settings" )
+// strategy settings
+rr = input.float(1.5,'Profit and loss ratio',step = 0.1, group = 'strategy settings')
+atr_times = input.float(2,'ATR times', step = 0.1, group = 'strategy settings')
+back_test_length = input.int(14, 'Back test length', group = 'strategy settings')
+first_tp_qty = input.int(50, 'First take profit qty percent', group = 'strategy settings')
+qty_precision = input.int(2, "qty precision", group = "strategy settings")
+highest = ta.highest(high, back_test_length)
+lowest = ta.lowest(low, back_test_length)
+limit = close
+vrsi = ta.rsi(limit, length)
+co = ta.crossover(vrsi, overSold)
+cu = ta.crossunder(vrsi, overBought)
+long_cond = co
+short_cond = cu
+hasFitFirstProfit = false
+curSize = strategy.position_size
+curId = strategy.position_entry_name
+isShorting = curSize < 0
+isLonging = curSize > 0
+isOpening = isShorting or isLonging
+// enums
+LONG = "long"
+SHORT = "short"
+getStrategyInfoFromId(id)=>
+    info = str.split(id, "_")
+    openPrice = float(na)
+    profitPrice = float(na)
+    stopPrice = float(na)
+    entrySize = float(na)
+    if array.size(info) != 0 
+        openPrice := str.tonumber(array.get(info, 1))
+        profitPrice := str.tonumber(array.get(info, 3))
+        stopPrice := str.tonumber(array.get(info, 2))
+        entrySize := str.tonumber(array.get(info, 4))
+    [openPrice, profitPrice, stopPrice, entrySize]
+getBasicProfit(openPrice, stopPrice) =>
+    openPrice + (openPrice - stopPrice) * rr
+getStrategyId(prefix, openPrice, stopPrice, profitPrice, size) =>
+    prefix + "_" + str.tostring(openPrice) + "_" + str.tostring(stopPrice) + "_" + str.tostring(profitPrice) + "_" + str.tostring(size)
+startStrategy(direction, openPrice, stopPrice, qty, entryComment) =>
+    prefix = direction
+    profitPrice = getBasicProfit(openPrice, stopPrice)
+    id = getStrategyId(prefix, openPrice, stopPrice, profitPrice, qty * (direction == LONG ? 1: -1))
+    strategy.entry(id, direction == LONG ? strategy.long : strategy.short, comment= entryComment, limit=openPrice, qty = qty)
+toOdd(num)=>
+    2 * math.round(num / 2)
+getQty(limit) =>
+    avaC = strategy.grossprofit - strategy.grossloss + strategy.initial_capital
+    qtyNum = math.round(avaC / limit, qty_precision)
+    qtyTimes = math.pow(10, qty_precision)
+    math.round(toOdd( qtyNum * qtyTimes) / qtyTimes, qty_precision)
+decimal(number, precision) =>
+    numStr = str.tostring(math.round(number, precision + 1))
+    str.tonumber(str.substring(numStr, 0, str.length(numStr) - 1))
+longQty = decimal(getQty(limit) , 2)
+shortQty = decimal(getQty(limit) , 2)
+calculateDynimacStop()=>
+    ATR = atr_times * ta.atr(back_test_length)
+    dynamicLongStop = float(na)
+    dynamicShortStop = float(na)
+    if (close > open)
+        dynamicLongStop := low - ATR
+        if (isLonging)
+            dynamicLongStop := math.max(dynamicLongStop, dynamicLongStop[1])
+    else
+        dynamicLongStop := dynamicLongStop[1]
+    if (close < open)
+        dynamicShortStop := high + ATR
+        if (isShorting)
+            dynamicShortStop := math.min(dynamicShortStop, dynamicShortStop[1])
+    else 
+        dynamicShortStop := dynamicShortStop[1]
+    [dynamicLongStop, dynamicShortStop]
+[dynamicLongStop, dynamicShortStop] = calculateDynimacStop()
+[curOpenPrice, curProfitPrice, curStopPrice, curEntrySize] = getStrategyInfoFromId(curId)
+hasFitFirstProfit := math.abs(curEntrySize) > math.abs(curSize)
+if isLonging == false and isShorting == false 
+    if long_cond and bar_index > back_test_length
+        long_stop = lowest
+        long_profit = getBasicProfit(limit, long_stop)
+        startStrategy(LONG, limit, long_stop, longQty, "entry long")
+    if short_cond and bar_index > back_test_length
+        short_stop = highest
+        short_profit = getBasicProfit(limit, short_stop)
+        startStrategy(SHORT, limit, short_stop, longQty, "entry short")
+else
+    if isLonging
+        if hasFitFirstProfit 
+            if low < dynamicLongStop 
+                strategy.close(curId, comment='stop long dynamic')
+            else if close < curStopPrice
+                strategy.close(curId, comment='stop long at stop')
+            else if low < curOpenPrice
+                strategy.close(curId, comment='stop long at open')
+            else if short_cond
+                short_stop = highest
+                short_profit = getBasicProfit(limit, short_stop)
+                startStrategy(SHORT, limit, short_stop, shortQty, "entry short")
+        else 
+            if close < curStopPrice
+                strategy.close(curId, comment = 'stop long')
+            if high > curProfitPrice
+                strategy.close(curId, comment = "take long " + str.tostring(first_tp_qty) + '% profit',  qty_percent =first_tp_qty)
+    if isShorting
+        if hasFitFirstProfit 
+            if high > dynamicShortStop
+                strategy.close(curId, comment='stop short dynamic')
+            else if close > curStopPrice
+                strategy.close(curId, comment='stop short at stop')
+            else if high > curOpenPrice
+                strategy.close(curId, comment='stop short at open')
+            else if long_cond
+                long_stop = lowest
+                long_profit = getBasicProfit(limit, long_stop)
+                startStrategy(LONG, limit, long_stop, longQty, "entry long")
+        else
+            if close > curStopPrice
+                strategy.close(curId, comment = 'stop short')
+            if low < curProfitPrice 
+                strategy.close(curId, comment = "take short " + str.tostring(first_tp_qty) + '% profit', qty_percent =first_tp_qty)
+               
+// plots  
+lstop = isLonging ? curStopPrice : na
+sStop = isShorting ? curStopPrice: na
+lprofit = isLonging ? curProfitPrice :na 
+sProfit = isShorting ? curProfitPrice : na 
+lopen = isLonging ? curOpenPrice : na
+sopen = isShorting ? curOpenPrice : na 
+sDStop = dynamicShortStop
+lDStop = dynamicLongStop
+plot(isOpening?lstop:na, title="long stop color" ,color=color.red,style = plot.style_linebr,linewidth = 1)
+plot(isOpening?lprofit:na,title="long profit color",color=color.green,style = plot.style_linebr,linewidth = 1)
+plot(isOpening?lopen : na,title="long open color", color = color.silver, style = plot.style_linebr, linewidth = 1)
+plot(isLonging and hasFitFirstProfit? lDStop: na,title="long dynamic stop color", color=color.yellow, style = plot.style_linebr, linewidth = 1)
+plot(isOpening?sStop:na,title="short stop color" ,color=color.red,style = plot.style_linebr,linewidth = 1)
+plot(isOpening?sProfit:na,title="short profit color" ,color=color.green,style = plot.style_linebr,linewidth = 1)
+plot(isOpening?sopen : na,title="short open color" , color = color.silver, style = plot.style_linebr, linewidth = 1)
+plot(isShorting and hasFitFirstProfit? sDStop:na,title="short dynamic stop color" , color=color.yellow, style = plot.style_linebr, linewidth = 1)
+Expand (172 lines)

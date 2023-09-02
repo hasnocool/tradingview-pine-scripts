@@ -1,0 +1,93 @@
+Script Name: SuperTrend Trapping Candle Strategy
+Author: thehemantkaushik
+Description: Hello traders!
+
+ How this indicator works? 
+The main functionality of this indicator is to find entry based upon SuperTrend indicator. This indicator helps us to find trapping candle to enter into the market.
+
+ What is a trapping candle? 
+A trapping candle is a candle that shows strength in opposite direction to SuperTrend. This helps us to enter in a trade before...
+PineScript code:
+
+Pine Script™ strategy
+SuperTrend Trapping Candle Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+//@version=5
+strategy("SuperTrend Trapping Candle Strategy", shorttitle="ST", margin_long=1, margin_short=1, overlay=true)
+// Inputs
+atrPeriod = input.int(10, "ATR Length")
+factor = input.int(2, "Factor")
+candleDivider = input.float(0.003, "Candle Height", step=0.0001)
+// Supertrend
+[supertrend, direction] = ta.supertrend(factor, atrPeriod)
+plot(direction < 0 ? supertrend : na, "Up Trend", color = color.green, style=plot.style_linebr)
+plot(direction < 0? na : supertrend, "Down Trend", color = color.red, style=plot.style_linebr)
+//Trapping canlde
+isUptrend = direction < 0
+isDowntrend = direction > 0
+isBullsStrengthDecreasing = volume < volume[1] and volume[1] < volume[2] and close > close[1] and close[1] > close[2] and open > open[1] and open[1] > open[2]
+isBearsStrengthDecreasing = volume < volume[1] and volume[1] < volume[2] and close < close[1] and close[1] < close[2] and open < open[1] and open[1] < open[2]
+isStrongVolume = (volume > volume[1]) or isBullsStrengthDecreasing or isBearsStrengthDecreasing
+isSmallCandle = (high - low) < close * candleDivider
+isUptrendTrapping = isUptrend and close < open and isStrongVolume and isSmallCandle
+isDowntrendTrapping = isDowntrend and close > open and isStrongVolume and isSmallCandle
+plotshape(isUptrendTrapping, style=shape.triangleup, location=location.belowbar, color=color.green)
+plotshape(isDowntrendTrapping, style=shape.triangledown, location=location.abovebar, color=color.orange)
+// Signals
+longCondition = isUptrendTrapping
+if (longCondition)
+    strategy.entry("Long", strategy.long)
+shortCondition = isDowntrendTrapping
+if (shortCondition)
+    strategy.entry("Short", strategy.short)
+if open < close
+    alert("Seller Trapped.", alert.freq_all)
+if close > open
+    alert("Buyer Trapped.", alert.freq_all)
+Expand (46 lines)

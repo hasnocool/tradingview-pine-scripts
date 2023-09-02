@@ -1,0 +1,268 @@
+Script Name: Oath
+Author: OrcChieftain
+Description: Oath consists of 21 and 55 EMA , Commodity Channel Index and Supertrend indicator. It confirms a trend and gives you a signal on a pullback. Original creation worked on 1h EURUSD chart.
+
+Oath is merely a rebrand of my previous  Patient Trendfollower  strategy. Unlike Patient Trendfollower, Oath has actually a good name and it does not fill your screen with...
+PineScript code:
+
+Pine Script™ strategy
+Oath
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © greenmask9
+//@version=4
+strategy("Oath", overlay=true)
+// 21 EMA
+emalength = input(21, title="Short EMA")
+emashort = ema(close, emalength)
+// 55 EMA
+emalength2 = input(55, title="Long EMA")
+ema = ema(close, emalength2)
+//CCI calculation and inputs
+lengthcci = input(20, minval=1, title="Overbought/sold detector period")
+src = input(close, title="Overbought/sold detector source")
+ma = sma(src, lengthcci)
+ccivalue = (src - ma) / (0.015 * dev(src, lengthcci))
+//CCI plotting
+ccioverbought = input(defval=100, title="Overbought level 1")
+ccioverbought2 = input(defval=140, title="Overbought level 2")
+ccioverbought3 = input(defval=180, title="Overbought level 3")
+ccioversold = input(defval=-100, title="Oversold level 1")
+ccioversold2 = input(defval=-140, title="Oversold level 2")
+ccioversold3 = input(defval=-180, title="Oversold level 3")
+//cciOB = (ccivalue >= ccioverbought and ccivalue < ccioverbought2)
+//cciOS = (ccivalue <= ccioversold and ccivalue > ccioversold2)
+//cciOB2 = (ccivalue >= ccioverbought2 and ccivalue < ccioverbought3)
+//cciOS2 = (ccivalue <= ccioversold and ccivalue > ccioversold3)
+//cciOB3 = (ccivalue >= ccioverbought3)
+//cciOS3 = (ccivalue <= ccioversold3)
+//Supertrend
+length = input(title="ATR Period", type=input.integer, defval=55)
+mult = input(title="ATR Multiplier", type=input.float, step=0.1, defval=5.0)
+wicks = input(title="Take Wicks into Account ?", type=input.bool, defval=true)
+illuminate = input(title="Illuminate Trend", type=input.bool, defval=false)
+atr = mult * atr(length)
+longStop = hl2 - atr
+longStopPrev = nz(longStop[1], longStop)
+longStop := (wicks ? low[1] : close[1]) > longStopPrev ? max(longStop, longStopPrev) : longStop
+shortStop = hl2 + atr
+shortStopPrev = nz(shortStop[1], shortStop)
+shortStop := (wicks ? high[1] : close[1]) < shortStopPrev ? min(shortStop, shortStopPrev) : shortStop
+dir = 1
+dir := nz(dir[1], dir)
+dir := dir == -1 and (wicks ? high : close) > shortStopPrev ? 1 : dir == 1 and (wicks ? low : close) < longStopPrev ? -1 : dir
+//entries
+uptrend = emashort>ema and dir == 1
+upsignal = ccivalue<=ccioversold and ccivalue>ccioversold2
+upsignal2 = ccivalue<=ccioversold2 and ccivalue>ccioversold3
+upsignal3 = ccivalue<=ccioversold3
+downtrend = emashort<ema and dir == -1
+downsignal = ccivalue>=ccioverbought and ccivalue<ccioverbought2
+downsignal2 = ccivalue>=ccioverbought2 and ccivalue<ccioverbought3
+downsignal3 = ccivalue>=ccioverbought3
+//adapts to the current bar, I need to save the bars number when the condition for buy was true, static number is spread
+spread = input (0.00020, title="Spread")
+upstoploss = longStop - spread
+downstoploss = shortStop + spread
+ordersize=floor(strategy.initial_capital/close)
+testlong = input(title="Test longs", type=input.bool, defval=true)
+testshort = input(title="Test shorts", type=input.bool, defval=true)
+//new
+degree = input(title="Test level 1 overbought/sold levels", type=input.bool, defval=true)
+degree2 = input(title="Test level 2 overbought/sold levels", type=input.bool, defval=false)
+degree3 = input(title="Test level 3 overbought/sold levels", type=input.bool, defval=false)
+statictarget = input(title="Use static target", type=input.bool, defval=true)
+statictargetvalue = input(title="Static target in pips", type=input.integer, defval=400)
+//timetrade = input(title="Open trades only withing specified time", type=input.bool, defval=true)
+//timtrade = input()
+//přidat možnost TP podle ATR a sl podle ATR
+buy1 = uptrend and upsignal and strategy.opentrades==0 and testlong and degree
+x1 = barssince (buy1)
+if (buy1)
+//bodlo by zakázat atrtarget v tomto případě
+    if (statictarget)
+        strategy.entry("Oath1", strategy.long, ordersize)
+        strategy.exit( "Oath1 Close", from_entry="Oath1" , profit=statictargetvalue,stop=upstoploss[x1])
+ 
+buy2 = uptrend and upsignal2 and strategy.opentrades==0 and testlong and degree2
+x2 = barssince (buy2)
+if (buy2)
+//bodlo by zakázat atrtarget v tomto případě
+    if (statictarget)
+        strategy.entry("Oath2", strategy.long, ordersize)
+        strategy.exit( "Oath2 Close", from_entry="Oath2" , profit=statictargetvalue,stop=upstoploss[x2])
+  
+buy3 = uptrend and upsignal3 and strategy.opentrades==0 and testlong and degree3
+x3 = barssince (buy3)
+if (buy3)
+//bodlo by zakázat atrtarget v tomto případě
+    if (statictarget)
+        strategy.entry("Oath3", strategy.long, ordersize)
+        strategy.exit( "Oath3 Close", from_entry="Oath3" , profit=statictargetvalue,stop=upstoploss[x3])
+sell1 = downtrend and downsignal and strategy.opentrades==0 and testshort and degree
+y1 = barssince (sell1)
+if (sell1)
+    if (statictarget)
+        strategy.entry("Oath1.s", strategy.short, ordersize)
+        strategy.exit( "Oath1 Close", from_entry="Oath1.s" , profit=statictargetvalue,stop=downstoploss[y1])
+sell2 = downtrend and downsignal2 and strategy.opentrades==0 and testshort and degree2
+y2 = barssince (sell2)
+if (sell2)
+    if (statictarget)
+        strategy.entry("Oath2.s", strategy.short, ordersize)
+        strategy.exit( "Oath2 Close", from_entry="Oath2.s" , profit=statictargetvalue,stop=downstoploss[y2])
+sell3 = downtrend and downsignal3 and strategy.opentrades==0 and testshort and degree3
+y3 = barssince (sell3)
+if (sell3)
+    if (statictarget)
+        strategy.entry("Oath3.s", strategy.short, ordersize)
+        strategy.exit( "Oath3 Close", from_entry="Oath3.s" , profit=statictargetvalue,stop=downstoploss[y3])
+plotshape(uptrend and upsignal and degree, location=location.belowbar, color=color.green, transp=0, style=shape.triangleup, size=size.tiny, text="Oath up")
+plotshape(downtrend and downsignal and degree, location=location.abovebar, color=color.red, transp=0, style=shape.triangledown, size=size.tiny, text="Oath down")
+plotshape(uptrend and upsignal2 and degree2, location=location.belowbar, color=color.green, transp=0, style=shape.triangleup, size=size.tiny, text="Oath up+")
+plotshape(downtrend and downsignal2 and degree2, location=location.abovebar, color=color.red, transp=0, style=shape.triangledown, size=size.tiny, text="Oath down+")
+plotshape(uptrend and upsignal3 and degree3, location=location.belowbar, color=color.green, transp=0, style=shape.triangleup, size=size.tiny, text="Oath up++")
+plotshape(downtrend and downsignal3 and degree3, location=location.abovebar, color=color.red, transp=0, style=shape.triangledown, size=size.tiny, text="Oath down++")
+Expand (142 lines)

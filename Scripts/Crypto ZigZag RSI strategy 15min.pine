@@ -1,0 +1,156 @@
+Script Name: Crypto ZigZag RSI strategy 15min
+Author: SoftKill21
+Description: This strategy is designed for crypto markets like ETHUSD/T, BTCUSD/T and so on.
+
+It works amazingly with 15 min time frames.
+
+Its idea consists in :
+
+
+We have the RSI indicator, and with it we check for the crossover with overbought and oversold levels. At the same time we have the zigzag which is made from the higher highs and the lower lows between a specific...
+PineScript code:
+
+Pine Script™ strategy
+Crypto ZigZag RSI strategy 15min
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © SoftKill21
+//@version=4
+strategy("Crypto ZigZag RSI strategy 15min",overlay=true)
+length =input(5, title="RSI Length")
+overSold = input(25)
+overBought= input(75)
+p =close
+vrsi = rsi(p, length)
+var bool long = na
+var bool short = na
+long :=crossover(vrsi,overSold) 
+short := crossunder(vrsi,overBought)
+var float last_open_long = na
+var float last_open_short = na
+last_open_long := long ? close : nz(last_open_long[1])
+last_open_short := short ? close : nz(last_open_short[1])
+entry_value =last_open_long
+entry_value1=last_open_short
+//
+ZZPercent = input(1, title="Minimum % Change", type=input.float)
+r1Level=entry_value
+s1Level=entry_value1
+trend = 0
+trend := na(trend[1]) ? 1 : trend[1]
+LL = 0.0
+LL := na(LL[1]) ? s1Level : LL[1]
+HH = 0.0
+HH := na(HH[1]) ?r1Level : HH[1]
+Pi = ZZPercent * 0.01
+zigzag = float(na)
+if trend > 0  
+    if r1Level >= HH  
+        HH := r1Level
+        HH
+    else
+        if s1Level < HH * (1 - Pi)
+            zigzag :=r1Level[1]
+            trend := -1
+            LL := s1Level
+            LL
+else
+   
+    if s1Level <= LL 
+        LL := s1Level
+        LL
+    else
+        if r1Level > LL * (1 + Pi)
+            zigzag := s1Level[1]
+            trend := 1
+            HH := s1Level
+            HH
+shortc=crossunder(trend,0)
+longc=crossover(trend,0)
+longa =input(true)
+shorta=input(false)
+if(longa)
+    strategy.entry("long",1,when=longc)
+    strategy.close("long",when=shortc)
+if(shorta)
+    strategy.entry("short",0,when=shortc)
+    strategy.close("long",when=longc)
+Expand (78 lines)

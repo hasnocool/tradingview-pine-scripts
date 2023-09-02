@@ -1,0 +1,94 @@
+Script Name: Bollinger Band with Fib Golden Ratio (0.618)
+Author: mohanee
+Description: This startegy uses Fib level (0.618)  of Bollinger Band  for long entry.   I find this is the only strategy which gives similar results on the different time frames.  I have tested QQQ  for 1H, 2H , 3H and 4H  charts , all showed over 70% winning rate.
+
+BB settings  50   , mult 1.5   (or you can use 2.5 or 3 )
+
+Note:  for the basis I have used VWMA  instead of SMA...
+PineScript code:
+
+Pine Script™ strategy
+Bollinger Band with Fib Golden Ratio (0.618)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mohanee
+//@version=4
+strategy(title="Bollinger Band with Fib Golden Ratio (0.618)",  shorttitle="Bollinger Band with Fib Golden Ratio" , overlay=true, pyramiding=1,     default_qty_type=strategy.percent_of_equity,  default_qty_value=20, initial_capital=10000, currency=currency.USD)  
+length = input(50,title="BB Length" , minval=1)
+src1 = input(hlc3, title="Source")
+//mult1 = input(1.33, minval=0.001, maxval=50)
+mult = input(1.5,title="multplier", minval=0.001, maxval=50)
+stopLoss=input(5,title="Stop Loss",minval=1)
+basis = vwma(src1, length)
+dev = mult * stdev(src1, length)
+//dev3 = mult3 * stdev(src, length)
+upper_618= basis + (0.618*dev)
+lower_618= basis - (0.618*dev)
+//lower_618_dev3= basis - (0.618*dev3)
+plot_upper618= plot(upper_618, color=color.purple, linewidth=2, title="0.618")
+plot(basis, color=color.purple,style=plot.style_circles,  linewidth=2)
+plot_lower618= plot(lower_618, color=color.purple, linewidth=2, title="0.618 entry")
+//plot_lower618_dev3= plot(lower_618_dev3, color=color.red, linewidth=1, title="0.618 stop")
+//plot_lower618= plot(lower_618, color=color.purple, linewidth=1, title="0.618 entry")
+ema200=ema(close,200)
+ema50=ema(close,50)
+plot (ema200, title="ema200", color=color.orange, linewidth=2)
+plot (ema50, title="ema50", color=color.blue , linewidth=2)
+longCondition= ema50 > ema200
+strategy.entry(id="BB_Fib618", long=true, when = longCondition and ( close < lower_618  or  low <= lower_618)  )
+strategy.close(id="BB_Fib618",  comment="points="+tostring(close - strategy.position_avg_price,  "###.##") , when = strategy.position_size >= 1  and crossover(close,upper_618 )) 
+//stoploss exit
+stopLossVal = strategy.position_size>=1 ?  strategy.position_avg_price * ( 1 - (stopLoss/100) ) : 0.00
+strategy.close(id="BB_Fib618", comment="SL="+tostring(close - strategy.position_avg_price,  "###.##"), when=abs(strategy.position_size)>=1 and close < stopLossVal ) //and close > strategy.position_avg_price )
+Expand (51 lines)

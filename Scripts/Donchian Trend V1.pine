@@ -1,0 +1,184 @@
+Script Name: Donchian Trend V1
+Author: Oracle_Systems
+Description: The Donchian Trend strategy is a trend-following approach that uses the Donchian Channels indicator to identify potential entry and exit points in a security. The Donchian Channels are formed by taking the highest high and the lowest low prices over a specified period and plotting them as upper and lower channels around the current price. The width of the channels...
+PineScript code:
+
+Pine Script™ strategy
+Donchian Trend V1
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+//@version=5
+strategy(title="DON-SS-TREND-V1.2", overlay=true,default_qty_type = strategy.percent_of_equity,default_qty_value=100,initial_capital=1000,pyramiding=0,commission_value=0.01)//@version=5
+length = input.int(42, minval=1, title = "Donchian Lenght")
+lower = ta.lowest(length)
+upper = ta.highest(length)
+basis = math.avg(upper, lower)
+updiff = upper - close
+downdiff = lower - close
+dontrend = -(updiff + downdiff)   
+//plot(dontrend, "DON-SS", color=color.green,linewidth = 3)
+//zerox =ta.valuewhen(ta.cross(dontrend,0),close,0)
+//plot(zerox, "ZEROTH", color=color.black,linewidth = 3)
+xupx = ta.highest(dontrend,length) 
+xdownx = ta.lowest(dontrend,length) 
+inversedragup = xupx[1]  
+inversedragdown = xdownx[1]  
+inversedragon = (inversedragup+inversedragdown)/2
+//plot(close+inversedragon, "Inverse-Drag", color=color.blue,style = plot.style_line,linewidth = 3)
+emalengthslow = input.int(5, minval=1,title = "Slow EMA")
+emax = ta.ema(dontrend,emalengthslow)
+//plot(emax, "EMA-SLOW", color=color.black)
+emalengthfast = input.int(45, minval=1,title = "Fast EMA")
+emin = ta.ema(dontrend,emalengthfast)
+//plot(emin, "EMA-FAST", color=color.black)
+EMAlengthTRF = input.int(200, minval=1,title = "EMA Filter")
+ematrf = ta.ema(close,EMAlengthTRF)
+/////////////////////// MACD FILTER ////////////////
+fast_length = input(title="Fast Length-MACD", defval=5)
+slow_length = input(title="Slow Length-MACD", defval=45)
+src = input(title="Source", defval=close)
+signal_length = input.int(title="Signal Smoothing",  minval = 1, maxval = 50, defval = 5)
+sma_source = input.string(title="Oscillator MA Type",  defval="EMA", options=["SMA", "EMA"])
+sma_signal = input.string(title="Signal Line MA Type", defval="EMA", options=["SMA", "EMA"])
+// Calculating
+fast_ma = sma_source == "SMA" ? ta.sma(src, fast_length) : ta.ema(src, fast_length)
+slow_ma = sma_source == "SMA" ? ta.sma(src, slow_length) : ta.ema(src, slow_length)
+macd = fast_ma - slow_ma
+signal = sma_signal == "SMA" ? ta.sma(macd, signal_length) : ta.ema(macd, signal_length)
+hist = macd - signal
+/////////////////////// STRATEGY ////////////////
+ShortConditionx = (ta.crossunder(emax,emin) and close<ematrf) or ta.crossunder(close,ematrf) and macd<signal
+longConditionx = (ta.crossover(emax,emin) and close>ematrf) or ta.crossover(close,ematrf) and macd>signal
+tp1 = input.int(5, minval=1,title = "TP-1")
+tp2 = input.int(10, minval=1,title = "TP-2")
+tp3 = input.int(15, minval=1,title = "TP-3")
+ematp = ta.ema(close,5)
+sellzerox =ta.valuewhen(ShortConditionx,close,0)
+plot(sellzerox, "SELL-ZEROTH", color=color.black,linewidth = 3)
+TPTAKA1S = sellzerox*(1-tp1/100)
+plot(TPTAKA1S, "SELL-TP1", color=color.red,linewidth = 1)
+TPTAKA2S = sellzerox*(1-tp2/100)
+plot(TPTAKA2S, "SELL-TP2", color=color.red,linewidth = 1)
+TPTAKA3S = sellzerox*(1-tp3/100)
+plot(TPTAKA3S, "SELL-TP3", color=color.red,linewidth = 1)
+buyzerox =ta.valuewhen(longConditionx,close,0)
+plot(buyzerox, "BUY-ZEROTH", color=color.blue,linewidth = 3)
+TPTAKA1B = buyzerox*(1+tp1/100)
+plot(TPTAKA1B, "BUY-TP1", color=color.red,linewidth = 1)
+TPTAKA2B = buyzerox*(1+tp2/100)
+plot(TPTAKA2B, "BUY-TP2", color=color.red,linewidth = 1)
+TPTAKA3B = buyzerox*(1+tp3/100)
+plot(TPTAKA3B, "BUY-TP3", color=color.red,linewidth = 1)
+/////////////////////// TAKE PROFIT SECTION ////////////////
+BUYTP = ta.crossunder(dontrend,inversedragon) or ta.crossunder(ematp,TPTAKA1B) or ta.crossunder(ematp,TPTAKA2B) or ta.crossunder(ematp,TPTAKA3B) 
+SELLTP = ta.crossover(dontrend,inversedragon) or ta.crossover(ematp,TPTAKA1S) or ta.crossover(ematp,TPTAKA2S) or ta.crossover(ematp,TPTAKA3S)
+// Check for Long Entry
+longCondition = (ta.crossover(emax,emin) and close>ematrf) or ta.crossover(close,ematrf)
+if longCondition
+    strategy.entry('Long', strategy.long, comment = "ENTER-LONG")
+buyclose = ta.crossunder(emax,emin) or ta.crossunder(close,ematrf) or ShortConditionx==true or ta.crossunder(dontrend,0)  
+// Exit condition 
+strategy.close('Long', when=buyclose or BUYTP==true, comment = "EXIT-LONG")
+// Check for Short Entry
+ShortCondition = (ta.crossunder(emax,emin) and close<ematrf) or ta.crossunder(close,ematrf)
+if ShortCondition
+    strategy.entry('Short', strategy.short, comment = "ENTER-SHORT")
+sellclose = ta.crossover(emax,emin) or ta.crossover(close,ematrf) or longConditionx==true  or ta.crossover(dontrend,0)
+// Exit condition 
+strategy.close('Short', when=sellclose or SELLTP==true, comment = "EXIT-SHORT")
+///// END OF STRATEGY ///////////
+Expand (95 lines)

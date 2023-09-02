@@ -1,0 +1,100 @@
+Script Name: Só Trade Top - Média de 8 - Augusto Backes
+Author: Valente_F
+Description: This strategy is an ADAPTATION of the EMA8 Setup from Augusto Backes (brazilian crypto youtuber). 
+The strategy was designed to work on the daily timeframe with the weekly EMA8.
+
+Buy signals when there is a bullish candle above the weekly EMA8 - bullish candles in the script: engulfing candles, closing price reversal and bullish hammer.
+
+Exit signals when there is...
+PineScript code:
+
+Pine Script™ strategy
+Só Trade Top - Média de 8 - Augusto Backes
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Valente_F
+//@version=4
+strategy("Só Trade Top - Média de 8 - Augusto Backes", overlay=true, max_bars_back = 5000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, initial_capital = 10000, commission_type = strategy.commission.percent, process_orders_on_close = true)
+tipo_media = input(title="Tipo de Média", defval="EMA", options=["SMA", "EMA"],inline = "3",  group = "SETUP MÉDIA DE 8", tooltip = "Média utilizada para os cálculos do Setup")
+c_media = input(defval = 8, title = "Comprimento", type = input.integer,inline = "3",  group = "SETUP MÉDIA DE 8")
+cb_raro = input(true, title="Habilitar Sinal Raro", group = "SETUP MÉDIA DE 8", tooltip = "Sinais normais são caracterizados por Engolfos, Martelos e Preço de Fechamento de Reversão com FECHAMENTO acima da Média de 8. Sinais Raros são caracterizados pelas mesmas figuras, mas com FECHAMENTO e ABERTURA acima da média de 8. O mesmo vale para sinais de venda.")
+media8 = tipo_media == "SMA" ? security(syminfo.tickerid, "1W", sma(close[1], c_media)) : security(syminfo.tickerid, "1W", ema(close[1], c_media))
+plot(media8, title = "Média", color = color.green, linewidth = 2)
+lookback_swing=5
+candle_engolfo = (close > open and close[1] < open[1] and close >= open[1] and open <= close[1] ) and close>media8
+candle_martelo = 2*abs(close-open) < (min(close, open)-low) and (high - max(close, open)) < abs(close-open) and close>open and close>media8
+candle_fr = low < low[1] and low < low[2] and close > close[1] and close > open  and close>media8
+compra = (candle_engolfo or candle_martelo or candle_fr) 
+vcandle_engolfo = (close < open and close[1] > open[1] and close <= open[1] and open >= close[1]) and close<media8
+vcandle_martelo = 2*abs(close-open) < (high-max(close, open)) and (min(close, open)-low) < abs(close-open) and close<open  and close<media8
+vcandle_fr = high > high[1] and high > high[2] and close < close[1] and close < open  and close<media8
+venda = (vcandle_engolfo or vcandle_martelo or vcandle_fr) 
+if cb_raro
+    compra := compra and open > media8
+    venda := venda and open <media8
+else
+    compra := compra
+    venda := venda
+barcolor(compra and strategy.position_size==0?color.green:venda and strategy.position_size>0?color.red : color.new(color.black, 100))
+plotshape(compra and candle_engolfo and strategy.position_size==0, title = "Engolfo de Alta", style = shape.labeldown, color = color.green, text = "Engolfo de Alta", textcolor = color.white)
+plotshape(compra and candle_martelo and strategy.position_size==0, title = "Martelo de Alta", style = shape.labeldown, color = color.green, text = "Martelo de Alta", textcolor = color.white)
+plotshape(compra and candle_fr and strategy.position_size==0, title = "PFR de Alta", style = shape.labeldown, color = color.green, text = "PFR de Alta", textcolor = color.white)
+plotshape(venda and vcandle_engolfo and strategy.position_size>0, title = "Engolfo de Baixa", style = shape.labelup, location =  location.belowbar, color = color.red, text = "Engolfo de Baixa", textcolor = color.white)
+plotshape(venda and vcandle_martelo and strategy.position_size>0, title = "Martelo de Baixa", style = shape.labelup, location =  location.belowbar, color = color.red, text = "Martelo de Baixa", textcolor = color.white)
+plotshape(venda and vcandle_fr and strategy.position_size>0, title = "PFR de Baixa", style = shape.labelup, location =  location.belowbar, color = color.red, text = "PFR de Baixa", textcolor = color.white)
+strategy.entry("Compra", true, when = compra)
+strategy.close("Compra", when = venda)
+Expand (53 lines)

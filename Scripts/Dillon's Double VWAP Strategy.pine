@@ -1,0 +1,563 @@
+Script Name: Dillon's Double VWAP Strategy
+Author: jordanfray
+Description: This is based on Dillon's double VWAP strategy. 
+I enters when the ADX is low (aka not a trending market) and it's not close to the VWAP reset. Check it out.
+PineScript code:
+
+Pine Script™ strategy
+Dillon's Double VWAP Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © jordanfray
+//@version=5
+strategy(title="Double VWAP Strategy", overlay=true, max_bars_back=5000, default_qty_type=strategy.percent_of_equity, default_qty_value=100,initial_capital=100000, commission_type=strategy.commission.percent, commission_value=0.05, backtest_fill_limits_assumption=2)
+// Indenting Classs
+indent_1 = " "
+indent_2 = "  "
+indent_3 = "   "
+indent_4 = "    "
+// Group Titles
+group_one_title = "VWAP Settings"
+group_two_title = "ADX Settings"
+group_three_title = "Entry Settings"
+group_four_title = "Limit Entries"
+// Input Tips
+adx_thresholdToolTip = "The minumn ADX value to allow opening a postion"
+adxCancelToolTip= "You can optionally set a different lower value for ADX that will allow entries even if below the trigger threshold."
+close_early_toopTip = "Enabling this will cause entries to close if/when the price crosses the VWAP to the other outer band."
+ladderInToolTip = "Enable this to use the laddering settings below."
+emaDistanceToolTip = "Disable opening trades when the price is too close to the above EMA."
+// Colors
+ocean_blue = color.new(#0C6090,0)
+sky_blue = color.new(#00A5FF,0)
+green = color.new(#2DBD85,0)
+red = color.new(#E02A4A,0)
+light_blue = color.new(#00A5FF,90)
+light_green = color.new(#2DBD85,90)
+light_red = color.new(#E02A4A,90)
+light_yellow = color.new(#FFF900,90)
+white = color.new(#ffffff,0)
+transparent = color.new(#000000,100)
+// Strategy Settings
+anchor =                      input.string(defval="Session", title="Anchor Period", options=["Session", "Week", "Month", "Quarter", "Year"], group=group_one_title)
+src =                         input.source(defval=close, title="VWAP Source", group=group_one_title)
+multiplier_inner =            input.float(defval=1.0, step=.1, title="Inner Bands Multiplier", group=group_one_title)
+multiplier_outer =            input.float(defval=2.1, step=.1, title="Outer Bands Multiplier", group=group_one_title)
+adx_len =                     input.int(defval=14, title="ADX Smoothing", group=group_two_title)
+di_len =                      input.int(defval=14, title="DI Length", group=group_two_title)
+adx_threshold =               input.int(defval=30, title="ADX Threshold", group=group_two_title, tooltip=adx_thresholdToolTip)
+enableLaddering =             input.bool(defval=true, title="Ladder Into Positions", tooltip=ladderInToolTip, group=group_two_title)
+ladderRungs =                 input.int(defval=3, minval=2, maxval=4, step=1, title=indent_4+"Ladder Rungs", group=group_two_title)
+ladderStep =                  input.float(defval=.25, title=indent_4+"Ladder Step (%)", step=.1, group=group_two_title)/100
+stop_loss_val =               input.float(defval=5.0, title="Stop Loss (%)", step=0.1, group=group_three_title)/100
+take_profit_val =             input.float(defval=10.5, title="Take Profit (%)", step=0.1, group=group_three_title)/100
+long_entry_limit_lookback =   input.int(defval=1, title="Long Entry Limit Lookback", minval=1, step=1, group=group_three_title)
+short_entry_limit_lookback =  input.int(defval=1, title="Short Entry Limit Lookback", minval=1, step=1, group=group_three_title)
+start_trailing_after =        input.float(defval=3, title="Start Trailing After (%)", step=0.1, group=group_three_title)/100
+trail_behind =                input.float(defval=4, title="Trail Behind (%)", step=0.1, group=group_three_title)/100
+close_early =                 input.bool(defval=false, title="Close early if price crosses outer VWAP band", tooltip=close_early_toopTip)
+enableEmaFilter =             input.bool(defval=true, title="Use EMA Filter", group=group_four_title)
+emaFilterTimeframe =          input.timeframe(defval="240", title=indent_4+"Timeframe", group=group_four_title)
+emaFilterLength =             input.int(defval=100, minval=1, step=10, title=indent_4+"Length", group=group_four_title)
+emaFilterSource =             input.source(defval=hl2, title=indent_4+"Source", group=group_four_title)
+enableEmaDistanceFilter =     input.bool(defval=true, title="Use EMA Distance Filter", group=group_four_title)
+emaDistanceThreshold =        input.float(defval=2.0, title=indent_4+"EMA Min Distance (%)", group=group_four_title, tooltip=emaDistanceToolTip)
+useTimeFilter =               input.bool(defval=true, title="Use Time Session Filter", group=group_four_title)
+timeSession =                 input.session(defval="1400-2200", title=indent_4+"Time Session To Ignore Trades", group=group_four_title)
+// Calculate and plot VWAP bands
+float vwap_val = na
+float upper_inner_band_value = na
+float lower_inner_band_value = na
+float upper_outer_band_value = na
+float lower_outer_band_value = na
+var cumVol = 0.
+cumVol += nz(volume)
+if barstate.islast and cumVol == 0
+    runtime.error("No volume is provided by the data vendor.")
+    
+computeVWAP(src, isNewPeriod, stDevMultiplier) =>
+    var float sum_src_vol = na
+    var float sum_vol = na
+    var float sum_src_src_vol = na
+    sum_src_vol := isNewPeriod ? src * volume : src * volume + sum_src_vol[1]
+    sum_vol := isNewPeriod ? volume : volume + sum_vol[1]
+    sum_src_src_vol := isNewPeriod ? volume * math.pow(src, 2) : volume * math.pow(src, 2) + sum_src_src_vol[1]
+    _vwap = sum_src_vol / sum_vol
+    variance = sum_src_src_vol / sum_vol - math.pow(_vwap, 2)
+    variance := variance < 0 ? 0 : variance
+    standard_deviation = math.sqrt(variance)
+    lower_band_value = _vwap - standard_deviation * stDevMultiplier
+    upper_band_value = _vwap + standard_deviation * stDevMultiplier
+    [_vwap, lower_band_value, upper_band_value]
+timeChange(period) =>
+    ta.change(time(period))
+isNewPeriod = switch anchor
+    "Session" => timeChange("D")
+    "Week" => timeChange("W")
+    "Month" => timeChange("M")
+    "Quarter" => timeChange("3M")
+    "Year" => timeChange("12M")
+    => false
+[inner_vwap, inner_bottom, inner_top] = computeVWAP(src, isNewPeriod, multiplier_inner)
+[outer_vwap, outer_bottom, outer_top] = computeVWAP(src, isNewPeriod, multiplier_outer)
+vwap_val := inner_vwap
+upper_inner_band_value := inner_top
+lower_inner_band_value := inner_bottom
+upper_outer_band_value := outer_top
+lower_outer_band_value := outer_bottom
+// Calculate and plot ADX
+dirmov(len) =>
+    up = ta.change(high)
+    down = -ta.change(low)
+    plus_dm = na(up) ? na : (up > down and up > 0 ? up : 0)
+    minus_dm = na(down) ? na : (down > up and down > 0 ? down : 0)
+    true_range = ta.rma(ta.tr, len)
+    plus = fixnan(100 * ta.rma(plus_dm, len) / true_range)
+    minus = fixnan(100 * ta.rma(minus_dm, len) / true_range)
+    [plus, minus]
+adx(di_len, adx_len) =>
+    [plus, minus] = dirmov(di_len)
+    sum = plus + minus
+    adx = 100 * ta.rma(math.abs(plus - minus) / (sum == 0 ? 1 : sum), adx_len)
+adx_val = adx(di_len, adx_len)
+plot(adx_val, title="ADX")
+// Calculate and Plot Macro EMA
+ema_filter = ta.ema(emaFilterSource, emaFilterLength)
+ema_filter_smoothed = request.security(syminfo.tickerid, emaFilterTimeframe, ema_filter[barstate.isrealtime ? 1 : 0])
+distance_from_EMA = ((close - ema_filter_smoothed)/close)*100
+if distance_from_EMA < 0
+    distance_from_EMA := distance_from_EMA * -1
+plot(enableEmaFilter ? ema_filter_smoothed: na, title="EMA Macro Filter", style=plot.style_stepline, linewidth=2, color=sky_blue, editable=true)
+// Calculate if bars are in restricted time period
+isInSession(sess) => 
+    na(time(timeframe.period, sess,"GMT-6")) == false
+withinTime = (useTimeFilter and not isInSession(timeSession)) or not useTimeFilter
+// Calulate Ladder Entries
+long_ladder_1_limit_price = close - (close * 1 * ladderStep)
+long_ladder_2_limit_price = close - (close * 2 * ladderStep)
+long_ladder_3_limit_price = close - (close * 3 * ladderStep)
+long_ladder_4_limit_price = close - (close * 4 * ladderStep)
+short_ladder_1_limit_price = close + (close * 1 * ladderStep)
+short_ladder_2_limit_price = close + (close * 2 * ladderStep)
+short_ladder_3_limit_price = close + (close * 3 * ladderStep)
+short_ladder_4_limit_price = close + (close * 4 * ladderStep)
+var position_qty = strategy.equity/close
+if enableLaddering
+    position_qty := (strategy.equity/close) / ladderRungs
+else
+    position_qty := strategy.equity/close
+    
+plot(position_qty, color=white)
+// Calculate entry and exit values
+limit_order_long_price = ta.lowest(hl2, long_entry_limit_lookback)
+limit_order_short_price = ta.highest(hl2, short_entry_limit_lookback)
+long_start_trailing_val = strategy.position_avg_price + (strategy.position_avg_price * start_trailing_after)
+short_start_trailing_val = strategy.position_avg_price - (strategy.position_avg_price * start_trailing_after)
+long_trail_behind_val = close - (strategy.position_avg_price * (trail_behind/100))
+short_trail_behind_val = close + (strategy.position_avg_price * (trail_behind/100))
+currently_in_a_long_postion = strategy.position_size > 0
+currently_in_a_short_postion = strategy.position_size < 0
+long_profit_target = strategy.position_avg_price * (1 + take_profit_val)
+short_profit_target = strategy.position_avg_price * (1 - take_profit_val)
+long_stop_loss = strategy.position_avg_price * (1.0 - stop_loss_val)
+short_stop_loss = strategy.position_avg_price * (1 + stop_loss_val)
+bars_since_entry = currently_in_a_long_postion or currently_in_a_short_postion ? bar_index - strategy.opentrades.entry_bar_index(strategy.opentrades - 1) + 1 : 5
+long_run_up = ta.highest(high, bars_since_entry)
+short_run_up = ta.lowest(low, bars_since_entry)
+long_trailing_stop = currently_in_a_long_postion and bars_since_entry > 0 and long_run_up > long_start_trailing_val ? long_run_up - (long_run_up * trail_behind) : long_stop_loss
+short_trailing_stop = currently_in_a_short_postion and bars_since_entry > 0 and short_run_up < short_start_trailing_val ? short_run_up + (short_run_up * trail_behind) : short_stop_loss
+// Entry Criteria
+price_far_enough_away_from_ema = distance_from_EMA > emaDistanceThreshold
+adx_is_below_threshold = adx_val < adx_threshold
+price_closed_below_VWAP_upper_outer_band = close < upper_outer_band_value
+price_closed_above_VWAP_lower_outer_band = close > lower_outer_band_value
+price_crossed_up_VWAP_upper_outer_band =  ta.crossover(high,upper_outer_band_value)
+price_crossed_down_VWAP_lower_outer_band = ta.crossunder(low, lower_outer_band_value)
+price_above_ema_filter = close > ema_filter_smoothed
+price_below_ema_filter = close < ema_filter_smoothed
+//Trade Restirctions
+no_trades_allowed = not withinTime or not adx_is_below_threshold or not price_far_enough_away_from_ema
+// Enter trades when...
+long_conditions_met = enableEmaFilter ? price_above_ema_filter and not currently_in_a_short_postion and withinTime and adx_is_below_threshold and price_crossed_down_VWAP_lower_outer_band and price_closed_above_VWAP_lower_outer_band : not currently_in_a_long_postion and withinTime and adx_is_below_threshold and price_crossed_down_VWAP_lower_outer_band and price_closed_above_VWAP_lower_outer_band
+short_conditions_met = enableEmaFilter ? price_below_ema_filter and not currently_in_a_long_postion and withinTime and adx_is_below_threshold and price_crossed_up_VWAP_upper_outer_band and price_closed_below_VWAP_upper_outer_band : not currently_in_a_short_postion and withinTime and adx_is_below_threshold and price_crossed_up_VWAP_upper_outer_band and price_closed_below_VWAP_upper_outer_band
+// Take Profit When...
+price_closed_below_short_trailing_stop = ta.cross(close, short_trailing_stop)
+price_hit_short_entry_profit_target = low > short_profit_target
+price_closed_above_long_entry_trailing_stop = ta.cross(close, long_trailing_stop)
+price_hit_long_entry_profit_target = high > long_profit_target
+long_position_take_profit = close_early ? price_crossed_up_VWAP_upper_outer_band or price_closed_above_long_entry_trailing_stop or price_hit_long_entry_profit_target : price_closed_above_long_entry_trailing_stop or price_hit_long_entry_profit_target
+short_position_take_profit = close_early ? price_crossed_down_VWAP_lower_outer_band or price_closed_below_short_trailing_stop or price_hit_short_entry_profit_target : price_closed_below_short_trailing_stop or price_hit_short_entry_profit_target
+// Cancel limir order if...
+cancel_long_condition = no_trades_allowed
+cancel_short_condition = no_trades_allowed
+// Long Entry
+if enableLaddering
+    if ladderRungs == 2
+        strategy.entry(id="Long Ladder 1", direction=strategy.long, qty=position_qty, limit=long_ladder_1_limit_price, when=long_conditions_met)
+        strategy.entry(id="Long Ladder 2", direction=strategy.long, qty=position_qty, limit=long_ladder_2_limit_price, when=long_conditions_met)
+    else if ladderRungs == 3
+        strategy.entry(id="Long Ladder 1", direction=strategy.long, qty=position_qty, limit=long_ladder_1_limit_price, when=long_conditions_met)
+        strategy.entry(id="Long Ladder 2", direction=strategy.long, qty=position_qty, limit=long_ladder_2_limit_price, when=long_conditions_met)
+        strategy.entry(id="Long Ladder 3", direction=strategy.long, qty=position_qty, limit=long_ladder_3_limit_price, when=long_conditions_met)
+    else if ladderRungs == 4
+        strategy.entry(id="Long Ladder 1", direction=strategy.long, qty=position_qty, limit=long_ladder_1_limit_price, when=long_conditions_met)
+        strategy.entry(id="Long Ladder 2", direction=strategy.long, qty=position_qty, limit=long_ladder_2_limit_price, when=long_conditions_met)
+        strategy.entry(id="Long Ladder 3", direction=strategy.long, qty=position_qty, limit=long_ladder_3_limit_price, when=long_conditions_met)
+        strategy.entry(id="Long Ladder 4", direction=strategy.long, qty=position_qty, limit=long_ladder_4_limit_price, when=long_conditions_met)
+    
+    strategy.exit(id="Close Long Ladder 1", from_entry="Long Ladder 1", stop=long_trailing_stop, limit=long_profit_target, when=long_position_take_profit)
+    strategy.exit(id="Close Long Ladder 2", from_entry="Long Ladder 2", stop=long_trailing_stop, limit=long_profit_target, when=long_position_take_profit)
+    strategy.exit(id="Close Long Ladder 3", from_entry="Long Ladder 3", stop=long_trailing_stop, limit=long_profit_target, when=long_position_take_profit)
+    strategy.exit(id="Close Long Ladder 4", from_entry="Long Ladder 4", stop=long_trailing_stop, limit=long_profit_target, when=long_position_take_profit)
+    
+    strategy.cancel(id="Long Ladder 1", when=cancel_long_condition)
+    strategy.cancel(id="Long Ladder 2", when=cancel_long_condition)
+    strategy.cancel(id="Long Ladder 3", when=cancel_long_condition)
+    strategy.cancel(id="Long Ladder 4", when=cancel_long_condition)
+else
+    strategy.entry(id="Long", direction=strategy.long, qty=position_qty, when=long_conditions_met)
+    strategy.exit(id="Close Long", from_entry="Long", stop=long_stop_loss, limit=long_profit_target, when=long_position_take_profit)
+    strategy.cancel(id="Long", when=cancel_long_condition)
+// short Entry
+if enableLaddering
+    if ladderRungs == 2
+        strategy.entry(id="short Ladder 1", direction=strategy.short, qty=position_qty, limit=short_ladder_1_limit_price, when=short_conditions_met)
+        strategy.entry(id="short Ladder 2", direction=strategy.short, qty=position_qty, limit=short_ladder_2_limit_price, when=short_conditions_met)
+    else if ladderRungs == 3
+        strategy.entry(id="short Ladder 1", direction=strategy.short, qty=position_qty, limit=short_ladder_1_limit_price, when=short_conditions_met)
+        strategy.entry(id="short Ladder 2", direction=strategy.short, qty=position_qty, limit=short_ladder_2_limit_price, when=short_conditions_met)
+        strategy.entry(id="short Ladder 3", direction=strategy.short, qty=position_qty, limit=short_ladder_3_limit_price, when=short_conditions_met)
+    else if ladderRungs == 4
+        strategy.entry(id="short Ladder 1", direction=strategy.short, qty=position_qty, limit=short_ladder_1_limit_price, when=short_conditions_met)
+        strategy.entry(id="short Ladder 2", direction=strategy.short, qty=position_qty, limit=short_ladder_2_limit_price, when=short_conditions_met)
+        strategy.entry(id="short Ladder 3", direction=strategy.short, qty=position_qty, limit=short_ladder_3_limit_price, when=short_conditions_met)
+        strategy.entry(id="short Ladder 4", direction=strategy.short, qty=position_qty, limit=short_ladder_4_limit_price, when=short_conditions_met)
+    
+    strategy.exit(id="Close short Ladder 1", from_entry="short Ladder 1", stop=short_trailing_stop, limit=short_profit_target, when=short_position_take_profit)
+    strategy.exit(id="Close short Ladder 2", from_entry="short Ladder 2", stop=short_trailing_stop, limit=short_profit_target, when=short_position_take_profit)
+    strategy.exit(id="Close short Ladder 3", from_entry="short Ladder 3", stop=short_trailing_stop, limit=short_profit_target, when=short_position_take_profit)
+    strategy.exit(id="Close short Ladder 4", from_entry="short Ladder 4", stop=short_trailing_stop, limit=short_profit_target, when=short_position_take_profit)
+    
+    strategy.cancel(id="short Ladder 1", when=cancel_short_condition)
+    strategy.cancel(id="short Ladder 2", when=cancel_short_condition)
+    strategy.cancel(id="short Ladder 3", when=cancel_short_condition)
+    strategy.cancel(id="short Ladder 4", when=cancel_short_condition)
+else
+    strategy.entry(id="short", direction=strategy.short, qty=position_qty, when=short_conditions_met)
+    strategy.exit(id="Close short", from_entry="short", stop=short_stop_loss, limit=short_profit_target, when=short_position_take_profit)
+    strategy.cancel(id="short", when=cancel_short_condition)
+// Plot entry lines & values
+center_VWAP_line = plot(vwap_val, title="VWAP", linewidth=1, color=green)
+upper_inner_band = plot(upper_inner_band_value, title="Upper Inner Band", linewidth=1, color=sky_blue)
+lower_inner_band = plot(lower_inner_band_value, title="Lower Inner Band", linewidth=1, color=sky_blue)
+upper_outer_band = plot(upper_outer_band_value, title="Upper Outer Band", linewidth=2, color=ocean_blue)
+lower_outer_band = plot(lower_outer_band_value, title="Lower Outer Band", linewidth=2, color=ocean_blue)
+fill(upper_outer_band, lower_outer_band, title="VWAP Bands Fill", color=light_blue)
+plotshape(long_conditions_met ? close  : na, title="Long Entry Symbol", color=green, style=shape.triangleup, location=location.abovebar)
+plotshape(short_conditions_met ? close  : na, title="Short Entry Symbol", color=red, style=shape.triangledown, location=location.belowbar)
+long_trailing_stop_line = plot(long_trailing_stop, style=plot.style_stepline, editable=false, color=currently_in_a_long_postion ? long_trailing_stop > strategy.position_avg_price ? green : red : transparent)
+short_trailing_stop_line = plot(short_trailing_stop, style=plot.style_stepline, editable=false, color=currently_in_a_short_postion ? short_trailing_stop < strategy.position_avg_price ? green : red : transparent)
+bars_since_entry_int = plot(bars_since_entry, editable=false, title="Bars Since Entry", color=green)
+entry = plot(strategy.position_avg_price, editable=false, title="Entry", style=plot.style_stepline, color=currently_in_a_long_postion or currently_in_a_short_postion ? color.blue : transparent, linewidth=1)
+fill(entry,long_trailing_stop_line, editable=false, color=currently_in_a_long_postion ? long_trailing_stop > strategy.position_avg_price ? light_green : light_red : transparent)
+fill(entry,short_trailing_stop_line, editable=false, color=currently_in_a_short_postion ? short_trailing_stop < strategy.position_avg_price ? light_green : light_red : transparent)
+bgcolor(title="No Trades Allowed", color=no_trades_allowed ? light_red : light_green)
+//long_run_up_line = plot(long_run_up, style=plot.style_stepline, editable=false, color=currently_in_a_long_postion ? green : transparent)
+//short_run_up_line = plot(short_run_up, style=plot.style_stepline, editable=false, color=currently_in_a_short_postion ? green : transparent)
+Expand (296 lines)

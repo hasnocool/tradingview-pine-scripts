@@ -1,0 +1,317 @@
+Script Name: Trend Surfers - Premium Breakout + Alerts
+Author: TrendSurfersSignals
+Description: Trend Surfers - Premium Breakout Strategy with Alerts 
+
+I am happy today to release the first free Trend Surfers complete Breakout Strategy!
+
+The strategy includes:
+ 
+ Entry for Long and Short
+ Stoploss
+ Position Size
+ Exit Signal
+ Risk Management Feature
+ 
+
+ How the strategy works 
+This is a Trend Following strategy. The strategy will have drawdowns, but they...
+PineScript code:
+
+Pine Script™ strategy
+Trend Surfers - Premium Breakout + Alerts
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+//@version=4
+strategy(shorttitle="Trend Surfers - Breakout", title="Trend Surfers - Premium Breakout",
+     overlay=true, calc_on_every_tick =false, initial_capital=100000, default_qty_type=strategy.percent_of_equity, 
+     default_qty_value=100, commission_type="percent", commission_value=0.04)
+// Risk for position and pyramid
+maxriskval = input(2, "Max % risk", type = input.float,
+     tooltip="Risk % over total equity / Position", group = "Risk Management")
+pairnumber = input(title = "How many pairs",type = input.integer, defval= 1,
+     tooltip="How many pairs are you trading with the strategy?", group = "Risk Management")
+// Emtry Exit
+highPeriod = input(title="Highest High Period", type=input.integer, defval=168
+     , tooltip="Highest High of X bars - This will trigger a Long Entry when close is above. (Thin Green Line)"
+     , group = "Entry Condition")
+lowPeriod = input(title="Lowest Low Period", type=input.integer, defval=168,
+     tooltip="Lowest low of X bars - This will trigger a Short Entry when close is under. (Thin Red Line)"
+     , group = "Entry Condition")
+// Stoploss
+trailingAtrPeriod = input(title="Trailing ATR Pediod", type=input.integer, defval=10,
+     tooltip="Average True Range for the Trailing Stop. (Thick Green Line) "
+     , group = "Exit Condition")
+trailingAtrMultiplier = input(title="Trailing ATR Multiplier", type=input.float, defval=8
+     , group = "Exit Condition")
+fixAtrPeriod = input(title="Fix ATR Pediod", type=input.integer, defval=10,
+     tooltip="Average True Range for the Fix Stoloss. (Thick Yellow Line)"
+     , group = "Exit Condition")
+fixAtrMultiplier = input(title="Fix ATR Multiplier", type=input.float, defval=2
+     , group = "Exit Condition")
+// Pair info 
+pair = syminfo.basecurrency + syminfo.currency
+// High Low Variable
+highestHigh = highest(high, highPeriod)[1]
+lowestLow = lowest(low, lowPeriod)[1]
+trailingAtr = atr(trailingAtrPeriod) * trailingAtrMultiplier
+// Trade Condition
+longCondition = crossover(close, highestHigh) 
+shortCondition = crossunder(close, lowestLow)
+// Risk Variable
+fixAtr = atr(fixAtrPeriod) * fixAtrMultiplier
+stopvaluelong = close[1] - fixAtr[1]
+stopvalueshort = close[1] + fixAtr[1]
+// Position size Long
+maxpossize = strategy.equity / close 
+positionsizelong = ( ( ( (maxriskval/100) * strategy.equity) / (close - stopvaluelong))) 
+stopperclong = ((close - stopvaluelong) / close) * 100
+leveragelong = max(1, ceil(positionsizelong / maxpossize)) * 2
+posperclong =  (((positionsizelong * close) / strategy.equity) *100 / leveragelong) / pairnumber
+realposlong = (((posperclong / 100) * strategy.equity) * leveragelong) / close
+// Position size Short
+positionsizeshort = ( ( ( (maxriskval/100) * strategy.equity) / (stopvalueshort - close))) 
+stoppercshort = ((close - stopvalueshort) / close) * 100
+leverageshort = max(1, ceil(positionsizeshort / maxpossize)) * 2
+pospercshort =  (((positionsizeshort * close) / strategy.equity) *100 / leverageshort) / pairnumber
+realposshort = (((pospercshort / 100) * strategy.equity) * leverageshort) / close
+// Alert Message
+entry_long_message = '\nGo Long for ' + pair + 'NOW!' +
+                     '\nPosition Size % =' + tostring(posperclong) +
+                     '\nLeverage' + tostring(leveragelong) +
+                     '\nStoploss Price =' + tostring(stopvaluelong) +
+                     '\nClose any Short position that are open for ' + pair + '!' +
+                     '\n\nVisit TrendSurfersSignals.com' +
+                     '\nFor automated premium signals (FREE)'
+entry_short_message ='\nGo Short for ' + pair + 'NOW!' +
+                     '\nPosition Size % =' + tostring(pospercshort) +
+                     '\nLeverage' + tostring(leverageshort) +
+                     '\nStoploss Price =' + tostring(stopvalueshort) +
+                     '\nClose any Long position that are open for ' + pair + '!' +
+                     '\n\nVisit TrendSurfersSignals.com' +
+                     '\nFor automated premium signals (FREE)'
+exit_short_message = '\nExit Short for ' + pair + 'NOW!' +
+                     '\n\nVisit TrendSurfersSignals.com' +
+                     '\nFor automated premium signals (FREE)'
+exit_long_message = '\nExit Long for ' + pair + 'NOW!' +
+                     '\n\nVisit TrendSurfersSignals.com' +
+                     '\nFor automated premium signals (FREE)'
+// Order
+if longCondition 
+    strategy.entry("Long", strategy.long, stop=highestHigh, comment="Long", qty=realposlong
+     , alert_message = entry_long_message)
+if shortCondition
+    strategy.entry("Short", strategy.short, stop=lowestLow, comment="Short", qty=realposshort
+     , alert_message = entry_short_message)
+// Stoploss Trailing
+longTrailing = close - trailingAtr
+shortTrailing = close + trailingAtr
+var longTrailingStop = 0.0
+var shortTrailingStop = 999999.9
+trailingStopLine = 0.0
+trailingStopLine := na
+fixedStopLine = 0.0
+fixedStopLine := na
+var inTrade = 0
+if longCondition or shortCondition
+    if 0 == inTrade
+        if longCondition
+            inTrade := 1
+        else
+            inTrade := -1
+if 1 == inTrade and (shortCondition or low <= max(fixedStopLine[1], longTrailingStop))
+    inTrade := 0
+if -1 == inTrade and (longCondition or high >= min(fixedStopLine[1], shortTrailingStop))
+    inTrade := 0
+longTrailingStop := if (1 == inTrade)
+    stopValue = longTrailing
+    max(stopValue, longTrailingStop[1])
+else
+    0
+shortTrailingStop := if (-1 == inTrade)
+    stopValue = shortTrailing
+    min(stopValue, shortTrailingStop[1])
+else
+    999999
+// Fix Stoploss
+firstPrice = 0.0
+firstFixAtr = 0.0
+firstPrice := na
+firstFixAtr := na
+if 0 != inTrade
+    firstPrice := valuewhen(inTrade != inTrade[1] and 0 != inTrade, close, 0)
+    firstFixAtr := valuewhen(inTrade != inTrade[1] and 0 != inTrade, fixAtr, 0)
+    if 1 == inTrade
+        fixedStopLine := firstPrice - firstFixAtr
+        trailingStopLine := longTrailingStop
+    else
+        fixedStopLine := firstPrice + firstFixAtr
+        trailingStopLine := shortTrailingStop
+if (strategy.position_size > 0)
+    strategy.exit(id="L Stop", stop=max(fixedStopLine, longTrailingStop)
+     , alert_message = exit_long_message)
+if (strategy.position_size < 0)
+    strategy.exit(id="S Stop", stop=min(fixedStopLine, shortTrailingStop)
+     , alert_message = exit_short_message)
+    
+// Plot
+plot(highestHigh, color=color.green, linewidth=1, transp=0, title='Highest High')
+plot(lowestLow, color=color.red, linewidth=1, transp=0, title='Lowest Low')
+plot(trailingStopLine, color=color.lime, linewidth=2, transp=0, offset=1, title='Trailing Stop')
+plot(fixedStopLine, color=color.orange, linewidth=2, transp=0, offset=1, title='Fixed Stop')
+Expand (157 lines)

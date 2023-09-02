@@ -1,0 +1,756 @@
+Script Name: DCA Bot Long-Short
+Author: fiddlah
+Description: Thanks to @TheTradingParrot for the inspiration and knowledge shared. 
+ Thanks to @ericlin0122 for the original DCA Bot Emulator which is the backbone of this strategy. 
+ The script simulates DCA strategy with parameters used in 3commas DCA bots for futures trading. Experiment with parameters
+ to find your trading setup. 
+ Beware how large your total leveraged...
+PineScript code:
+
+Pine Script™ strategy
+DCA Bot Long/Short
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+// Thanks to @TheTradingParrot for the inspiration and knowledge shared. 
+// Thanks to @ericlin0122 for the original DCA Bot Emulator which is the backbone of this strategy. 
+// The script simulates DCA strategy with parameters used in 3commas DCA bots for futures trading. Experiment with parameters
+// to find your trading setup. 
+// Beware how large your total leveraged position is and how far can market go before you get liquidated!
+// Do that with the help of futures liquidation calculators you can find online!
+//
+//                                      I`ve added:
+//
+// 1) an internal average price and profit calculating, instead of TV`s native one, which is subject to severe slippage.
+// 2) I`ve built a graphic interface, so levels are clearly visible and backtest analyzing made easier.
+// 3) now both Long & Short direction of the strategy exist.
+// 4) trailing TP which was featured in the initial script has been removed because TV`s execution model makes 
+//    it impossible to know how the real world trailing would have unfolded.
+// 5) the table is self explanatory, and it is there to help you discover what happened and where. 
+// 6) vertical colored lines appear when the new maximum deviation from the original price has
+//    been reached
+//    All the trading happens with total account capital, and all order sizes inputs are in percents
+//
+//
+//                                  Known issues:
+//
+// When deviation is small, and the same candle triggers safety AND the close order, the initial orders are closed, but a 
+// new one opens on the next candle. This is "resolved" by closing the unwanted trade forcefully on the next candle, affecting 
+// profit calculating minimally and guaranteeing that what should be closed has been closed.
+//
+// The code could be improved through use of arrays, making the table flexible so the number of rows should be dynamic depending
+// on the number of SOs.
+//
+//
+//                                  !!!!! IMPORTANT!!!!!
+//
+// This strategy script is made to receieve a signal from an exterior study script, which should plot +100 for long or -100 for short 
+// entry (that is by default - values can be changed in the strategy settings menu). That plot should be found in "Enter Trigger" input 
+// dropdown menu at the bottom of strategy settings menu. Removing the "and trigger == long/short_trigger" condition from strategy entry 
+// conditions makes the strategy open trades ASAP.
+// Cheers!
+//@version=4
+strategy("DCA Bot L/S", overlay=true, pyramiding=999, calc_on_every_tick=false, default_qty_type=strategy.percent_of_equity, default_qty_value=1, initial_capital=5000, commission_value = 0.04, slippage = 2)
+// Date Ranges
+show_table = input(true, title="Show table", type=input.bool)
+text_size_switch = input(true, title="Small text in the table", type=input.bool)
+direction = input(defval = "All", title = "Trading Direction", options=["All", "Long", "Short"])
+from_month = input(defval = 5, title = "From Month", minval = 1, maxval = 12)
+from_day   = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+from_year  = input(defval = 2021, title = "From Year")
+to_month   = input(defval = 12, title = "To Month", minval = 1, maxval = 12)
+to_day     = input(defval = 1, title = "To Day", minval = 1, maxval = 31)
+to_year    = input(defval = 2021, title = "To Year")
+start  = timestamp(from_year, from_month, from_day, 00, 00)  // backtest start window
+finish = timestamp(to_year, to_month, to_day, 23, 59)        // backtest finish window
+window = time >= start and time <= finish ? true : false // create function "within window of time"
+source_type = input("Close", "Source", options = ["Close", "Open", "High", "Low", "HL2", "HLC3", "OHLC4", "Median Body", "Weighted Close", "Trend Biased", "Trend Biased Extreme"])
+source_function(type) =>
+    if type == "Close"
+        close
+    else if type == "Open"
+        open
+    else if type == "High"
+        high
+    else if type == "Low"
+        low
+    else if type == "HL2"
+        hl2
+    else if type == "HL3"
+        hlc3
+    else if type == "OHLC4"
+        ohlc4
+    else if type == "Median Body"
+        (open + close) / 2
+    else if type == "Weighted Close"
+        (high + low + 2 * close) / 4
+    else if type == "Trend Biased"
+        close > open ? (high + close) / 2 : (low + close) / 2
+    else if type == "Trend Biased Extreme"
+        close > open ? high : low
+truncate(number, decimals) =>
+    factor = pow(10, decimals)
+    int(number * factor) / factor
+var long = false
+var short = true
+if direction == "All"
+    long := true
+    short := true
+else if direction == "Long"
+    long := true
+    short := false
+else if direction == "Short"
+    long := false
+    short := true
+// Strategy Inputs
+price_deviation = input(1.1, type=input.float, title='Price deviation to open safety orders (%)', step=0.1, minval=0.0)/100
+take_profit = input(1.2, type=input.float, title='Target Take Profit (%)', step=0.1, minval=0.0)/100
+base_order  = input(4.2, type=input.float, title='base order') 
+safe_order  = input(4.2, type=input.float, title='safe order') 
+safe_order_volume_scale  = input(2, type=input.float, step=0.1, title='Safety order volume scale') 
+safe_order_step_scale  = input(1, type=input.float, step=0.1, title='Safety order step scale') 
+max_safe_order = input(6, title='max no. of safe orders') 
+price_S_deviation = input(1.0, type=input.float, title='Price deviation to open short safety orders (%)', step=0.1, minval=0.0)/100
+take_S_profit = input(1.0, type=input.float, title='Short Target Take Profit (%)', step=0.1, minval=0.0)/100
+base_S_order  = input(4.2, type=input.float, title='base sell order') 
+safe_S_order  = input(4.2, type=input.float, title='safe sell order') 
+safe_S_order_volume_scale  = input(2, type=input.float, step=0.1, title='Safety sell order volume scale') 
+safe_S_order_step_scale  = input(1.25, type=input.float, step=0.1, title='Safety sell order step scale') 
+max_S_safe_order = input(6, title='max no. of sell safe orders') 
+// Triggers
+long_trigger = input(title = "Long trigger value", type = input.integer, defval = 100)
+short_trigger = input(title = "Short trigger value", type = input.integer, defval =-100)
+trigger = input(title="Enter trigger", type= input.source, defval=close)
+var current_so = 0
+var current_S_so = 0
+var initial_order = 0.0
+var initial_S_order = 0.0
+var original_ttp_value = 0.0
+var quantity = 0.0
+var entry_price = 0.0
+var firstBarTime = 0.0 
+var maxDiffDays = 0.0
+var soCount = 0
+var SO1 = 0
+var SO2 = 0
+var SO3 = 0
+var SO4 = 0
+var SO5 = 0
+var SO6 = 0
+var SO7 = 0
+var noSO = 0
+var initial_price = 0.0
+var initial_S_price = 0.0
+var price_drop = 0.0
+var price_pump = 0.0
+var max_drop = 0.0
+var max_pump = 0.0
+var pump_date = 0
+var pump_month = 0
+var drop_date = 0
+var drop_month = 0
+var longest_trade_day = 0
+var longest_trade_month = 0
+var take_profit_level = 0.0
+var take_S_profit_level = 0.0
+var tp_plot = 0.0
+var tp_S_plot = 0.0
+var threshold = 0.0
+var S_threshold = 0.0
+timeDiff = time - firstBarTime
+maxDev = 0.0
+maxSDev = 0.0
+closedTrades = 0
+var tradeCount = 0
+var i = 0
+var avg_price = 0.0
+var total_funds_in_trade = 0.0
+var total_qty_in_trade = 0.0
+var capital = 100.0
+// Turn that time difference into days
+diffDays = timeDiff / 86400000
+// Calculate our TP levels
+take_profit_level:= avg_price * (1 + take_profit)
+take_S_profit_level:= avg_price * (1 - take_S_profit)
+// First Position
+for i = 0 to max_safe_order - 1
+    maxDev := int((maxDev + (price_deviation* 100 * pow(safe_order_step_scale, i)))*100)/100
+for i = 0 to max_S_safe_order - 1
+    maxSDev := int((maxSDev + (price_S_deviation* 100 * pow(safe_S_order_step_scale, i)))*100)/100
+strategy.close_all(abs(strategy.position_size) != 0 and current_so[1] == 0)
+    
+if long and (strategy.position_size == 0  and source_function(source_type) > 0) and window and trigger == long_trigger
+    strategy.entry("Long @" + tostring(source_function(source_type)), strategy.long, qty = (strategy.equity*base_order/100)/source_function(source_type))
+    initial_order := source_function(source_type)
+    current_so := 1
+    initial_price:= close
+    price_drop:= close 
+    original_ttp_value := 0
+    firstBarTime := time 
+    tradeCount := tradeCount + 1
+    avg_price := close
+    total_funds_in_trade := avg_price*base_order
+    total_qty_in_trade := base_order
+else if short and (strategy.position_size == 0  and source_function(source_type) > 0) and window and trigger == short_trigger
+    strategy.entry("Short @" + tostring(source_function(source_type)), strategy.short, qty = (strategy.equity*base_S_order/100)/source_function(source_type))
+    initial_S_order := source_function(source_type)
+    current_so := 1
+    firstBarTime := time
+    tradeCount := tradeCount + 1
+    initial_S_price := close
+    price_pump := close
+    avg_price := close
+    total_funds_in_trade := avg_price*base_S_order
+    total_qty_in_trade := base_S_order
+//makes the red and green line plot pretty at the position opening
+if strategy.position_size == 0
+    threshold :=low[1]
+    S_threshold := high[1]
+//Safety order levels
+//Long
+if strategy.position_size > 0 and i==0
+    if(safe_order_step_scale == 1.0)
+        threshold := initial_order - (initial_order * price_deviation * safe_order_step_scale * current_so)
+    else
+        threshold := initial_order - (initial_order * ((price_deviation * (pow(safe_order_step_scale, current_so) - 1)) / (safe_order_step_scale - 1)))
+//Short
+else if strategy.position_size <0 and i==0
+    if(safe_S_order_step_scale == 1.0)
+        S_threshold := initial_S_order * (1 + price_S_deviation * current_so)
+    else
+        S_threshold := initial_S_order * (1 + ((price_S_deviation * (pow(safe_S_order_step_scale, current_so) - 1)) / (safe_S_order_step_scale - 1)))
+// Average Down
+if current_so > 0 and i == 0 and strategy.position_size > 0 and low <= threshold and current_so <= max_safe_order 
+    strategy.entry("SO " + tostring(current_so) + "@" + tostring(source_function(source_type)), strategy.long , qty = strategy.equity*safe_order/100* pow(safe_order_volume_scale,(current_so-1))/source_function(source_type))
+    total_funds_in_trade := total_funds_in_trade + threshold*safe_order*pow(safe_order_volume_scale, current_so-1)
+    total_qty_in_trade := total_qty_in_trade + safe_order*pow(safe_order_volume_scale, current_so-1)
+    avg_price := total_funds_in_trade/total_qty_in_trade
+    current_so := current_so + 1
+    tradeCount := tradeCount + 1
+// Short Average Up
+if current_so > 0 and i==0 and strategy.position_size < 0 and high >= S_threshold and current_so <= max_S_safe_order 
+    strategy.entry("SSO " + tostring(current_so) + "@" + tostring(source_function(source_type)), strategy.short , qty = strategy.equity*safe_S_order/100* pow(safe_S_order_volume_scale,(current_so-1))/source_function(source_type))
+    total_funds_in_trade := total_funds_in_trade + S_threshold*safe_S_order*pow(safe_S_order_volume_scale, current_so-1)
+    total_qty_in_trade := total_qty_in_trade + safe_S_order*pow(safe_S_order_volume_scale, current_so-1)
+    avg_price := total_funds_in_trade/total_qty_in_trade
+    current_so := current_so + 1
+    tradeCount := tradeCount + 1
+// Take Profit! 
+if i==1
+    strategy.close_all()
+    i:=0
+if (take_profit_level <= high and strategy.position_size > 0)
+    strategy.close_all(comment = "Close @" + tostring(source_function(source_type)))
+    soCount := current_so
+    current_so := 0
+    original_ttp_value := 0
+    price_drop:=na
+    initial_price:= na
+    diffDays := (time - firstBarTime)
+    if diffDays > maxDiffDays
+        maxDiffDays := diffDays
+        longest_trade_day := dayofmonth
+        longest_trade_month := month
+    i:=1
+    initial_order := 0.0
+    avg_price := na
+    capital := capital*(1+total_qty_in_trade*take_profit/100)
+        
+// Take Short Profit! 
+if (take_S_profit_level >= low and strategy.position_size <0) 
+    strategy.close_all(comment = "Close Short @" + tostring(source_function(source_type)))
+    soCount := current_so
+    current_so := 0
+    price_pump := na
+    initial_S_price:= na
+    diffDays := (time - firstBarTime)
+    if diffDays > maxDiffDays
+        maxDiffDays := diffDays
+    initial_S_order := 0.0
+    avg_price := na
+    capital := capital*(1+total_qty_in_trade*take_S_profit/100)
+//Table building and calculations
+if strategy.position_size == 0
+    if soCount == 1
+        noSO := noSO + 1
+    else if soCount == 2
+        SO1 := SO1 + 1
+    else if soCount == 3
+        SO2 := SO2 + 1
+    else if soCount == 4
+        SO3 := SO3 + 1
+    else if soCount == 5
+        SO4 := SO4 + 1
+    else if soCount == 6 
+        SO5 := SO5 + 1
+    else if soCount == 7
+        SO6 := SO6 + 1
+    else if soCount == 8
+        SO7 := SO7 + 1    
+    soCount := 0
+closedTrades := noSO+SO1*2+SO2*3+SO3*4+SO4*5+SO5*6+SO6*7+SO7*8    
+if low < price_drop and window and strategy.position_size > 0
+    price_drop := low
+    if max_drop < int((1-(price_drop/initial_price))*10000)/100 
+        max_drop := int((1-(price_drop/initial_price))*10000)/100
+        drop_date := dayofmonth(time)
+        drop_month := month(time)
+bgcolor(max_drop[1] < max_drop ? color.aqua : na, transp = 50)
+if high > price_pump and window and strategy.position_size < 0
+    price_pump := high
+    if max_pump < int(((price_pump/initial_S_price)-1)*10000)/100
+        max_pump := int(((price_pump/initial_S_price)-1)*10000)/100
+        pump_date := dayofmonth(time)
+        pump_month := month(time)
+bgcolor(max_pump[1] < max_pump ? color.purple : na, transp = 70)
+if take_profit_level > 0 and strategy.position_size > 0
+    tp_plot := take_profit_level
+else  
+    tp_plot := close
+if take_S_profit_level > 0 and strategy.position_size < 0
+    tp_S_plot := take_S_profit_level
+else
+    tp_S_plot := close
+//Plotting the levels
+p1 = plot(tp_plot, color = strategy.position_size <=0 ? na : #00ff00)
+p2 = plot(avg_price, color= strategy.position_size == 0 ? na : color.white)
+p3 = plot(threshold, color = strategy.position_size <=0 ? na : #ff0000)
+p4 = plot(tp_S_plot, color = strategy.position_size >= 0 ? na : #00ff00)
+p5 = plot(S_threshold, color = strategy.position_size >= 0 ? na : #ff0000)
+fill(p1, p2, color=strategy.position_size > 0 ? color.green : na, transp = 90)
+fill(p2, p3, strategy.position_size > 0 ? color.red : na, transp = 90)
+fill(p4, p2, color=strategy.position_size < 0 ? color.green : na, transp = 90)
+fill(p5, p2, color=strategy.position_size < 0 ? color.red : na, transp = 90)
+profit_color = strategy.openprofit < 0 ? color.red : color.green
+text_size = text_size_switch ? size.small :size.normal
+// plot(strategy.opentrades)
+// plot(current_so, color = color.yellow)
+// plot(abs(strategy.position_size), color = color.red)
+// plot(quantity, color=color.purple)
+     
+//Table formatting
+if show_table 
+    var Table = table.new(position.top_right, columns = 2, rows = 20, border_width = 1, bgcolor = color.black, border_color = color.gray)
+    table.cell(table_id = Table, column = 0, row = 0, text_color=color.gray, text_size = text_size, text = "Net Profit")
+    table.cell(table_id = Table, column = 1, row = 0, text = tostring(int((capital-100)*100)/100) + "%", text_size = text_size, text_color=color.lime)
+    table.cell(table_id = Table, column = 0, row = 1, text_color=color.gray, text_size = text_size, text = "Max Deviation ")
+    table.cell(table_id = Table, column = 1, row = 1, text =  tostring(maxDev) + "%", text_size = text_size, text_color=color.orange)
+    table.cell(table_id = Table, column = 0, row = 2, text_color=color.gray, text_size = text_size, text = "Max Short Dev ")
+    table.cell(table_id = Table, column = 1, row = 2, text =  tostring(maxSDev) + "%", text_size = text_size, text_color=color.orange)
+    table.cell(table_id = Table, column = 0, row = 3, text = "No SO ", text_size = text_size, text_color=color.gray)
+    table.cell(table_id = Table, column = 1, row = 3, text =  tostring(noSO), text_size = text_size, text_color=color.olive)
+    table.cell(table_id = Table, column = 0, row = 4, text = "SO 1 ", text_size = text_size, text_color=color.gray)
+    table.cell(table_id = Table, column = 1, row = 4, text =  tostring(SO1), text_size = text_size, text_color=color.olive)
+    table.cell(table_id = Table, column = 0, row = 5, text = "SO 2 ", text_size = text_size, text_color=color.gray)
+    table.cell(table_id = Table, column = 1, row = 5, text =  tostring(SO2), text_size = text_size, text_color=color.olive)
+    table.cell(table_id = Table, column = 0, row = 6, text = "SO 3 ", text_size = text_size, text_color=color.gray) 
+    table.cell(table_id = Table, column = 1, row = 6, text =  tostring(SO3), text_size = text_size, text_color=color.olive)
+    table.cell(table_id = Table, column = 0, row = 7, text = "SO 4 ", text_size = text_size, text_color=color.gray)
+    table.cell(table_id = Table, column = 1, row = 7, text =  tostring(SO4), text_size = text_size, text_color=color.olive)
+    table.cell(table_id = Table, column = 0, row = 8, text = "SO 5 ", text_size = text_size, text_color=color.gray)
+    table.cell(table_id = Table, column = 1, row = 8, text =  tostring(SO5), text_size = text_size, text_color=color.olive) 
+    table.cell(table_id = Table, column = 0, row = 9, text = "SO 6 ", text_size = text_size, text_color=color.gray)
+    table.cell(table_id = Table, column = 1, row = 9, text =  tostring(SO6), text_size = text_size, text_color=color.olive)
+    table.cell(table_id = Table, column = 0, row = 10, text = "SO 7 ", text_size = text_size, text_color=color.gray)
+    table.cell(table_id = Table, column = 1, row = 10, text =  tostring(SO7), text_size = text_size, text_color=color.olive)
+    table.cell(table_id = Table, column = 0, row = 11, text = "Closed/Open trades" , text_size = text_size, text_color=color.gray)
+    table.cell(table_id = Table, column = 1, row = 11, text =  tostring(strategy.closedtrades) + "/" + tostring(strategy.opentrades), text_size = text_size, text_color= color.olive )
+    table.cell(table_id = Table, column = 0, row = 12, text = "Current Deal Time", text_size = text_size, text_color=color.gray)
+    table.cell(table_id = Table, column = 1, row = 12, text =  strategy.position_size != 0 ? tostring(int((time - firstBarTime)/ 8640000)/10) + " days" : "0" , text_size = text_size, text_color=color.green) 
+    table.cell(table_id = Table, column = 0, row = 13, text = "Unrealized position", text_size = text_size, text_color=color.gray)
+    table.cell(table_id = Table, column = 1, row = 13, text =  tostring(int((strategy.openprofit/(strategy.initial_capital + strategy.netprofit))*10000)/100) + " %", text_size = text_size, text_color=profit_color)
+    table.cell(table_id = Table, column = 0, row = 14, text = "Longest deal:", text_size = text_size, text_color=color.orange)
+    table.cell(table_id = Table, column = 1, row = 14, text =  tostring(int(maxDiffDays / 8640000)/10) +" days, " + tostring(longest_trade_day)+"/" + tostring(longest_trade_month), text_size = text_size, text_color=color.red)
+    table.cell(table_id = Table, column = 0, row = 15, text = "Max price drop:", text_size = text_size, text_color=color.orange)
+    table.cell(table_id = Table, column = 1, row = 15, text =  tostring(max_drop) +" %, " + tostring(drop_date)+"/" + tostring(drop_month), text_size = text_size, text_color=color.red)
+    table.cell(table_id = Table, column = 0, row = 16, text = "Max price pump:", text_size = text_size, text_color=color.orange)
+    table.cell(table_id = Table, column = 1, row = 16, text =  tostring(max_pump) +" %, " + tostring(pump_date)+"/" + tostring(pump_month), text_size = text_size, text_color=color.red)
+    
+   
+Expand (388 lines)

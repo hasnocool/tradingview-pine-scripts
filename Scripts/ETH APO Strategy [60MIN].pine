@@ -1,0 +1,63 @@
+Script Name: ETH APO Strategy [60MIN]
+Author: layth7ussein
+Description: In general this strategy is wining but I won't recommend a trader to start using it directly.
+
+You can you use it as a template to build your own strategy on, with a bit improvement you can get much better results.
+
+The APO indicator is the core of this strategy and it only work on Long trades, you may focus on fining a way to filter the wrong long entries to make...
+PineScript code:
+
+Pine Script™ strategy
+ETH APO Strategy [60MIN]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+//@version=5 
+strategy(title='ETH APO Strategy', shorttitle='ETH APO Strategy', initial_capital=1000, currency=currency.USD, overlay=false)
+LengthShortEMA = input.int(9, minval=1)
+LengthLongEMA = input.int(19, minval=1)
+hline(0, color=color.gray, linestyle=hline.style_dotted)
+upperBand = hline(15, color=color.gray, linestyle=hline.style_dashed)
+lowerBand = hline(-15, color=color.gray, linestyle=hline.style_dashed)
+fill(upperBand, lowerBand, color=color.rgb(126, 87, 194, 90), title="RSI Background Fill")
+xPrice = close
+xShortEMA = ta.ema(xPrice, LengthShortEMA)
+xLongEMA = ta.ema(xPrice, LengthLongEMA)
+xAPO = xShortEMA - xLongEMA
+plot(xAPO, color=color.yellow, title="APO")
+up = ta.rma(math.max(ta.change(close), 0), 14)
+down = ta.rma(-math.min(ta.change(close), 0), 14)
+rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+rsiMA = ta.sma(rsi, 5)
+if ta.crossover(xAPO, -15) and rsiMA > rsiMA[2]
+    strategy.entry("LONG", strategy.long)
+if ta.crossover(xAPO, 14) or ta.crossunder(rsiMA, 70) or ta.crossunder(rsiMA, 60) or ta.crossunder(rsiMA, 25)
+    strategy.close_all()
+Expand (29 lines)

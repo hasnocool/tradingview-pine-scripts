@@ -1,0 +1,150 @@
+Script Name: Forex Fractal EMA Scalper
+Author: exlux99
+Description: This is a forex scalper designed for very short timeframes 1-5 min max.
+At the same time due to the short timeframe, is recommend to re optimize it weekly .
+
+Its components are 
+Fractals
+Triple EMA with different lengths
+
+
+Rules for entry:
+For long : we have an up fractal and all 3 ema are in ascending order
+For short: we have a down fractal and all 3 ema are in...
+PineScript code:
+
+Pine Script™ strategy
+Forex Fractal EMA Scalper
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © exlux99
+//@version=5
+strategy("Forex Fractal EMA Scalper", overlay=true)
+// Define "n" as the number of periods and keep a minimum value of 2 for error handling.
+n = input.int(title="Period Fractals", defval=2, minval=2, group="Optimization Parameters")
+src = input(hl2, title="Source for EMA's", group="Optimization Parameters")
+len1 = input.int(10, minval=1, title="Length EMA 1", group="Optimization Parameters")
+out1 = ta.ema(src, len1)
+len2 = input.int(20, minval=1, title="Length EMA 2", group="Optimization Parameters")
+out2 = ta.ema(src, len2)
+len3 = input.int(100, minval=1, title="Length EMA 3", group="Optimization Parameters")
+out3 = ta.ema(src, len3)
+// UpFractal
+bool upflagDownFrontier = true
+bool upflagUpFrontier0 = true
+bool upflagUpFrontier1 = true
+bool upflagUpFrontier2 = true
+bool upflagUpFrontier3 = true
+bool upflagUpFrontier4 = true
+for i = 1 to n
+    upflagDownFrontier := upflagDownFrontier and (high[n-i] < high[n])
+    upflagUpFrontier0 := upflagUpFrontier0 and (high[n+i] < high[n])
+    upflagUpFrontier1 := upflagUpFrontier1 and (high[n+1] <= high[n] and high[n+i + 1] < high[n])
+    upflagUpFrontier2 := upflagUpFrontier2 and (high[n+1] <= high[n] and high[n+2] <= high[n] and high[n+i + 2] < high[n])
+    upflagUpFrontier3 := upflagUpFrontier3 and (high[n+1] <= high[n] and high[n+2] <= high[n] and high[n+3] <= high[n] and high[n+i + 3] < high[n])
+    upflagUpFrontier4 := upflagUpFrontier4 and (high[n+1] <= high[n] and high[n+2] <= high[n] and high[n+3] <= high[n] and high[n+4] <= high[n] and high[n+i + 4] < high[n])
+flagUpFrontier = upflagUpFrontier0 or upflagUpFrontier1 or upflagUpFrontier2 or upflagUpFrontier3 or upflagUpFrontier4
+upFractal = (upflagDownFrontier and flagUpFrontier)
+// downFractal
+bool downflagDownFrontier = true
+bool downflagUpFrontier0 = true
+bool downflagUpFrontier1 = true
+bool downflagUpFrontier2 = true
+bool downflagUpFrontier3 = true
+bool downflagUpFrontier4 = true
+for i = 1 to n
+    downflagDownFrontier := downflagDownFrontier and (low[n-i] > low[n])
+    downflagUpFrontier0 := downflagUpFrontier0 and (low[n+i] > low[n])
+    downflagUpFrontier1 := downflagUpFrontier1 and (low[n+1] >= low[n] and low[n+i + 1] > low[n])
+    downflagUpFrontier2 := downflagUpFrontier2 and (low[n+1] >= low[n] and low[n+2] >= low[n] and low[n+i + 2] > low[n])
+    downflagUpFrontier3 := downflagUpFrontier3 and (low[n+1] >= low[n] and low[n+2] >= low[n] and low[n+3] >= low[n] and low[n+i + 3] > low[n])
+    downflagUpFrontier4 := downflagUpFrontier4 and (low[n+1] >= low[n] and low[n+2] >= low[n] and low[n+3] >= low[n] and low[n+4] >= low[n] and low[n+i + 4] > low[n])
+flagDownFrontier = downflagUpFrontier0 or downflagUpFrontier1 or downflagUpFrontier2 or downflagUpFrontier3 or downflagUpFrontier4
+downFractal = (downflagDownFrontier and flagDownFrontier)
+// plotshape(downFractal, style=shape.triangledown, location=location.belowbar, offset=-n, color=#F44336, size = size.small)
+// plotshape(upFractal, style=shape.triangleup,   location=location.abovebar, offset=-n, color=#009688, size = size.small)
+long= out1 > out2 and out2>out3 and upFractal
+short= out1 < out2 and out2<out3 and downFractal
+strategy.entry("long",strategy.long,when= short)
+strategy.entry("short",strategy.short,when=long)
+tp=input(25, title="TP in PIPS", group="Risk Management")*10
+sl=input(25, title="SL in PIPS", group="Risk Management")*10
+strategy.exit("X_long", "long", profit=tp,  loss=sl  )
+strategy.exit("x_short", "short",profit=tp, loss=sl  )
+Expand (76 lines)

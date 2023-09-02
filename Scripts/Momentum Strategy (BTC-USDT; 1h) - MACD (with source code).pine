@@ -1,0 +1,215 @@
+Script Name: Momentum Strategy (BTC-USDT; 1h) - MACD (with source code)
+Author: Drun30
+Description: Good morning traders. 
+It's been a while from my last publication of a strategy and today I want to share with you this small piece of script that showed quite interesting result across bitcoin and other altcoins. 
+
+The macd indicator is an indicator built on the difference between a fast moving average and a slow moving average: this difference is generally...
+PineScript code:
+
+Pine Script™ strategy
+Momentum Strategy (BTC/USDT; 1h) - MACD (with source code)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Drun30
+//@version=4
+strategy("MACD+RSI", initial_capital=100, overlay=false,default_qty_type=strategy.percent_of_equity,default_qty_value=100,commission_type="percent",commission_value=0.075)
+//@version=4
+// Getting inputs
+fast_length = input(title="Fast Length", type=input.integer, defval=12,group="MACD")
+slow_length = input(title="Slow Length", type=input.integer, defval=26,group="MACD")
+src = input(title="Source", type=input.source, defval=close,group="MACD")
+signal_length = input(title="Signal Smoothing", type=input.integer, minval = 1, maxval = 50, defval = 9,group="MACD")
+sma_source1 = input(title="Simple MA FAST (Oscillator)", defval="EMA", options=["HMA","DHMA","THMA","FHMA","WMA","DWMA","TWMA","FWMA","SMA","DSMA","TSMA","FSMA","EMA","DEMA","TEMA","FEMA","RMA","DRMA","TRMA","FRMA"],group="MACD")
+sma_source2 = input(title="Simple MA SLOW (Oscillator)", defval="EMA", options=["HMA","DHMA","THMA","FHMA","WMA","DWMA","TWMA","FWMA","SMA","DSMA","TSMA","FSMA","EMA","DEMA","TEMA","FEMA","RMA","DRMA","TRMA","FRMA"],group="MACD")
+sma_signal = input(title="Simple MA(Signal Line)",defval="EMA", options=["HMA","DHMA","THMA","FHMA","WMA","DWMA","TWMA","FWMA","SMA","DSMA","TSMA","FSMA","EMA","DEMA","TEMA","FEMA","RMA","DRMA","TRMA","FRMA"],group="MACD")
+// Calculating
+ma(source,length,type)=>
+    type=="FEMA"?4*ema(source,length)-ema(ema(ema(ema(source,length),length),length),length):type=="FSMA"?4*sma(source,length)-sma(sma(sma(sma(source,length),length),length),length):type=="FWMA"?4*wma(source,length)-wma(wma(wma(wma(source,length),length),length),length):type=="FRMA"?4*rma(source,length)-rma(rma(rma(rma(source,length),length),length),length):type=="TEMA"?3*ema(source,length)-ema(ema(ema(source,length),length),length):type=="TSMA"?3*sma(source,length)-sma(sma(sma(source,length),length),length):type=="TWMA"?3*wma(source,length)-wma(wma(wma(source,length),length),length):type=="TRMA"?3*rma(source,length)-rma(rma(rma(source,length),length),length):type=="EMA"?ema(source,length):type=="SMA"?sma(source,length):type=="WMA"?wma(source,length):type=="RMA"?rma(source,length):type=="DEMA"?2*ema(source,length)-ema(ema(source,length),length):type=="DSMA"?2*sma(source,length)-sma(sma(source,length),length):type=="DWMA"?2*wma(source,length)-wma(wma(source,length),length):type=="DRMA"?2*rma(source,length)-rma(rma(source,length),length):type=="HMA"?hma(source,length):type=="DHMA"?2*hma(source,length)-hma(hma(source,length),length):type=="THMA"?3*hma(source,length)-hma(hma(hma(source,length),length),length):type=="FHMA"?4*hma(source,length)-hma(hma(hma(hma(source,length),length),length),length):ema(source,length)
+fast_ma = ma(src,fast_length,sma_source1)  
+slow_ma = ma(src,slow_length,sma_source2)
+macd = fast_ma - slow_ma //Differenza tra la media mobile veloce e quella lenta 
+signal = ma(macd,signal_length,sma_signal) //usa o la SMA oppure la EMA sulla differenza tra la media mobile veloce e lenta
+hist = macd - signal //Differenza tra la differenza precedente e la media mobile della differenza
+// Plot colors
+col_grow_above = #26A69A
+col_grow_below = #FFCDD2
+col_fall_above = #B2DFDB
+col_fall_below = #EF5350
+col_macd = #0094ff
+col_signal = #ff6a00
+use_stress=input(false,title="Use stress on recent bars",group="Stress")
+recent_stress=input(0.01,title="Stress on recent bars",group="Stress",step=0.01,minval=0.01,maxval=0.99)
+level=input(1,title="Level of stress",group="Stress")
+if use_stress 
+    macd:=macd*(1/(1-recent_stress))
+    if not na(macd[1])
+        macd:=pow((macd*(recent_stress)),level)+(1-recent_stress*macd[1])
+use_ma= input(true,title="Use moving average (MACD)?",group="Moving Average")
+if use_ma
+    macd:=ma(macd,input(36,title="Length",group="Moving Average"),input(title="Type MA",defval="THMA", options=["HMA","DHMA","THMA","FHMA","WMA","DWMA","TWMA","FWMA","SMA","DSMA","TSMA","FSMA","EMA","DEMA","TEMA","FEMA","RMA","DRMA","TRMA","FRMA"],group="Moving Average"))
+use_linreg= input(true,title="Use linear regression (MACD)?",group="Linear Regression")
+if use_linreg
+    macd:=linreg(macd,input(10,title="Length",group="Linear Regression"),input(1,title="Offset",group="Linear Regression"))
+//macd == linea blu (differenza tra media mobile veloce e media mobile lenta)
+//signal == linea arancione (media mobile dell'macd)
+//hist == istogramma (differenza tra macd e media mobile)
+on_cross = input(false,title="Use cross macd and signal",group="Condition entry/exit")
+on_minmax = input(true,title="Use min/max macd",group="Condition entry/exit")
+aperturaLong = change(macd)>0//crossover(macd,signal)
+aperturashort=not (change(macd)>0)//crossunder(macd,signal)
+if on_cross
+    on_minmax:=false
+    aperturaLong := crossover(macd,signal)
+    aperturashort := crossunder(macd,signal)
+if on_minmax
+    on_cross:=false
+    aperturaLong := change(macd)>0//crossover(macd,signal)
+    aperturashort:=change(macd)<0//crossunder(macd,signal)
+//plot(hist, title="Histogram", style=plot.style_columns, color=(hist>=0 ? (hist[1] < hist ? col_grow_above : col_fall_above) : (hist[1] < hist ? col_grow_below : col_fall_below) ), transp=0 )
+plot(macd, title="MACD", color=change(macd)>0 and on_minmax?color.white:change(macd)<0 and on_minmax?color.purple:color.blue, transp=0)
+plot(on_cross?signal:na, title="Signal", color=col_signal, transp=0)
+rsiFilter = input(false,title="Use RSI filter?",group="RSI")
+rsiTP = input(true,title="Use RSI Take Profit?",group="RSI")
+len=input(14,title="RSI period",group="RSI")
+srcr=input(close,title="RSI source",group="RSI")
+rsi=rsi(srcr,len)
+ovb=input(90,title="Overbought height",group="RSI") 
+ovs=input(44,title="Oversold height",group="RSI")
+okLong=rsi<ovb and change(macd)>0 and change(macd)[1]<=0
+okShort=rsi>ovs and change(macd)<0 and change(macd)[1]>=0
+if not rsiFilter
+    okLong:=true
+    okShort:=true
+    
+usiLong=input(true,title="Use long?")
+usiShort=input(true,title="Use short?")
+chiusuraShort=rsi<ovs or (aperturaLong)
+chiusuraLong=rsi>ovb or (aperturashort)
+if rsiTP
+    aperturaLong := change(macd)>0 and change(macd)[1]<=0 and rsi<ovb//crossover(macd,signal)
+    aperturashort:=change(macd)<0 and change(macd)[1]>=0 and rsi>ovs//crossunder(macd,signal)
+if not rsiTP
+    chiusuraShort:=okLong and aperturaLong
+    chiusuraLong:=okShort and aperturashort
+    
+if chiusuraShort 
+    strategy.close("SHORTISSIMO")
+if usiLong and strategy.position_size<=0 and okLong and aperturaLong
+    strategy.entry("LONGHISSIMO",true)
+if chiusuraLong 
+    strategy.close("LONGHISSIMO")
+if usiShort and strategy.position_size>=0 and okShort and aperturashort
+    strategy.entry("SHORTISSIMO",false)
+Expand (112 lines)

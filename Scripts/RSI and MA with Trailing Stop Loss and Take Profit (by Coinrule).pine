@@ -1,0 +1,117 @@
+Script Name: RSI and MA with Trailing Stop Loss and Take Profit (by Coinrule)
+Author: Coinrule
+Description: The relative strength index is a momentum indicator used in technical analysis. It measures the speed and magnitude of a coin's recent price changes to evaluate overvalued or undervalued conditions in the price of that coin. The RSI is displayed as an oscillator (a line graph essentially) on a scale of zero to 100. When the RSI reaches oversold levels, it can...
+PineScript code:
+
+Pine Script™ strategy
+RSI and MA with Trailing Stop Loss and Take Profit (by Coinrule)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+//@version=5
+strategy("RSI and MA Strategy with Trailing Stop Loss and Take Profit",
+         overlay=true,
+         initial_capital=1000,
+         process_orders_on_close=true,
+         default_qty_type=strategy.percent_of_equity,
+         default_qty_value=100,
+         commission_type=strategy.commission.percent,
+         commission_value=0.1)
+showDate = input(defval=true, title='Show Date Range')
+timePeriod = time >= timestamp(syminfo.timezone, 2022, 1, 1, 0, 0)
+notInTrade = strategy.position_size <= 0
+//==================================Buy Conditions============================================
+//RSI
+length = input(14)
+rsi = ta.rsi(close, length)
+buyCondition1 = rsi > 50
+//MA
+SMA9 = ta.sma(close, 9)
+SMA50 = ta.sma(close, 50)
+SMA100 = ta.sma(close, 100)
+plot(SMA9, color = color.green)
+plot(SMA50, color = color.orange)
+plot(SMA100, color = color.blue)
+buyCondition2 = SMA9 > SMA50//ta.crossover(SMA9, SMA100)
+//RSI Increase
+increase = 5
+buyCondition3 = (rsi > rsi[1] + increase)
+if (buyCondition1 and buyCondition2 and buyCondition3 and timePeriod) //and buyCondition
+    strategy.entry("Long", strategy.long)
+//==================================Sell Conditions============================================
+//Trailing Stop Loss and Take Profit
+longTrailPerc = input.float(title='Trail Long Loss (%)', minval=0.0, step=0.1, defval=2) * 0.01
+shortTrailPerc = input.float(title='Trail Short Loss (%)', minval=0.0, step=0.1, defval=1) * 0.01
+longStopPrice = 0.0
+shortStopPrice = 0.0
+longStopPrice := if strategy.position_size > 0
+    stopValue = close * (1 - longTrailPerc)
+    math.max(stopValue, longStopPrice[1])
+else
+    0
+shortStopPrice := if strategy.position_size < 0
+    stopValue = close * (1 + shortTrailPerc)
+    math.min(stopValue, shortStopPrice[1])
+else
+    999999
+strategy.exit(id="Exit", stop = longStopPrice, limit = shortStopPrice)
+Expand (61 lines)

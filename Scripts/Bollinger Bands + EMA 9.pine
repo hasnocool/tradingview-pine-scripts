@@ -1,0 +1,153 @@
+Script Name: Bollinger Bands + EMA 9
+Author: D499
+Description: A 1 minute scalping strategy.
+
+Uses Bollinger Bands (no basis line) and a 9 period EMA.
+
+Waits for price to close below the lower Bollinger Band and the next candle to close bullish above the lower Bollinger Band but below the 9 Period EMA.
+
+If all conditions are met, the script enters a long position with TP at the 9 Period EMA.
+PineScript code:
+
+Pine Script™ strategy
+Bollinger Bands + EMA 9
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © D499
+// -D4-
+//@version=5
+strategy("Bollinger Bands + EMA 9", overlay = true, initial_capital = 1000, process_orders_on_close=true, default_qty_type = strategy.fixed)
+// Risk management inputs
+max_risk_percentage = input.float(1, "Max Risk (%)", 0.01, 99, 0.01, group = "Risk Management")
+riskType = input.string("%", title="Risk Type", options = ["%", "$"], group = "Risk Management")
+// Calculate Indicators
+bb_upper = ta.sma(close, 20) + 2 * ta.stdev(close, 20)
+bb_lower = ta.sma(close, 20) - 2 * ta.stdev(close, 20)
+ema = ta.ema(close, 9)
+// Define bull_candle and bear_candle candles
+bull_candle = close > open
+bear_candle = close < open
+// Check if entry signal is flashed and calculate order size
+barsSinceLastEntry() =>
+    strategy.opentrades > 0 ? bar_index - strategy.opentrades.entry_bar_index(strategy.opentrades - 1) : na
+percent2money(price, percent) =>
+    price * percent / 100 * syminfo.pointvalue
+calcPositionSize(entry, stop_size) =>
+    risk = if riskType == "% from equity"
+        strategy.equity * max_risk_percentage / 100
+    else
+        max_risk_percentage
+    risk / percent2money(entry, stop_size)
+stop = 0.0
+entry = 0.0
+tp = 0.0
+if close[1] < bb_lower and bull_candle and strategy.position_size == 0 
+    stop := low[1]
+    entry := close
+    tp := ema
+    stop_size = (entry - stop) / stop
+    order_size = calcPositionSize(close, stop_size)
+    strategy.entry("LONG", strategy.long, math.abs(order_size))
+if close[1] > bb_upper and bear_candle and strategy.position_size == 0
+    stop := high[1]
+    entry := close
+    tp := ema
+    stop_size = (stop - entry) / stop
+    order_size = calcPositionSize(close, stop_size)
+    strategy.entry("SHORT", strategy.short, math.abs(order_size))
+if strategy.position_size > 0
+    strategy.exit("LONG", limit = ema[barsSinceLastEntry()], stop = low[barsSinceLastEntry()+1], comment_profit = "✅", comment_loss = "❌")
+if strategy.position_size < 0 
+    strategy.exit("SHORT", limit = ema[barsSinceLastEntry()], stop = high[barsSinceLastEntry()+1], comment_profit = "✅", comment_loss = "❌")
+// Plot Indicators
+plot(bb_upper, color=color.red)
+plot(bb_lower, color=color.green)
+plot(ema, color = color.white)
+// Plot trade visualization
+longEntryPlot = plot(strategy.position_size > 0  ? strategy.position_avg_price : na, color=color.new(color.white, 85), style=plot.style_linebr)
+longTargetPlot = plot(strategy.position_size > 0  ? ema[barsSinceLastEntry()] : na, color=color.new(color.green, 85), style=plot.style_linebr)
+longStopPlot = plot(strategy.position_size > 0  ? low[barsSinceLastEntry()+1] : na, color=color.new(color.red, 85), style=plot.style_linebr)
+fill(longEntryPlot, longTargetPlot, color=color.new(color.green, 85), editable=true)
+fill(longEntryPlot, longStopPlot, color=color.new(color.red, 85), editable=true)
+shortEntryPlot = plot(strategy.position_size < 0  ? strategy.position_avg_price : na, color=color.new(color.white, 85), style=plot.style_linebr)
+shortTargetPlot = plot(strategy.position_size < 0  ? ema[barsSinceLastEntry()] : na, color=color.new(color.green, 85), style=plot.style_linebr)
+shortStopPlot = plot(strategy.position_size < 0  ? high[barsSinceLastEntry()+1] : na, color=color.new(color.red, 85), style=plot.style_linebr)
+fill(shortEntryPlot, shortTargetPlot, color=color.new(color.green, 85), editable=true)
+fill(shortEntryPlot, shortStopPlot, color=color.new(color.red, 85), editable=true)
+Expand (76 lines)

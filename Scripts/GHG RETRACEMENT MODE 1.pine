@@ -1,0 +1,124 @@
+Script Name: GHG RETRACEMENT MODE 1
+Author: timothylampung
+Description: This scripts are based on breakout and fibonacci retracement
+
+To trade using this Signal, you need to
+
+1. Wait for buy/sell signal
+2. When a signal ready follow these steps.
+
+Eg. STEPS TO BUY
+
+1. When a signal appear on candle, pull fibonacci retracement from swing high of SIGNAL CANDLE, to swing low of pervious 2 candle.
+2. Then place a pending order at level,...
+PineScript code:
+
+Pine Script™ strategy
+GHG RETRACEMENT MODE 1
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+//@version=5
+strategy("GHG RETRACEMENT MODE 1", overlay=true)
+entryLevel1 = input(0.5, "ENTRY LEVEL 1")
+entryLevel2 = input(0.25, "ENTRY LEVEL 2")
+entryLevel3 = input(0.0, "ENTRY LEVEL 3")
+stopLevel = input(-0.35, "STOP LEVEL")
+tpLevel = input(0.88, "TP LEVEL")
+dontUseEma = input(false, "Don't Use EMA")
+get_level(level, level100, level0) =>
+    level * (level100 - level0) + level0
+buySignal = close[2] < open[2] and close[1] > open[1] and close[0] > open[0] and high[0] > open[2] and high[1] < high[2]
+sellSignal = close[2] > open[2] and close[1] < open[1] and close[0] < open[0] and low[0] < open[2] and low[1] > low[2]
+if buySignal and (close[0] > ta.ema(close, 200) or dontUseEma)
+    l = label.new(bar_index, na)
+    entryPrice1 = get_level(entryLevel1, high[0], low[2])
+    entryPrice2 = get_level(entryLevel2, high[0], low[2])
+    entryPrice3 = get_level(entryLevel3, high[0], low[2])
+    
+    exitPrice = get_level(tpLevel, high[0], low[2])
+    stopPrice = get_level(stopLevel, high[0], low[2])
+    
+    strategy.order("BUY 1", strategy.long, comment="BUY 1", limit=entryPrice1)
+    strategy.exit("exit", "BUY 1", limit=high[0], stop=stopPrice)
+    strategy.order("BUY 2", strategy.long, comment="BUY 2", limit=entryPrice2)
+    strategy.exit("exit", "BUY 2", limit=high[0], stop=stopPrice)
+    label.set_text(l, "Buy => " + str.tostring(close[2]) + "\nSL=> " + str.tostring(stopPrice) + "\nTP => " + str.tostring(exitPrice) )
+    label.set_color(l, color.green)
+    label.set_yloc(l, yloc.belowbar)
+    label.set_style(l, label.style_label_up)
+    
+if sellSignal and (close[0] < ta.ema(close, 200) or dontUseEma)
+    a = label.new(bar_index, na)
+    entryPrice1 = get_level(entryLevel1, low[0], high[2])
+    entryPrice2 = get_level(entryLevel2, low[0], high[2])
+    entryPrice3 = get_level(entryLevel3, low[0], high[2])
+    
+    exitPrice = get_level(tpLevel, low[0], high[2])
+    stopPrice = get_level(stopLevel,low[0], high[2])
+    
+    strategy.order("SELL 1", strategy.short, comment="SELL 1", limit=entryPrice1)
+    strategy.exit("exit", "SELL 1", limit=low[0], stop=stopPrice) 
+    strategy.order("SELL 2", strategy.short, comment="SELL 2", limit=entryPrice2)
+    strategy.exit("exit", "SELL 2", limit=low[0], stop=stopPrice) 
+    label.set_text(a,"Sell => " + str.tostring(close[2]) + "\nSL=> " + str.tostring(stopPrice) + "\nTP => " + str.tostring(exitPrice) )
+    label.set_color(a, color.red)
+    label.set_yloc(a, yloc.abovebar)
+    label.set_style(a, label.style_label_down)
+   
+Expand (57 lines)

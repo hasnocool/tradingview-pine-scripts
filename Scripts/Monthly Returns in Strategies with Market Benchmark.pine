@@ -1,0 +1,241 @@
+Script Name: Monthly Returns in Strategies with Market Benchmark
+Author: levieux
+Description: This is a modified version of this excellent script  Monthly Returns in PineScript Strategues  by  QuantNomad 
+
+I liked and used the script but wanted to see how strategy performed vs market on each month/year. So I am sharing back.
+
+The modification consists in adding Market or Buy & Hold performance between parenthesis inside each cell to better see how strategy...
+PineScript code:
+
+Pine Script™ strategy
+Monthly Returns in Strategies with Market Benchmark
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+//@version=4
+strategy(title="Monthly Returns in Strategies vs Buy & Hold", shorttitle="Monthly P&L vs Buy & Hold", initial_capital= 1000, overlay=true,default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, commission_value = 0.1)
+maLength= input(400)
+precision=input(0)
+wma= vwma(hl2,maLength)
+uptrend= rising(wma, 5)
+downtrend= falling(wma,5)
+plot(wma)
+if uptrend
+    strategy.entry("Buy", strategy.long)
+else
+    strategy.close("Buy")//
+///////////////////
+// MONTHLY TABLE //
+new_month = month(time) != month(time[1])
+new_year  = year(time)  != year(time[1])
+eq = strategy.equity
+bar_pnl = eq / eq[1] - 1
+bar_bh = (close-close[1])/close[1]
+cur_month_pnl = 0.0
+cur_year_pnl  = 0.0
+cur_month_bh = 0.0
+cur_year_bh  = 0.0
+// Current Monthly P&L
+cur_month_pnl := new_month ? 0.0 : 
+                 (1 + cur_month_pnl[1]) * (1 + bar_pnl) - 1 
+cur_month_bh := new_month ? 0.0 : 
+                 (1 + cur_month_bh[1]) * (1 + bar_bh) - 1
+// Current Yearly P&L
+cur_year_pnl := new_year ? 0.0 : 
+                 (1 + cur_year_pnl[1]) * (1 + bar_pnl) - 1
+cur_year_bh := new_year ? 0.0 : 
+                 (1 + cur_year_bh[1]) * (1 + bar_bh) - 1
+// Arrays to store Yearly and Monthly P&Ls
+var month_pnl  = array.new_float(0)
+var month_time = array.new_int(0)
+var month_bh  = array.new_float(0)
+var year_pnl  = array.new_float(0)
+var year_time = array.new_int(0)
+var year_bh  = array.new_float(0)
+end_time = false
+end_time:= time_close + (time_close - time_close[1]) > timenow or barstate.islastconfirmedhistory
+if (not na(cur_month_pnl[1]) and (new_month or end_time))
+    if (end_time[1])
+        array.pop(month_pnl)
+        array.pop(month_time)
+        
+    array.push(month_pnl , cur_month_pnl[1])
+    array.push(month_time, time[1])
+    array.push(month_bh , cur_month_bh[1])
+if (not na(cur_year_pnl[1]) and (new_year or end_time))
+    if (end_time[1])
+        array.pop(year_pnl)
+        array.pop(year_time)
+        
+    array.push(year_pnl , cur_year_pnl[1])
+    array.push(year_time, time[1])
+    array.push(year_bh , cur_year_bh[1])
+// Monthly P&L Table    
+var monthly_table = table(na)
+getCellColor(pnl, bh)  => 
+    if pnl > 0
+        if bh < 0 or pnl > 2 * bh
+            color.new(color.green, transp = 20)
+        else if pnl > bh
+            color.new(color.green, transp = 50)
+        else
+            color.new(color.green, transp = 80)
+    else
+        if bh > 0 or pnl < 2 * bh
+            color.new(color.red, transp = 20)
+        else if pnl < bh
+            color.new(color.red, transp = 50)
+        else
+            color.new(color.red, transp = 80)
+if end_time
+    monthly_table := table.new(position.bottom_right, columns = 14, rows = array.size(year_pnl) + 1, border_width = 1)
+    table.cell(monthly_table, 0,  0, "",     bgcolor = #cccccc)
+    table.cell(monthly_table, 1,  0, "Jan",  bgcolor = #cccccc)
+    table.cell(monthly_table, 2,  0, "Feb",  bgcolor = #cccccc)
+    table.cell(monthly_table, 3,  0, "Mar",  bgcolor = #cccccc)
+    table.cell(monthly_table, 4,  0, "Apr",  bgcolor = #cccccc)
+    table.cell(monthly_table, 5,  0, "May",  bgcolor = #cccccc)
+    table.cell(monthly_table, 6,  0, "Jun",  bgcolor = #cccccc)
+    table.cell(monthly_table, 7,  0, "Jul",  bgcolor = #cccccc)
+    table.cell(monthly_table, 8,  0, "Aug",  bgcolor = #cccccc)
+    table.cell(monthly_table, 9,  0, "Sep",  bgcolor = #cccccc)
+    table.cell(monthly_table, 10, 0, "Oct",  bgcolor = #cccccc)
+    table.cell(monthly_table, 11, 0, "Nov",  bgcolor = #cccccc)
+    table.cell(monthly_table, 12, 0, "Dec",  bgcolor = #cccccc)
+    table.cell(monthly_table, 13, 0, "Year", bgcolor = #999999)
+    for yi = 0 to array.size(year_pnl) - 1
+        table.cell(monthly_table, 0,  yi + 1, tostring(year(array.get(year_time, yi))), bgcolor = #cccccc)
+        
+        y_color = getCellColor(array.get(year_pnl, yi), array.get(year_bh, yi))
+        table.cell(monthly_table, 13, yi + 1, tostring(round(array.get(year_pnl, yi) * 100, precision)) + " (" + tostring(round(array.get(year_bh, yi) * 100, precision)) + ")", bgcolor = y_color)
+        
+    for mi = 0 to array.size(month_time) - 1
+        m_row   = year(array.get(month_time, mi))  - year(array.get(year_time, 0)) + 1
+        m_col   = month(array.get(month_time, mi)) 
+        m_color = getCellColor(array.get(month_pnl, mi), array.get(month_bh, mi))
+        
+        table.cell(monthly_table, m_col, m_row, tostring(round(array.get(month_pnl, mi) * 100, precision)) + " (" + tostring(round(array.get(month_bh, mi) * 100,precision)) +")", bgcolor = m_color)
+Expand (125 lines)

@@ -1,0 +1,101 @@
+Script Name: Ok signal
+Author: aqibali14108
+Description: Plz add this is very true signal is liye ni no Kuni to ni no Kuni to ni no Kuni to ni no Kuni to ni no Kuni to ni no Kuni to ni no Kuni is love you ❤️🥀 Congratulations to e iqball WEs e eW to
+PineScript code:
+
+Pine Script™ strategy
+Ok signal
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+//@version=4
+strategy(title="BB training No Repainting (OTS Mode)", overlay=true)
+// Strategy Rules:
+// 1. Enter trade when price crosses above the lower band
+// 2. Exit trade when price touches the upper band
+// 
+// Chart Properties
+testStartYear = input(2010, "Backtest Start Year")
+testStartMonth = input(01, "Backtest Start Month")
+testStartDay = input(1, "Backtest Start Day")
+testPeriodStart = timestamp(testStartYear, testStartMonth, testStartDay, 0, 0)
+testStopYear = input(2030, "Backtest Stop Year")
+testStopMonth = input(12, "Backtest Stop Month")
+testStopDay = input(30, "Backtest Stop Day")
+testPeriodStop = timestamp(testStopYear, testStopMonth, testStopDay, 0, 0)
+// A switch to control background coloring of the test period
+testPeriodBackground = input(title="Color Background?", type=input.bool, defval=true)
+testPeriodBackgroundColor = testPeriodBackground and time >= testPeriodStart and time <= testPeriodStop ? #6c6f6c : na
+bgcolor(testPeriodBackgroundColor, transp=97)
+// User provided values
+smaLength = input(title="SMA Length", type=input.integer, defval=20) // Middle band period length (moving average)
+stdLength = input(title="StdDev Length", type=input.integer, defval=20) // Range to apply bands to
+ubOffset = input(title="Upper Band Offset", type=input.float, defval=2.0, step=0.5) // Number of standard deviations above MA
+lbOffset = input(title="Lower Band Offset", type=input.float, defval=2.0, step=0.5) // Number of standard deviation below MA
+testPeriod() =>
+    time >= testPeriodStart and time <= testPeriodStop ? true : false
+smaValue = sma(close, smaLength) // Middle band
+stdDev = stdev(close, stdLength)
+upperBand = smaValue + stdDev * ubOffset // Top band
+lowerBand = smaValue - stdDev * lbOffset // Bottom band
+// Plot bands to chart
+plot(series=smaValue, title="SMA", color=color.green)
+plot(series=upperBand, title="UB", color=color.blue, linewidth=2)
+plot(series=lowerBand, title="LB", color=color.blue, linewidth=2)
+longCondition = (crossover(close, lowerBand))
+closeLongCondition = (close >= upperBand)
+if (longCondition and testPeriod())
+    strategy.entry(id="CALL", long=true, qty=100)
+strategy.close(id="CALL", when=closeLongCondition)
+Expand (53 lines)

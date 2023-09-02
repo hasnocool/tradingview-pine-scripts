@@ -1,0 +1,238 @@
+Script Name: RMI + Triple HMRSI + Double EVWRSI + TERSI + CMO Strategy
+Author: burgercrisis
+Description: This is a strange experimental strategy WIP that I decided to upload an early version to share some of what I am working on. Just one script of a few.
+
+It combines Chande Momentum with RMI and some weird ones I am experimenting with - Triple Hull MA RSI, Double Exponential + Volume Weighted RSI, Triple Exponential RSI. And to top it off, a final oscillator that...
+PineScript code:
+
+Pine Script™ strategy
+RMI + Triple HMRSI + Double EVWRSI + TERSI + CMO Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © burgercrisis
+//@version=4
+strategy("RMI + Triple HMRSI + Double EVWRSI + TERSI Strategy")
+//* Backtesting Period Selector | Component *//
+//* https://www.tradingview.com/script/eCC1cvxQ-Backtesting-Period-Selector-Component *//
+//* https://www.tradingview.com/u/pbergden/ *//
+//* Modifications made *//
+testStartYear = input(2021, "Backtest Start Year") 
+testStartMonth = input(1, "Backtest Start Month")
+testStartDay = input(1, "Backtest Start Day")
+testPeriodStart = timestamp(testStartYear,testStartMonth,testStartDay,0,0)
+testStopYear = input(999999, "Backtest Stop Year")
+testStopMonth = input(9, "Backtest Stop Month")
+testStopDay = input(26, "Backtest Stop Day")
+testPeriodStop = timestamp(testStopYear,testStopMonth,testStopDay,0,0)
+testPeriod() =>
+    time >= testPeriodStart and time <= testPeriodStop ? true : false
+/////////////// END - Backtesting Period Selector | Component ///////////////
+src = input(close, "Price", type = input.source)
+CMOlength = input(9, minval=1, title="Alpha Chande Momentum Length")
+//CMO
+momm = change(src)
+f1(m) => m >= 0.0 ? m : 0.0
+f2(m) => m >= 0.0 ? 0.0 : -m
+m1 = f1(momm)
+m2 = f2(momm)
+sm1 = sum(m1, CMOlength)
+sm2 = sum(m2, CMOlength)
+percent(nom, div) => 100 * nom / div
+chandeMO = percent(sm1-sm2, sm1+sm2)
+plot(chandeMO, "Chande MO", color=color.blue)
+//RMI
+// Copyright (c) 2018-present, Alex Orekhov (everget)
+// Relative Momentum Index script may be freely distributed under the MIT license.
+length3 = input(title="RMI Length", type=input.integer, minval=1, defval=30)
+momentumLength3 = input(title="RMI Momentum ", type=input.integer, minval=1, defval=25)
+up3 = rma(max(change(src, momentumLength3), 0), length3)
+down3 = rma(-min(change(src, momentumLength3), 0), length3)
+rmi3 = (down3 == 0 ? 100 : up3 == 0 ? 0 : 100 - (100 / (1 + up3 / down3)))-50
+//
+//
+// end RMI, end Alex Orekhov copywrite
+//
+//
+lengthMA = input(7)
+lengthRSI = input(14)
+thrsi = hma(hma(hma(rsi(src, lengthRSI), lengthMA), lengthMA), lengthMA)
+thrsi1 = (thrsi-50)*10
+lengthMA2 = input(7)
+lengthRSI2 = input(14)
+devwrsi = ((ema(ema(vwma(rsi(src, lengthRSI2), lengthMA2), lengthMA2), lengthMA2))-50)*5
+lengthMA3 = input(7)
+lengthRSI3 = input(14)
+tersi = ((ema(ema(ema(rsi(src, lengthRSI3), lengthMA3), lengthMA3), lengthMA3))-50)*10
+rmirsi = ((thrsi*rmi3/25))
+//Boundary Lines
+obLevel1 = input(0, title="Chande Sellline")
+osLevel1 = input(0, title="Chande Buyline")
+hline(obLevel1, color=#0bc4d9)
+hline(osLevel1, color=#0bc4d9)
+obLevel2 = input(0, title="Triple HMRSI Sellline")
+osLevel2 = input(0, title="Triple HMRSI Buyline")
+hline(obLevel2, color=#5a0bd9)
+hline(osLevel2, color=#5a0bd9)
+obLevel3 = input(0, title="DEVWRSI Sellline")
+osLevel3 = input(0, title="DEVWRSI Buyline")
+hline(obLevel3, color=#5a0bd9)
+hline(osLevel3, color=#5a0bd9)
+obLevel4 = input(0, title="TERSI Sellline")
+osLevel4 = input(0, title="TERSI Buyline")
+hline(obLevel4, color=#5a0bd9)
+hline(osLevel4, color=#5a0bd9)
+obLevel5 = input(0, title="RMI Sellline")
+osLevel5 = input(0, title="RMI Buyline")
+hline(obLevel5, color=#5a0bd9)
+hline(osLevel5, color=#5a0bd9)
+obLevel6 = input(0, title="RMI*RSI Sellline")
+osLevel6 = input(0, title="RMI*RSI Buyline")
+hline(obLevel6, color=#5a0bd9)
+hline(osLevel6, color=#5a0bd9)
+plot((thrsi1), title="THRSI")
+plot(devwrsi, color=color.red, title="DEVWRSI")
+plot(tersi, color=color.yellow, title="TERSI")
+plot(rmirsi, color=color.purple, title="RMI*HMRSI")
+plot(rmi3, color=color.orange, title="RMI")
+longcondition1 = crossover(chandeMO, osLevel1)
+shortcondition1 = crossunder(chandeMO, obLevel1)
+longcondition2 = rmirsi<osLevel6 and rmi3<osLevel5 and tersi<osLevel4 and devwrsi<osLevel3 and thrsi1<osLevel2  and longcondition1
+shortcondition2 = rmirsi>obLevel6 and rmi3>obLevel5 and tersi>obLevel4 and devwrsi>obLevel3 and thrsi1>obLevel2  and shortcondition1
+if testPeriod()
+    if longcondition2
+        strategy.entry("Buy", strategy.long)
+    if shortcondition2
+        strategy.entry("Sell", strategy.short)
+hline(0, color=#C0C0C0, linestyle=hline.style_dashed, title="Zero Line")
+Expand (131 lines)

@@ -1,0 +1,126 @@
+Script Name: BlackSwan strategy
+Author: RobotBTC
+Description: Wild fluctuation of price is detected automatically, you will be informed of the black swan immediately.
+Period: 1-3minutes
+PineScript code:
+
+Pine Script™ strategy
+BlackSwan strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+//@version=4
+//适合1分钟-3分钟的k线，发生波动超过百分之二时，自动报警
+strategy("BlackSwan strategy", overlay=true,
+         initial_capital=10000, currency='USD', default_qty_type=strategy.percent_of_equity,
+         default_qty_value=100, commission_type= strategy.commission.percent, commission_value=0.075,pyramiding=3)
+//-------------------------------------------
+//-------------------------------------------
+timecondition =  timeframe.period =="480"  or timeframe.period =="240" or timeframe.period =="D"  or timeframe.period =="720"
+// Make input options that configure backtest date range
+startDate = input(title="Start Date", type=input.integer,
+     defval=1, minval=1, maxval=31)
+startMonth = input(title="Start Month", type=input.integer,
+     defval=11, minval=1, maxval=12)
+startYear = input(title="Start Year", type=input.integer,
+     defval=2018, minval=1800, maxval=2100)
+endDate = input(title="End Date", type=input.integer,
+     defval=1, minval=1, maxval=31)
+endMonth = input(title="End Month", type=input.integer,
+     defval=11, minval=1, maxval=12)
+endYear = input(title="End Year", type=input.integer,
+     defval=2031, minval=1800, maxval=2100)
+// Look if the close time of the current bar
+// falls inside the date range
+inDateRange = (time >= timestamp(syminfo.timezone, startYear,
+         startMonth, startDate, 0, 0)) and
+     (time < timestamp(syminfo.timezone, endYear, endMonth, endDate, 0, 0))
+     
+     
+// Inputs
+a = input(1,     title = "Key Vaule. 'This changes the sensitivity'")
+c = input(10,    title = "ATR Period")
+h = input(false, title = "Signals from Heikin Ashi Candles")
+ma60 = sma(close,60)
+ema144 = ema(close,144)
+ema169 = ema(close,169)
+ma20=sma(close,20)
+     
+plot(ema144,color=color.yellow, title="144")
+plot(ema169,color=color.orange, title="169")
+    
+heitiane=(close-open)
+heitiane:=abs(heitiane)
+heitiane:=heitiane/close
+if (inDateRange and  heitiane >0.0191 and close<open) //  and close>f3
+    strategy.entry("botsell20", strategy.short, comment = "黑天鹅追空"+tostring(heitiane))
+if(crossover(ema144,ema169))
+    strategy.close("botsell20", comment = "平空")
+if (inDateRange and  heitiane >0.0191 and close>open) //  and close>f3
+    strategy.entry("botbuy20", strategy.long, comment = "白天鹅追多"+tostring(heitiane))
+if(crossunder(ema144,ema169))
+    strategy.close("botbuy20", comment = "平多")
+  
+Expand (64 lines)

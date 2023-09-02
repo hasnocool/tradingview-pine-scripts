@@ -1,0 +1,167 @@
+Script Name: ETH Climber Snake [ETHUSDT 60MIN]
+Author: layth7ussein
+Description: BEST PERFORMANCE:  FTX:ETHUSDT  6H timeframe
+
+The concept of Climber Snake is to detect the uptrend first and then take the advantage of each correction while the price is rising, while it hold during the bearish trend.
+
+I'm using SAR indicator to detect the trend and  Smooth HA Candles MTF v1  indicator made by @RafaelZioni to detect the correction waves
+PineScript code:
+
+Pine Script™ strategy
+ETH Climber Snake [ETHUSDT 60MIN]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+//@version=5
+strategy('ETH Climber Snake', overlay=true, pyramiding=1, initial_capital=10000, default_qty_type=strategy.percent_of_equity, default_qty_value=100, calc_on_order_fills=false, slippage=0, commission_type=strategy.commission.percent)
+higherTf = input.timeframe('60', 'TF')
+ha_close = 1.01*(open+close+high+low)/4
+ha_open = (open[1]+close[1])/2
+ha_high = math.max(high, ha_close, ha_open)
+ha_low = math.min(low, ha_close, ha_open)
+ha_ohlc4 = (ha_close+ha_open+ha_high+ha_low)/5
+data = close
+data1 = open
+data2 = low
+data3 = high
+ec1ft = request.security(syminfo.tickerid, higherTf, data[1], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+ec1ft1 = request.security(syminfo.tickerid, higherTf, data1[1], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+ec1ft2 = request.security(syminfo.tickerid, higherTf, data2[1], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+ec1ft3 = request.security(syminfo.tickerid, higherTf, data3[1], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+//
+//Heiken Ashi
+o = request.security(ticker.heikinashi(syminfo.tickerid), higherTf, ec1ft1)
+c = request.security(ticker.heikinashi(syminfo.tickerid), higherTf, ec1ft)
+l = request.security(ticker.heikinashi(syminfo.tickerid), higherTf, ec1ft2)
+h = request.security(ticker.heikinashi(syminfo.tickerid), higherTf, ec1ft3)
+//plotcandle(o, h, l, c, color=o < c ? color.lime : color.red)
+//
+src = close
+showma = input(true, title='Show MA 1?')
+len = input(50, title='MA Length 1')
+showma1 = false
+len1 = 26
+showma2 = false
+len2 = 52
+_hma(src, len) =>
+    ta.wma(2 * ta.wma(src, len / 2) - ta.wma(src, len), math.round(math.sqrt(len)))
+thma(src, len) =>
+    ma1 = _hma(src, len)
+    ma2 = _hma(ma1, len)
+    ma3 = _hma(ma2, len)
+    3 * (ma1 - ma2) + ma3
+ma = showma ? thma(src, len) : na
+l1 = showma ? thma(l, len) : na
+h1 = showma ? thma(h, len) : na
+o1 = showma ? thma(o, len) : na
+c1 = showma ? thma(c, len) : na
+source_close = request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, close)
+length = input(50, title='length')
+os = input(70, title='oversold')
+ob = input(30, title='overbought')
+RSI = ta.rsi(source_close, length)
+[macdLine, signalLine, histLine] = ta.macd(ha_close, 12, 24, 9)
+plotcandle(o1, h1, l1, c1, color=o1 < c1 ? color.green : color.red)
+shortlen=input.int(10, "Short Length", minval=1)
+longlen=input.int(21, "Long Length", minval=1)
+_src = input(close, title="Source")
+exp = input(false, "exponential")
+esma(source, length)=>
+    s = ta.sma(source, length)
+    e = ta.ema(source, length)
+    exp ? e : s
+short = esma(_src, shortlen)
+long = esma(_src, longlen)
+po = (short - long)/long*100
+SAR = ta.sar(0, 0.001, 0.2)
+plot(SAR, "ParabolicSAR", style=plot.style_cross, color=#2962FF)
+if ta.crossover(c1, o1) and RSI > 50 and (po > 0 or po > po[1]) and po < 2
+    strategy.entry('L', strategy.long)
+if (ta.crossunder(c1, o1) and c1 < o1) 
+    strategy.close_all()
+Expand (87 lines)

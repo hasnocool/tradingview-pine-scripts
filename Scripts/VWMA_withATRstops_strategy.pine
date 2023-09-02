@@ -1,0 +1,120 @@
+Script Name: VWMA_withATRstops_strategy
+Author: ediks123
+Description: This strategy follows the trend when price is above VWMA indicator.  I have modified entry and exit rules to get most out of it.
+
+Instead of entering LONG when price crosses above VWMA,    I have  used  RSI(14)  of VWMA .  that way it skips the false signals. (some extent)
+
+ENTRY
+========
+1.  VWMA  setting is 33
+2. When RSIofVwma is above 30 enter Long  ( and ...
+PineScript code:
+
+Pine Script™ strategy
+VWMA_withATRstops_strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mohanee
+//@version=4
+//strategy("", overlay=true)
+strategy(title="VWMA_withATRstops_strategy V2", overlay=true, pyramiding=1,     default_qty_type=strategy.percent_of_equity,  default_qty_value=20, initial_capital=10000, currency=currency.USD)  //default_qty_value=10, default_qty_type=strategy.fixed,
+float xATRTrailingStop=na
+int pos=na
+vwmalength = input(33, title="VWMA Length", minval=1, maxval=365)
+//vwmalength2 = input(9, title="VWAM Short Term Length", minval=1, maxval=365)
+nATRPeriod = input(33, title="ATR length", minval=1, maxval=365)
+nATRMultip = input(3.5, title="ATR Multiplier")
+rsiofVwmaLength=input(14, title="RSI of VWMA Length")
+riskCapital = input(title="Risk % of capital", defval=10, minval=1)
+stopLoss=input(5,title="Stop Loss",minval=1)
+vwmaVal=vwma(close, vwmalength)
+//vwmaVal2=vwma(close, vwmalength2)
+//maVal=sma(close, vwmalength)
+plot(vwmaVal, color=color.orange, linewidth=2,  title="VWMA")
+//plot(vwmaVal2, color=color.blue, title="VWMA Short Term")
+//plot(maVal, color=color.blue, title="MA")
+//rsi of vwma Longterm
+rsiofVwmaVal=rsi(vwmaVal,rsiofVwmaLength)
+xATR = atr(nATRPeriod)
+nLoss = nATRMultip * xATR
+xATRTrailingStop:= iff(close > nz(xATRTrailingStop[1], 0) and close[1] > nz(xATRTrailingStop[1], 0), max(nz(xATRTrailingStop[1]), close - nLoss), iff(close < nz(xATRTrailingStop[1], 0) and close[1] < nz(xATRTrailingStop[1], 0), min(nz(xATRTrailingStop[1]), close + nLoss), iff(close > nz(xATRTrailingStop[1], 0), close - nLoss, close + nLoss)))
+pos:=   iff(close[1] < nz(xATRTrailingStop[1], 0) and close > nz(xATRTrailingStop[1], 0), 1,        iff(close[1] > nz(xATRTrailingStop[1], 0) and close < nz(xATRTrailingStop[1], 0), -1, nz(pos[1], 0))) 
+color1 = pos == -1 ? color.red: pos == 1 ? color.green : color.blue 
+//plot(xATRTrailingStop, color=color1, title="ATR Trailing Stop")
+//Entry--
+//Echeck how many units can be purchased based on risk manage ment and stop loss
+qty1 = (strategy.equity  * riskCapital / 100 ) /  (close*stopLoss/100)  
+//check if cash is sufficient  to buy qty1  , if capital not available use the available capital only
+qty1:= (qty1 * close >= strategy.equity ) ? (strategy.equity / close) : qty1
+//Long Entry
+//strategy.entry(id="VWMA LE", long=true, qty=qty1, when= close >vwmaVal and open>vwmaVal and close>open and close > xATRTrailingStop and xATRTrailingStop>  vwmaVal)
+strategy.entry(id="VWMA LE", long=true, qty=qty1, when= rsiofVwmaVal>=30 and  close>open and close>vwmaVal and pos == 1 )    ///pos == 1 means ATRStop line is green    
+//vwmaVal2>vwmaVal and
+plot(strategy.position_size>=1  ? xATRTrailingStop : na, color=color1, style=plot.style_linebr, title="ATR Trailing Stop")
+bgcolor(strategy.position_size>=1 ? color.blue : na )
+//Exit
+strategy.close(id="VWMA LE",  when= strategy.position_size>=1 and crossunder(close, xATRTrailingStop)  )
+//strategy.close(id="VWMA LE",  when= strategy.position_size>=1 and close<vwmaVal and open<vwmaVal and close<open )
+Expand (62 lines)

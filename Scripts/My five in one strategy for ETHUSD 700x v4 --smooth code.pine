@@ -1,0 +1,379 @@
+Script Name: My five in one strategy for ETHUSD 700x v4 --smooth code
+Author: Algo_Alert
+Description: I have developed a script that uses the Aroon indicator, volume, Macd, momentum, and Puel Manuel. 
+
+Every time you load a script, you have already preset inputs in the comments of the close.
+
+Suppose you want to find new ones. You use PM inputs to determine where the bottom and top are, so you do not sell there. You use volatility swaps to determine how volume is...
+PineScript code:
+
+Pine Script™ strategy
+My five in one strategy for ETHUSD 700x v4 //smooth code
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Gammapips
+//@version=5
+strategy('My five in one strategy for ETHUSD 700x v4 //smooth code', overlay=true, default_qty_type = strategy.percent_of_equity)
+// xrpusd BEST OF THE BEST IS LENGHT 10 20  4 HOURS 1 day pm 0.7 / 3.3.
+// xrpusd BEST OF THE BEST IS LENGHT 10 18  4 HOURS 1 WEEK pm 0.7 / 3.3
+// ETHUSD 27% dropdoen 500x   length 8 17 swap 8HOURS 1 week , pm 0.7 / 3.3  sortino 2.7 sharp  0.29
+//BNBUSD 49% dropdown 350x  length 6 33 swap 8 hours 1 week , pm 0.9 / 6  sortino 3.4 sharp  0.25
+//DOGEUSD 24% dropdown 2000x  length 5 34 swap 8 hours 1 week , pm 0.7 / 4  sortino 10.7 sharp  0.38
+//ADAUSD 30% dropdown 4000x  length 6 27 swap 8 hours 1 week , pm 0.7 / 4  sortino 4.2 sharp  0.32
+//NEMUSD 30% dropdown 60x  length 2 25 swap 4 hours 1 week , pm 0.8 / 2.3  sortino 1.6 sharp  0.45
+//ETHUSD 55% dropdown 900x  length 6 26 swap 4 hours 1 week , pm 0.7 / 3.4  sortino 2.6 sharp  0.34
+//ETHUSD 48% dropdown 700x  length 6 26 swap 8 hours 1 week , pm 0.7 / 3.4 sortino 2.33 sharp  0.33
+//ETH USD 45% dropdown 500x  length 6 26 swap 1 week 1 week , pm 0.7 / 3.4 sortino 2.4 sharp  0.32
+//LTCUSD length 10 35 swap 4 hours 1 week , pm 0.7 / 3.1
+// BTCUSD length 8 36 swap 4 hours 1 week , pm 0.6 / 3.1
+// xrpusd BEST OF THE BEST IS LENGHT 2 (or 11) 19  4 HOURS 1 WEEK pm 0.7 / 3.3
+// 1h trading ... length 5 .. 14 swap 15 min 1 hour
+//Inputs
+resIn_0 = input.timeframe(title='Resolution for Funding Interval', defval="480") // 480 is 8 hours timeframe
+res = resIn_0 == '0' ? timeframe.period : resIn_0
+resIn_1 = input.timeframe(title='Resolution for TWAP Interval', defval='240')
+res_1 = resIn_1 == '0' ? timeframe.period : resIn_1
+source = input.source(close, title="Momentum Source")
+_length = input.int(6, title="Momentum Length")
+length = input.int(26, defval = 7, minval = 1, maxval = 1000, title="Aroon Length")
+fromyear = input.int(2018, defval = 2018, minval = 1900, maxval = 2100, title = "From Year")
+toyear = input.int(2100, defval = 2100, minval = 1900, maxval = 2100, title = "To Year")
+perp_ticker = input.symbol(title='Perp Ticker', defval='BITMEX:XBTUSD')
+spot_ticker = input.symbol(title='Spot Ticker', defval='BITMEX:XBT')
+top = input.float(0.7, step=0.1)
+bottom = input.float(3.4, step=0.1)
+// Inputs
+i_stratSelect = input.string(defval='macd', title='Select Strategy', options=['rsi', 'macd', 'bb', 'rsi + macd', 'tt','pm','aroon', 'aroon1 + pm'])
+//Momentum
+mom = ta.mom(source, _length)
+//Buy/Sell Momentum
+sell = mom < 0
+buy = mom > 0
+// Takes an average of prices for each ticker, for use in TWAP calc
+typicalPrice_fut = (request.security(perp_ticker, res, open) + request.security(perp_ticker, res, high) + request.security(perp_ticker, res, low) + request.security(perp_ticker, res, close)) / 4
+typicalPrice_idx = (request.security(spot_ticker, res, open) + request.security(spot_ticker, res, high) + request.security(spot_ticker, res, low) + request.security(spot_ticker, res, close)) / 4
+weight = ta.barssince(ta.change(request.security(perp_ticker, res_1, time, lookahead=barmerge.lookahead_on)))
+// calculate basic funding rate ratio
+ratio = typicalPrice_fut / typicalPrice_idx - 1
+// initialize price
+price = 0.0
+// calc TWAP and 8hr funding rate 
+price := weight == 0 ? ratio : ratio + nz(price[1])
+twap = price / (weight + 1)
+funding_1hr = twap * (1.0 / 24.0) * 100.0
+funding_8hr = twap * (8.0 / 24.0) * 100.0
+count_up = 0                                   // Declare the global count variable
+count_up := nz(count_up[1], 0)                   // Reassign the count variable to the previous value. If it was na then change it to 0
+Counter_up() =>
+    if funding_8hr > 0.0098
+        count_up + 1
+    else
+        0
+count_up := Counter_up()  
+count_down = 0                                   // Declare the global count variable
+count_down := nz(count_down[1], 0)                   // Reassign the count variable to the previous value. If it was na then change it to 0
+Counter_down() =>
+    if funding_8hr < -0.0098
+        count_down + 1
+    else
+        0
+count_down := Counter_down()  // Modify the global variable in the global scope.
+nn=0
+funding_up = false
+if count_up > nn
+    funding_up := true
+    
+funding_down = false
+if count_down > nn
+    funding_down := true
+    
+miningRevenue = request.security('QUANDL:BCHAIN/MIREV', 'D', close[1], barmerge.gaps_off, barmerge.lookahead_on)
+ma365 = request.security('QUANDL:BCHAIN/MIREV', 'D', ta.sma(close, 365)[1], barmerge.gaps_off, barmerge.lookahead_on)
+puellMultiple = miningRevenue / ma365
+//Aroon
+upper = 200 * (ta.highestbars(high, length+1) + length)/length
+lower = 200 * (ta.lowestbars(low, length+1) + length)/length
+//////////plot(upper, color=#FF6A00)
+//////////plot(lower, color=#0094FF)
+i_stratSelect := 'macd'
+if  buy
+    i_stratSelect := 'aroon1 + pm'
+f_strategySelector(_strat) =>
+    if _strat == 'macd'
+        [macdLine, signalLine, histLine] = ta.macd(close, 12, 26, 9)
+        macdbuyCondition = histLine > 0 and ta.crossover(macdLine, signalLine)
+        macdsellCondition = histLine < 0 and ta.crossunder(macdLine, signalLine)
+        [macdbuyCondition, macdsellCondition]
+    
+    else if _strat ==  'aroon1 + pm'
+            //Signals
+            
+        yas1 = puellMultiple < top 
+        no1 = puellMultiple > bottom
+        
+        up1 = upper > lower 
+        dn1 = upper < lower
+        [up1 or yas1, dn1 or no1]  
+        
+        
+    else if _strat ==  'aroon'
+            //Signals
+        up = upper > lower 
+        dn = upper < lower
+        [up, dn]
+        
+    else
+        [na, na]
+      
+[_buy, _sell] = f_strategySelector(i_stratSelect)
+smonadnu = puellMultiple < top 
+smonavrhu = puellMultiple > bottom
+if _buy and year >= fromyear and year <= toyear and (month > 1 or dayofmonth > 6 or true)   and strategy.equity > 0  and ( not funding_up or false ) and not smonavrhu
+    //strategy.entry('buy', strategy.long)
+    /// LONG
+    strategy.entry("long", strategy.long, when = _buy)
+   // strategy.exit("short", when=_buy, stop=close, limit=close, comment = "EXIT-SHORT_FTX_XRP-PERP_scalper_1M_8eafb86c43a4915e")
+   
+if _sell and year >= fromyear and year <= toyear  and strategy.equity > 0 and ( not funding_down  or false ) and not smonadnu
+    //strategy.entry('sell', strategy.short)
+    strategy.entry("short", strategy.short, when = _sell)
+    //strategy.exit("long", when=_sell, stop=close, limit=close, comment = "EXIT-LONG_FTX_XRP-PERP_scalper_1M_8eafb86c43a4915e")
+//if sell and year >= fromyear and year <= fromyear and strategy.equity > 0 and ( funding_up  or false ) and not smonadnu // and na
+    //strategy.close('buy', when = sell)
+    
+//if time > timestamp(toyear, tomonth, today, 23, 59)
+    //strategy.close_all()
+    
+    
+ 
+Expand (230 lines)

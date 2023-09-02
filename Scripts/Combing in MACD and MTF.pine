@@ -1,0 +1,133 @@
+Script Name: Combing in MACD and MTF
+Author: marcoderoni
+Description: Hi all, I'm trying to wedge in the MACD into a multiple timeframe. Scope is to create:
+1) an alert when the MACD across all timeframes is positive,
+2) an alert when the MACD across all timeframes is negative, and
+3) one when neither of them is applicable.
+
+Would anyone be so kind to give it some thoughts, please?
+
+//@version=2
+strategy("  Easy MTF Strategy",...
+PineScript code:
+
+Pine Script™ strategy
+Combing in MACD and MTF
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+//@version=4
+strategy("MACD on MTF", overlay=false, process_orders_on_close=true)
+ 
+TF_1_time = input(title = "Timeframe 1", type = input.resolution, defval= "3")
+TF_2_time = input(title = "Timeframe 2", type = input.resolution, defval= "5")
+TF_3_time = input(title = "Timeframe 3", type = input.resolution, defval= "15")
+TF_4_time = input(title = "Timeframe 4", type = input.resolution, defval= "30")
+ 
+fastLen = input(title="Fast Length", type=input.integer, defval=12)
+slowLen = input(title="Slow Length", type=input.integer, defval=26)
+sigLen  = input(title="Signal Length", type=input.integer, defval=9)
+[macdLine, signalLine, _] = macd(close, fastLen, slowLen, sigLen)
+width = 5
+upcolor = color.green
+downcolor = color.red
+neutralcolor = color.blue
+linestyle = plot.style_line
+ 
+TF_1 = security(syminfo.tickerid, TF_1_time, signalLine) < security(syminfo.tickerid, TF_1_time, macdLine) ? true:false
+TF_1_color = TF_1 ? upcolor:downcolor
+ 
+TF_2 = security(syminfo.tickerid, TF_2_time, signalLine) < security(syminfo.tickerid, TF_2_time, macdLine) ? true:false
+TF_2_color = TF_2 ? upcolor:downcolor
+ 
+TF_3 = security(syminfo.tickerid, TF_3_time, signalLine) < security(syminfo.tickerid, TF_3_time, macdLine) ? true:false
+TF_3_color = TF_3 ? upcolor:downcolor
+ 
+TF_4 = security(syminfo.tickerid, TF_4_time, signalLine) < security(syminfo.tickerid, TF_4_time, macdLine) ? true:false
+TF_4_color = TF_4 ? upcolor:downcolor
+ 
+TF_global = TF_1 == true and TF_2 == true and TF_3 == true and TF_4 == true
+TF_global_bear = TF_1 == false and TF_2 == false and TF_3 == false and TF_4 == false
+f_01(_c) => _c ? 1 : 0
+TF_count = f_01(TF_1) + f_01(TF_2) + f_01(TF_3) + f_01(TF_4)
+TF_global_off = TF_count > 0 and TF_count < 4
+TF_global_color = TF_global ? color.green : TF_global_bear ? color.red : color.white
+TF_trigger_width = TF_global ? 6 : width
+ 
+plot(1, style=linestyle, linewidth=width, color=TF_1_color)
+plot(5, style=linestyle, linewidth=width, color=TF_2_color)
+plot(10, style=linestyle, linewidth=width, color=TF_3_color)
+plot(15, style=linestyle, linewidth=width, color=TF_4_color)
+plot(25, style=linestyle, linewidth=4, color=TF_global_color)    
+ 
+exitCondition_Long = TF_global_bear or TF_global_off
+exitCondition_Short = TF_global or TF_global_off
+ 
+longCondition = TF_global
+if (longCondition)
+    strategy.entry("MTF_Long", strategy.long)
+ 
+shortCondition = TF_global_bear
+if (shortCondition)
+    strategy.entry("MTF_Short", strategy.short)
+    
+strategy.close("MTF_Long", when=TF_global_bear or TF_global_off)    
+strategy.close("MTF_Short", when=TF_global or TF_global_off)
+Expand (59 lines)

@@ -1,0 +1,200 @@
+Script Name: MA Candles Supertrend Strategy
+Author: Trendoscope
+Description: Simple strategy which is derived by below method:
+
+1. Calculate moving average of High, Low, Open and Close and make candles of them.
+2. Derive supertrend on the moving average candles.
+3. Generate buy and sell signals based on supertrend direction combined with higher timeframe high-low condition
+PineScript code:
+
+Pine Script™ strategy
+MA Candles Supertrend Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HeWhoMustNotBeNamed
+//@version=5
+strategy('MA Candles Supertrend Strategy', shorttitle='MACSTS', overlay=true, initial_capital=20000, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent, pyramiding=1, commission_value=0.01)
+MAType = input.string(title='Moving Average Type', defval='rma', options=['ema', 'sma', 'hma', 'rma', 'vwma', 'wma'])
+LoopbackBars = input.int(20, step=10)
+AtrMAType = input.string(title='Moving Average Type', defval='rma', options=['ema', 'sma', 'hma', 'rma', 'vwma', 'wma'])
+AtrLength = input.int(30, step=10)
+AtrMult = input(1)
+adoptiveWicks = false  // does not work
+wicks = input(true)
+dThreshold = input.float(0.2, step=0.1, maxval=1)
+rThreshold = input.float(0.7, step=0.1, maxval=1)
+tradeDirection = input.string(title='Trade Direction', defval=strategy.direction.long, options=[strategy.direction.all, strategy.direction.long, strategy.direction.short])
+i_startTime = input.time(defval=timestamp('01 Jan 2010 00:00 +0000'), title='Start Time')
+i_endTime = input.time(defval=timestamp('01 Jan 2099 00:00 +0000'), title='End Time')
+inDateRange = time >= i_startTime and time <= i_endTime
+strategy.risk.allow_entry_in(tradeDirection)
+f_getMovingAverage(source, MAType, length) =>
+    ma = ta.sma(source, length)
+    if MAType == 'ema'
+        ma := ta.ema(source, length)
+        ma
+    if MAType == 'hma'
+        ma := ta.hma(source, length)
+        ma
+    if MAType == 'rma'
+        ma := ta.rma(source, length)
+        ma
+    if MAType == 'vwma'
+        ma := ta.vwma(source, length)
+        ma
+    if MAType == 'wma'
+        ma := ta.wma(source, length)
+        ma
+    ma
+f_secureSecurity(_symbol, _res, _src, _offset) =>
+    request.security(_symbol, _res, _src[_offset], lookahead=barmerge.lookahead_on)
+f_getYearlyHighLowCondition() =>
+    yhighrange = f_secureSecurity(syminfo.tickerid, '12M', high, 1)
+    ylowrange = f_secureSecurity(syminfo.tickerid, '12M', low, 1)
+    yearlyHighCondition = close > yhighrange * (1 - dThreshold) or close > ylowrange * (1 + rThreshold)
+    yearlyLowCondition = close < ylowrange * (1 + dThreshold) or close < yhighrange * (1 - rThreshold)
+    [yearlyHighCondition, yearlyLowCondition]
+f_getSupertrend(oOpen, oClose, oHigh, oLow, AtrMAType, AtrLength, AtrMult, wicks) =>
+    truerange = math.max(oHigh, oClose[1]) - math.min(oLow, oClose[1])
+    averagetruerange = f_getMovingAverage(truerange, AtrMAType, AtrLength)
+    atr = averagetruerange * AtrMult
+    longWicks = adoptiveWicks and close < oClose or wicks
+    shortWicks = adoptiveWicks and close > oClose or wicks
+    longStop = oClose - atr
+    longStopPrev = nz(longStop[1], longStop)
+    longStop := (longWicks ? oLow[1] : oClose[1]) > longStopPrev ? math.max(longStop, longStopPrev) : longStop
+    shortStop = oClose + atr
+    shortStopPrev = nz(shortStop[1], shortStop)
+    shortStop := (shortWicks ? oHigh[1] : oClose[1]) < shortStopPrev ? math.min(shortStop, shortStopPrev) : shortStop
+    dir = 1
+    dir := nz(dir[1], dir)
+    dir := dir == -1 and (longWicks ? oHigh : oClose) > shortStopPrev ? 1 : dir == 1 and (shortWicks[1] ? oLow : oClose) < longStopPrev ? -1 : dir
+    [dir, longStop, shortStop]
+oOpen = f_getMovingAverage(open, MAType, LoopbackBars)
+oClose = f_getMovingAverage(close, MAType, LoopbackBars)
+oHigh = f_getMovingAverage(high, MAType, LoopbackBars)
+oLow = f_getMovingAverage(low, MAType, LoopbackBars)
+colorByPreviousClose = false
+candleColor = colorByPreviousClose ? oClose[1] < oClose ? color.green : oClose[1] > oClose ? color.red : color.silver : oOpen < oClose ? color.green : oOpen > oClose ? color.red : color.silver
+plotcandle(oOpen, oHigh, oLow, oClose, 'Oscilator Candles', color=candleColor)
+[yearlyHighCondition, yearlyLowCondition] = f_getYearlyHighLowCondition()
+[dir, longStop, shortStop] = f_getSupertrend(oOpen, oClose, oHigh, oLow, AtrMAType, AtrLength, AtrMult, wicks)
+trailingStop = dir == 1 ? longStop : shortStop
+trendColor = dir == 1 ? color.green : color.red
+plot(trailingStop, title='TrailingStop', color=trendColor, linewidth=2, style=plot.style_linebr)
+exitLongCondition = dir == -1 and (dir[1] == -1 and close < close[1] or close < longStop)
+exitShortCondition = dir == 1 and (dir[1] == 1 and close > close[1] or close > shortStop)
+longCondition = exitShortCondition and yearlyHighCondition and inDateRange
+shortCondition = exitLongCondition and yearlyLowCondition and inDateRange
+strategy.risk.allow_entry_in(tradeDirection)
+strategy.entry('Long', strategy.long, when=longCondition, oca_name='oca_buy', oca_type=strategy.oca.cancel)
+strategy.close('Long', when=exitLongCondition)
+strategy.entry('Short', strategy.short, when=shortCondition, oca_name='oca_sell', oca_type=strategy.oca.cancel)
+strategy.close('Short', when=exitShortCondition)
+Expand (106 lines)

@@ -1,0 +1,381 @@
+Script Name: V Bottom & V Top Pattern [Misu]
+Author: Fontiramisu
+Description: █  This indicator shows V bottom & V top patterns as well as potential V bottom & V top. 
+These V bottom & V top are chart powerful reversal patterns. 
+They appear in all markets and time-frames, but due to the nature of the aggressive moves that take place when a market reverses direction, it can be difficult to identify this pattern in real-time.
+To address this...
+PineScript code:
+
+Pine Script™ strategy
+V Bottom & V Top Pattern [Misu]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// Author : @Fontiramisu
+// @version=5 
+strategy("V Bottom/Top Pattern [Misu]", shorttitle="V pattern [Misu]", overlay=true, initial_capital=50000, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+// import Fontiramisu/fontLib/80 as fontilab
+import Fontiramisu/fontilab/8 as fontilab
+//   -------- Find dev pivots ---------- [
+// -- Var user input --
+var devTooltip              = "Deviation is a multiplier that affects how much the price should deviate from the previous pivot in order for the bar to become a new pivot."
+var depthTooltip            = "The minimum number of bars that will be taken into account when analyzing pivots."
+thresholdMultiplier         = input.float(title="Deviation", defval=3.1, step=0.1, minval=0, tooltip=devTooltip, group="Pivot")
+depth                       = input.int(title="Depth", defval=8, minval=1, tooltip=depthTooltip, group="Pivot") 
+// Prepare pivot variables
+var line lineLast = na
+var int iLast = 0 // Index last
+var int iPrev = 0 // Index previous
+var float pLast = 0 // Price last
+var float pLastHigh = 0 // Price last
+var float pLastLow = 0 // Price last
+var isHighLast = false // If false then the last pivot was a pivot low
+isPivotUpdate = false
+// Get pivot information from dev pivot finding function
+[dupLineLast, dupIsHighLast, dupIPrev, dupILast, dupPLast, dupPLastHigh, dupPLastLow] = 
+     fontilab.getDeviationPivots(thresholdMultiplier, depth, lineLast, isHighLast, iLast, pLast, true, close, high, low)
+if not na(dupIsHighLast)
+    lineLast := dupLineLast
+    isHighLast := dupIsHighLast
+    iPrev := dupIPrev
+    iLast := dupILast
+    pLast := dupPLast
+    pLastHigh := dupPLastHigh
+    pLastLow := dupPLastLow
+    isPivotUpdate := true
+// Plot.
+// Get last Pivots.
+var highP   = 0.0
+var lowP    = 0.0
+var midP    = 0.0
+highP       := isHighLast ? pLast : highP
+lowP        := not isHighLast ? pLast : lowP
+midP        := (highP + lowP)/2
+// ] -------- Input Vars --------------- [.
+breakoutTypeConf            = input.string("Mid Pivot", title="Confirmation Type", options=["At First Break", "Mid Pivot", "Opposit Pivot", "No Confirmation"], group="Signal Type Confirmation")
+lenghtSizeAvgBody           = input.int(9, title="Lenght Avg Body", group="Breakouts Settings")
+firstBreakoutFactor         = input.float(0.2, step=0.1, title="First Breakout Factor", tooltip="Factor used to validate the first breakout of the V pattern", group="Breakouts Settings")
+confBreakoutFactor              = input.float(1.2, step=0.1, title="Confirmation Breakout Factor", tooltip="Factor used to validate the confirmation breakout of the V pattern", group="Breakouts Settings")
+maxNbBarsValidV             = input.int(11, title="Max Bars Confirmation", group="Timing Confirmation")
+// ] -------- Logical Vars ------------- [
+var _isVbottomPot       = false
+var _isVtopPot          = false
+_isVbottom              = false
+_isVtop                 = false
+lastLow                 = 0.0
+indexLow                = 0
+lastHigh                = 0.0
+indexHigh               = 0
+// Confirm V pattern vars.
+var lHighVtopPot        = 0.0
+var lLowVbotPot         = 0.0
+var nbBarLVtopPot       = 0
+var nbBarLVbotPot       = 0
+var breakLevelVbotPot   = 0.0
+var breakLevelVtopPot   = 0.0
+// ] -------- Util Functions ----------- [
+// Cond Vars.
+_bodyHi                 = math.max(close, open)
+_bodyLo                 = math.min(close, open)
+_body                   = _bodyHi - _bodyLo
+_bodyAvg                = ta.ema(_body, lenghtSizeAvgBody)
+_longBody               = _body > _bodyAvg
+_upperWick              = high - _bodyHi
+_greenBody              = open < close
+_redBody                = open > close
+// COND: Potential V pattern.
+_breakAboveLowP         = ta.crossover(close, lowP) and _body > _bodyAvg * firstBreakoutFactor
+_breakUnderHighP        = ta.crossunder(close, highP) and _body > _bodyAvg * firstBreakoutFactor 
+// Crossing Vars.
+breakLevelVbotPot       := ta.crossunder(close, lowP) ? lowP : breakLevelVbotPot
+breakLevelVtopPot       := ta.crossover(close, highP) ? highP : breakLevelVtopPot
+// @function to get last high/low (handle multiple rsiOver in a row)
+getIndexHighLowFromNbCandles(bool isLong, int nbCandles) => 
+    highLow = isLong ? low : high
+    indexHighLows = 0
+    // indexHighLow = 0
+    for counter = 1 to nbCandles + 10
+        if isLong
+            if low[counter] < highLow 
+                highLow         := low[counter]
+                indexHighLows   := counter
+        else 
+            if high[counter] > highLow
+                highLow         := high[counter]
+                indexHighLows   := counter
+    indexHighLows
+isWickCrossPattern (src, isCrossUp) =>
+    isCross = false
+    if isCrossUp
+        isCross := _bodyHi < src and src < high
+    else
+        isCross := low < src and src < _bodyLo
+    isCross
+getBreakoutTypeConf(type, isVtop) => 
+    switch type
+        "No Confirmation"   => isVtop ? highP : lowP
+        "Opposit Pivot"     => isVtop ? lowP : highP 
+        "Mid Pivot"         => midP 
+        "At First Break"    => isVtop ? breakLevelVtopPot : breakLevelVbotPot
+        
+isPivotChanged (oldMidP) =>
+    midP != oldMidP
+// ] -------- Logical Script ----------- [
+// -----
+// Calculate.
+lastLowDup              = fontilab.getHighLowFromNbCandles(true, 10)
+indexLowDup             = getIndexHighLowFromNbCandles(true, 10)
+lastHighDup             = fontilab.getHighLowFromNbCandles(false, 10)
+indexHighDup            = getIndexHighLowFromNbCandles(false, 10)
+if _breakAboveLowP
+    lastLow             := lastLowDup
+    indexLow            := indexLowDup
+    _isVbottomPot       := true
+    lLowVbotPot         := lastLow
+else if _breakUnderHighP
+    lastHigh            := lastHighDup
+    indexHigh           := indexHighDup
+    _isVtopPot          := true
+    lHighVtopPot        := lastHigh
+// Confirm potential V bot pattern.
+isBreakBarAvg   = breakoutTypeConf != "No Confirmation" ? _body > _bodyAvg * confBreakoutFactor : true
+vBotConfSrc     = getBreakoutTypeConf(breakoutTypeConf, false)
+_isVbottom      := _isVbottomPot and ta.crossover(close, vBotConfSrc) and isBreakBarAvg
+if _isVbottomPot
+    // Cond V pot invalidated or finished.
+    if not _isVbottom and low >= lLowVbotPot and nbBarLVbotPot <= maxNbBarsValidV
+        nbBarLVbotPot   := nbBarLVbotPot + 1
+    else
+        _isVbottomPot   := false
+        nbBarLVbotPot   := 0
+// Confirm potential V top pattern.
+vTopConfSrc     = getBreakoutTypeConf(breakoutTypeConf, true)
+_isVtop         := _isVtopPot and ta.crossunder(close, vTopConfSrc) and isBreakBarAvg
+if _isVtopPot 
+    // Cond V pot invalidated or finished.
+    if not _isVtop and high <= lHighVtopPot and nbBarLVtopPot <= maxNbBarsValidV
+        nbBarLVtopPot   := nbBarLVtopPot + 1
+    else // reinit for next V patter.
+        _isVtopPot      := false
+        nbBarLVtopPot   := 0
+// -----
+// BUY / SELL COND.
+buyCond             = _isVbottom
+sellCond            = _isVtop
+// ] -------- Strategy Part ------------ [
+// if buyCond
+//     strategy.entry("L", strategy.long, alert_message="Buy Signal")
+// if sellCond
+//     strategy.entry("S", strategy.short, alert_message="Sell Signal")
+    
+// ] -------- Plot Part & Alerts ------- [
+midPPlot   = plot(midP, title='Mid Pivot', linewidth=1, color=color.yellow, display=display.none)
+highPlot   = plot(highP, title='High Pivot', linewidth=1, color=color.red, display=display.none)
+lowPlot    = plot(lowP, title='Low Pivot', linewidth=1, color=color.green, display=display.none)
+distLabel = ta.atr(30) * 0.2
+if buyCond
+    label.new(x = bar_index, y = low - distLabel, xloc = xloc.bar_index, text = "V", style = label.style_label_up, color = color.green, size = size.small, textcolor = color.white, textalign = text.align_center)
+else if sellCond
+    label.new(x = bar_index, y = high + distLabel, xloc = xloc.bar_index, text = "V", style = label.style_label_down, color = color.red, size = size.small, textcolor = color.white, textalign = text.align_center)
+if _breakAboveLowP
+    label.new(x = bar_index - indexLowDup, y = low[indexLowDup] - distLabel, xloc = xloc.bar_index, text = "Vp", style = label.style_label_up, color = color.new(color.green, 70), size = size.small, textcolor = color.white, textalign = text.align_center)
+else if _breakUnderHighP
+    label.new(x = bar_index - indexHighDup, y = high[indexHighDup] + distLabel, xloc = xloc.bar_index, text = "Vp", style = label.style_label_down, color = color.new(color.red, 70), size = size.small, textcolor = color.white, textalign = text.align_center)
+Expand (198 lines)

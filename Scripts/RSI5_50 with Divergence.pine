@@ -1,0 +1,379 @@
+Script Name: RSI5_50 with Divergence
+Author: mohanee
+Description: This is variation of RSI  Divergence strategy.
+
+I have added a filter (long term RSI)  to the Rules.   strategy BUYs when RSI 50 period is above 50 line  and there is divergence on the short term RSI
+
+settings
+=========
+short term RSI period  5
+long term RSI period 50
+stopLoss    is 8%   --- if setting is enabled
+
+BUY Rule
+========
+RSI 50  is above 50 line
+short...
+PineScript code:
+
+Pine Script™ strategy
+RSI5_50 with Divergence
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mohanee
+//@version=4
+//GOOGL setting  5 ,50 close, 3 , 1  profitLevel at 75 and No stop Loss shows win rate 99.03 % profit factor 5830.152
+strategy(title="RSI5_50 with Divergence", overlay=false,pyramiding=2, default_qty_type=strategy.fixed, default_qty_value=3,    initial_capital=10000, currency=currency.USD)
+len = input(title="RSI Period", minval=1, defval=5)
+longRSILen = input(title="Long RSI Period", minval=10, defval=50)
+src = input(title="RSI Source", defval=close)
+lbR = input(title="Pivot Lookback Right", defval=3)
+lbL = input(title="Pivot Lookback Left", defval=1)
+takeProfitRSILevel = input(title="Take Profit at RSI Level", minval=50, defval=75)
+stopLoss = input(title="Stop Loss%(if checked 8% rule applied)", defval=false)
+shortTermRSI = rsi(close,len)
+longTermRSI = rsi(close,longRSILen)
+rangeUpper = input(title="Max of Lookback Range", defval=60)
+rangeLower = input(title="Min of Lookback Range", defval=5)
+plotBull = input(title="Plot Bullish", defval=true)
+plotHiddenBull = input(title="Plot Hidden Bullish", defval=true)
+plotBear = input(title="Plot Bearish", defval=true)
+plotHiddenBear = input(title="Plot Hidden Bearish", defval=false)
+bearColor = color.purple
+bullColor = color.green
+hiddenBullColor = color.new(color.green, 80)
+hiddenBearColor = color.new(color.red, 80)
+textColor = color.white
+noneColor = color.new(color.white, 100)
+plot(shortTermRSI, title="RSI", linewidth=2, color=#8D1699)
+plot(longTermRSI, title="longTermRSI", linewidth=2, color=color.orange)
+hline(50, title="Middle Line", linestyle=hline.style_dotted)
+obLevel = hline(70, title="Overbought", linestyle=hline.style_dotted)
+osLevel = hline(30, title="Oversold", linestyle=hline.style_dotted)
+fill(obLevel, osLevel, title="Background", color=longTermRSI >=50 ? color.green:color.purple, transp=65)  // longTermRSI >=50
+plFound = na(pivotlow(shortTermRSI, lbL, lbR)) ? false : true
+phFound = na(pivothigh(shortTermRSI, lbL, lbR)) ? false : true
+_inRange(cond) =>
+    bars = barssince(cond == true)
+    rangeLower <= bars and bars <= rangeUpper
+//------------------------------------------------------------------------------
+// Regular Bullish
+// shortTermRSI: Higher Low
+oscHL = shortTermRSI[lbR] > valuewhen(plFound, shortTermRSI[lbR], 1) and _inRange(plFound[1])
+// Price: Lower Low
+priceLL = low[lbR] < valuewhen(plFound, low[lbR], 1)
+bullCond = plotBull and priceLL and oscHL and plFound
+plot(
+     plFound ? shortTermRSI[lbR] : na,
+     offset=-lbR,
+     title="Regular Bullish",
+     linewidth=2,
+     color=(bullCond ? bullColor : noneColor),
+     transp=0
+     )
+plotshape(
+     bullCond ? shortTermRSI[lbR] : na,
+     offset=-lbR,
+     title="Regular Bullish Label",
+     text=" Bull ",
+     style=shape.labelup,
+     location=location.absolute,
+     color=bullColor,
+     textcolor=textColor,
+     transp=0
+     )
+//------------------------------------------------------------------------------
+// Hidden Bullish
+// shortTermRSI: Lower Low
+oscLL = shortTermRSI[lbR] < valuewhen(plFound, shortTermRSI[lbR], 1) and _inRange(plFound[1])
+// Price: Higher Low
+priceHL = low[lbR] > valuewhen(plFound, low[lbR], 1)
+hiddenBullCond = plotHiddenBull and priceHL and oscLL and plFound
+plot(
+     plFound ? shortTermRSI[lbR] : na,
+     offset=-lbR,
+     title="Hidden Bullish",
+     linewidth=2,
+     color=(hiddenBullCond ? hiddenBullColor : noneColor),
+     transp=0
+     )
+plotshape(
+     hiddenBullCond ? shortTermRSI[lbR] : na,
+     offset=-lbR,
+     title="Hidden Bullish Label",
+     text=" H Bull ",
+     style=shape.labelup,
+     location=location.absolute,
+     color=bullColor,
+     textcolor=textColor,
+     transp=0
+     )
+longCondition= longTermRSI >=50  and ( (bullCond or hiddenBullCond ) )  or  (strategy.position_size>0 and crossover(shortTermRSI,20) )
+//last condition above is to leg in if you are already in the Long trade, 
+strategy.entry(id="RSIDivLE", long=true,  when=longCondition)
+//------------------------------------------------------------------------------
+// Regular Bearish
+// shortTermRSI: Lower High
+oscLH = shortTermRSI[lbR] < valuewhen(phFound, shortTermRSI[lbR], 1) and _inRange(phFound[1])
+// Price: Higher High
+priceHH = high[lbR] > valuewhen(phFound, high[lbR], 1)
+bearCond = plotBear and priceHH and oscLH and phFound
+plot(
+     phFound ? shortTermRSI[lbR] : na,
+     offset=-lbR,
+     title="Regular Bearish",
+     linewidth=2,
+     color=(bearCond ? bearColor : noneColor),
+     transp=0
+     )
+plotshape(
+     bearCond ? shortTermRSI[lbR] : na,
+     offset=-lbR,
+     title="Regular Bearish Label",
+     text=" Bear ",
+     style=shape.labeldown,
+     location=location.absolute,
+     color=bearColor,
+     textcolor=textColor,
+     transp=0
+     )
+//------------------------------------------------------------------------------
+// Hidden Bearish
+// shortTermRSI: Higher High
+oscHH = shortTermRSI[lbR] > valuewhen(phFound, shortTermRSI[lbR], 1) and _inRange(phFound[1])
+// Price: Lower High
+priceLH = high[lbR] < valuewhen(phFound, high[lbR], 1)
+hiddenBearCond = plotHiddenBear and priceLH and oscHH and phFound
+plot(
+     phFound ? shortTermRSI[lbR] : na,
+     offset=-lbR,
+     title="Hidden Bearish",
+     linewidth=2,
+     color=(hiddenBearCond ? hiddenBearColor : noneColor),
+     transp=0
+     )
+plotshape(
+     hiddenBearCond ? shortTermRSI[lbR] : na,
+     offset=-lbR,
+     title="Hidden Bearish Label",
+     text=" H Bear ",
+     style=shape.labeldown,
+     location=location.absolute,
+     color=bearColor,
+     textcolor=textColor,
+     transp=0
+     )
+     
+     
+//calculate stop Loss
+stopLossVal = stopLoss==true ? ( strategy.position_avg_price -  (strategy.position_avg_price*0.08) ) : 0
+//partial profit
+strategy.close(id="RSIDivLE", comment="TP1", qty=strategy.position_size*3/4, when=strategy.position_size>0 and (longTermRSI>=takeProfitRSILevel or crossover(longTermRSI,90)))
+strategy.close(id="RSIDivLE",comment="TP2",   qty=strategy.position_size*3/4 , when=crossover(longTermRSI,70))
+strategy.close(id="RSIDivLE",comment="TP3",   qty=strategy.position_size/2, when=crossover(longTermRSI,65))
+strategy.close(id="RSIDivLE",comment="TP4",   qty=strategy.position_size/2 , when=crossover(longTermRSI,60))
+//close the whole position when stoploss hits or longTermRSI goes below 30
+strategy.close(id="RSIDivLE",comment="Exit",    when=crossunder(longTermRSI,30) or close<stopLossVal)
+Expand (202 lines)

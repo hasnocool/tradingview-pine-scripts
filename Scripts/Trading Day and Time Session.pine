@@ -1,0 +1,131 @@
+Script Name: Trading Day and Time Session
+Author: Dannnnnnny
+Description: This script provides options for the user to choose:
+- Start date and End date
+- Trade time during a day (With UTC offset)
+- Which days of the week to trade
+
+It return a condition if all the date and time conditions are true. It's very easy to integrate with any script.
+PineScript code:
+
+Pine Script™ strategy
+Trading Day and Time Session
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Dannnnnnny
+//@version=5
+strategy(title="Trade Day-Time Session", overlay = true)
+//Session=====================================================================
+fromDay = input.int(defval = 1, title = "From", minval = 1, maxval = 31, inline="1", group='Trade Session')
+fromMonth = input.int(defval = 1, title = "", minval = 1, maxval = 12,inline="1", group='Trade Session')
+fromYear = input.int(defval = 2010, title = "", minval = 1970, inline="1", group='Trade Session')
+toDay = input.int(defval = 31, title = "To", minval = 1, maxval = 31, inline="2", group='Trade Session')
+toMonth = input.int(defval = 12, title = "", minval = 1, maxval = 12, inline="2",group='Trade Session')
+toYear = input.int(defval = 2099, title = "", minval = 1970, inline="2",group='Trade Session')
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+date_cond = time >= startDate and time <= finishDate
+i_sess = input.session("0400-1900", "Trade time", group='Trade Session')
+UTC_offset = input.int(3, title='UTC Offset', minval=-10, maxval=13, group='Trade Session')
+UTC_string = 'UTC' + (UTC_offset > 0 ? '+' : '') + (UTC_offset != 0 ? str.tostring(UTC_offset) : '')
+time_cond = time(timeframe.period, i_sess, UTC_string)
+is_trade_mon = input(true, title="Trade Monday?", group='Trade Session')
+is_trade_tue = input(true, title="Trade Tuesday?", group='Trade Session')
+is_trade_wed = input(true, title="Trade Wednesday?", group='Trade Session')
+is_trade_thu = input(true, title="Trade Thursday?", group='Trade Session')
+is_trade_fri = input(true, title="Trade Friday?", group='Trade Session')
+is_trade_sat = input(false, title="Trade Saturday?", group='Trade Session')
+is_trade_sun = input(false, title="Trade Sunday?", group='Trade Session')
+day_cond = false
+if(dayofweek(time_cond, UTC_string) == dayofweek.monday and is_trade_mon)
+    day_cond := true
+else if(dayofweek(time_cond, UTC_string) == dayofweek.tuesday and is_trade_tue)
+    day_cond := true
+else if(dayofweek(time_cond, UTC_string) == dayofweek.wednesday and is_trade_wed)
+    day_cond := true
+else if(dayofweek(time_cond, UTC_string) == dayofweek.thursday and is_trade_thu)
+    day_cond := true
+else if(dayofweek(time_cond, UTC_string) == dayofweek.friday and is_trade_fri)
+    day_cond := true
+else if(dayofweek(time_cond, UTC_string) == dayofweek.saturday and is_trade_sat)
+    day_cond := true
+else if(dayofweek(time_cond, UTC_string) == dayofweek.sunday and is_trade_sun)
+    day_cond := true
+bgcolor(time == time_cond and day_cond ? color.new(color.gray,90) : na)
+final_time_cond = time == time_cond and day_cond and date_cond
+//=====================================================================
+maLength= 400
+wma= ta.vwma(hl2,maLength)
+uptrend= ta.rising(wma, 5)
+downtrend= ta.falling(wma,5)
+plot(wma)
+if(final_time_cond)
+    if uptrend
+        strategy.entry("Buy", strategy.long)
+    else
+        strategy.close("Buy")
+Expand (64 lines)

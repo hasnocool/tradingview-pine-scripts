@@ -1,0 +1,88 @@
+Script Name: Stochastic Rsi+Ema - Auto Buy Scalper Scirpt v.0.3
+Author: TechYes069
+Description: Simple concept for a scalping script, written for 5 minute candles, optimized for BTC.  
+1st script I've created from scratch, somewhat from scratch.  Also part of the goal of this one is to hold coin as often as possible, whenever it's sideways or not dropping significantly. 
+
+Designed to buy on the stochastic bottoms (K>D and rising, and <17) 
+Then and sell...
+PineScript code:
+
+Pine Script™ strategy
+Stochastic Rsi+Ema - Auto Buy Scalper Scirpt v.0.3
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+//@version=5
+strategy(title="Stochastic RSI W Auto Buy Scalper Scirpt III ", shorttitle="Stoch RSI_III", format=format.price, precision=2)
+smoothK = input.int(3, "K", minval=1)
+smoothD = input.int(3, "D", minval=1)
+lengthRSI = input.int(14, "RSI Length", minval=1)
+lengthStoch = input.int(14, "Stochastic Length", minval=1)
+src = input(close, title="RSI Source")
+rsi1 = ta.rsi(src, lengthRSI)
+k = ta.sma(ta.stoch(rsi1, rsi1, rsi1, lengthStoch), smoothK)
+d = ta.sma(k, smoothD)
+plot(k, "K", color=#2962FF)
+plot(d, "D", color=#FF6D00)
+h0 = hline(80, "Upper Band", color=#787B86)
+hline(50, "Middle Band", color=color.new(#787B86, 50))
+h1 = hline(20, "Lower Band", color=#787B86)
+longStopLoss  = strategy.opentrades.entry_price(0)* (.985)
+stochDropping = ta.falling(k,2)
+shortSma = ta.sma(hlc3,12)
+shorterSma = ta.sma(hlc3,3)
+plot(shortSma[3])
+shortSmaFlip = (ta.change(shortSma,3)>0) and ta.falling(hlc3,1)
+shorterSmaFlip = (ta.change(shorterSma,2)>0) and ta.falling(hlc3,1)
+messageSellText ='"type": "sell", "symbol": "BTCUSD", "marketPosition": "{{strategy.market_position}}"'
+messageBuyText ='"type": "buy", "symbol": "BTCUSD", "marketPosition": {{strategy.market_position}}"'
+fill(h0, h1, color=color.rgb(33, 150, 243, 90), title="Background")
+strategy.entry("Tech", strategy.long, .003, when=(strategy.position_size <= 0 and k<17 and k>d),alert_message=messageBuyText)
+//original: strategy.close("TL", when=(strategy.position_size >= 0 and (k>90 and k<d)))
+takeProfit = hlc3 > strategy.opentrades.entry_price(0)*1.01
+//longStopLoss  = strategy.opentrades.entry_price(0)* (.995)
+strategy.close("Tech", when=(strategy.position_size >= 0 and (k>90 and k<d and stochDropping)) or close<longStopLoss, comment="rsi or Stop sell",alert_message=messageSellText)
+//strategy.close("Tech", when=(strategy.position_size >= 0 and close<longStopLoss), comment="stopLoss sell",alert_message=messageSellText)
+strategy.close("Tech", when=(shortSmaFlip and k>20 and takeProfit),comment="Sma after profit",alert_message=messageSellText)
+Expand (43 lines)

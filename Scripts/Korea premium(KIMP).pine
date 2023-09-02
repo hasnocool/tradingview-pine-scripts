@@ -1,0 +1,324 @@
+Script Name: Korea premium(KIMP)
+Author: roses27
+Description: Korea premium(KIMP) Ver. 1.0
+
+I posted an  'KIMP(Kimchi premium, Korea Premium) can be used  as a leading indicator of collapse and adjustment.'
+idea.
+
+by the way @mahmodbeigy asked if it was true and I answered the question with this strategy.
+PineScript code:
+
+Pine Script™ strategy
+Korea premium(KIMP)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © roses27
+//@version=4
+// Ver. 1.4
+strategy(title = "Korea premium(KIMP)", overlay=true, calc_on_every_tick=false,
+         process_orders_on_close=true, initial_capital=100000, default_qty_type=strategy.percent_of_equity, 
+         default_qty_value=100, pyramiding = 0, commission_type=strategy.commission.percent, commission_value=0.25)
+tradeType   = input("LONG", title="What trades should be taken : ", options=["LONG", "SHORT", "BOTH"])
+use_ema     = input(defval = false,  title = "use EMA?")
+basisLen0   = input(defval = 10,     title = "MA Period",        minval = 1)
+alma_offset = input(defval = 0.5,    title = "Offset for ALMA",  minval = 0.0, step = 0.02)
+alma_sigma  = input(defval = 20.0,   title = "Sigma for ALMA",   minval = 0.0, step = 1.0)
+high_low_Len= input(defval = 254,    title = "High Low Period",  minval = 1)
+i_startTime = input(defval = timestamp(" 1 Mar 2021 00:00 +0000"), title ="Start Time", type = input.time)
+i_endTime   = input(defval = timestamp(" 1 Dec 2022 00:00 +0000"), title ="End Time",   type = input.time)
+use_index_btc= input(defval = false,  title = "Use INDEX:BTCUSD KIMP?",      group = "Select data to use for calculation")
+use_absolute= input(defval = false,  title = "Use Absolute Percentage?",    group = "Absolute Percentage")
+bias_low_A  = input(defval = 13.2,   title = "Absolute bias_low %",         group = "Absolute Percentage",              step=0.1)
+bias_high_A = input(defval = 16.7,   title = "Absolute bias_high  %",       group = "Absolute Percentage",  minval=0,   step=0.1)
+bias_low    = input(defval =  30.0 , title = "Relative bias_low  %",        group = "Relative  Percentage", minval=0,   step=1.0)/100.0
+bias_high   = input(defval =  95.0 , title = "Relative bias_high %",        group = "Relative  Percentage",             step=1.0)/100.0
+bb          = input(defval = false,  title = "use BB?")
+length0     = input(defval = 70, title = "BB Length")
+stddev0     = input(defval = 0.3, title = "BB Stddev", step = 0.01)
+length_ema  = input(defval = 34, title = "ema Length")
+st0         = input(defval = 'KRW',  title = "Current Currency",            group = "Select Currency to use for calculation")
+st1         = input(defval = 'USDT', title = "Currency to compare",         group = "Select Currency to use for calculation")
+st2         = input(defval = 'USD',  title = "Currency to compare",         group = "Select Currency to use for calculation")
+Dealer_0    = input(defval = 'BITHUMB', title = "Current Dealer",           group = "Select Currency to use for calculation")
+Dealer_1    = input(defval = 'BINANCE', title = "Dealer to compare",        group = "Select Currency to use for calculation")
+// id01 = input(defval = syminfo.ticker, title='Symbol 01',type=input.symbol)
+// id01 = input(defval = 'XRP', title='Symbol 01',type=input.symbol)
+f_grad_transp(_c_col, _transp) =>
+    _c_red = color.r(_c_col)
+    _c_green = color.g(_c_col)
+    _c_blue = color.b(_c_col)
+    color.rgb(_c_red, _c_green, _c_blue, _transp)
+var string id00 = str.replace_all(syminfo.ticker,st1,'')
+var string id0  = str.replace_all(id00,st2,'')
+var string id   = str.replace_all(id0, st0,'')
+var string id0_0 = Dealer_0 + ':' + id + st0
+var string id0_1 = Dealer_1 + ':' + id + st1
+showPlot    = input(defval = true, title = "Show Plot", type = input.bool)
+inDateRange = time >= i_startTime and time <= i_endTime
+coin_0      = security(id0_0, "", close)
+coin_0_high = security(id0_0, "", high)
+coin_0_low  = security(id0_0, "", low)
+coin_1      = security(id0_1, "", close)
+coin_1_high = security(id0_1, "", high)
+coin_1_low  = security(id0_1, "", low)
+btc_krw      = security('BITHUMB:BTCKRW',"", close)
+btc_krw_high = security('BITHUMB:BTCKRW',"", high)
+btc_krw_low  = security('BITHUMB:BTCKRW',"", low)
+// btc_usd      = security('BINANCE:BTCUSDT',"", close)
+// btc_usd_high = security('BINANCE:BTCUSDT',"", high)
+// btc_usd_low  = security('BINANCE:BTCUSDT',"", low)
+btc_usd      = security('INDEX:BTCUSD',"", close)
+btc_usd_high = security('INDEX:BTCUSD',"", high)
+btc_usd_low  = security('INDEX:BTCUSD',"", low)
+usd_krw = security('USDKRW',"",close)
+kimp_       = 0.0
+kimp_high   = 0.0
+kimp_low    = 0.0
+if use_index_btc
+    kimp_       := 100.0 * (btc_krw      - btc_usd      * usd_krw) / (btc_usd      * usd_krw)
+    kimp_high   := 100.0 * (btc_krw_high - btc_usd_high * usd_krw) / (btc_usd_high * usd_krw)
+    kimp_low    := 100.0 * (btc_krw_low  - btc_usd_low  * usd_krw) / (btc_usd_low  * usd_krw)
+else 
+    if syminfo.ticker == id + st0 //krw
+         // kimp_ := 100.0 * (coin_1 -    close * usd_krw) / (close    * usd_krw)
+        kimp_       := 100.0 * (close - coin_1 * usd_krw) / close
+        kimp_high   := 100.0 * (high  - coin_1 * usd_krw) / high
+        kimp_low    := 100.0 * (low   - coin_1 * usd_krw) / low
+    else                          //usd
+        kimp_       := 100.0 * (coin_0      / usd_krw -    close) / close
+        kimp_high   := 100.0 * (coin_0_high / usd_krw -    high)  / high
+        kimp_low    := 100.0 * (coin_0_low  / usd_krw -    low)   / low
+var int basisLen =  int(3 * basisLen0/tonumber(timeframe.period)) > 3 ? int(3 * basisLen0/tonumber(timeframe.period)) : 3
+kimp_alma       = alma(kimp_,     basisLen, alma_offset, alma_sigma)
+kimp_alma_h     = alma(kimp_high, basisLen, alma_offset, alma_sigma)
+kimp_alma_l     = alma(kimp_low,  basisLen, alma_offset, alma_sigma)
+// kimp_alma_high  = highest(kimp_alma, high_low_Len)
+// kimp_alma_low   = lowest( kimp_alma, high_low_Len)
+kimp_alma_high  = highest(kimp_alma_h, high_low_Len)
+kimp_alma_low   = lowest( kimp_alma_l, high_low_Len)
+kimp_ema        = ema(kimp_,     basisLen0)
+kimp_ema_h      = ema(kimp_high, basisLen0)
+kimp_ema_l      = ema(kimp_low,  basisLen0)
+kimp_ema_high   = highest(kimp_ema_h, high_low_Len)
+kimp_ema_low    = lowest( kimp_ema_l, high_low_Len)
+kimp_plot_ = 0.0    
+if syminfo.ticker == id + st1 or syminfo.ticker == id + st2
+    kimp_plot_   := coin_0 / usd_krw
+if syminfo.ticker == id + st0
+    kimp_plot_   := coin_1 * usd_krw
+// if use_index_btc and id == 'BTC'
+//     kimp_plot_   := btc_usd * usd_krw
+if use_index_btc and id == 'BTC' and syminfo.ticker == id + st0
+    kimp_plot_   := btc_usd * usd_krw
+    
+if use_index_btc and id == 'BTC' and (syminfo.ticker == id + st1 or syminfo.ticker == id + st2)
+    kimp_plot_   := btc_krw / usd_krw
+[middle, upper, lower] = bb(kimp_, length0, stddev0)
+close_ema = ema(kimp_, length_ema)
+value       = 0.0
+bottom_value= 0.0
+top_value   = 0.0
+if use_absolute
+    value       := kimp_
+    bottom_value:= bias_low_A
+    top_value   := bias_high_A
+else if bb    
+    value       := close_ema
+    bottom_value:= lower
+    top_value   := upper
+else if use_ema
+    value       := kimp_
+    bottom_value:= (kimp_ema_high - kimp_ema_low) * bias_low  + kimp_ema_low
+    top_value   := (kimp_ema_high - kimp_ema_low) * bias_high + kimp_ema_low
+else
+    value       := kimp_
+    bottom_value:= (kimp_alma_high - kimp_alma_low) * bias_low  + kimp_alma_low
+    top_value   := (kimp_alma_high - kimp_alma_low) * bias_high + kimp_alma_low
+PAL     = (value <  bottom_value)
+PAS     = (value >  top_value )
+c_grad  = color.from_gradient(value, bottom_value, top_value, color.lime, color.red)    
+chgPAL = PAL and not PAL[1]
+chgPAS = PAS and not PAS[1]
+band0 = plot(series = showPlot and inDateRange ?  kimp_plot_ : na, color =  syminfo.ticker == id0 ? color.blue : color.red, linewidth = 2)
+band1 = plot(inDateRange ?  close: na)
+fill(band0, band1, color=f_grad_transp(c_grad, 80), title="Background")
+if (inDateRange and tradeType!="NONE")
+    strategy.entry("long",  strategy.long,  when=chgPAL ==true and tradeType!="SHORT" and inDateRange, comment = "EL")
+    strategy.entry("short", strategy.short, when=chgPAS ==true and tradeType!="LONG"  and inDateRange, comment = "ES")
+    strategy.close("long",                  when=chgPAS ==true and tradeType=="LONG"  and inDateRange, comment = "EL close")
+    strategy.close("short",                 when=chgPAL ==true and tradeType=="SHORT" and inDateRange, comment = "ES close")
+// === /STRATEGY ===
+// eof
+Expand (172 lines)

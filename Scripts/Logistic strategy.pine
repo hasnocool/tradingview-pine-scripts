@@ -1,0 +1,83 @@
+Script Name: Logistic strategy
+Author: pieroliviermarquis
+Description: This strategy is loosely based on the logistic function. This function is often used to model population growth. I used it here to model price change using the z-score of net volume as the parameter to the exponential function.
+PineScript code:
+
+Pine Script™ strategy
+Logistic strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+//@version=4
+strategy("Logistic", overlay=true, shorttitle="Logistic Strategy", default_qty_type= strategy.percent_of_equity, default_qty_value= 100, initial_capital= 10000, calc_on_every_tick=true)
+volume_pos = 0.0
+volume_neg = 0.0
+roc = roc(close, 1)
+for i = 0 to 100
+    if (roc > 0)
+        volume_pos := volume
+    else
+        volume_neg := volume
+    
+volume_net = volume_pos - volume_neg
+net_std    = stdev(volume_net, 100)
+net_sma    = sma(volume_net, 10)
+z          =  net_sma / net_std
+std        = stdev(close, 20)
+logistic(close, std, z) =>
+    m = (close + std)
+    a = std / close
+    pt = m / ( 1 + a*exp(-z))
+    pt
+    
+    
+pred = logistic(close, std, z)
+buy = pred > close * 1.005
+sell = pred < close * 0.995
+color = strategy.position_size > 0? #3BB3E4 : strategy.position_size == 0? #FF006E : #6b6b6b
+barcolor(color)
+if (buy == true)
+    strategy.entry("Long", strategy.long, comment="Open L")
+    
+if (sell == true)
+    strategy.close("Long", comment="Close L")
+Expand (41 lines)

@@ -1,0 +1,189 @@
+Script Name: CCI + EMA with RSI Cross Strategy
+Author: rwestbrookjr
+Description: This strategy uses the CCI + 2 RSIs + 2 EMAs to generate trade signals. Trades are only taken during the normal trading session and all open trades are closed 15 min before the close of the current session. A trailing stop loss is used and is customizable. 
+
+Not trading advice, use at your own risk.
+PineScript code:
+
+Pine Script™ strategy
+CCI + EMA with RSI Cross Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © rwestbrookjr
+//@version=5
+strategy("CCI + EMA with RSI Cross Strategy", overlay=true, margin_long=100, margin_short=100, process_orders_on_close=true)
+//EMA
+fastLen = input(title='Fast EMA Length', defval=9, group='EMA Settings')
+slowLen = input(title='Slow EMA Length', defval=20, group='EMA Settings')
+fastEMA = ta.ema(close, fastLen)
+slowEMA = ta.ema(close, slowLen)
+fema = plot(fastEMA, title='FastEMA', color=color.new(color.green, 0), linewidth=1, style=plot.style_line)
+sema = plot(slowEMA, title='SlowEMA', color=color.new(color.red, 0), linewidth=1, style=plot.style_line)
+fill(fema, sema, color=fastEMA > slowEMA ? color.new(#417505, 50) : color.new(#890101, 50), title='Cloud')
+// Bull and Bear Alerts
+//Bull = ta.crossover(fastEMA, slowEMA)
+Bull = fastEMA > slowEMA
+//Bear = ta.crossunder(fastEMA, slowEMA)
+Bear = fastEMA < slowEMA
+//RSIs
+rsiLength1Input = input.int(9, minval=1, title="Fast RSI Length", group="RSI Settings")
+rsiSource1Input = input.source(close, "Fast RSI Source", group="RSI Settings")
+rsiLength2Input = input.int(20, minval=1, title="Slow RSI Length", group="RSI Settings")
+rsiSource2Input = input.source(close, "Slow RSI Source", group="RSI Settings")
+up1 = ta.rma(math.max(ta.change(rsiSource1Input), 0), rsiLength1Input)
+down1 = ta.rma(-math.min(ta.change(rsiSource1Input), 0), rsiLength1Input)
+rsi = down1 == 0 ? 100 : up1 == 0 ? 0 : 100 - (100 / (1 + up1 / down1))
+up2 = ta.rma(math.max(ta.change(rsiSource2Input), 0), rsiLength2Input)
+down2 = ta.rma(-math.min(ta.change(rsiSource2Input), 0), rsiLength2Input)
+rsi2 = down2 == 0 ? 100 : up2 == 0 ? 0 : 100 - (100 / (1 + up2 / down2))
+rsiBull = rsi > rsi2 and rsi > rsi[1]
+rsiBear = rsi < rsi2 and rsi < rsi[1]
+//CCI
+cciLength = input.int(title='CCI Length', group='CCI Settings', defval=20, minval=1)
+src = input(hlc3, title='CCI Source', group='CCI Settings')
+ma = ta.sma(src, cciLength)
+cci = (src - ma) / (0.015 * ta.dev(src, cciLength))
+cciCut = input.int(title = 'CCI Cutoff', group='CCI Settings', defval = 50)
+cciBull = cci > cciCut
+cciBear = cci < cciCut * -1
+//Trail Stop Setup
+trstp = input.float(title="Trail Loss ($)", group='Stop Settings', minval = 0.0, step = 0.01, defval = 0.67)
+longStop = 0.0, shortStop = 0.0
+longStop := if Bull or strategy.position_size > 0
+    stopValue = slowEMA - trstp
+    math.max(stopValue, longStop[1])
+else
+    0.0
+shortStop := if Bear or strategy.position_size < 0
+    stopValue = slowEMA + trstp
+    math.min(stopValue, shortStop[1])
+else
+    999999
+    
+plotshape(title='Short Stop', series=shortStop != 999999 and strategy.opentrades > 0 and strategy.position_size < 0 ? shortStop : na, style=shape.cross, color=color.yellow, location=location.absolute)
+plotshape(title='Long Stop', series=longStop != 0.0 and strategy.opentrades > 0 and strategy.position_size > 0 ? longStop : na,style=shape.cross, color=color.yellow, location=location.absolute)
+//Session Setup
+open_session=input.session(title='Session',group='Session Settings', defval="0930-1545")
+session = time("1", open_session)
+validSession=(na(session) ? 0 : 1)
+//Trade Signals
+//longCondition = Bull and cci > cciCut and ta.crossover(rsi,rsi2) and validSession
+longCondition = cciBull and ta.crossover(rsi,rsi2) and close > slowEMA and validSession
+//longCondition = cciBull and ta.crossover(rsi,rsi2) and Bull and validSession
+if (longCondition)
+    strategy.entry("Long", strategy.long, 100)
+    
+//longExit = close > strategy.opentrades.entry_price(0) + 1.5 or close < strategy.opentrades.entry_price(0) - 0.75
+longExit = close < longStop or not validSession
+//longExit = ta.crossunder(low,longStop) or not validSession
+if (longExit)
+    strategy.close("Long")
+//shortCondition = Bear and cci < (cciCut*-1) and ta.crossunder(rsi,rsi2) and validSession
+shortCondition = cciBear and ta.crossunder(rsi,rsi2) and close < slowEMA and validSession
+//shortCondition = cciBear and ta.crossunder(rsi,rsi2) and Bear and validSession
+if (shortCondition)
+    strategy.entry("Short", strategy.short, 100)
+//shortExit = close < strategy.opentrades.entry_price(0) - 1.5 or close > strategy.opentrades.entry_price(0) + 0.75
+shortExit = close > shortStop or not validSession
+//shortExit = ta.crossover(high, shortStop) or not validSession
+if (shortExit)
+    strategy.close("Short")
+Expand (98 lines)

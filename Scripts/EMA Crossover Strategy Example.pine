@@ -1,0 +1,174 @@
+Script Name: EMA Crossover Strategy Example
+Author: ParametricTrading
+Description: This is a script written as an example of how to build a simple strategy with user-defined inputs based on a simple Moving Average crossover.  
+
+--
+
+This indicator is used for backtesting Moving Average crossover strategies (only for long trades). 
+
+A "short" and "long" moving average period and calculation method (the "smoothing type") are user-adjustable. The...
+PineScript code:
+
+Pine Script™ strategy
+EMA Crossover Strategy Example
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//@version=4
+strategy("EMA Crossover Strategy", overlay=true)
+////////////////////////////////////////////////////////////////////////////////
+// BACKTESTING RANGE
+ 
+// From Date Inputs
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2020, title = "From Year", minval = 1970)
+ 
+// To Date Inputs
+toDay = input(defval = 1, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 1, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2021, title = "To Year", minval = 1970)
+ 
+// Calculate start/end date and time condition
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate
+ 
+////////////////////////////////////////////////////////////////////////////////
+//CREATE USER-INPUT VARIABLES
+periodShort = input(13, minval=1, title="Enter Period for Short Moving Average")
+smoothingShort = input(title="Choose Smoothing Type for Short Moving Average", defval="EMA", options=["RMA", "SMA", "EMA", "WMA", "VWMA", "SMMA", "DEMA", "TEMA", "HullMA", "LSMA"])
+periodLong = input(48, minval=1, title="Enter Period for Long Moving Average")
+smoothingLong = input(title="Choose Smoothing Type for Long Moving Average", defval="EMA", options=["RMA", "SMA", "EMA", "WMA", "VWMA", "SMMA", "DEMA", "TEMA", "HullMA", "LSMA"])
+periodExit = input(30, minval=1, title="Enter Period for Exit Moving Average")
+smoothingExit = input(title="Choose Smoothing Type for Exit Moving Average", defval="EMA", options=["RMA", "SMA", "EMA", "WMA", "VWMA", "SMMA", "DEMA", "TEMA", "HullMA", "LSMA"])
+src1 = close
+pivot = (high + low + close) / 3
+//MA CALCULATION FUNCTION
+ma(smoothing, src, length) => 
+    if smoothing == "RMA"
+        rma(src, length)
+    else
+        if smoothing == "SMA"
+            sma(src, length)
+        else 
+            if smoothing == "EMA"
+                ema(src, length)
+            else 
+                if smoothing == "WMA"
+                    wma(src, length)
+                else
+                    if smoothing == "VWMA"
+                        vwma(src, length)
+                    else
+                        if smoothing == "SMMA"
+                            na(src[1]) ? sma(src, length) : (src[1] * (length - 1) + src) / length
+                        
+                        else
+                            if smoothing == "HullMA"
+                                wma(2 * wma(src, length / 2) - wma(src, length), round(sqrt(length)))
+//ASSIGN A MOVING AVERAGE RESULT TO A VARIABLE
+shortMA=ma(smoothingShort, pivot, periodShort)
+longMA=ma(smoothingLong, pivot, periodLong)
+exitMA=ma(smoothingExit, pivot, periodExit)
+//PLOT THOSE VARIABLES
+plot(shortMA, linewidth=4, color=color.yellow,title="The Short Moving Average")
+plot(longMA, linewidth=4, color=color.blue,title="The Long Moving Average")
+plot(exitMA, linewidth=1, color=color.red,title="The Exit CrossUnder Moving Average")
+//BUY STRATEGY
+buy = crossover(shortMA,longMA) ? true : na
+exit = crossunder(close,exitMA) ? true : na
+strategy.entry("long",true,when=buy and time_cond)
+strategy.close("long",when=exit and time_cond)
+if (not time_cond)
+    strategy.close_all()
+Expand (90 lines)

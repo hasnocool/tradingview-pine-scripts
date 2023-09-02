@@ -1,0 +1,121 @@
+Script Name: Ichimoku Cloud Strategy Long Only [Bitduke]
+Author: Bitduke
+Description: Slightly modificated and optimized for Pine Script 4.0, Ichimoku Cloud Strategy which, suddenly, good suitable for the several crypto assets.
+
+ Details: 
+
+Enter position when conversion line crosses base line up, and close it when the opposite happens. 
+
+Additional condition for open / close the trade is lagging span, it should be higher than cloud to open...
+PineScript code:
+
+Pine Script™ strategy
+Ichimoku Cloud Strategy Long Only [Bitduke]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// Simple long-only Ichimoku Cloud Strategy
+// Enter position when conversion line crosses base line up, and close it when the opposite happens. 
+// Additional condition for open / close the trade is lagging span, it should be higher than cloud to open position and below - to close it.
+//@version=4
+strategy("Ichimoku Cloud Strategy Long Only", shorttitle="Ichimoku Cloud Strategy (long only)", overlay=true, calc_on_every_tick=true,pyramiding=0, default_qty_type=strategy.cash,default_qty_value=1000, currency=currency.USD, initial_capital=1000,commission_type=strategy.commission.percent, commission_value=0.075)
+conversion_length = input(9, minval=1, title="Conversion Line Periods"),
+base_length = input(26, minval=1, title="Base Line Periods")
+lagging_length = input(52, minval=1, title="Lagging Span 2 Periods"),
+delta = input(26, minval=1, title="Delta")
+average(len) => avg(lowest(len), highest(len))
+conversion_line = average(conversion_length) // tenkan sen - trend
+base_line = average(base_length) // kijun sen - movement
+lead_line_a = avg(conversion_line, base_line) // senkou span A
+lead_line_b = average(lagging_length) // senkou span B
+lagging_span = close // chikou span - trend / move power
+plot(conversion_line, color=color.blue, linewidth=2, title="Conversion Line")
+plot(base_line, color=color.white, linewidth=2, title="Base Line")
+plot(lagging_span, offset = -delta, color=color.purple, linewidth=2, title="Lagging Span")
+lead_line_a_plot = plot(lead_line_a, offset = delta, color=color.green, title="Lead 1")
+lead_line_b_plot = plot(lead_line_b, offset = delta, color=color.red, title="Lead 2")
+fill(lead_line_a_plot, lead_line_b_plot, color = lead_line_a > lead_line_b ? color.green : color.red)
+// Strategy logic
+long_signal = crossover(conversion_line,base_line) and ((lagging_span) > (lead_line_a)) and ((lagging_span) > (lead_line_b))
+short_signal = crossover(base_line, conversion_line) and ((lagging_span) < (lead_line_a)) and ((lagging_span) < (lead_line_b))
+strategy.entry("LONG", strategy.long, when=strategy.opentrades == 0 and long_signal, alert_message='BUY')
+strategy.close("LONG", when=strategy.opentrades > 0 and short_signal, alert_message='SELL')
+    
+    // === Backtesting Dates === thanks to Trost
+testPeriodSwitch = input(true, "Custom Backtesting Dates")
+testStartYear = input(2021, "Backtest Start Year")
+testStartMonth = input(1, "Backtest Start Month")
+testStartDay = input(1, "Backtest Start Day")
+testStartHour = input(0, "Backtest Start Hour")
+testPeriodStart = timestamp(testStartYear, testStartMonth, testStartDay, testStartHour, 0)
+testStopYear = input(2021, "Backtest Stop Year")
+testStopMonth = input(12, "Backtest Stop Month")
+testStopDay = input(1, "Backtest Stop Day")
+testStopHour = input(0, "Backtest Stop Hour")
+testPeriodStop = timestamp(testStopYear, testStopMonth, testStopDay, testStopHour, 0)
+testPeriod() =>
+    time >= testPeriodStart and time <= testPeriodStop ? true : false
+testPeriod_1 = testPeriod()
+isPeriod = testPeriodSwitch == true ? testPeriod_1 : true
+// === /END
+if not isPeriod
+    strategy.cancel_all()
+    strategy.close_all()
+Expand (58 lines)

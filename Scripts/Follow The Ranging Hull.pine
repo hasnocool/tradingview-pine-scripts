@@ -1,0 +1,591 @@
+Script Name: Follow The Ranging Hull
+Author: flygalaxies
+Description: This is a scalping strategy, trying to make quick points based on momentum and trend trading.
+
+Entry Points are when either the range filter or the the following line changes colour. And the Hull is in that same direction. 
+
+--The Strategy Only enters on range filter entry point for now.
+
+This Strategy has been tested on the NASDAQ 1 min,  And works best with low...
+PineScript code:
+
+Pine Script™ strategy
+Follow The Ranging Hull
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © flygalaxies
+// Strategy based on the Follow Line Indicator by Dreadblitz, Hull Suite by InSilico and Range Filter Buy and Sell 5 min by guikroth
+// Designed for the purpose of back testing
+// Strategy:
+//  - When the Range Filter Color Changes, And the HULL Suite is in that direction, Enter In that direction
+//  - e.g Range Filter Changes color from red to green, and Hull Suite is in Green. Enter Long
+//  - e.g Range Filter Changes color from green to red, and Hull Suite is in red. Enter Short
+//
+//  - When the Following Line Color Changes, And the HULL Suite is in that direction, Enter In that direction
+//  - e.g Following Line Changes color from red to green, and Hull Suite is in Green. Enter Long
+//  - e.g Following Line Changes color from green to red, and Hull Suite is in red. Enter Short
+//
+// Credits:
+// Hull Suite by InSilico  https://www.tradingview.com/u/InSilico/
+// Range Filter Buy and Sell 5 min https://www.tradingview.com/u/guikroth/
+// Follow Line Indicator by Dreadblitz https://www.tradingview.com/u/Dreadblitz/
+//@version=5
+strategy("Follow The Ranging Hull", overlay=true, initial_capital = 50000, process_orders_on_close = true)
+/////////////////////////
+// STRATEGY SETTINGS ///
+///////////////////////
+fromDate = input.time(title="From", defval=timestamp("01 Jan 2022 00:00 GMT+2"), inline="1", group="Date Range")
+toDate = input.time(title="To", defval=timestamp("01 Jan 2022 23:00 GMT+2"), inline="1", group="Date Range")
+inDate = time >= fromDate and time <= toDate
+isStrategy = input.bool(title="IS STRATEGY", defval = false, group="Trading Rules")
+isPointRule = input.bool(title="Apply Point Rule", defval = false, group="Trading Rules")
+pointRulePoints = input.int(title="Points (The points that it uses to take profit)", defval = 80, group="Trading Rules")
+////////////////////////////////////
+// FOLLOWING, ENTRY, EXIT RULES ///
+//////////////////////////////////
+followLineUseATR = input.bool(title="Use ATR for the Following Line (if false, it will use the slow range filter)", defval = true, group="Following, Entry, Exit Rules")
+followRngFilterEntry = input.bool(title="use Following line or Slow Range Filter as entry point", defval = false, group="Following, Entry, Exit Rules")
+showStatusWindow = input.bool(title="Show Status Window (BETA)", defval = false, group="Following, Entry, Exit Rules")
+hl            = input.bool(defval = false, title = "Hide Labels", group = "Following, Entry, Exit Rules")
+exitRule = input.session("Hull", title="Exit Rule", options=["Hull", "RangeFilter", "Following/SlowRangeFilter"], group="Following, Entry, Exit Rules")
+////////////////////
+// COLOR INPUTS ///
+//////////////////
+rngFilterColorUp = input.color(title="Fast Range Filter Color Up", defval = color.green, group="Range Filter Colors")
+rngFilterColorDown = input.color(title="Fast Range Filter Color Down", defval = color.red, group="Range Filter Colors")
+rngFilterColorUpSlow = input.color(title="Slow Range Filter Color Up", defval = color.green, group="Range Filter Colors")
+rngFilterColorDownSlow = input.color(title="Slow Range Filter Color Down", defval = color.red, group="Range Filter Colors")
+hullColorUp = input.color(title="Hull Color Up", defval = color.green, group="Hull Suite Colors")
+hullColorDown = input.color(title="Hull Color Down", defval = color.red, group="Hull Suite Colors")
+fliColorUp = input.color(title="Follow Line Color Up", defval = color.green, group="Following Line Colors")
+fliColorDown = input.color(title="Follow Line Color Down", defval = color.red, group="Following Line Colors")
+    
+///////////////////////////
+// Range Filter INPUTS ///
+/////////////////////////
+// Fast Inputs
+src = input(defval=ohlc4, title="Range Filter Fast Source", group="Range Filter Fast")
+per = input.int(defval=33, minval=1, title="Range Filter Fast Sampling Period", group="Range Filter Fast")
+mult = input.float(defval=2.1, minval=0.1, title="Range Filter Fast Multiplier", group="Range Filter Fast", step=0.1)
+// Slow Inputs
+srcSlow = input(defval=ohlc4, title="Range Filter Slow Source", group="Range Filter Slow")
+perSlow = input.int(defval=48, minval=1, title="Range Filter Slow Sampling Period", group="Range Filter Slow")
+multSlow = input.float(defval=3.4, minval=0.1, title="Range Filter Slow Multiplier", group="Range Filter Slow", step=0.1)
+/////////////////////////
+// Hull Suite INPUTS ///
+///////////////////////
+srcHull = input(close, title="Source", group="Hull Suite")
+modeSwitch = input.session("Ehma", title="Hull Variation", options=["Hma", "Thma", "Ehma"], group="Hull Suite")
+length = input(55, title="Length(180-200 for floating S/R , 55 for swing entry)")
+switchColor = input(true, "Color Hull according to trend?", group="Hull Suite")
+visualSwitch  = input(true, title="Show as a Band?", group="Hull Suite")
+thicknesSwitch = input(1, title="Line Thickness", group="Hull Suite")
+transpSwitch = input.int(40, title="Band Transparency",step=5, group="Hull Suite")
+//////////////////////////
+// FOLLOW LINE INPUTS ///
+////////////////////////
+BBperiod      = input.int(defval = 21, title = "BB Period", minval = 1, group = "Following Line ")
+BBdeviations  = input.float(defval = 1.00, title = "BB Deviations", minval = 0.1, step=0.05, group = "Following Line ")
+UseATRfilter  = input.bool(defval = true, title = "ATR Filter", group = "Following Line ")
+ATRperiod     = input.int(defval = 5, title = "ATR Period", minval = 1, group = "Following Line ")
+//////////////////////////
+// Range Filter Logic ///
+////////////////////////
+// Fast
+smoothrng(x, t, m) =>
+    wper = t * 2 - 1
+    avrng = ta.ema(math.abs(x - x[1]), t)
+    smoothrng = ta.ema(avrng, wper) * m
+    smoothrng
+smrng = smoothrng(src, per, mult)
+rngfilt(x, r) =>
+    rngfilt = x
+    rngfilt := x > nz(rngfilt[1]) ? x - r < nz(rngfilt[1]) ? nz(rngfilt[1]) : x - r : 
+       x + r > nz(rngfilt[1]) ? nz(rngfilt[1]) : x + r
+    rngfilt
+filt = rngfilt(src, smrng)
+upward = 0.0
+upward := filt > filt[1] ? nz(upward[1]) + 1 : filt < filt[1] ? 0 : nz(upward[1])
+downward = 0.0
+downward := filt < filt[1] ? nz(downward[1]) + 1 : filt > filt[1] ? 0 : nz(downward[1])
+filtcolor = upward > 0 ? rngFilterColorUp : downward > 0 ? rngFilterColorDown : color.orange
+filtplot = plot(filt, color=filtcolor, linewidth=3, title="Fast Range Filter ")
+// Slow
+smoothrngSlow(x, t, m) =>
+    wper = t * 2 - 1
+    avrng = ta.ema(math.abs(x - x[1]), t)
+    smoothrngSlow = ta.ema(avrng, wper) * m
+    smoothrngSlow
+smrngSlow = smoothrngSlow(srcSlow, perSlow, multSlow)
+rngfiltSlow(x, r) =>
+    rngfilt = x
+    rngfilt := x > nz(rngfilt[1]) ? x - r < nz(rngfilt[1]) ? nz(rngfilt[1]) : x - r : 
+       x + r > nz(rngfilt[1]) ? nz(rngfilt[1]) : x + r
+    rngfilt
+filtSlow = rngfiltSlow(srcSlow, smrngSlow)
+upwardSlow = 0.0
+upwardSlow := filtSlow > filtSlow[1] ? nz(upwardSlow[1]) + 1 : filtSlow < filtSlow[1] ? 0 : nz(upwardSlow[1])
+downwardSlow = 0.0
+downwardSlow := filtSlow < filtSlow[1] ? nz(downwardSlow[1]) + 1 : filtSlow > filtSlow[1] ? 0 : nz(downwardSlow[1])
+filtcolorSlow = upwardSlow > 0 ? rngFilterColorUpSlow : downwardSlow > 0 ? rngFilterColorDownSlow : color.orange
+filtplotSlow = plot(followLineUseATR == false ? filtSlow : na, color=filtcolorSlow, linewidth=3, title="Slow Range Filter")
+////////////////////////
+// Hull Suite Logic ///
+//////////////////////
+HMA(_srcHull, _length) =>  ta.wma(2 * ta.wma(_srcHull, _length / 2) - ta.wma(_srcHull, _length), math.round(math.sqrt(_length)))
+EHMA(_srcHull, _length) =>  ta.ema(2 * ta.ema(_srcHull, _length / 2) - ta.ema(_srcHull, _length), math.round(math.sqrt(_length)))
+THMA(_srcHull, _length) =>  ta.wma(ta.wma(_srcHull,_length / 3) * 3 - ta.wma(_srcHull, _length / 2) - ta.wma(_srcHull, _length), _length)
+Mode(modeSwitch, src, len) =>
+      modeSwitch == "Hma"  ? HMA(src, len) : 
+      modeSwitch == "Ehma" ? EHMA(src, len) : 
+      modeSwitch == "Thma" ? THMA(src, len/2) : na
+_hull = Mode(modeSwitch, src, int(length))
+HULL =  _hull
+MHULL = HULL[0]
+SHULL = HULL[2]
+// HIGHER TIMEFRAME HULL
+HULL1 =  request.security(syminfo.ticker, "1", _hull)
+HULL5 =  request.security(syminfo.ticker, "5", _hull)
+HULL15 =  request.security(syminfo.ticker, "15", _hull)
+HULL3 =  request.security(syminfo.ticker, "3", _hull)
+hullColor = switchColor ? (HULL > HULL[2] ? hullColorUp : hullColorDown) : #ff9800
+Fi1 = plot(MHULL, title="MHULL", color=hullColor, linewidth=thicknesSwitch, transp=50)
+Fi2 = plot(visualSwitch ? SHULL : na, title="SHULL", color=hullColor, linewidth=thicknesSwitch, transp=50)
+fill(Fi1, Fi2, title="Band Filler", color=hullColor, transp=transpSwitch)
+/////////////////////////
+// Follow Line Logic ///
+///////////////////////
+BBUpper=ta.sma (close,BBperiod)+ta.stdev(close, BBperiod)*BBdeviations
+BBLower=ta.sma (close,BBperiod)-ta.stdev(close, BBperiod)*BBdeviations
+TrendLine = 0.0
+iTrend = 0.0
+buy = 0.0
+sell = 0.0
+BBSignal = close>BBUpper? 1 : close<BBLower? -1 : 0
+if BBSignal == 1 and UseATRfilter == 1
+    TrendLine:=low-ta.atr(ATRperiod)
+    if TrendLine<TrendLine[1] 
+        TrendLine:=TrendLine[1]
+if BBSignal == -1 and UseATRfilter == 1
+    TrendLine:=high+ta.atr(ATRperiod)
+    if TrendLine>TrendLine[1]
+        TrendLine:=TrendLine[1]
+if BBSignal == 0 and UseATRfilter == 1
+    TrendLine:=TrendLine[1]
+if BBSignal == 1 and UseATRfilter == 0
+    TrendLine:=low
+    if TrendLine<TrendLine[1] 
+        TrendLine:=TrendLine[1]
+if BBSignal == -1 and UseATRfilter == 0
+    TrendLine:=high
+    if TrendLine>TrendLine[1]
+        TrendLine:=TrendLine[1]
+if BBSignal == 0 and UseATRfilter == 0
+    TrendLine:=TrendLine[1]
+iTrend:=iTrend[1]
+if TrendLine>TrendLine[1] 
+    iTrend:=1
+if TrendLine<TrendLine[1] 
+    iTrend:=-1
+buy:= iTrend[1]==-1 and iTrend==1 and followLineUseATR == true ? 1 : na 
+sell:= iTrend[1]==1 and iTrend==-1 and followLineUseATR == true ? 1 : na 
+plot(followLineUseATR == true ? TrendLine : na, color=iTrend > 0? fliColorUp : fliColorDown ,style=plot.style_line,linewidth=2,transp=0,title="Trend Line") 
+///////////////////////////
+// STATUS WINDOW LOGIC ///
+/////////////////////////
+if(showStatusWindow == true )
+    var table statuswindow = table.new(position.top_right, 100, 100, border_width=2)
+    
+    txt1 = "🡇            Hull 1 min             🡇"
+    table.cell(statuswindow, 1, 0, text=txt1, bgcolor=color.new(#000000, 50), text_color=color.white, text_size=size.small)
+    if(HULL1 > HULL1[2])
+        table.cell(statuswindow, 1, 1, text='', bgcolor=hullColorUp, text_color=color.white, text_size=size.small) 
+    else
+        table.cell(statuswindow, 1, 1, text='', bgcolor=hullColorDown, text_color=color.white, text_size=size.small)
+    
+    
+    txt3 = "🡇            Hull 3 min             🡇"
+    table.cell(statuswindow, 2, 0, text=txt3, bgcolor=color.new(#000000, 50), text_color=color.white, text_size=size.small)
+    if(HULL3 > HULL3[2])
+        table.cell(statuswindow, 2, 1, text='', bgcolor=hullColorUp, text_color=color.white, text_size=size.small) 
+    else
+        table.cell(statuswindow, 2, 1, text='', bgcolor=hullColorDown, text_color=color.white, text_size=size.small)
+        
+    txt5 = "🡇            Hull 5 min             🡇"
+    table.cell(statuswindow, 3, 0, text=txt5, bgcolor=color.new(#000000, 50), text_color=color.white, text_size=size.small)
+    if(HULL5 > HULL5[2])
+        table.cell(statuswindow, 3, 1, text='', bgcolor=hullColorUp, text_color=color.white, text_size=size.small) 
+    else
+        table.cell(statuswindow, 3, 1, text='', bgcolor=hullColorDown, text_color=color.white, text_size=size.small)
+    
+    txt15 = "🡇            Hull 15 min             🡇"
+    table.cell(statuswindow, 4, 0, text=txt15, bgcolor=color.new(#000000, 50), text_color=color.white, text_size=size.small)
+    if(HULL15 > HULL15[2])
+        table.cell(statuswindow, 4, 1, text='', bgcolor=hullColorUp, text_color=color.white, text_size=size.small) 
+    else
+        table.cell(statuswindow, 4, 1, text='', bgcolor=hullColorDown, text_color=color.white, text_size=size.small)
+////////////////////////////////////////////
+// ALERTS & LABELS BASED ON ENTRY POINT ///
+//////////////////////////////////////////
+plotshape((filtcolor[1] == rngFilterColorDown and filtcolor == rngFilterColorUp )and hl == false and HULL > HULL[2] ? TrendLine-ta.atr(8) :na, text='BUY', style= shape.labelup, location=location.absolute, color=color.blue, textcolor=color.white, offset=0, transp=0,size=size.auto)
+plotshape((filtcolor[1] == rngFilterColorUp and filtcolor == rngFilterColorDown) and hl == false and HULL < HULL[2] ?TrendLine+ta.atr(8):na, text='SELL', style=shape.labeldown, location=location.absolute, color=color.red, textcolor=color.white, offset=0, transp=0,size=size.auto)
+plotshape(followRngFilterEntry == true and followLineUseATR == true and buy == 1 and hl == false and HULL > HULL[2] ? TrendLine-ta.atr(8) :na, text='BUY', style= shape.labelup, location=location.absolute, color=color.blue, textcolor=color.white, offset=0, transp=0,size=size.auto)
+plotshape(followRngFilterEntry == true and followLineUseATR == true and sell == 1 and hl == false and  HULL < HULL[2] ? TrendLine+ta.atr(8):na, text='SELL', style=shape.labeldown, location=location.absolute, color=color.red, textcolor=color.white, offset=0, transp=0,size=size.auto)
+plotshape(followRngFilterEntry == true and followLineUseATR == false and (filtcolorSlow[1] == rngFilterColorDownSlow and filtcolorSlow == rngFilterColorUpSlow) and hl == false and HULL > HULL[2] ? TrendLine-ta.atr(8) :na, text='BUY', style= shape.labelup, location=location.absolute, color=color.blue, textcolor=color.white, offset=0, transp=0,size=size.auto)
+plotshape(followRngFilterEntry == true and followLineUseATR == false and (filtcolorSlow[1] == rngFilterColorUpSlow and filtcolorSlow == rngFilterColorDownSlow) and hl == false and  HULL < HULL[2] ?TrendLine+ta.atr(8):na, text='SELL', style=shape.labeldown, location=location.absolute, color=color.red, textcolor=color.white, offset=0, transp=0,size=size.auto)
+//////////////////////////////////
+// STRATEGY ENTRY POINT LOGIC ///
+////////////////////////////////
+if(inDate and isStrategy)
+    // RANGE FILTER ENTRY LONG WITH HULL
+    if(filtcolor[1] == rngFilterColorDown and filtcolor == rngFilterColorUp)
+        strategy.entry("rngFiltLong", strategy.long, when = HULL > HULL[2])
+    // RANGE FILTER ENTRY SHORT WITH HULL
+    if(filtcolor[1] == rngFilterColorUp and filtcolor == rngFilterColorDown)
+        strategy.entry("rngFiltShort", strategy.short, when = HULL < HULL[2])
+    // FOLLOW LINE OR SLOW RANGE FILTER ENTRY, IF ENABLED    
+    if(followRngFilterEntry == true)
+        if(followLineUseATR == true)
+            // FOLLOWING LINE  ENTRY SHORT WITH HULL
+            if(buy == 1)
+                strategy.entry("fliLong", strategy.long, when = HULL > HULL[2])
+            // FOLLOWING LINE ENTRY SHORT WITH HULL
+            if(sell == 1)
+                strategy.entry("fliShort", strategy.short, when = HULL < HULL[2])
+        else
+            // SLOW RANGE FILTER ENTRY WITH HULL
+            if(filtcolorSlow[1] == rngFilterColorDownSlow and filtcolorSlow == rngFilterColorUpSlow)
+                strategy.entry("slowRngFiltLong", strategy.long, when = HULL > HULL[2])
+            // SLOW RANGE FILTER ENTRY SHORT WITH HULL
+            if(filtcolorSlow[1] == rngFilterColorUpSlow and filtcolorSlow == rngFilterColorDownSlow)
+                strategy.entry("slowRngFiltShort", strategy.short, when = HULL < HULL[2])
+        
+    if(isPointRule)
+        strategy.exit('exitRngFiltLong', 'rngFiltLong', profit=pointRulePoints)
+        strategy.exit('exitRngFiltShort', 'rngFiltShort', profit=pointRulePoints)
+        strategy.exit('exitSlowRngFiltLong', 'slowRngFiltLong', profit=pointRulePoints)
+        strategy.exit('exitSlowRngFiltShort', 'slowRngFiltShort', profit=pointRulePoints)
+        strategy.exit('exitFliLong', 'fliLong', profit=pointRulePoints, when = sell == 1)
+        strategy.exit('exitFliShort', 'fliShort', profit=pointRulePoints , when = buy == 1)
+    closingRuleLong = exitRule == "Hull" ? HULL > HULL[2] : exitRule == "RangeFilter" ? (filtcolor[2] == rngFilterColorUp and filtcolor == rngFilterColorDown) : exitRule == "Following/SlowRangeFilter" ? followLineUseATR == false? (sell == 1): (filtcolor[2] == rngFilterColorUp and filtcolor == rngFilterColorDown): na
+    closingRuleShort = exitRule == "Hull" ? HULL > HULL[2] : exitRule == "RangeFilter" ? (filtcolor[1] == rngFilterColorDown and filtcolor == rngFilterColorUp) : exitRule == "Following/SlowRangeFilter" ? followLineUseATR == true ? (buy == 1) : (filtcolor[2] == rngFilterColorDown and filtcolor == rngFilterColorUp) : na
+                        
+    strategy.close("rngFiltLong", when = closingRuleLong)
+    strategy.close("rngFiltShort", when = closingRuleShort)
+    strategy.close("slowRngFiltLong", when = closingRuleLong)
+    strategy.close("slowRngFiltShort",  when = closingRuleShort)
+    strategy.close("fliLong", when = closingRuleLong)
+    strategy.close("fliShort", when = closingRuleShort)
+    
+Expand (311 lines)

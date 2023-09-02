@@ -1,0 +1,238 @@
+Script Name: Coin Flipper Pro with strategy tester
+Author: melodicfish
+Description: Converted the script "Coin Flipper Pro" into a Strategy. The same random "Coin Flip" trading fun with new features.  Now users can run back test on the random trades and see how adjusting the risk to reward ratio affects the over all win rate and the profit of each trade. The Back test can be enabled or disabled in the settings along with the option to choose...
+PineScript code:
+
+Pine Script™ strategy
+Coin Flipper Pro with strategy tester
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © melodicfish
+//@version=4
+strategy("Coin Flipper Pro",overlay=true,max_bars_back=100)
+// ======= User Inputs variables=========
+h1=input(title="------- Trade Activity -------",defval=false)
+maxBars=input(25.0,title="Max Bars between Coin Filps",step=1.0,minval=4.0)
+h2=input(title="------- Position Settings -------",defval=false)
+risk=input(defval=5.0,title="Risk in % ",type=input.float, minval=0.001 ,step=0.1)
+ratio= input(defval=1.5,title="Risk to Reward Ratio x:1 ",type=input.float, minval=0.001,step=0.1)
+h3=input(title="------- Plot Options -------",defval=false)
+showBox=input(defval=true, title="Show Position Boxes")
+h4=input(title="------- Back Testing -------",defval=false)
+runTest=input(defval=true, title="Run Strategy Back Test")
+customTime=input(defval=false, title="Use Custom Date Range for back test")
+tsYear = input(2021,minval=1000,maxval=9999,title= "Test Start Year")
+tsMonth = input(1,minval=1,maxval=12,title= "Test Start Month")
+tsDay = input(1,minval=1,maxval=31,title= "Test Start Day")
+start = timestamp(tsYear,tsMonth,tsDay,0,0)
+teYear = input(2021,minval=1000,maxval=9999,title=  "Test Stop Year")
+teMonth = input(5,minval=1,maxval=12,title=  "Test Stop Month")
+teDay = input(1,minval=1,maxval=31,title=  "Test Stop Day")
+end = timestamp(teYear,teMonth,teDay,0,0)
+// ======= variables =========
+var barsBetweenflips=25
+var coinFlipResult=0.0
+var flip=true
+var coinLabel=0.0
+var stoppedOut= true
+var takeProfit=true
+var posLive=false
+var p1=0.0
+var p2=0.0
+var p3=0.0
+var plotBox=false
+var posType=0
+long=false
+short=false
+// ===== Functions ======
+getColor() => 
+    round(random(1,255))
+// ===== Logic ========
+if barssince(flip==true)>barsBetweenflips and posLive==false
+    flip:=true
+    coinLabel:=random(1,10)
+    // Candle Colors   
+candleColor= flip==true and flip[1]==false and barstate.isconfirmed==false?color.rgb(getColor(),getColor(),getColor(),0):flip==false and close>=open?color.green:color.red
+candleColor:= barstate.ishistory==true and close>=open?color.green: barstate.ishistory==true and close<open? color.red:candleColor 
+barcolor(candleColor)
+if flip[1]==true and posLive==false
+    flip:=false
+    barsBetweenflips:=round(random(3,round(maxBars)))
+    posLive:=true
+    
+long:= flip[1]==true and coinLabel[1]>=5.0
+short:= flip[1]==true and coinLabel[1]<5.0
+    // Calculate Position Boxes
+if long==true and posType!=1 
+    riskLDEC=1-(risk/100) 
+    p1:= close[1]*(1+((risk/100)*ratio)) // TargetLine
+    p2:=close[1]
+    p3:= close[1]*riskLDEC // StopLine
+    plotBox:=true
+    posType:=1
+  
+if short==true and posType!=-1 
+    riskSDEC=1-((risk*ratio)/100)
+    p1:= close[1]*riskSDEC   // TargetLine
+    p2:=close[1]
+    p3:= close[1]*(1+(risk/100)) // StopLine
+    plotBox:=true
+    posType:=-1
+    
+    // Check Trade Status 
+stoppedOut:= posType==1 and long==false and low<= p3? true: posType==-1 and short==false and high>=p3? true: false  
+takeProfit:= posType==1 and long == false and high>= p1? true: posType==-1 and short==false and low<=p1? true: false  
+if stoppedOut==true or takeProfit==true
+    posType:=0
+    plotBox:=false
+    posLive:=false
+// ====== Plots ========
+plot1=plot(plotBox and showBox? p1:na,style=plot.style_linebr,color=color.white, transp= 100)
+plot2=plot(plotBox and showBox? p2:na,style=plot.style_linebr,color=color.white, transp= 100)
+plot3=plot(plotBox and showBox? p3:na,style=plot.style_linebr,color=color.white, transp= 100)
+fill(plot1,plot2,color= color.green)
+fill(plot2,plot3,color= color.red)
+plotshape(flip==true and flip[1]==false and coinLabel>=5.0,style=shape.labelup,location=location.belowbar, color=color.green,size=size.tiny,title="short label",text="Heads",textcolor=color.white)
+plotshape(flip==true and flip[1]==false and coinLabel<5.0,style=shape.labeldown,location=location.abovebar, color=color.red,size=size.tiny,title="short label",text="Tails",textcolor=color.white)
+if stoppedOut==true
+    label.new(bar_index-1, p3, style=label.style_xcross, color=color.orange)
+if takeProfit==true
+    label.new(bar_index-1, p1, style=label.style_flag, color=color.blue)
+    
+    
+if runTest==true and customTime==false or runTest==true and customTime==true and time >= start and time <= end 
+    strategy.entry("Sell", strategy.short,when=short==true)
+    strategy.close("Sell", comment="Close Short", when=stoppedOut==true or takeProfit==true)
+    strategy.entry("Long", strategy.long,when=long==true)
+    strategy.close("Long",comment="Close Long", when= stoppedOut==true or takeProfit==true )
+   
+    
+Expand (128 lines)

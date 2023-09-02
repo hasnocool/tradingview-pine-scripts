@@ -1,0 +1,146 @@
+Script Name: Super Scalper - 5 Min 15 Min
+Author: VinayKumarKV
+Description: This strategy is based on RSI and ATR Bands which works better in 5 and 15 Mins time frame. 
+Perform enough back testing with 1:2R before using in real time.
+
+Entry only on trade on screen symbols, use additional buy/sell alerts to book profit or to trail SL.
+
+I have also added Golden Cross Over of 65 and 21 EMA to have confirmation on trend.
+PineScript code:
+
+Pine Script™ strategy
+Super Scalper - 5 Min 15 Min
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+//@version=5
+//Revision: Updated script to pine script version 5
+//added Double RSI for Long/Short prosition trend confirmation instead of single RSI
+strategy("Super Scalper - 5 Min 15 Min", overlay=true)
+source = close
+atrlen = input.int(14, "ATR Period")
+mult = input.float(1, "ATR Multi", step=0.1)
+smoothing = input.string(title="ATR Smoothing", defval="WMA", options=["RMA", "SMA", "EMA", "WMA"])
+ma_function(source, atrlen) => 
+    if smoothing == "RMA"
+        ta.rma(source, atrlen)
+    else
+        if smoothing == "SMA"
+            ta.sma(source, atrlen)
+        else
+            if smoothing == "EMA"
+                ta.ema(source, atrlen)
+            else
+                ta.wma(source, atrlen)
+atr_slen = ma_function(ta.tr(true), atrlen)
+upper_band = atr_slen * mult + close
+lower_band = close - atr_slen * mult
+// Create Indicator's
+ShortEMAlen = input.int(21, "Fast EMA")
+LongEMAlen = input.int(65, "Slow EMA")
+shortSMA = ta.ema(close, ShortEMAlen)
+longSMA = ta.ema(close, LongEMAlen)
+RSILen1 = input.int(25, "Fast RSI Length")
+RSILen2 = input.int(100, "Slow RSI Length")
+rsi1 = ta.rsi(close, RSILen1)
+rsi2 = ta.rsi(close, RSILen2)
+atr = ta.atr(atrlen)
+//RSI Cross condition
+RSILong = rsi1 > rsi2
+RSIShort = rsi1 < rsi2
+// Specify  conditions
+longCondition = open < lower_band
+shortCondition = open > upper_band
+GoldenLong = ta.crossover(shortSMA,longSMA)
+Goldenshort = ta.crossover(longSMA,shortSMA)
+plotshape(shortCondition, title="Sell Label", text="Sell", location=location.abovebar, style=shape.labeldown, size=size.tiny, color=color.red, textcolor=color.white, transp=0)
+plotshape(longCondition, title="Buy Label", text="Buy", location=location.belowbar, style=shape.labelup, size=size.tiny, color=color.green, textcolor=color.white, transp=0)
+plotshape(Goldenshort, title="Golden Sell Label", text="Golden Crossover Short", location=location.abovebar, style=shape.labeldown, size=size.tiny, color=color.blue, textcolor=color.white, transp=0)
+plotshape(GoldenLong, title="Golden Buy Label", text="Golden Crossover Long", location=location.belowbar, style=shape.labelup, size=size.tiny, color=color.yellow, textcolor=color.white, transp=0)
+// Execute trade if condition is True
+if (longCondition)
+    stopLoss = low - atr * 2
+    takeProfit = high + atr * 5
+    strategy.entry("long", strategy.long, when = RSILong)
+if (shortCondition)
+    stopLoss = high + atr * 2
+    takeProfit = low - atr * 5
+    strategy.entry("short", strategy.short, when = RSIShort)
+// Plot ATR bands to chart
+////ATR Up/Low Bands
+plot(upper_band)
+plot(lower_band)
+// Plot Moving Averages
+plot(shortSMA, color = color.red)
+plot(longSMA, color = color.yellow)
+Expand (72 lines)

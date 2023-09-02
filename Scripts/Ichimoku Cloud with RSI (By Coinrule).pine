@@ -1,0 +1,133 @@
+Script Name: Ichimoku Cloud with RSI (By Coinrule)
+Author: Coinrule
+Description: The Ichimoku Cloud is a collection of technical indicators that show support and resistance levels, as well as momentum and trend direction. It does this by taking multiple averages and plotting them on a chart. It also uses these figures to compute a “cloud” that attempts to forecast where the price may find support or resistance in the future.
+
+The Ichimoku...
+PineScript code:
+
+Pine Script™ strategy
+Ichimoku Cloud with RSI (By Coinrule)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Coinrule
+//@version=5
+strategy("Ichimoku Cloud with RSI (By Coinrule)",
+         overlay=true,
+         initial_capital=1000,
+         process_orders_on_close=true,
+         default_qty_type=strategy.percent_of_equity,
+         default_qty_value=30,
+         commission_type=strategy.commission.percent,
+         commission_value=0.1)
+showDate = input(defval=true, title='Show Date Range')
+timePeriod = time >= timestamp(syminfo.timezone, 2022, 6, 1, 0, 0)
+// RSI inputs and calculations
+lengthRSI = 14
+RSI = ta.rsi(close, lengthRSI)
+//Inputs
+ts_bars = input.int(9, minval=1, title="Tenkan-Sen Bars")
+ks_bars = input.int(26, minval=1, title="Kijun-Sen Bars")
+ssb_bars = input.int(52, minval=1, title="Senkou-Span B Bars")
+cs_offset = input.int(26, minval=1, title="Chikou-Span Offset")
+ss_offset = input.int(26, minval=1, title="Senkou-Span Offset")
+long_entry = input(true, title="Long Entry")
+short_entry = input(true, title="Short Entry")
+middle(len) => math.avg(ta.lowest(len), ta.highest(len))
+// Components of Ichimoku Cloud
+tenkan = middle(ts_bars)
+kijun = middle(ks_bars)
+senkouA = math.avg(tenkan, kijun)
+senkouB = middle(ssb_bars)
+// Plot Ichimoku Cloud
+plot(tenkan, color=#0496ff, title="Tenkan-Sen")
+plot(kijun, color=#991515, title="Kijun-Sen")
+plot(close, offset=-cs_offset+1, color=#459915, title="Chikou-Span")
+sa=plot(senkouA, offset=ss_offset-1, color=color.green, title="Senkou-Span A")
+sb=plot(senkouB, offset=ss_offset-1, color=color.red, title="Senkou-Span B")
+fill(sa, sb, color = senkouA > senkouB ? color.green : color.red, title="Cloud color")
+ss_high = math.max(senkouA[ss_offset-1], senkouB[ss_offset-1])
+ss_low = math.min(senkouA[ss_offset-1], senkouB[ss_offset-1])
+// Entry/Exit Conditions
+tk_cross_bull = tenkan > kijun
+tk_cross_bear = tenkan < kijun
+cs_cross_bull = ta.mom(close, cs_offset-1) > 0
+cs_cross_bear = ta.mom(close, cs_offset-1) < 0
+price_above_kumo = close > ss_high
+price_below_kumo = close < ss_low
+bullish = tk_cross_bull and cs_cross_bull and price_above_kumo
+bearish = tk_cross_bear and cs_cross_bear and price_below_kumo
+strategy.entry("Long", strategy.long, when=bullish and long_entry and RSI < 50 and timePeriod)
+strategy.close("Long", when=bearish and not short_entry)
+strategy.entry("Short", strategy.short, when=bearish and short_entry and RSI > 50 and timePeriod)
+strategy.close("Short", when=bullish and not long_entry)
+Expand (70 lines)

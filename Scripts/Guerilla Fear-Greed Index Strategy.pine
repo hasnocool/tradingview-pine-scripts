@@ -1,0 +1,162 @@
+Script Name: Guerilla Fear-Greed Index Strategy
+Author: calebsandfort
+Description: This strategy combines  NAAIM Exposure Index  and the  Equity Put/Call Ratio  into Fear/Greed Index that oscillates between 0 and 100.
+
+It smooths all of these values and enters a trade when Fear reaches a certain threshold and exits when Greed reaches a certain threshold.
+
+I don't really know if this is a great indicator or not, but the results on various indexes...
+PineScript code:
+
+Pine Script™ strategy
+Guerilla Fear/Greed Index Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © calebsandfort
+//@version=4
+strategy(title = "Guerilla Fear/Greed Index Strategy", shorttitle = "GFGI Strat", overlay=false, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=10000, calc_on_every_tick=true)
+maLength = input(title="MA Length", defval=10)
+/////////////////////NAAIM Component/////////////////////
+naaim_weight = input(title="NAAIM Weight", defval=50) / 100
+naaim_fear_threshold = input(title="NAAIM Fear Threshold", defval=50)
+naaim_greed_threshold = input(title="NAAIM Greed Threshold", defval=90)
+naaim = security("QUANDL:NAAIM/NAAIM", "W", close)
+naaimMa = ema(naaim, maLength)
+naaimComponent = (naaimMa < naaim_fear_threshold ? 0 : naaimMa > naaim_greed_threshold ? 100 : ((naaimMa - naaim_fear_threshold)/(naaim_greed_threshold - naaim_fear_threshold)) * 100) * naaim_weight
+/////////////////////Equity Put/Call Ratio Component/////////////////////
+pcce_weight = input(title="EPCR Weight", defval=50) / 100
+pcce_fear_threshold = input(title="EPCR Fear Threshold", defval=.7)
+pcce_greed_threshold = input(title="EPCR Greed Threshold", defval=.55)
+pcce = security ("USI:PCCE", "D", close)
+pcceMa = ema(pcce, maLength)
+pcceComponent = (pcceMa > pcce_fear_threshold ? 0 : pcceMa < pcce_greed_threshold ? 100 : ((pcce_fear_threshold - pcceMa)/(pcce_fear_threshold - pcce_greed_threshold)) * 100) * pcce_weight
+/////////////////////Guerilla Fear/Greed Index/////////////////////
+buyLevel = input(title="Buy Level", defval=40)
+sellLevel = input(title="Sell Level", defval=65)
+buyHline = hline(buyLevel, color = color.gray, linestyle = hline.style_dashed)
+sellHline = hline(sellLevel, color = color.gray, linestyle = hline.style_dashed)
+gfgi = naaimComponent + pcceComponent
+color1 = #ff0000
+color2 = #ff6400
+color3 = #ff9900
+color4 = #ffc700
+color5 = #fff200
+color6 = #d3e100
+color7 = #a9cf00
+color8 = #7fbd00
+color9 = #54aa00
+color10 = #1e9600
+gfgiColor = gfgi < 10 ? color1 : gfgi < 20 ? color2 : gfgi < 30 ? color3 : gfgi < 40 ? color4 :gfgi < 50 ? color5 :gfgi < 60 ? color6 :gfgi < 70 ? color7 : gfgi < 80 ? color8 : gfgi < 90 ? color9 : color10
+plot(gfgi, color=gfgiColor, linewidth = 2)
+gfgiMaLength = input(title="GFGI MA Length", defval=21)
+gfgiMa = ema(gfgi, gfgiMaLength)
+gfgiMaColor = gfgiMa < 10 ? color1 : gfgiMa < 20 ? color2 : gfgiMa < 30 ? color3 : gfgiMa < 40 ? color4 :gfgiMa < 50 ? color5 :gfgiMa < 60 ? color6 :gfgiMa < 70 ? color7 : gfgiMa < 80 ? color8 : gfgiMa < 90 ? color9 : color10
+plot(gfgiMa, color=gfgiMaColor, style=plot.style_circles)
+startDate = input(title="Start Date", defval=1, minval=1, maxval=31)
+startMonth = input(title="Start Month", defval=1, minval=1, maxval=12)
+startYear = input(title="Start Year", defval=2015, minval=1800, maxval=2100)
+// See if this bar's time happened on/after start date
+afterStartDate = (time >= timestamp(syminfo.timezone, startYear, startMonth, startDate, 0, 0))
+useCloseDate = input(title="Use Close Date", defval=true)
+closeDay = input(title="Close Day", defval=20, minval=1, maxval=31)
+closeMonth = input(title="Close Month", defval=11, minval=1, maxval=12)
+closeYear = input(title="Close Year", defval=2020, minval=1800, maxval=2100)  
+// See if this bar's time happened on/after end date
+afterEndDate = year == closeYear and month == closeMonth and dayofmonth == closeDay
+Bull = gfgiMa[1] < buyLevel and (gfgiMa[0] > gfgiMa[1]) and (gfgiMa[2] > gfgiMa[1])
+Bear = gfgiMa[1] > sellLevel and (gfgiMa[0] < gfgiMa[1]) and (gfgiMa[2] < gfgiMa[1])
+///Entries and Exits//
+if (Bull and afterStartDate)
+    strategy.entry("Long", strategy.long, comment = "LE")
+    
+if ((afterStartDate and Bear) or (useCloseDate and afterEndDate))
+    strategy.close("Long", qty_percent=100, comment="close")
+Expand (89 lines)

@@ -1,0 +1,142 @@
+Script Name: Binance Estimaed Liquidations indicator-strategy
+Author: LowSkiII
+Description: 1) Provides ESTIMATED liquidation amount based od difference on volume between binance futures and coinbase spot(by default, you can change this)
+2) Provides some strategies based on this numbers
+PineScript code:
+
+Pine Script™ strategy
+Binance Estimaed Liquidations indicator/strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+//@version=4
+strategy("Binance Liquidations", pyramiding=1, default_qty_type=strategy.cash, default_qty_value=1000, initial_capital=1000,overlay=false, currency=currency.USD, commission_type=strategy.commission.percent, commission_value=0.07)
+fastLen = input(title="Fast Ma lenght", type=input.integer, defval=8)
+slowLen = input(title="Slow Ma lenght", type=input.integer, defval=22)
+premVal = input(title="Premium Value", type=input.float, defval=2000000)
+doTrades = input(title="Trades?", type=input.bool, defval=true)
+onlyLong = input(title="Only long?", type=input.bool, defval=true)
+smoothStrat = input(title="Smooth strat?", type=input.bool, defval=false)
+diffStrat = input(title="Diff strat?", type=input.bool, defval=true)
+maStrat = input(title="MA strat?", type=input.bool, defval=false)
+timeRestr = input(title="Time restrictions?", type=input.bool, defval=true)
+assetLiquidated = input(title="Pair", type = input.string, defval = "btcperp")
+assetSpot = input(title="Pair", type = input.string, defval = "btc")
+//res = input(title="resolution ", type=input.resolution, defval=timeframe.period)
+coinbase = "coinbase:"+assetSpot+"usd"
+binance = "binance:"+assetLiquidated
+inDateRange = (time >= timestamp(syminfo.timezone, 2021,
+         01, 29, 0, 0) and time<=timestamp(syminfo.timezone, 2021,
+         04, 20, 0, 0)) or not timeRestr
+A = security(coinbase,timeframe.period,volume)
+B = security(binance,timeframe.period,volume)
+premium = (B - A)
+if (open < close)
+    premium := 0
+//plot(wma(premium,fastLen), title="CME vs. Coinbase Spread", linewidth = 3, color = color.red)
+//plot(wma(premium,slowLen), title="CME vs. Coinbase Spread", linewidth = 3, color = color.green)
+supersmoother(_src, _length) =>
+    pi      = 2 * asin(1)
+    s_a1    = exp(-sqrt(2) * pi / _length)
+    s_b1    = 2 * s_a1 * cos(sqrt(2) * pi / _length)
+    s_c3    = -pow(s_a1, 2)
+    s_c2    = s_b1
+    s_c1    = 1 - s_c2 - s_c3
+    ss      = 0.0
+    ss     := s_c1 * _src + s_c2 * nz(ss[1], _src[1]) + s_c3 * nz(ss[2], _src[2])
+    
+premiumSmooth = supersmoother(wma(premium,fastLen), fastLen*1.5)
+hline(0, title="0", linewidth = 2, color = color.red, linestyle = hline.style_solid)
+mainSeries = (diffStrat) ? premium : wma(premium,fastLen)
+plot(mainSeries, linewidth = 2, color = color.white, style = (diffStrat) ? plot.style_histogram : plot.style_line)
+series = (smoothStrat) ? premiumSmooth : na
+series := (maStrat) ? wma(premium,slowLen) : na
+plot(series, linewidth = 2, color = color.green)
+wmaFast = wma(premium,fastLen)
+WMA = wma(close, 4*24*5)
+buySignal = false
+sellSignal = false
+if (doTrades)
+    buySignal := (smoothStrat) ? crossover(premiumSmooth,premVal) : crossover(wmaFast,premVal)
+    sellSignal := (smoothStrat) ? crossunder(premiumSmooth,premVal) : crossunder(wmaFast,premVal)
+    buySignal := (diffStrat) ? crossover(premium,premVal) : buySignal
+    sellSignal := (diffStrat) ? crossunder(premium,premVal) : sellSignal
+    buySignal := (maStrat) ? crossover(wmaFast,wma(premium,slowLen)) : buySignal
+    sellSignal := (maStrat) ? crossunder(wmaFast,wma(premium,slowLen)) : sellSignal
+strategy.entry("long", strategy.long, when = buySignal and inDateRange and close > WMA)
+strategy.entry("short", strategy.short, when = sellSignal and not onlyLong and inDateRange)
+strategy.exit(id="XL TP", limit=strategy.position_avg_price * 1.01, stop=strategy.position_avg_price * 0.99)
+Expand (75 lines)

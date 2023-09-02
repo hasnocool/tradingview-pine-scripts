@@ -1,0 +1,333 @@
+Script Name: Tilson T3 and MavilimW Triple Combined Strategy
+Author: bartua
+Description: Inspired by truly greatful Kivanç Ozbilgic (www.tradingview.com).
+
+The strategy tries to combined three different moving average strategies into one. 
+
+Strategies covered are:
+
+ 1. Tillson T3 Moving Average Strategy 
+
+Developed by Tim Tillson, the T3 Moving Average is considered superior to traditional moving averages as it is smoother, more responsive and thus...
+PineScript code:
+
+Pine Script™ strategy
+Tilson T3 and MavilimW Triple Combined Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+//@version=4
+//creator&compiler: Bartu Altan
+//inspired by: KIVANÇ ÖZBİLGİÇ @fr3792 and @mavilim0732 on twitter
+//With courtesy of Kıvanç Özbilgiç, Permission Pending
+strategy("Tilson T3, Tilson T3 Fibo and MavilimW Combined Strategy Strategy",shorttitle="T3 and MavilimW Strategy", initial_capital=100,currency=currency.USD,default_qty_type=strategy.percent_of_equity,default_qty_value =75,overlay=true)
+stop_loss=input(defval=3.0,title="Stop Loss %",type=input.float)*0.01
+strategyt3 = input(true,"T3")
+strategyt3Fibo = input(true,"T3 Fibo Cross")
+strategyMav = input(true,"MavilimW")
+fmal=input(3,"First Moving Average length")
+smal=input(5,"Second Moving Average length")
+barsSinceCloseUnderMavw = input(5,"Bars Since Close Under MAVW")
+length1 = input(8, "T3 Length")
+a1 = input(0.7, "Volume Factor")
+showSignals = input(true,"Show Signals = Check, Show Strategy Signals = Uncheck")
+// BEGINNING OF T3
+e1 = ema((high + low + 2 * close) / 4, length1)
+e2 = ema(e1, length1)
+e3 = ema(e2, length1)
+e4 = ema(e3, length1)
+e5 = ema(e4, length1)
+e6 = ema(e5, length1)
+c1 = -a1 * a1 * a1
+c2 = 3 * a1 * a1 + 3 * a1 * a1 * a1
+c3 = -6 * a1 * a1 - 3 * a1 - 3 * a1 * a1 * a1
+c4 = 1 + 3 * a1 + a1 * a1 * a1 + 3 * a1 * a1
+T3 = c1 * e6 + c2 * e5 + c3 * e4 + c4 * e3
+col1t3 = T3 > T3[1]
+col3t3 = T3 < T3[1]
+color_1 = col1t3 ? color.green : col3t3 ? color.red : color.yellow
+plot(strategyt3 or strategyt3Fibo ? T3:na, color=color_1, linewidth=3, title="T3")
+//T3 Fibo
+length12 = input(5, "T3 Length fibo")
+a12 = input(0.618, "Volume Factor fibo")
+e12 = ema((high + low + 2 * close) / 4, length12)
+e22 = ema(e12, length12)
+e32 = ema(e22, length12)
+e42 = ema(e32, length12)
+e52 = ema(e42, length12)
+e62 = ema(e52, length12)
+c12 = -a12 * a12 * a12
+c22 = 3 * a12 * a12 + 3 * a12 * a12 * a12
+c32 = -6 * a12 * a12 - 3 * a12 - 3 * a12 * a12 * a12
+c42 = 1 + 3 * a12 + a12 * a12 * a12 + 3 * a12 * a12
+T32 = c12 * e62 + c22 * e52 + c32 * e42 + c42 * e32
+col12 = T32 > T32[1]
+col32 = T32 < T32[1]
+color2 = col12 ? color.blue : col32 ? color.purple : color.yellow
+plot(strategyt3Fibo ? T32 : na, color=color2, linewidth=2, title="T3fibo")
+//End of T3 Fibo
+// END OF T3
+// MAVİLİMW //
+tmal=fmal+smal
+Fmal=smal+tmal
+Ftmal=tmal+Fmal
+Smal=Fmal+Ftmal
+M1= wma(close, fmal)
+M2= wma(M1, smal)
+M3= wma(M2, tmal)
+M4= wma(M3, Fmal)
+M5= wma(M4, Ftmal)
+MAVW= wma(M5, Smal)
+col1= MAVW>MAVW[1]
+col3= MAVW<MAVW[1]
+colorM = col1 ? color.blue : col3 ? color.red : color.yellow
+plot(strategyMav ?MAVW:na,title="MAVW",color=colorM,linewidth=2)
+// END OF MAVILIMW
+//Backtest Range Function
+// === INPUT BACKTEST RANGE ===
+fromMonth = input(defval = 8,    title = "From Month",      type = input.integer, minval = 1, maxval = 12)
+fromDay   = input(defval = 19,    title = "From Day",        type = input.integer, minval = 1, maxval = 31)
+fromYear  = input(defval = 2020, title = "From Year",       type = input.integer, minval = 1970)
+thruMonth = input(defval = 1,    title = "Thru Month",      type = input.integer, minval = 1, maxval = 12)
+thruDay   = input(defval = 1,    title = "Thru Day",        type = input.integer, minval = 1, maxval = 31)
+thruYear  = input(defval = 2112, title = "Thru Year",       type = input.integer, minval = 1970)
+// === FUNCTION EXAMPLE ===
+start     = timestamp(fromYear, fromMonth, fromDay, 00, 00)        // backtest start window
+finish    = timestamp(thruYear, thruMonth, thruDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+// Long Conditions // 
+longT3single = strategyt3 and not(strategyt3Fibo) and not(strategyMav) ? crossover(close,T3) and barssince(crossunder(close,T3)) > barsSinceCloseUnderMavw : na
+longT3Fibo = not(strategyt3) and strategyt3Fibo and not(strategyMav) ? crossover(T32,T3):na
+longMav = not(strategyt3) and not(strategyt3Fibo) and strategyMav ? crossover(close,MAVW) and barssince(crossunder(close,MAVW)) > barsSinceCloseUnderMavw : na
+longT3WFiboandMav = strategyt3 and strategyt3Fibo and strategyMav ? close > T3 and close > MAVW and T32 > T3 : na
+longT3WFibo = strategyt3 and strategyt3Fibo and not(strategyMav) ? (crossover(T32,T3)  and close > T3) or (T32>T3 and crossover(close,T3) and barssince(crossunder(close,T3)) > barsSinceCloseUnderMavw):na
+longMavT3Fibo = not(strategyt3) and strategyt3Fibo and strategyMav ? (crossover(T32,T3) and close > MAVW) or (T32>T3 and crossover(close,MAVW) and barssince(crossunder(close,MAVW)) > barsSinceCloseUnderMavw) : na
+longMavT3 = (strategyt3) and not(strategyt3Fibo) and strategyMav ? (crossover(close,T3) and barssince(crossunder(close,T3)) > barsSinceCloseUnderMavw and close>MAVW) or (crossover(close,MAVW) and barssince(crossunder(close,MAVW)) > barsSinceCloseUnderMavw and close>T3) : na
+longchosen = window() and (longT3single or longT3Fibo or longMav or longT3WFiboandMav or longT3WFibo or longMavT3Fibo or longMavT3)
+// Long Close Conditions // 
+longcT3single = strategyt3 and not(strategyt3Fibo) and not(strategyMav) ? crossunder(close,T3) : na
+longcT3Fibo = not(strategyt3) and strategyt3Fibo and not(strategyMav) ? crossunder(T32,T3):na
+longcMav = not(strategyt3) and not(strategyt3Fibo) and strategyMav ? crossunder(close,MAVW): na
+longcT3WFiboandMav = strategyt3 and strategyt3Fibo and strategyMav ? close < T3 and close < MAVW and T32 < T3 : na
+longcT3WFibo = strategyt3 and strategyt3Fibo and not(strategyMav) ? (crossunder(T32,T3)  and close < T3) or (T32<T3 and crossunder(close,T3)):na
+longcMavT3Fibo = not(strategyt3) and strategyt3Fibo and strategyMav ? (crossunder(T32,T3) and close < MAVW) or (T32<T3 and crossunder(close,MAVW)):  na
+longcMavT3 = (strategyt3) and not(strategyt3Fibo) and strategyMav ? (crossunder(close,T3) and close<MAVW) or (crossunder(close,MAVW) and close<T3) : na
+longclosechosen = window() and (longcT3single or longcT3Fibo or longcMav or longcT3WFiboandMav or longcT3WFibo or longcMavT3Fibo or longcMavT3)
+// t3 fibo //
+long = longchosen
+longclose = longclosechosen
+long_plot = barssince(long[1])>barssince(longclose[1])?long:na
+longclose_plot = barssince(longclose[1])>barssince(long[1])?longclose:na
+plotshape(showSignals ? long_plot:na,title="Long",style=shape.labelup,color=color.green,text="Long",textcolor=color.white, location=location.abovebar)
+plotshape(showSignals ? longclose_plot:na,title="Long Close",style=shape.labeldown,color=#B1E141,text="Long Close",textcolor=color.white,location=location.belowbar)
+// Short Conditions // 
+shortT3single = strategyt3 and not(strategyt3Fibo) and not(strategyMav) ? crossunder(close,T3) and barssince(crossover(close,T3)) > barsSinceCloseUnderMavw : na
+shortT3Fibo = not(strategyt3) and strategyt3Fibo and not(strategyMav) ? crossunder(T32,T3):na
+shortMav = not(strategyt3) and not(strategyt3Fibo) and strategyMav ? crossunder(close,MAVW) and barssince(crossover(close,MAVW)) > barsSinceCloseUnderMavw : na
+shortT3WFiboandMav = strategyt3 and strategyt3Fibo and strategyMav ? close < T3 and close < MAVW and T32 < T3 : na
+shortT3WFibo = strategyt3 and strategyt3Fibo and not(strategyMav) ? (crossunder(T32,T3)  and close < T3) or (T32<T3 and crossunder(close,T3) and barssince(crossover(close,T3)) > barsSinceCloseUnderMavw):na
+shortMavT3Fibo = not(strategyt3) and strategyt3Fibo and strategyMav ? (crossunder(T32,T3) and close < MAVW) or (T32<T3 and crossunder(close,MAVW) and barssince(crossover(close,MAVW)) > barsSinceCloseUnderMavw) : na
+shortMavT3 = (strategyt3) and not(strategyt3Fibo) and strategyMav ? (crossunder(close,T3) and barssince(crossover(close,T3)) > barsSinceCloseUnderMavw and close<MAVW) or (crossunder(close,MAVW) and barssince(crossover(close,MAVW)) > barsSinceCloseUnderMavw and close<T3) : na
+shortchosen = window() and (shortT3single or shortT3Fibo or shortMav or shortT3WFiboandMav or shortT3WFibo or shortMavT3Fibo or shortMavT3)
+// Long Close Conditions // 
+shortcT3single = strategyt3 and not(strategyt3Fibo) and not(strategyMav) ? crossover(close,T3) : na
+shortcT3Fibo = not(strategyt3) and strategyt3Fibo and not(strategyMav) ? crossover(T32,T3):na
+shortcMav = not(strategyt3) and not(strategyt3Fibo) and strategyMav ? crossover(close,MAVW): na
+shortcT3WFiboandMav = strategyt3 and strategyt3Fibo and strategyMav ? close > T3 and close > MAVW and T32 > T3 : na
+shortcT3WFibo = strategyt3 and strategyt3Fibo and not(strategyMav) ? (crossover(T32,T3)  and close > T3) or (T32>T3 and crossover(close,T3)):na
+shortcMavT3Fibo = not(strategyt3) and strategyt3Fibo and strategyMav ? (crossover(T32,T3) and close > MAVW) or (T32>T3 and crossover(close,MAVW)):  na
+shortcMavT3 = (strategyt3) and not(strategyt3Fibo) and strategyMav ? (crossover(close,T3) and close>MAVW) or (crossover(close,MAVW) and close>T3) : na
+shortclosechosen = window() and (shortcT3single or shortcT3Fibo or shortcMav or shortcT3WFiboandMav or shortcT3WFibo or shortcMavT3Fibo or shortcMavT3)
+short = shortchosen
+shortclose = shortclosechosen
+short_plot = barssince(short[1])>barssince(shortclose[1])?short:na
+shortclose_plot = barssince(shortclose[1])>barssince(short[1])?shortclose:na
+plotshape(showSignals ? short_plot:na,title="Short",style=shape.labeldown,color=color.red,text="Short",textcolor=color.white,location=location.abovebar)
+plotshape(showSignals ? shortclose_plot:na,title="Short Close",style=shape.labeldown,color=#E19B89,text="Short Close",textcolor=color.white,location=location.belowbar)
+alerttrigger = short_plot or shortclose_plot or long_plot or longclose_plot
+alertcondition(alerttrigger, "New Position Alert","New Position Discovered")
+strategy.entry("Long", true, when=long_plot and not(showSignals))
+strategy.close("Long",when=longclose_plot and not(showSignals))
+strategy.exit("Long Stop Loss","Long",stop=strategy.position_avg_price*(1-stop_loss))
+strategy.entry("Short", false, when=short_plot and not(showSignals))
+strategy.close("Short",when=shortclose_plot and not(showSignals))
+strategy.exit("Short Stop Loss","Short",stop=strategy.position_avg_price*(1+stop_loss))
+Expand (180 lines)

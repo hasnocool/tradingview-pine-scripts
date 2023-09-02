@@ -1,0 +1,413 @@
+Script Name: 4 MA Strategy + Position Management
+Author: tweakerID
+Description: // This is a simple crossover Moving Average strategy, good for long term crypto trades. 
+// It buys when the MA "X" crosses up the MA "Y", viceversa for shorts. 
+// Both MAs are selectable from the Inputs section in the front panel. 
+// There is also a Position Management option thats 
+// sizes positions to have the same USD risk (using leverage) on each...
+PineScript code:
+
+Pine Script™ strategy
+4 MA Strategy + Position Management
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+//@version=4
+// This is a simple crossover Moving Average strategy, good for long term crypto trades. 
+// It buys when the MA "X" crosses up the MA "Y", viceversa for shorts. 
+// Both MAs are selectable from the Inputs section in the front panel. 
+// There is also a Position Management option thats 
+// sizes positions to have the same USD risk (using leverage) on each trade,
+// based on the percentage distance to the stop loss level.
+// If you turn this option on you will see how the profit 
+// grows exponentially while the drawdown percentage almost remains the same.
+strategy("4 MA Strat", overlay=true, pyramiding=1, 
+     default_qty_type=strategy.percent_of_equity, 
+     default_qty_value=100, 
+     commission_value = 0.04, 
+     initial_capital=10000, 
+     process_orders_on_close=false)
+direction = input(0, title = "Strategy Direction", type=input.integer, minval=-1, maxval=1)
+strategy.risk.allow_entry_in(direction == 0 ? strategy.direction.all : (direction < 0 ? strategy.direction.short : strategy.direction.long))
+//Inputss
+PSMGMT=input(defval=false, title="Position Management")
+risk_per_trade=input(defval=5, title="Risk Per Trade % (for PSMGMT)", step=0.5)*.01
+//SL & TP Inputs
+i_SL=input(true, title="Use Swing Lo/Hi Stop Loss & Take Profit")
+i_SwingLookback=input(10, title="Swing Lo/Hi Lookback")
+i_SLExpander=input(defval=0, step=1, title="SL Expander")
+i_MAFilter=input(false, title="Use MA4 as Bull / Bear filter")
+//MA Type Selector
+MAtype = input(false, title="----------------MA Selector-----------------")
+MA1Period = input(9, title="MA1 Period")
+MA1Type = input(title="MA1 Type", defval="EMA", options=["RMA", "SMA", "EMA", "WMA", "HMA", "ALMA"])
+MA2Period = input(21, title="MA2 Period")
+MA2Type = input(title="MA2 Type", defval="EMA", options=["RMA", "SMA", "EMA", "WMA", "HMA", "ALMA"])
+MA3Period = input(50, title="MA3 Period")
+MA3Type = input(title="MA3 Type", defval="SMA", options=["RMA", "SMA", "EMA", "WMA", "HMA", "ALMA"])
+MA4Period = input(100, title="MA4 Period")
+MA4Type = input(title="MA4 Type", defval="SMA", options=["RMA", "SMA", "EMA", "WMA", "HMA", "ALMA"])
+//MA Selector 
+MA1 = if MA1Type == "SMA"
+    sma(close, MA1Period)
+else
+    if MA1Type == "EMA"
+        ema(close, MA1Period)
+    else
+        if MA1Type == "WMA"
+            wma(close, MA1Period)
+        else
+            if MA1Type == "RMA"
+                rma(close, MA1Period)
+            else
+                if MA1Type == "HMA"
+                    hma(close, MA1Period)
+                else
+                    if MA1Type == "ALMA"
+                        alma(close, MA1Period, 0.85, 6)
+                    
+MA2 = if MA2Type == "SMA"
+    sma(close, MA2Period)
+else
+    if MA2Type == "EMA"
+        ema(close, MA2Period)
+    else
+        if MA2Type == "WMA"
+            wma(close, MA2Period)
+        else
+            if MA2Type == "RMA"
+                rma(close, MA2Period)
+            else
+                if MA2Type == "HMA"
+                    hma(close, MA2Period)
+                else
+                    if MA2Type == "ALMA"
+                        alma(close, MA2Period, 0.85, 6)
+                            
+MA3 = if MA3Type == "SMA"
+    sma(close, MA3Period)
+else
+    if MA3Type == "EMA"
+        ema(close, MA3Period)
+    else
+        if MA3Type == "WMA"
+            wma(close, MA3Period)
+        else
+            if MA3Type == "RMA"
+                rma(close, MA3Period)
+            else
+                if MA3Type == "HMA"
+                    hma(close, MA3Period)
+                else
+                    if MA3Type == "ALMA"
+                        alma(close, MA3Period, 0.85, 6)
+                    
+MA4 = if MA4Type == "SMA"
+    sma(close, MA4Period)
+else
+    if MA4Type == "EMA"
+        ema(close, MA4Period)
+    else
+        if MA4Type == "WMA"
+            wma(close, MA4Period)
+        else
+            if MA4Type == "RMA"
+                rma(close, MA4Period)
+            else
+                if MA4Type == "HMA"
+                    hma(close, MA4Period)
+                else
+                    if MA4Type == "ALMA"
+                        alma(close, MA4Period, 0.85, 6)
+                    
+// X Y Logic
+x=input(title="x", defval="close", options=["MA1", "MA2", "MA3", "MA4", "close"])
+y=input(title="y", defval="MA1", options=["MA1", "MA2", "MA3", "MA4", "close"])
+X = if x == "MA1"
+    MA1
+else
+    if x == "MA2"
+        MA2
+    else
+        if x == "MA3"
+            MA3
+        else
+            if x == "MA4"
+                MA4
+            else
+                if x == "close"
+                    close
+                    
+Y = if y == "MA1"
+    MA1
+else
+    if y == "MA2"
+        MA2
+    else
+        if y == "MA3"
+            MA3
+        else
+            if y == "MA4"
+                MA4
+            else
+                if y == "close"
+                    close
+//SL & TP Calculations
+SwingLow=lowest(i_SwingLookback)
+SwingHigh=highest(i_SwingLookback)
+bought=strategy.position_size != strategy.position_size[1]
+LSL=valuewhen(bought, SwingLow, 0)-((valuewhen(bought, atr(14), 0)/5)*i_SLExpander)
+SSL=valuewhen(bought, SwingHigh, 0)+((valuewhen(bought, atr(14), 0)/5)*i_SLExpander)
+islong=strategy.position_size > 0
+isshort=strategy.position_size < 0
+SL= islong ? LSL : isshort ? SSL : na
+//Position Management Calculations
+capital=strategy.equity
+distance_to_long_stop_loss=1-(LSL/strategy.position_avg_price)
+distance_to_short_stop_loss=(SSL/strategy.position_avg_price)-1
+PS=(capital*risk_per_trade)/distance_to_long_stop_loss
+SPS=(capital*risk_per_trade)/distance_to_short_stop_loss
+PSqty=PS/close
+SPSqty=SPS/close
+//Strategy Calculations
+MAFilter=close > MA4
+BUY = crossover(X , Y) 
+SELL = crossunder(X , Y) 
+BUY2 = crossover(X , Y) and MAFilter
+SELL2 = crossunder(X , Y) and not MAFilter
+//Entries
+strategy.entry("long", true, qty=PSMGMT ? PSqty : na, when=not i_MAFilter ? BUY : BUY2)
+strategy.entry("short", false, qty=PSMGMT ? SPSqty : na, when=not i_MAFilter ? SELL : SELL2)
+//Exits
+if i_SL //and SL != na
+    strategy.exit("longexit", "long", stop=LSL)
+    strategy.exit("shortexit", "short", stop=SSL)
+if i_MAFilter
+    strategy.close("long", when=SELL)
+    strategy.close("short", when=BUY)
+//Plots
+plot(i_SL ? SL : na, color=color.red, style=plot.style_cross, title="SL")
+plot(MA1, color=color.green, linewidth=1, title="MA1")
+plot(MA2, color=color.yellow, linewidth=2, title="MA2")
+plot(MA3, color=color.red, linewidth=3, title="MA3")
+plot(MA4, color=color.white, linewidth=3, title="MA4")
+plotshape(BUY ? 1 : na, style=shape.triangleup, location=location.belowbar, color=color.green, title="Bullish Setup")
+plotshape(SELL ? 1 : na, style=shape.triangledown, location=location.abovebar, color=color.red, title="Bearish Setup")
+//Debugging Plots
+plot(SSL, transp=100, title="SwingHigh")
+plot(bought ? 1:0, transp=100, title="bought")
+plot(PSqty, title="PSqty", transp=100)
+plot(SPSqty, title="SPSqty", transp=100)
+plot(PS, title="PS", transp=100)
+plot(SPS, title="SPS", transp=100)
+plot(distance_to_long_stop_loss, title="distance to LSL", transp=100)
+plot(distance_to_short_stop_loss, title="distance to SSL", transp=100)
+plot(capital, title="equity", transp=100)
+Expand (209 lines)

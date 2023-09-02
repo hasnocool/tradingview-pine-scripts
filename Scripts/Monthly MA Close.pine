@@ -1,0 +1,164 @@
+Script Name: Monthly MA Close
+Author: universique
+Description: Generates buy or sell signal if monthly candle closes above or below the signal MA.
+Long positions only.
+
+Inputs:
+-Change timeframe MA
+-Change period MA
+-Use SMA or EMA
+-Display MA
+-Use another ticker as signal
+-Select time period for backtesting
+
+This script is not necessarily written to maximize profits, but to minimize losses.
+Although it can outperform 'Buy &...
+PineScript code:
+
+Pine Script™ strategy
+Monthly MA Close
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © universique
+//@version=4
+strategy("Monthly MA Close ", shorttitle="MMAC", overlay=true, default_qty_type =  strategy.percent_of_equity, default_qty_value = 100)
+//MAY 6 2020 18:00
+// No repaint function 
+// Function to securely and simply call `security()` so that it never repaints and never looks ahead.
+f_secureSecurity(_symbol, _res, _src) => security(_symbol, _res, _src[1], lookahead = barmerge.lookahead_on)
+//sec10 = f_secureSecurity(syminfo.tickerid, higherTf, data)
+// ————— Converts current chart resolution into a float minutes value.
+f_resInMinutes() => 
+    _resInMinutes = timeframe.multiplier * (
+      timeframe.isseconds ? 1. / 60             :
+      timeframe.isminutes ? 1.                  :
+      timeframe.isdaily   ? 60. * 24            :
+      timeframe.isweekly  ? 60. * 24 * 7        :
+      timeframe.ismonthly ? 60. * 24 * 30.4375  : na)
+// ————— Returns the float minutes value of the string _res.
+f_tfResInMinutes(_res) =>
+    // _res: resolution of any TF (in "timeframe.period" string format).
+    // Dependency: f_resInMinutes().
+    security(syminfo.tickerid, _res, f_resInMinutes())
+// —————————— Determine if current timeframe is smaller that higher timeframe selected in Inputs.
+// Get higher timeframe in minutes.
+//higherTfInMinutes = f_tfResInMinutes(higherTf)
+// Get current timeframe in minutes.
+currentTfInMinutes = f_resInMinutes()
+// Compare current TF to higher TF to make sure it is smaller, otherwise our plots don't make sense.
+//chartOnLowerTf = currentTfInMinutes < higherTfInMinutes
+// Input
+switch1=input(true, title="Show MA")
+exponential = input(true, title="Exponential MA")
+ticker = input(false, title="Other ticker MA")
+tic_ma = input(title="Ticker MA", type=input.symbol, defval="SPY")
+res_ma = input(title="Time MA (W, D, [min])", type=input.string, defval="M")
+len_ma = input(8, minval=1, title="Period MA")
+ma_cus = exponential?f_secureSecurity(tic_ma, res_ma, ema(close,len_ma)) : f_secureSecurity(tic_ma, res_ma, sma(close,len_ma))
+ma_long = exponential?f_secureSecurity(syminfo.tickerid, res_ma, ema(close,len_ma)) : f_secureSecurity(syminfo.tickerid, res_ma, sma(close,len_ma))
+cl1 = f_secureSecurity(syminfo.tickerid, 'M', close)
+cl2 = f_secureSecurity(tic_ma, 'M', close)
+// Input Backtest Range
+showDate  = input(defval = false, title = "Show Date Range", type = input.bool)
+fromMonth = input(defval = 1,    title = "From Month",      type = input.integer, minval = 1, maxval = 12)
+fromDay   = input(defval = 1,    title = "From Day",        type = input.integer, minval = 1, maxval = 31)
+fromYear  = input(defval = 1995, title = "From Year",       type = input.integer, minval = 1850)
+thruMonth = input(defval = 1,    title = "Thru Month",      type = input.integer, minval = 1, maxval = 12)
+thruDay   = input(defval = 1,    title = "Thru Day",        type = input.integer, minval = 1, maxval = 31)
+thruYear  = input(defval = 2112, title = "Thru Year",       type = input.integer, minval = 1850)
+// Funcion Example
+start     = timestamp(fromYear, fromMonth, fromDay, 00, 00)        // backtest start window
+finish    = timestamp(thruYear, thruMonth, thruDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+// Calculation
+bullish_cross = ticker?cl2>ma_cus : cl1>ma_long
+bearish_cross = ticker?cl2<ma_cus : cl1<ma_long
+MAColor = bullish_cross ? color.green : bearish_cross ? color.red : color.orange
+// Strategy
+strategy.entry("long", strategy.long, when = window() and bullish_cross)
+strategy.close("long", when = window() and bearish_cross)
+// Output
+plot(switch1?ma_long:na,color = MAColor,linewidth=4)
+// Alerts
+alertcondition(bullish_cross, title='Bullish', message='Bullish')
+alertcondition(bearish_cross, title='Bearish', message='Bearish')
+Expand (79 lines)

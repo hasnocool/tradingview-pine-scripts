@@ -1,0 +1,71 @@
+Script Name: Exponential Stochastic Strategy
+Author: faytterro
+Description: what is Exponential Stochastic?
+it is a modified version of the stochastic indicator. This strategy does not include pyramiding, repaint, trailing stop or take profit.
+
+what it does?
+It contains an extra input in addition to the stochastic indicator. Thanks to this input, different exponential weights can be given to the outputs and the indicator can be made more...
+PineScript code:
+
+Pine Script™ strategy
+Exponential Stochastic Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © faytterro
+//@version=5
+strategy("Exponential Stochastic Strategy", overlay=false, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+len=input.int(14, "length") 
+ex=input.int(2, title="exp", minval=1, maxval=10)
+exp= ex<10? (ex)/(10-ex) : 99
+s=100 * (close - ta.lowest(low, len)) / (ta.highest(high, len) - ta.lowest(low, len))
+ks=s>50? math.pow(math.abs(s-50),exp)/math.pow(50,exp-1)+50 :
+ -math.pow(math.abs(s-50),exp)/math.pow(50,exp-1)+50
+plot(ks, color= color.white)
+bot=input.int(20)
+top=input.int(80)
+longCondition = ta.crossover(ks, bot) and bar_index>0
+if (longCondition)
+    strategy.entry("My Long Entry Id", strategy.long)
+shortCondition = ta.crossunder(ks, top) and bar_index>0
+if (shortCondition)
+    strategy.entry("My Short Entry Id", strategy.short)
+//    strategy.close("My Long Entry Id")
+alertcondition(longCondition, title = "buy")
+alertcondition(shortCondition, title = "sell")
+h1=hline(top)
+h2=hline(bot)
+h3=hline(100)
+h4=hline(0)
+fill(h1,h3, color= color.rgb(255,0,0,200-top*2))
+fill(h2,h4, color= color.rgb(0,255,0,bot*2))
+Expand (30 lines)

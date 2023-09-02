@@ -1,0 +1,412 @@
+Script Name: TDI Hedge Strategy
+Author: mabonyi
+Description: This is the incomplete version but upon multiple requests, I have released it early. All of the strategy and alert functions are yet to be written and I'll get around to it soon.
+
+This indicator aims to be the best TDI indicator on TradingView. It is a strategy or study. It will have all of the filter, entry, and exit conditions for the strategies around the...
+PineScript code:
+
+Pine Script™ strategy
+TDI Hedge Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+//@version=4
+// author: @mabonyi
+// === USAGE
+//
+// This script is a full-suite TDI indicator and strategy. The intended use is to provide good entries
+// and optimal take profits for a cross margin hedge strategy where you may be building and reducing both sides.
+//
+// The original strategy depends on using a lower timeframe to execute on a higher timeframe.
+// For instance, this indicator was developed for day trading the 1m and the indicator executing on the 15m.
+//
+// When used for trade signals, it is important to enable the "No Repaint Mode" to ensure consistency.
+// To receive signals sooner, you may try "High Resolution" with "No Repaint Mode", but use at your own risk.
+// === BACKTESTING
+//
+// For backtesting in study mode (default), connect with the Backtesting & Trading Engine by PineCoders.
+// Add BTE to your layout and select the "BTE Signal" plot as the "External Source" in the BTE settings at the bottom.
+// You can still use the alerts in this mode.
+//
+// Alternatively, make a copy of this script and uncomment the strategy() call and comment out the study() call.
+// You may then use it in the Strategy Tester. Both should work fine, but BTE has better statistics and parameters.
+// You CANNOT use alerts in this mode.
+// === IMPORTANT
+//
+// Since TradingView is unable to perform both long and short positions simultaneously, you may wish to view this script in two-chart layouts,
+// with one for longs and the other for shorts. You will need to do the final sum of both to see if it is net positive in profit.
+//
+// By default, the plots will be for the higher timeframe.
+// Ideal timeframe factors are 5, 13, 15, 21, 50, and 60, for various reasons. The preference is 15.
+//
+// Alternatively, there are dynamic length options.
+// Select "Dynamic HTF" and enter a Factor to automatically calculate a HTF based on current TF
+// Select "High Resolution" to show plots for the current TF using lengths multiplied by (HTF / current TF)
+// == CHANGES TO TYPICAL TDI
+// - a complete suite of TDI signals
+//   - all entry types
+//   - all exit conditions
+//   - all filter conditions
+//   - a flip filter: if a condition is met, a reversal requires new criteria (e.g. if green crosses red, subsequent crosses will be ignored until green has crossed BB or midline)
+// - option to use SMA (default) or EMA for averages
+// - option to use RSI (default) or MFI for signals
+// - "No Repaint" technique for consistent signals in realtime Strategy Tester
+// - "Dynamic HTF" to calculate the corrent HTF based on a factor of current TF
+// - "High Resolution" mode for displaying plots for current TF * (HTF / TF)
+// - alert conditions for manual alerts and automated trading systems
+// - a hidden BTE Signal plot to use the Backtesting & Trading Engine by PineCoders
+// - hidden PLO plot to use with my Projected Limit Order overlay (outputs price peaks of the indicator)
+// - colour scheme that looks nicer in dark mode
+//
+// == COLOUR CHANGE
+// - Slow RSI: green line => gold
+// - Fast RSI: red line => magenta
+// - BB: dark purple
+// - Midline SMA/EMA: light purple
+// === TDI STRATEGY SIGNALS
+// * early entry: red crosses midline (above = long, below = short)
+// * elite entry: green re-enters inside BB (lower = long, upper = short)
+// * elite filter: except when red outside BB (upper = no long, lower = no short)
+// * basic entry: green crosses red (above = long, below = short)
+// * safe entry: green crosses midline (above = long, below = short)
+// * safe filter: except when green is oversold/overbought (OB = no long, OS = no short)
+// * breakout entry: BBW falling, green exits BB (upper = long, lower = short)
+//
+// === TDI EXIT SIGNALS
+// * take profit early: fast MA crosses midline
+// * take profit elite: slow MA crosses outside BB (note: does not need to re-enter)
+// * take profit basic: slow MA crosses fast MA
+// * hard exit safe: slow MA crosses midline
+// * hard exit breakout: slow MA exits BB while BBW is falling
+//study("TDI Hedge Strategy", shorttitle = "TDI HS")
+strategy("TDI Hedge Strategy", shorttitle = "TDI HS")
+// ===================
+// === OPTIONS =======
+// ===================
+// === TIMEFRAME OPTIONS
+o_htf_type1 = "Manual HTF"
+o_htf_type2 = "Dynamic HTF"
+i_htf_type = input(o_htf_type1, group = "Timeframes", title = "HTF Type", type = input.string, options = [o_htf_type1, o_htf_type2])
+i_dynamic_factor = input(15, group = "Timeframes", title = "Dynamic HTF Factor", type = input.integer, minval = 1)
+i_manual_res = input("", group = "Timeframes", title = "Manual HTF", type = input.resolution)
+i_high_res = input(false, group = "Timeframes", title = "High Resolution", type = input.bool, tooltip = "Plot for current TF, scaled to HTF. Must use Dynamic HTF")
+i_no_repaint = input(true, group = "Timeframes", title = "No Repaint Mode", type = input.bool, tooltip = "It will not plot until candle close on HTF")
+// === CORE OPTIONS
+i_rsi_length = input(13, group = "Core", title = "RSI Length", minval = 1, type = input.integer)
+i_rsi_length_hr = i_rsi_length * i_dynamic_factor
+i_bb_length = input(34, group = "Core", title = "BB Length", minval = 1, type = input.integer)
+i_bb_length_hr = i_bb_length * i_dynamic_factor
+i_bb_multiple = input(1.6185, group = "Core", title = "BB Multiple", minval = 0.5, type = input.float, tooltip = "Standard deviation multiplier")
+i_slowma_length = input(7, group = "Core", title = "Slow MA", minval = 1, type = input.integer)
+i_slowma_length_hr = i_slowma_length * i_dynamic_factor
+i_fastma_length = input(2, group = "Core", title = "Fast MA", minval = 1, type = input.integer)
+i_fastma_length_hr = i_fastma_length * i_dynamic_factor
+o_sma = "SMA"
+o_ema = "EMA"
+i_ma = input(o_sma, group = "Core", title = "Moving Average Type", type = input.string, options = [o_sma, o_ema], tooltip = "Used on the Oscillator and Bollinger Band")
+o_rsi = "RSI"
+o_mfi = "MFI"
+i_osc = input(o_mfi, group = "Core", title = "Oscillator Type", type = input.string, options = [o_rsi, o_mfi])
+// === ENTRY OPTIONS
+i_sig_entry_early = input(true, group ="Strategy: Entries", title = "Use Early Entry", type = input.bool, tooltip = "Fast MA crosses Midline (above = long, below = short)")
+i_sig_entry_elite = input(true, group ="Strategy: Entries", title = "Use Elite Entry", type = input.bool, tooltip = "Slow MA enters BB (lower = long, upper = short)")
+i_sig_entry_basic = input(true, group ="Strategy: Entries", title = "Use Basic Entry", type = input.bool, tooltip = "Slow MA crosses Fast MA (above = long, below = short)")
+i_sig_entry_safe = input(true, group ="Strategy: Entries", title = "Use Safe Entry", type = input.bool, tooltip = "Slow MA crosses Midline (above = long, below = short)")
+i_sig_entry_break = input(true, group ="Strategy: Entries", title = "Use Breakout Entry", type = input.bool, tooltip = "BBW falling, Slow MA exits BB (upper = long, lower short)")
+// === FILTER OPTIONS
+i_sig_filter_elite = input(true, group ="Strategy: Filters", title = "Use Elite Filter", type = input.bool, tooltip = "Fast MA crosses Midline")
+i_sig_filter_safe = input(true, group ="Strategy: Filters", title = "Use Safe Filter", type = input.bool, tooltip = "Fast MA crosses Midline")
+i_sig_filter_flip = input(true, group = "Strategy: Filters", title = "Use Flip Filter", type = input.bool, tooltip = "conditions cannot flip without others flipping first, e.g. slow MA crossing fast MA, must then see something cross BB or Midline")
+// === TAKE PROFIT OPTIONS
+i_sig_tp_early = input(true, group ="Strategy: Take Profit", title = "Use Early Take Profit", type = input.bool, tooltip = "Fast MA crosses Midline: early entry in the other direction")
+i_sig_tp_early_percent = input(25.0, group = "Strategy: Take Profit", title = "Early Take Profit Percent", type = input.float, minval = 0.1, tooltip = "Value will be divided by 100")
+i_sig_tp_elite = input(true, group ="Strategy: Take Profit", title = "Use Elite Take Profit", type = input.bool, tooltip = "Fast MA exits BB, note it just has to break out")
+i_sig_tp_elite_percent = input(50.0, group = "Strategy: Take Profit", title = "Elite Take Profit Percent", type = input.float, minval = 0.1, tooltip = "Value will be divided by 100")
+i_sig_tp_basic = input(true, group ="Strategy: Take Profit", title = "Use Basic Take Profit", type = input.bool, tooltip = "Fast MA crosses Slow MA")
+i_sig_tp_basic_percent = input(50.0, group = "Strategy: Take Profit", title = "Basic Take Profit Percent", type = input.float, minval = 0.1, tooltip = "Value will be divided by 100")
+// === EXIT OPTIONS
+i_sig_exit_safe = input(true, group ="Strategy: Hard Exits", title = "Use Safe Hard Exit", type = input.bool, tooltip = "Slow MA crosses midline")
+i_sig_exit_break = input(true, group ="Strategy: Hard Exits", title = "Use Breakout Hard Exit", type = input.bool, tooltip = "Falling BB width and Slow MA exits BB")
+// ===================
+// === FUNCTIONS =====
+// ===================
+// === LIBRARY FUNCTIONS
+// === PineCoders MTF Framework
+f_resInMinutes() => _resInMinutes = timeframe.multiplier * (timeframe.isseconds ? 1. / 60. : timeframe.isminutes ? 1. : timeframe.isdaily ? 1440. : timeframe.isweekly ? 10080. : timeframe.ismonthly ? 43800. : na)
+f_tfResInMinutes(_resolution) => security(syminfo.tickerid, _resolution, f_resInMinutes())
+f_resNextStep(_res) => _res <= 1 ? "15" : _res <= 5 ? "60"  : _res <= 30 ? "240" : _res <= 60 ? "1D" : _res <= 360 ? "3D" : _res <= 1440 ? "1W" : _res <= 10080 ? "1M" : "12M"
+f_multipleOfRes(_res, _mult) => _targetResInMin = _res * max(_mult, 1), _targetResInMin <= 0.083 ? "5S" : _targetResInMin <= 0.251 ? "15S" : _targetResInMin <= 0.501 ? "30S" : _targetResInMin <= 1440 ? tostring(round(_targetResInMin)) : _targetResInMin <= 43800 ? tostring(round(min(_targetResInMin / 1440, 365))) + "D" : tostring(round(min(_targetResInMin / 43800, 12))) + "M"
+f_resFromMinutes(_minutes) => _minutes <= 0.0167 ? "1S" : _minutes <= 0.0834 ? "5S" : _minutes <= 0.2500 ? "15S" : _minutes <= 0.5000 ? "30S" : _minutes <= 1440 ? tostring(round(_minutes)) : _minutes <= 43800 ? tostring(round(min(_minutes / 1440, 365))) + "D" : tostring(round(min(_minutes / 43800, 12))) + "M"
+f_theoreticalDilationOf(_res) => f_tfResInMinutes(_res) / f_resInMinutes()
+f_avgDilationOf(_res) => b = barssince(change(time(_res))), cumTotal = cum(b == 0 ? b[1] + 1 : 0), cumCount = cum(b == 0 ? 1 : 0), cumTotal / cumCount
+// === Custom Functions
+f_no_repaint(_src) => _src[barstate.isrealtime ? 1 : 0]
+f_ma(_src, _len) => i_ma == o_ema ? ema(_src, _len) : sma(_src, _len)
+f_osc(_src, _len) => i_osc == o_mfi ? mfi(_src, _len) : rsi(_src, _len)
+// ===================
+// === CALCULATIONS ==
+// ===================
+// not using all of the functions for fewer security() calls
+_tf_mins = f_resInMinutes()
+//_dynamic_htf_mins = _tf_mins * i_dynamic_factor
+_dynamic_htf_res = f_multipleOfRes(_tf_mins, i_dynamic_factor) // f_resFromMinutes(_dynamic_htf_mins)
+//_dynamic_htf_mins = f_tfResInMinutes(_dynamic_htf_res)
+htf = i_htf_type == o_htf_type2 ? _dynamic_htf_res : i_manual_res
+htf_mins = f_tfResInMinutes(htf)
+src = i_no_repaint ? f_no_repaint(close) : close
+use_high_res = i_htf_type == o_htf_type2 and i_high_res
+exec_tf = use_high_res ? timeframe.period : htf
+rsilen = use_high_res ? i_rsi_length_hr : i_rsi_length
+falen = use_high_res ? i_fastma_length_hr : i_fastma_length
+salen = use_high_res ? i_slowma_length_hr : i_slowma_length
+bblen = use_high_res ? i_bb_length_hr : i_bb_length
+f_core() =>
+    _osc = f_osc(src, rsilen)
+    _fa = f_ma(_osc, falen)
+    _sa = f_ma(_osc, salen)
+    [_bb_mid, _bb_upper, _bb_lower] = bb(_osc, bblen, i_bb_multiple)
+    [_osc, _fa, _sa, _bb_mid, _bb_upper, _bb_lower]
+[osc, fa, sa, bb_mid, bb_upper, bb_lower] = security(syminfo.tickerid, exec_tf, f_core(), barmerge.gaps_off, barmerge.lookahead_on)
+c_yellow = #ffd33c
+c_magenta = #e91e63
+c_blue = #2196f3
+plot(osc, title = "RSI", color = color.white, display = display.none)
+plot(fa, title = "Fast MA", color = c_yellow)
+plot(sa, title = "Slow MA", color =  c_magenta)
+plot(bb_mid, title = "BB Midline", color = c_blue)
+plot(bb_upper, title = "BB Upper", color = color.new(c_blue, 50))
+plot(bb_lower, title = "BB Lower", color = color.new(c_blue, 50))
+// ===================
+// === CONDITIONS ====
+// ===================
+// ===================
+// === STRATEGY ======
+// ===================
+// ===================
+// === PLOTS =========
+// ===================
+// ===================
+// === ALERTS ========
+// ===================
+Expand (223 lines)

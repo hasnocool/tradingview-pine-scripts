@@ -1,0 +1,106 @@
+Script Name: BTC Cap Dominance RSI Strategy
+Author: chanu_lev10k
+Description: This strategy is based on the BTC Cap Dominance RSI indicator, which is a combination of the RSI of Bitcoin Market Cap and the RSI of Bitcoin Dominance. The concept of this strategy is to get a good grasp of the bitcoin market flow by combining bitcoin dominance as well as bitcoin market cap.
+
+BTC Cap Dominance (BCD) RSI is defined as:
+
+BCD RSI = (BTC Cap RSI +...
+PineScript code:
+
+Pine Script™ strategy
+BTC Cap Dominance RSI Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © chanu_lev10k
+//@version=5
+strategy("BTC Cap Dominance RSI Strategy", overlay=false)
+// Inputs
+src = input.source(title='Source', defval=hlc3)
+res = input.timeframe(title='Resolution', defval='1D')
+len = input.int(defval=7, title='Length')
+isdomin = input.bool(title='Use Combination of Dominance RSI ?', defval=true)
+bullLevel = input.float(title='Bull Level', defval=56, step=1.0, maxval=100, minval=0)
+bearLevel = input.float(title='Bear Level', defval=37, step=1.0, maxval=100, minval=0)
+highlightBreakouts = input(title='Highlight Bull/Bear Breakouts ?', defval=true)
+// BTC Cap Dominance RSI Definition
+totalcap = request.security('CRYPTOCAP:TOTAL', res, src)
+altcoincap = request.security('CRYPTOCAP:TOTAL2', res, src)
+bitcoincap = totalcap - altcoincap
+dominance = bitcoincap / totalcap
+domin_f(res, len) =>
+    n = ta.rsi(bitcoincap, len)
+    t = (ta.rsi(bitcoincap, len) + ta.rsi(dominance, len))/2
+    isdomin ? t : n
+tot_rsi = domin_f(res, len)
+// Plot
+rcColor = tot_rsi > bullLevel ? #0ebb23 : tot_rsi < bearLevel ? #ff0000 : #f4b77d
+maxBand = hline(100, title='Max Level', linestyle=hline.style_dotted, color=color.white)
+hline(0, title='Zero Level', linestyle=hline.style_dotted)
+minBand = hline(0, title='Min Level', linestyle=hline.style_dotted, color=color.white)
+bullBand = hline(bullLevel, title='Bull Level', linestyle=hline.style_dotted)
+bearBand = hline(bearLevel, title='Bear Level', linestyle=hline.style_dotted)
+fill(bullBand, bearBand, color=color.new(color.purple, 95))
+bullFillColor = tot_rsi > bullLevel and highlightBreakouts ? color.green : na
+bearFillColor = tot_rsi < bearLevel and highlightBreakouts ? color.red : na
+fill(maxBand, bullBand, color=color.new(bullFillColor, 80))
+fill(minBand, bearBand, color=color.new(bearFillColor, 80))
+plot(tot_rsi, title='BTC Cap Dominance RSI', linewidth=2, color=rcColor)
+plot(ta.rsi(bitcoincap, len), title='BTC Cap RSI', linewidth=1, color=color.new(color.purple, 0))
+plot(ta.rsi(dominance, len), title='BTC Dominance RSI', linewidth=1, color=color.new(color.blue, 0))
+// Long Short conditions
+longCondition = ta.crossover(tot_rsi, bullLevel)
+if longCondition
+    strategy.entry('Long', strategy.long)
+shortCondition = ta.crossunder(tot_rsi, bearLevel)
+if shortCondition
+    strategy.entry('Short', strategy.short)
+Expand (49 lines)

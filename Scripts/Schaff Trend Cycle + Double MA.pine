@@ -1,0 +1,134 @@
+Script Name: Schaff Trend Cycle + Double MA
+Author: OrcChieftain
+Description: This strategy uses two different moving averages to determine a trend. It opens a position on a pullback from a trend.
+
+Conditions for buy signal are:
+►Crossover out of Shaff Trend Cycle's extreme levels
+►The price is above its short period exponential moving average.
+►A short period exponential moving average is above a long period exponential moving...
+PineScript code:
+
+Pine Script™ strategy
+Schaff Trend Cycle + Double MA
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+//@version=4
+// Shaff Trend Cycle coded by Alex Orekhov (everget)
+// Strategy and its additional conditions provided by greenmask
+// Schaff Trend Cycle script may be freely distributed under the MIT license.
+strategy("STC", shorttitle="STC")
+fastLength = input(title="MACD Fast Length", type=input.integer, defval=23)
+slowLength = input(title="MACD Slow Length", type=input.integer, defval=50)
+cycleLength = input(title="Cycle Length", type=input.integer, defval=10)
+d1Length = input(title="1st %D Length", type=input.integer, defval=3)
+d2Length = input(title="2nd %D Length", type=input.integer, defval=3)
+src = close
+highlightBreakouts = input(title="Highlight Breakouts ?", type=input.bool, defval=true)
+macd = ema(src, fastLength) - ema(src, slowLength)
+k = nz(fixnan(stoch(macd, macd, macd, cycleLength)))
+d = ema(k, d1Length)
+kd = nz(fixnan(stoch(d, d, d, cycleLength)))
+stc = ema(kd, d2Length)
+stc :=  stc > 100 ? 100 : stc < 0 ? 0 : stc
+stcColor = not highlightBreakouts ? (stc > stc[1] ? color.green : color.red) : #ff3013
+stcPlot = plot(stc, title="STC", color=stcColor, transp=0)
+upper = 75
+lower = 25
+transparent = color.new(color.white, 100)
+upperLevel = plot(upper, title="Upper", color=color.gray)
+hline(50, title="Middle", linestyle=hline.style_dotted)
+lowerLevel = plot(lower, title="Lower", color=color.gray)
+fill(upperLevel, lowerLevel, color=#f9cb9c, transp=90)
+upperFillColor = stc > upper and highlightBreakouts ? color.green : transparent
+lowerFillColor = stc < lower and highlightBreakouts ? color.red : transparent
+fill(upperLevel, stcPlot, color=upperFillColor, transp=80)
+fill(lowerLevel, stcPlot, color=lowerFillColor, transp=80)
+ordersize=floor(strategy.initial_capital/close)
+targetvalue = input(title="Target/stop", type=input.integer, defval=400)
+ma1length = input(title="SMA1", type=input.integer, defval=35)
+ma2length = input(title="SMA2", type=input.integer, defval=200)
+ma1 = ema(close,ma1length)
+ma2 = ema(close,ma2length)
+bullbuy = crossover(stc, lower) and ma1>ma2 and close>ma1
+bearsell = crossunder(stc, upper) and ma1<ma2 and close<ma1
+if (bullbuy)
+    strategy.entry("Riposte", strategy.long, ordersize)
+    strategy.exit( "Riposte close", from_entry="Riposte", qty_percent=100, profit=targetvalue,loss=targetvalue)
+if (bearsell)
+    strategy.entry("Riposte", strategy.short, ordersize)
+    strategy.exit( "Riposte close", from_entry="Riposte", qty_percent=100, profit=targetvalue,loss=targetvalue)
+//plotshape(bullbuy,  title= "Purple", location=location.belowbar, color=#006600, transp=0, style=shape.circle, size=size.tiny, text="Riposte")
+//plotshape(bearsell,  title= "Purple", location=location.abovebar, color=#006600, transp=0, style=shape.circle, size=size.tiny, text="Riposte")
+Expand (73 lines)

@@ -1,0 +1,230 @@
+Script Name: Scalping using RSI 2 indicator with TSL
+Author: Ninorigo
+Description: This strategy implements a simply scalping using the RSI (calculated on two periods), the slopes of two MAs ( EMA or SMA ) having different lengths (by default, I use 50 and 200).
+A trailing stop loss (%) is used.
+
+Entry conditions:
+.) Fast MA > Slow MA and Price > Slow MA and RSI < Oversold Threshold     ------> go Long
+.) Fast MA < Slow MA and Price < Slow MA...
+PineScript code:
+
+Pine Script™ strategy
+Scalping using RSI 2 indicator with TSL
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+// Scalping strategy with alert
+// © Lukescream and Ninorigo
+// (original version by Lukescream - lastest versions by Ninorigo) - v1.5
+//
+//@version=4
+strategy(title="Scalping using RSI 2 indicator and alert", shorttitle="RSI 2 Strategy", overlay=true, pyramiding=0, process_orders_on_close=false)
+var bool ConditionEntryL = false
+var bool ConditionEntryS = false
+//***********
+// Costants
+//***********
+def_start_date = timestamp("01 Jan 2021 07:30 +0000")
+def_end_date   = timestamp("01 Dec 2024 07:30 +0000")
+def_rsi_length = 2
+def_overbought_value = 90
+def_oversold_value   = 10
+def_slow_ma_length = 200
+def_fast_ma_length = 50
+def_ma_choice      = "EMA"
+def_tick   = 0.5
+def_filter = true
+def_trailing_stop = 1
+//***********
+// Alert messages
+//***********
+alert_msg_long_entry  = "RSI Long\nSymbol: "+syminfo.tickerid+"\nPrice: "+tostring(close)
+alert_msg_long_exit   = "Exit Long\nSymbol: "+syminfo.tickerid+"\nPrice: "+tostring(close)
+alert_msg_short_entry = "RSI Short\nSymbol: "+syminfo.tickerid+"\nPrice: "+tostring(close)
+alert_msg_short_exit  = "Exit Short\nSymbol: "+syminfo.tickerid+"\nPrice: "+tostring(close)
+//***********
+// Change the optional parameters
+//***********
+start_time  = input(title="Start date", defval=def_start_date, type=input.time)
+end_time    = input(title="End date", defval=def_end_date, type=input.time)
+// RSI
+src         = input(title="Source", defval=close, type=input.source)
+rsi_length  = input(title="RSI Length", defval=def_rsi_length, minval=1, type=input.integer)
+overbought_threshold = input(title="Overbought threshold", defval=def_overbought_value, type=input.float)
+oversold_threshold   = input(title="Oversold threshold", defval=def_oversold_value, type=input.float)
+// Moving average
+slow_ma_length = input(title="Slow MA length", defval=def_slow_ma_length, type=input.integer)
+fast_ma_length = input(title="Fast MA length", defval=def_fast_ma_length, type=input.integer)
+ma_choice = input(title="MA choice", defval="EMA", options=["SMA", "EMA"])
+// Input ticker
+tick   = input(title="Ticker size", defval=def_tick, type=input.float)
+filter = input(title="Trend Filter", defval=def_filter, type=input.bool)
+// Trailing stop (%)
+ts_perc = input(title="Trailing Stop %", defval=def_trailing_stop, type=input.float)
+//***********
+// RSI
+//***********
+// Calculate RSI
+up   = rma(max(change(src), 0), rsi_length)
+down = rma(-min(change(src), 0), rsi_length)
+rsi = (down == 0 ? 100 : (up == 0 ? 0 : 100-100/(1+up/down)))
+//***********
+// Moving averages
+//***********
+slow_ma = (ma_choice == "SMA" ? sma(close, slow_ma_length) : ema(close, slow_ma_length))
+fast_ma = (ma_choice == "SMA" ? sma(close, fast_ma_length) : ema(close, fast_ma_length))
+// Show the moving averages
+plot(slow_ma, color=color.white,  title="Slow MA")
+plot(fast_ma, color=color.yellow, title="Fast MA")
+//***********
+// Strategy
+//***********
+if time > start_time and time < end_time
+    // Determine the entry conditions (only market entry and market exit conditions)
+    // Long position
+    ConditionEntryL := (filter == true ? (fast_ma > slow_ma and close > slow_ma and rsi < oversold_threshold) : (fast_ma > slow_ma and rsi < oversold_threshold))
+    // Short position
+    ConditionEntryS := (filter == true ? (fast_ma < slow_ma and close < slow_ma and rsi > overbought_threshold) : (fast_ma < slow_ma and rsi > overbought_threshold))
+   
+    // Calculate the trailing stop
+    ts_calc = close * (1/tick) * ts_perc * 0.01
+    // Submit the entry orders and the exit orders
+    // *******************************************
+    // Long position
+    if ConditionEntryL
+        // Entry
+        strategy.entry("RSI Long", strategy.long)
+        alert(alert_msg_long_entry, alert.freq_once_per_bar)
+        // Exit
+        strategy.exit("Exit Long", "RSI Long", trail_points=0, trail_offset=ts_calc, alert_message=alert_msg_long_exit)
+    // *******************************************
+    // Short position 
+    if ConditionEntryS
+        // Entry
+        strategy.entry("RSI Short", strategy.short)
+        alert(alert_msg_short_entry, alert.freq_once_per_bar)
+        // Exit
+        strategy.exit("Exit Short", "RSI Short", trail_points=0, trail_offset=ts_calc, alert_message=alert_msg_short_exit)
+    
+// Highlights long conditions
+bgcolor (ConditionEntryL ? color.navy : na, transp=60, offset=1, editable=true, title="Long position band")
+// Highlights short conditions
+bgcolor (ConditionEntryS ? color.olive : na, transp=60, offset=1, editable=true, title="Short position band")
+Expand (119 lines)

@@ -1,0 +1,106 @@
+Script Name: Inverse MACD + DMI Scalping with Volatility Stop (By Coinrule)
+Author: Coinrule
+Description: This script is focused on shorting during downtrends and utilises two strength based indicators to provide confluence that the start of a short-term downtrend has occurred - catching the opportunity as soon as possible.  
+
+This script can work well on coins you are planning to hodl for long-term and works especially well whilst using an automated bot that can...
+PineScript code:
+
+Pine Script™ strategy
+Inverse MACD + DMI Scalping with Volatility Stop (By Coinrule)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+//@version=5
+strategy("Inverse MACD + DMI Scalping with Volatility Stop (Shorting) (By Coinrule)",
+         overlay=true,
+         initial_capital=10000,
+         process_orders_on_close=true,
+         default_qty_type=strategy.percent_of_equity,
+         default_qty_value=100,
+         commission_type=strategy.commission.percent,
+         commission_value=0.1)
+showDate = input(defval=true, title='Show Date Range')
+timePeriod = time >= timestamp(syminfo.timezone, 2022, 4, 1, 0, 0)
+notInTrade = strategy.position_size <= 0
+// DMI and MACD inputs and calculations
+[pos_dm, neg_dm, avg_dm] = ta.dmi(14, 14)
+[macd, macd_signal, macd_histogram] = ta.macd(close, 12, 26, 9)
+Take_profit = input(3) / 100
+longTakeProfit = strategy.position_avg_price * (1 + Take_profit)
+length = input.int(20, 'Length', minval=2)
+src = input(close, 'Source')
+factor = input.float(2.0, 'vStop Multiplier', minval=0.25, step=0.25)
+volStop(src, atrlen, atrfactor) =>
+    var max = src
+    var min = src
+    var uptrend = true
+    var stop = 0.0
+    atrM = nz(ta.atr(atrlen) * atrfactor, ta.tr)
+    max := math.max(max, src)
+    min := math.min(min, src)
+    stop := nz(uptrend ? math.max(stop, max - atrM) : math.min(stop, min + atrM), src)
+    uptrend := src - stop >= 0.0
+    if uptrend != nz(uptrend[1], true)
+        max := src
+        min := src
+        stop := uptrend ? max - atrM : min + atrM
+        stop
+    [stop, uptrend]
+    
+[vStop, uptrend] = volStop(src, length, factor)
+closeShort = close > longTakeProfit or ta.crossunder(close, vStop)
+//Entry
+strategy.entry(id='short', direction=strategy.short, when=ta.crossover(macd_signal, macd) and pos_dm < neg_dm and timePeriod)
+//Exit
+strategy.close('short', when=closeShort and timePeriod)
+Expand (52 lines)

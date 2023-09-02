@@ -1,0 +1,221 @@
+Script Name: RSI multitimeframe SMA crossover
+Author: redlinesd
+Description: Strategy based on the multi timeframe equally weighted RSI moving averages turned into single average and then cross of the 2 combined outputs, seems to be promising, default settings work good on 5m chart(better entry) but very filtered trade amount. If you want to use it on different timeframes be my guest and mess with adjustments, pretty much every aspect of...
+PineScript code:
+
+Pine Script™ strategy
+RSI multitimeframe SMA crossover
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+//@version=4
+strategy(title="RSI multitimeframe SMA crossover", shorttitle="RSI multitimeframe strategy", default_qty_type= strategy.percent_of_equity, margin_long=50, default_qty_value=150)
+res1 = input(title="Res 01", type=input.resolution, defval="1")
+res2 = input(title="Res 0", type=input.resolution, defval="5")
+res3 = input(title="Res 1", type=input.resolution, defval="15")
+res4 = input(title="Res 2", type=input.resolution, defval="15")
+res5 = input(title="Res 3", type=input.resolution, defval="15")
+res6 = input(title="Res 4", type=input.resolution, defval="30")
+res7 = input(title="Res 5", type=input.resolution, defval="45")
+res8 = input(title="Res 6", type=input.resolution, defval="60")
+lengthRSI = input(15, minval=1)
+lengthMA = input(15, minval=1)
+lengthFMA = input(100, minval=1)
+lengthFMA2 = input(150, minval=1)
+Long_yes = input(defval=1, title="Long trades 0 or 1", minval=0, maxval=1)
+Short_yes = input(defval=0, title="Short trades 0 or 1", minval=0, maxval=1)
+src = close
+// === INPUT BACKTEST RANGE ===
+fromMonth = input(defval = 1,    title = "From Month",      type = input.integer, minval = 1, maxval = 12)
+fromDay   = input(defval = 1,    title = "From Day",        type = input.integer, minval = 1, maxval = 31)
+fromYear  = input(defval = 2020, title = "From Year",       type = input.integer, minval = 1970)
+thruMonth = input(defval = 1,    title = "Thru Month",      type = input.integer, minval = 1, maxval = 12)
+thruDay   = input(defval = 1,    title = "Thru Day",        type = input.integer, minval = 1, maxval = 31)
+thruYear  = input(defval = 2112, title = "Thru Year",       type = input.integer, minval = 1970)
+// === INPUT SHOW PLOT ===
+showDate  = input(defval = true, title = "Show Date Range", type = input.bool)
+// === FUNCTION EXAMPLE ===
+start     = timestamp(fromYear, fromMonth, fromDay, 00, 00)        // backtest start window
+finish    = timestamp(thruYear, thruMonth, thruDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+// stop loss 
+longLossPerc = input(title="Long Stop Loss (%)", type=input.float, minval=0.0, step=0.5, defval=10) * 
+   0.01
+longStopPrice = strategy.position_avg_price * (1 - longLossPerc)
+shortLossPerc = input(title="Short Stop Loss (%)", type=input.float, minval=0.0, step=0.5, defval=10) * 
+   0.01
+shortStopPrice = strategy.position_avg_price * (1 + shortLossPerc)
+rsi1 = rsi(src, lengthRSI)
+MA1 = vwma(rsi1, lengthMA)
+outD1 = security(syminfo.tickerid, res1, MA1)
+outD2 = security(syminfo.tickerid, res2, MA1)
+outD3 = security(syminfo.tickerid, res3, MA1)
+outD4 = security(syminfo.tickerid, res4, MA1)
+outD5 = security(syminfo.tickerid, res5, MA1)
+outD6 = security(syminfo.tickerid, res6, MA1)
+outD7 = security(syminfo.tickerid, res7, MA1)
+outD8 = security(syminfo.tickerid, res8, MA1)
+//plot_d0 = outD0
+//plot_d1 = outD1
+//plot_d2 = outD2
+//plot_d3 = outD3
+//plot_d4 = outD4
+//plot_d5 = outD5
+//plot_d6 = outD6
+out_multi = ema(outD1+outD2+outD3+outD4+outD5+outD6+outD7+outD8, lengthFMA)
+out_multi2 = ema(outD1+outD2+outD3+outD4+outD5+outD6+outD7+outD8, lengthFMA2)
+//out_multi1 = outD2+outD3+outD4
+//out_multi2 = outD4+outD5+outD6
+//col0 = outD0 < 20 ? color.lime : outD0 > 80 ? color.red : color.blue
+//col1 = outD1 < 20 ? color.lime : outD1 > 80 ? color.red : color.blue
+//col2 = outD2 < 20 ? color.lime : outD2 > 80 ? color.red : color.blue
+//col3 = outD3 < 20 ? color.lime : outD3 > 80 ? color.red : color.blue
+//col4 = outD4 < 20 ? color.lime : outD4 > 80 ? color.red : color.blue
+//col5 = outD5 < 20 ? color.lime : outD5 > 80 ? color.red : color.blue
+//col6 = outD6 < 20 ? color.lime : outD6 > 80 ? color.red : color.blue
+// plot(plot_d0,linewidth=2, color=col0)
+// plot(plot_d1, linewidth=2, color=col1)
+// plot(plot_d2,linewidth=2, color=col2)
+// plot(plot_d3,linewidth=2, color=col3)
+// plot(plot_d4,linewidth=2, color=col4)
+// plot(plot_d5,linewidth=2, color=col5)
+// plot(plot_d6,linewidth=2, color=col6)
+long=(out_multi/8)
+short=(out_multi2/8)
+plot(long, linewidth=1, color=color.green)
+plot(short, linewidth=1, color=color.red)
+long1=crossover(long,short)
+short1=crossunder(long,short)
+h0 = hline(65, "Upper Band", color=color.red, linestyle=hline.style_solid, linewidth=2 )
+h1 = hline(35, "Lower Band", color=color.green, linestyle=hline.style_solid, linewidth=2)
+strategy.entry("buy", strategy.long, when=long1 and window() and Long_yes > 0) 
+if strategy.position_size > 0
+    strategy.exit(id="XL STP", stop=longStopPrice)
+strategy.close("buy",when=short1 )
+strategy.entry("sell", strategy.short, when=short1 and window() and Short_yes > 0) 
+if strategy.position_size < 0
+    strategy.exit(id="XS STP", stop=shortStopPrice)
+strategy.close("buy",when=long1 )
+Expand (124 lines)

@@ -1,0 +1,96 @@
+Script Name: Supertrend LSMA long Strategy
+Author: exlux99
+Description: This is a long strategy which combines Super trend indicator with LSMA moving average.
+
+In general it tends to works better with long trending markets such as stocks and cryptos using a big timeframe.
+
+The rules are simple
+
+Long entry:
+Supertrend is telling us to go long and close of a candle is above moving average
+
+Long exit:
+Supertrend is telling us to go...
+PineScript code:
+
+Pine Script™ strategy
+Supertrend LSMA long Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+//@version=4
+strategy(title = "Supertrend LSMA long Strategy", overlay = true,  pyramiding=1,initial_capital = 100, default_qty_type= strategy.percent_of_equity, default_qty_value = 100, calc_on_order_fills=false, slippage=0,commission_type=strategy.commission.percent,commission_value=0.1)
+atrPeriod = input(14, "ATR Length")
+factor = input(3, "Factor")
+//Time
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2010, title = "From Year", minval = 1970)
+ //monday and session 
+// To Date Inputs
+toDay = input(defval = 31, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 12, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2021, title = "To Year", minval = 1970)
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate
+//LSMA
+lengthx = input(title="Length LSMA", type=input.integer, defval=101)
+offset = 0//input(title="Offset", type=input.integer, defval=0)
+src = input(close, title="Source")
+lsma = linreg(src, lengthx, offset)
+[_, direction] = supertrend(factor, atrPeriod)
+if(time_cond)
+    if change(direction) < 0 and close > lsma
+        strategy.entry("long", strategy.long)
+    
+    if change(direction) > 0 //and close < lsma
+        strategy.close("long")
+        //strategy.entry("short", strategy.short)
+//strategy.close("long",when=close<lsma)
+//strategy.close("short",when=change(direction) < 0 )
+    
+//plot(strategy.equity, title="equity", color=color.red, linewidth=2, style=plot.style_areabr)
+Expand (44 lines)

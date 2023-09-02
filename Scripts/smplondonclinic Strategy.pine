@@ -1,0 +1,223 @@
+Script Name: smplondonclinic Strategy
+Author: smp_london
+Description: Hello my friend! I'm uploading the code for your strategy. I have included a feature in the settings menu called "Entry Direction" that you can use to isolate only longs, only shorts or have both directions at the same time for the backtesting. I have set the strategy to only open 1 position at a time, it will not open a new position unless the previous position...
+PineScript code:
+
+Pine Script™ strategy
+smplondonclinic Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+//@version=5
+strategy('smplondonclinic Strategy', shorttitle='SMPLC Strategy', overlay=true, pyramiding = 0, process_orders_on_close = true, default_qty_type = strategy.percent_of_equity, default_qty_value = 100)
+direction   = input.string(title='Entry Direction', defval='Long', options=['Long', 'Short', 'Both'],group = "Strategy Entry Direction")
+TPPerc = input.float(title='Take Profit (%)', minval=0.0, step=0.1, defval=0.5, group='Strategy TP & SL')
+SLPerc = input.float(title='Stop Loss (%)', minval=0.0, step=0.1, defval=0.5, group='Strategy TP & SL')
+period = input(20, 'CCI period',group = "TREND MAGIC")
+coeff = input(1, 'ATR Multiplier',group = "TREND MAGIC")
+AP = input(5, 'ATR Period',group = "TREND MAGIC")
+ATR = ta.sma(ta.tr, AP)
+srctm = close
+upT = low - ATR * coeff
+downT = high + ATR * coeff
+MagicTrend = 0.0
+MagicTrend := ta.cci(srctm, period) >= 0 ? upT < nz(MagicTrend[1]) ? nz(MagicTrend[1]) : upT : downT > nz(MagicTrend[1]) ? nz(MagicTrend[1]) : downT
+color1 = ta.cci(srctm, period) >= 0 ? #0022FC : #FC0400
+plot(MagicTrend, color=color1, linewidth=3)
+tmb = ta.cci(srctm, period) >= 0 and close>MagicTrend
+tms = ta.cci(srctm, period) <= 0 and close<MagicTrend
+//MACD
+res           = input.timeframe("",  "Indicator TimeFrame", group = "MACD")
+fast_length   = input.int(title="Fast Length", defval=12, group = "MACD")
+slow_length   = input.int(title="Slow Length", defval=26, group = "MACD")
+src           = input.source(title="Source", defval=close, group = "MACD")
+signal_length = input.int(title="Signal Smoothing", minval = 1, maxval = 999, defval = 9, group = "MACD")
+sma_source    = input.string(title="Oscillator MA Type", defval="EMA", options=["SMA", "EMA"], group = "MACD")
+sma_signal    = input.string(title="Signal Line MA Type", defval="EMA", options=["SMA", "EMA"], group = "MACD")
+fast_ma = request.security(syminfo.tickerid, res, sma_source == "SMA" ? ta.sma(src, fast_length) : ta.ema(src, fast_length))
+slow_ma = request.security(syminfo.tickerid, res, sma_source == "SMA" ? ta.sma(src, slow_length) : ta.ema(src, slow_length))
+macd = fast_ma - slow_ma
+signal = request.security(syminfo.tickerid, res, sma_signal == "SMA" ? ta.sma(macd, signal_length) : ta.ema(macd, signal_length))
+hist = macd - signal
+trend_up   = macd > signal
+trend_dn   = macd < signal
+cross_UP   = signal[1] >= macd[1] and signal < macd
+cross_DN   = signal[1] <= macd[1] and signal > macd
+cross_UP_A = (signal[1] >= macd[1] and signal < macd) and macd > 0
+cross_DN_B = (signal[1] <= macd[1] and signal > macd) and macd < 0
+//UT Bot
+srcut = close
+showut = input.bool(false, 'Show UT Bot Labels', group = "UT BOT")
+keyvalue = input.float(2, title='Key Vaule. \'This changes the sensitivity\'', step=.5, group = "UT BOT")
+atrperiod = input(7, title='ATR Period', group = "UT BOT")
+xATR = ta.atr(atrperiod)
+nLoss = keyvalue * xATR
+xATRTrailingStop = 0.0
+iff_1 = srcut > nz(xATRTrailingStop[1], 0) ? srcut - nLoss : srcut + nLoss
+iff_2 = srcut < nz(xATRTrailingStop[1], 0) and srcut[1] < nz(xATRTrailingStop[1], 0) ? math.min(nz(xATRTrailingStop[1]), srcut + nLoss) : iff_1
+xATRTrailingStop := srcut > nz(xATRTrailingStop[1], 0) and srcut[1] > nz(xATRTrailingStop[1], 0) ? math.max(nz(xATRTrailingStop[1]), srcut - nLoss) : iff_2
+pos = 0
+iff_3 = srcut[1] > nz(xATRTrailingStop[1], 0) and srcut < nz(xATRTrailingStop[1], 0) ? -1 : nz(pos[1], 0)
+pos := srcut[1] < nz(xATRTrailingStop[1], 0) and srcut > nz(xATRTrailingStop[1], 0) ? 1 : iff_3
+xcolor = pos == -1 ? color.red : pos == 1 ? color.green : color.blue
+//plot(xATR, color=xcolor, title='Trailing Stop')
+buy = ta.crossover(srcut, xATRTrailingStop)
+sell = ta.crossunder(srcut, xATRTrailingStop)
+barcolor = srcut > xATRTrailingStop
+plotshape(showut ? buy:na, title='Buy', text='Buy', style=shape.labelup, location=location.belowbar, color=color.new(color.green, 0), textcolor=color.new(color.white, 0), size=size.tiny)
+plotshape(showut ? sell:na, title='Sell', text='Sell', style=shape.labeldown, color=color.new(color.red, 0), textcolor=color.new(color.white, 0), size=size.tiny)
+//barcolor(barcolor ? color.green : color.red)
+goLong = buy and tmb and cross_UP
+goShort = sell and tms and cross_DN
+plotshape(goLong, location=location.bottom, style=shape.triangleup, color=color.lime, size=size.small)
+plotshape(goShort, location=location.top, style=shape.triangledown, color=color.red, size=size.small)
+percentAsPoints(pcnt) =>
+    strategy.position_size != 0 ? math.round(pcnt / 100.0 * strategy.position_avg_price / syminfo.mintick) : float(na)
+percentAsPrice(pcnt) =>
+    strategy.position_size != 0 ? (pcnt / 100.0 + 1.0) * strategy.position_avg_price : float(na)
+current_position_size = math.abs(strategy.position_size)
+initial_position_size = math.abs(ta.valuewhen(strategy.position_size[1] == 0.0, strategy.position_size, 0))
+TP = strategy.position_avg_price + percentAsPoints(TPPerc) * syminfo.mintick * strategy.position_size / math.abs(strategy.position_size)
+SL = strategy.position_avg_price - percentAsPoints(SLPerc) * syminfo.mintick * strategy.position_size / math.abs(strategy.position_size)
+var long = false
+var short = false
+if direction == 'Long' 
+    long := goLong
+    short := false
+if direction == 'Short'
+    short := goShort
+    long := false
+if direction == 'Both' 
+    long := goLong
+    short := goShort
+if long and strategy.opentrades == 0
+    strategy.entry(id='Long', direction=strategy.long)
+if short and strategy.opentrades == 0
+    strategy.entry(id='Short', direction=strategy.short)
+if strategy.position_size > 0
+    strategy.exit('TPSL', from_entry='Long', qty=initial_position_size, limit=TP, stop=SL)
+if strategy.position_size < 0
+    strategy.exit('TPSL2', from_entry='Short', qty=initial_position_size, limit=TP, stop=SL)
+Expand (124 lines)

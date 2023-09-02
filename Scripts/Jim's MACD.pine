@@ -1,0 +1,97 @@
+Script Name: Jim's MACD
+Author: yimbobz
+Description: MACD Buy/Sell Strategy 
+
+Filters bearish crossovers above the 0 line and bullish crossovers below.
+
+Uses 34 ema to further filter the trades and take only longs above and only shorts below.
+
+Apply at least 2:1 risk to reward ratio to account for losing trades.
+
+Trade at own risk!
+PineScript code:
+
+Pine Script™ strategy
+Jim's MACD
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © melihtuna
+//@version=4
+strategy("Jim's MACD v8", overlay=true)
+Tendies = input(true, title="Check here for tendies")
+//Momentum Logic
+mlength = input(12)
+price = close
+momentum(seria, mlength) =>
+    mom = seria - seria[mlength]
+    mom
+mom0 = momentum(price, mlength)
+mom1 = momentum( mom0, 1)
+//MACD Setup 
+signalLength=input(9)
+[macdLine, signalLine, histLine] = macd(close, 12, 26, signalLength)
+//Hullema
+hlength = input(9, minval=1)
+src = input(close, title="Source")
+hullma = wma(2*wma(src, hlength/2)-wma(src, hlength), floor(sqrt(hlength)))
+//Time
+entryt = time(timeframe.period, "0955-1430,1755-2030") //Ensures no new trades in last 30 minutes 
+exitt = time(timeframe.period, "0955-1500,1755-2100") //Trading times : 11AM-4PM , 7PM-10PM EST 
+b = (na(entryt) ? 0 : 1)
+c = (na(exitt) ? 0 : 1)
+//Bar coloring
+barcolor((strategy.position_size>0)?color.green:(strategy.position_size<0)?color.red:color.white)
+//Entry
+if( mom0 > 0 and mom1 > 0 and histLine > 0 and signalLine < 0 and close > hullma ) 
+    strategy.entry( "BUY", strategy.long, when = b == 1 )
+if( mom0 < 0 and mom1 < 0 and histLine < -0.1 and signalLine > 0 and close < hullma )
+    strategy.entry( "SELL", strategy.short, when = b == 1 )
+    
+//Exit 
+strategy.close("BUY", when = histLine < 0 or c == 0)
+strategy.close("SELL", when = histLine > 0 or c == 0)
+Expand (44 lines)

@@ -1,0 +1,256 @@
+Script Name: 3 EMA + Stochastic RSI + ATR
+Author: vaidab
+Description: 3ESRA
+             v0.2a
+
+Coded by Vaida Bogdan
+
+3ESRA consists of a 3 EMA cross + a close above (for longs) the quickest EMA
+or below (for shorts). Note that I've deactivated the RSI Cross Over/Under
+(you can modify the code and activate it). The strategy also uses a stop loss
+that's at 1 ATR distance from the entry price and a take profit that's...
+PineScript code:
+
+Pine Script™ strategy
+3 EMA + Stochastic RSI + ATR
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+//              3ESRA
+//              v0.2a
+// Coded by Vaida Bogdan
+// 3ESRA consists of a 3 EMA cross + a close above (for longs) the quickest EMA
+// or below (for shorts). Note that I've deactivated the RSI Cross Over/Under
+// (you can modify the code and activate it). The strategy also uses a stop loss
+// that's at 1 ATR distance from the entry price and a take profit that's at
+// 4 times the ATR distance from the entry price.
+// Feedback:
+// Tested BTCUSDT Daily
+// 1. Stoch-RSI makes you miss opportunities.
+// 2. Changing RR to 4:1 times ATR works better.
+//@version=4
+strategy(title="3 EMA + Stochastic RSI + ATR", shorttitle="3ESRA", overlay=true, pyramiding=1,
+     process_orders_on_close=true, calc_on_every_tick=true,
+     initial_capital=1000, currency = currency.USD, default_qty_value=10, 
+     default_qty_type=strategy.percent_of_equity,
+     commission_type=strategy.commission.percent, commission_value=0.1, slippage=2)
+startDate = input(title="Start Date", type=input.integer,
+     defval=1, minval=1, maxval=31, group="Backtesting range")
+startMonth = input(title="Start Month", type=input.integer,
+     defval=1, minval=1, maxval=12, group="Backtesting range")
+startYear = input(title="Start Year", type=input.integer,
+     defval=1900, minval=1800, maxval=2100, group="Backtesting range")
+endDate = input(title="End Date", type=input.integer,
+     defval=1, minval=1, maxval=31, group="Backtesting range")
+endMonth = input(title="End Month", type=input.integer,
+     defval=1, minval=1, maxval=12, group="Backtesting range")
+endYear = input(title="End Year", type=input.integer,
+     defval=2040, minval=1800, maxval=2100, group="Backtesting range")
+// Date range filtering
+inDateRange = (time >= timestamp(syminfo.timezone, startYear, startMonth, startDate, 0, 0)) and
+     (time < timestamp(syminfo.timezone, endYear, endMonth, endDate, 23, 59))
+     
+fast = input(8, minval=8, title="Fast EMA", group="EMAs")
+medium = input(14, minval=8, title="Medium EMA", group="EMAs")
+slow = input(50, minval=8, title="Slow EMA", group="EMAs")
+src = input(close, title="Source")
+smoothK = input(3, "K", minval=1, group="Stoch-RSI", inline="K&D")
+smoothD = input(3, "D", minval=1, group="Stoch-RSI", inline="K&D")
+lengthRSI = input(14, "RSI Length", minval=1, group="Stoch-RSI", inline="length")
+lengthStoch = input(14, "Stochastic Length", minval=1, group="Stoch-RSI", inline="length")
+rsiSrc = input(close, title="RSI Source", group="Stoch-RSI")
+length = input(title="Length", defval=14, minval=1, group="ATR")
+smoothing = input(title="Smoothing", defval="RMA", options=["RMA", "SMA", "EMA", "WMA"], group="ATR")
+// EMAs
+fastema = ema(src, fast)
+mediumema = ema(src, medium)
+slowema = ema(src, slow)
+// S-RSI
+rsi1 = rsi(rsiSrc, lengthRSI)
+k = sma(stoch(rsi1, rsi1, rsi1, lengthStoch), smoothK)
+d = sma(k, smoothD)
+sRsiCrossOver = k[1] < d[1] and k > d
+sRsiCrossUnder = k[1] > d[1] and k < d
+// ATR
+ma_function(source, length) =>
+     if smoothing == "RMA"
+          rma(source, length)
+     else
+          if smoothing == "SMA"
+               sma(source, length)
+          else
+               if smoothing == "EMA"
+                    ema(source, length)
+               else
+                    wma(source, length)
+atr = ma_function(tr(true), length)
+// Trading Logic
+longCond1 = (fastema > mediumema) and (mediumema > slowema)
+longCond2 = true
+// longCond2 = sRsiCrossOver
+longCond3 = close > fastema
+longCond4 = strategy.position_size <= 0
+longCond = longCond1 and longCond2 and longCond3 and longCond4 and inDateRange
+shortCond1 = (fastema < mediumema) and (mediumema < slowema)
+shortCond2 = true 
+// shortCond2 = sRsiCrossUnder
+shortCond3 = close < fastema
+shortCond4 = strategy.position_size >= 0
+shortCond = shortCond1 and shortCond2 and shortCond3 and shortCond4 and inDateRange
+var takeProfit = float(na), var stopLoss = float(na)
+if longCond and strategy.position_size <= 0
+    takeProfit := close + 4*atr
+    stopLoss := close - 1*atr
+    // takeProfit := close + 2*atr
+    // stopLoss := close - 3*atr
+else if shortCond and strategy.position_size >= 0
+    takeProfit := close - 4*atr
+    stopLoss := close + 1*atr
+    // takeProfit := close - 2*atr
+    // stopLoss := close + 3*atr
+    
+// Strategy calls
+strategy.entry("3ESRA", strategy.long, comment="Long", when=longCond and strategy.position_size <= 0)
+strategy.entry("3ESRA", strategy.short, comment="Short", when=shortCond and strategy.position_size >= 0)
+strategy.exit(id="TP-SL", from_entry="3ESRA", limit=takeProfit, stop=stopLoss)
+if (not inDateRange)
+    strategy.close_all()
+    
+// Plot EMAs
+plot(fastema, color=color.purple, linewidth=2, title="Fast EMA")
+plot(mediumema, color=color.teal, linewidth=2, title="Medium EMA")
+plot(slowema, color=color.yellow, linewidth=2, title="Slow EMA")
+// Plot S-RSI
+// plotshape((strategy.position_size > 0) ? na : sRsiCrossOver, title="StochRSI Cross Over", style=shape.triangleup, location=location.belowbar, color=color.teal, text="SRSI", size=size.small)
+// Plot trade
+bgcolor(strategy.position_size > 0 ? color.new(color.green, 75) : strategy.position_size < 0 ? color.new(color.red,75) : color(na))
+// Plot Strategy
+plot((strategy.position_size != 0) ? takeProfit : na, style=plot.style_linebr, color=color.green, title="TP")
+plot((strategy.position_size != 0) ? stopLoss : na, style=plot.style_linebr, color=color.red, title="SL")
+Expand (128 lines)

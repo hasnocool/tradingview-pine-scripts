@@ -1,0 +1,206 @@
+Script Name: ALMA-EMA-SRSI Strategy + Indicator
+Author: CheatCode1
+Description: Back with another great high hit rate strategy!!
+
+ Disclaimer* This strategy was sampled using source code written by @ClassicScott , as referred to in the script, there is a clear line where the source code was scripted by myself. 
+ 
+
+This Strategy consists of three key factors, the ALMA,  EMA crossover, and a Stochastic Rsi
+
+ALMA: The Alma is the step line...
+PineScript code:
+
+Pine Script™ strategy
+ALMA/EMA/SRSI Strategy + Indicator
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+//@version=5
+////Arranged by @ClassicScott
+//Strategy Created by @CheatCode1
+strategy('ALMA/EMA Strategy', shorttitle='ALMA/EMA Strategy', overlay=true,  margin_long=0, margin_short=0, default_qty_type = strategy.cash, initial_capital = 1000, pyramiding = 0, default_qty_value = 1000, max_bars_back = 100)
+////Source Selection & ALMA Variables
+//Dominant Momentum ALMA
+dsource = input.source(close, title='Source', group='Dominant ALMA')
+dperiod = input.int(title='Period', defval=130, group='Dominant ALMA')
+doffset = input.float(title='Offset', step=0.025, defval=0.775, group='Dominant ALMA')
+dsigma = input.float(title='Sigma', step=0.5, defval=4.5, group='Dominant ALMA')
+dalma = ta.alma(dsource, dperiod, doffset, dsigma)
+dalma_up_color = input.color(#66bb6a, 'Going Up!', group='Dominant ALMA', inline = '1')
+dalma_down_color = input.color(#ef5350, 'Going Down :(', group='Dominant ALMA', inline = '1')
+dcolor = close[1] > dalma ? dalma_up_color : dalma_down_color
+////ALMA Plots
+plot(dalma, color=dcolor, style=plot.style_stepline, linewidth=2, title='Dominant Momentum MA')
+//Strategy by @CheatCode1 //Strategy by @CheatCode1 //Strategy by @CheatCode1 //Strategy by @CheatCode1 //Strategy by @CheatCode1 //Strategy by @CheatCode1 //Strategy by @CheatCode1 //Strategy by @CheatCode1 //Strategy by @CheatCode1 //Strategy by @CheatCode1 //Strategy by @CheatCode1 //Strategy by @CheatCode1
+//Strategy by @CheatCode1 //Strategy by @CheatCode1 //Strategy by @CheatCode1 //Strategy by @CheatCode1 //Strategy by @CheatCode1 //Strategy by @CheatCode1 //Strategy by @CheatCode1 //Strategy by @CheatCode1 //Strategy by @CheatCode1 //Strategy by @CheatCode1 //Strategy by @CheatCode1 //Strategy by @CheatCode1
+cheatcode = input.bool(true, '-----------CHEATC0DE1------------', group = 'Strategy Inputs', confirm = true)
+//Variable Declerations/Plot Assingments
+inp1 = input.int(49, 'Slow Ema Length', 1, 100, group = 'Strategy Inputs', confirm = true)
+inp2 = input.int(9, 'Fast Ema Length', 1, 200, group = 'Strategy Inputs', confirm = true)
+inp3 = int(200)
+sma1 = ta.sma(close, inp3)
+ema1 = ta.ema(close, inp1)
+ema2 = ta.ema(close, inp2)
+eplot1 = plot(ema1, 'Slow Ema', color.aqua, 1,  plot.style_linebr)
+eplot2 = plot(ema2, 'Fast Ema', color.yellow, 1,  plot.style_linebr)
+splot1 = plot(sma1, 'Long MA', close[1] < sma1 ? color.red:color.green, 1, plot.style_line, display = display.none)
+cross1 = ta.crossover(ema1, ema2)
+cross2 = ta.crossunder(ema1, ema2)
+plotchar(cross2, '', '↑', location.belowbar,  close[1] > dalma and dalma > sma1 ? na:color.green, size = size.normal, editable = false)
+plotchar(cross1, '', '↓', location.abovebar, close[1] < dalma and dalma < sma1 ? na:color.red, size = size.normal, editable = false)
+bgcolor(cross1 and close[1] > dalma ? color.new(color.green, 80):cross2 and close[1] < dalma ? color.new(color.red, 80):na)
+valueL = ta.valuewhen(cross1 and close[1] > dalma, close, 0)
+valueS = ta.valuewhen(cross2 and close[1] < dalma, close, 0)
+//Entries
+if cross1 and close[2] > dalma[2] and close[1] > dalma[1]
+    strategy.entry('Long', strategy.long)
+if cross2 and close[2] < dalma[2] and close[1] < dalma[1]
+    strategy.entry('Short', strategy.short)
+    
+//StochRsi
+    
+smoothK = input.int(3, "K", minval=1)
+smoothD = input.int(15, "D", minval=1)
+lengthRSI = input.int(14, "RSI Length", minval=1)
+lengthStoch = input.int(8, "Stochastic Length", minval=1)
+src = input(close, title="RSI Source")
+rsi1 = ta.rsi(src, lengthRSI)
+k = ta.sma(ta.stoch(rsi1, rsi1, rsi1, lengthStoch), smoothK)
+d = ta.sma(k, smoothD)
+//Cancellations
+if k > 75
+    strategy.cancel('Long')
+if k < 25
+    strategy.cancel('Short')
+    
+//Closures
+if ta.crossunder(k, d) and k > 92
+    strategy.close('Long')
+if ta.crossover(k,d) and k < 8
+    strategy.close('Short')
+//Exit Percents
+takeP = input.float(3, title='Take Profit', group = 'Take Profit and Stop Loss') / 100
+stopL = input.float(5.49, title = 'Stop Loss', group = 'Take Profit and Stop Loss')/100
+// Pre Directionality
+Stop_L = strategy.position_avg_price * (1 - stopL)
+Stop_S = strategy.position_avg_price * (1 + stopL)
+Take_S= strategy.position_avg_price * (1 - takeP)
+Take_L = strategy.position_avg_price * (1 + takeP)
+     
+     
+//Post Excecution
+if strategy.position_size > 0
+    strategy.exit("Flat", limit=Take_L, stop = Stop_L)
+if strategy.position_size < 0
+    strategy.exit("Flat", limit=Take_S, stop = Stop_S)
+Expand (112 lines)

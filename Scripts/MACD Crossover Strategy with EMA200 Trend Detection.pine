@@ -1,0 +1,66 @@
+Script Name: MACD Crossover Strategy with EMA200 Trend Detection
+Author: rrunner88
+Description: Simple MACD Strategy Indicator. 
+
+Rules:
+
+- MACD Crossover with Signal Line
+
+If
+- MACD Crossover above zero line
+- Price is below EMA200 
+=> Sell
+
+If
+- MACD Crossover below zero line (buy)
+- Price is above EMA200
+=> Buy
+PineScript code:
+
+Pine Script™ strategy
+MACD Crossover Strategy with EMA200 Trend Detection
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+//@version=4
+strategy("MACD Crossover", overlay=true)
+// eingabeparameter
+// macd besteht aus einem fast und einem slow moving average sowie einer signal line
+fastMA = input(title="Fast moving average", defval = 12, minval = 7)
+slowMA = input(title="Slow moving average", defval = 26, minval = 7)
+signalLength = input(9,minval=1)
+trendEMALength = input(title="Trend Indicator EMA", defval = 200, minval = 20)
+// berechnung macd & signal
+[currMacd,_,_] = macd(close[0], fastMA, slowMA, signalLength)
+signal = ema(currMacd, signalLength)
+trendEMA = ema(close[0], trendEMALength)
+crossoverBear = cross(currMacd, signal) and currMacd < signal and close[0] < trendEMA and currMacd > 0 and signal > 0 ? true : false
+crossoverBull = cross(currMacd, signal) and currMacd > signal and close[0] > trendEMA and currMacd < 0 and signal < 0 ? true : false
+plotshape(crossoverBear, title='MACD-BEAR', style=shape.triangledown, text='', location=location.abovebar, color=color.red, textcolor=color.white, size=size.normal) 
+plotshape(crossoverBull, title='MACD-BULL', style=shape.triangleup, text='', location=location.belowbar, color=color.green, textcolor=color.white, size=size.normal) 
+alertcondition(crossoverBear, "MACD Bear", "MACD Bearish Crossover")
+alertcondition(crossoverBull, "MACD Bull", "MACD Bullish Crossover")
+Expand (25 lines)

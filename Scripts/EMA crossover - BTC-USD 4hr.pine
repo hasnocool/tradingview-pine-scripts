@@ -1,0 +1,207 @@
+Script Name: EMA crossover - BTC-USD 4hr
+Author: str1nger
+Description: This is my first strategy script, and looking at other EMA crossover strategies, there wasn't anything that I have seen which allowed different EMAs to be used for each Enter/Exit signal
+
+This uses a long term trend ling (one for Longs, one for shorts) to decide if we are in a bull bear market
+• If in a bull market, then it will allow for the longs to be opened
+•...
+PineScript code:
+
+Pine Script™ strategy
+EMA crossover - BTC/USD 4hr
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © str1nger
+//@version=4
+strategy(title="BTC - 4hr - Long/Short", shorttitle="BTC - 4hr - Long/Short", overlay=true, initial_capital=1000, default_qty_type=strategy.percent_of_equity, default_qty_value=75,commission_type=strategy.commission.percent, commission_value=0.075)//////<---Uses a percentage of starting equity
+//DATE RANGE//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+startDate = input(title="Start Date", type=input.integer,
+     defval=1, minval=1, maxval=31)
+startMonth = input(title="Start Month", type=input.integer,
+     defval=1, minval=1, maxval=12)
+startYear = input(title="Start Year", type=input.integer,
+     defval=2020, minval=2000, maxval=2100)
+endDate = input(title="End Date", type=input.integer,
+     defval=1, minval=1, maxval=31)
+endMonth = input(title="End Month", type=input.integer,
+     defval=12, minval=1, maxval=12)
+endYear = input(title="End Year", type=input.integer,
+     defval=2021, minval=2000, maxval=2100)
+inDateRange = (time >= timestamp("Europe/London", startYear,
+         startMonth, startDate, 0, 0)) and
+     (time < timestamp("Europe/London", endYear, endMonth, endDate, 0, 0))
+//EMAs//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//LONG
+//11,33,3,40
+lof= input(11, title="Long Open - Fast", step=1)
+los= input(33, title="Long Open - Slow", step=1)
+lcf= input(3, title="Long Close - Fast", step=1)
+lcs= input(40, title="Long Close - Slow", step=1)
+ema_long_open_fast = ema(close, lof)
+ema_long_open_slow = ema(close, los)
+ema_long_close_fast= ema(close, lcf)
+ema_long_close_slow = ema(close, lcs)
+//SHORT
+//5,11,4,7
+sof= input(5, title="Short Open - Fast", step=1)
+sos= input(11, title="Short Open - Slow", step=1)
+scf= input(4, title="Short Close - Fast", step=1)
+scs= input(7, title="Short Close - Slow", step=1)
+ema_short_open_fast = ema(close, sof)
+ema_short_open_slow = ema(close, sos)
+ema_short_close_fast = ema(close, scf)
+ema_short_close_slow = ema(close, scs)
+//CONDITIONS///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//LONG
+openlong = crossover(ema_long_open_fast, ema_long_open_slow)
+closelong = crossover(ema_long_close_slow, ema_long_close_fast)
+//1.7%
+long_loss_percent = input(title="Long Stop Loss (%)", type=input.float, minval=0.0, step=0.1, defval=1.7) * 0.01
+long_stop_price = strategy.position_avg_price * (1 - long_loss_percent)
+//SHORT
+openshort = crossover(ema_short_open_slow, ema_short_open_fast)
+closeshort = crossover(ema_short_close_fast, ema_short_close_slow)
+//0.4%
+short_loss_percent = input(title="Short Stop Loss (%)", type=input.float, minval=0.0, step=0.1, defval=0.4) * 0.01
+short_stop_price = strategy.position_avg_price * (1 + short_loss_percent)
+//PLOT EMAs////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//LONG
+plot(ema_long_open_fast, "Long EMA open lower", linewidth=1, color=color.green)
+plot(ema_long_open_slow, "Long EMA close upper", linewidth=1, color=color.green)
+plot(ema_long_close_fast, "Long close lower", linewidth=1, color=color.red)
+plot(ema_long_close_slow, "Long close upper", linewidth=1, color=color.red)
+//SHORT
+plot(ema_short_open_fast, "Short open fast", linewidth=1, color=color.green)
+plot(ema_short_open_slow, "Short open slow", linewidth=1, color=color.green)
+plot(ema_short_close_fast, "Short close fast", linewidth=1, color=color.red)
+plot(ema_short_close_slow, "Short close slow", linewidth=1, color=color.red)
+//LONG-TERM TRENDS
+//LONG 144
+long_term_trend_longs= input(144, title="Long-term trend - Longs", step=1)
+lttl= ema(close, long_term_trend_longs)
+plot(lttl, "Long-term trend - Longs", linewidth=2, color=color.blue)
+//SHORT 89
+long_term_trend_shorts= input(89, title="Long-term trend - Shorts", step=1)
+ltts = ema(close, long_term_trend_shorts)
+plot(ltts, "Long-term trend - Shorts", linewidth=2, color=color.blue)
+//STRATEGY//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//LONG
+if (inDateRange and openlong and (close > lttl))
+    strategy.entry("OL", long=true, comment="##insert open long comment here##")
+if (inDateRange and closelong)
+    strategy.close("OL", comment="##insert close long comment here##")
+if strategy.position_size > 0
+    strategy.exit("L-SL", stop=long_stop_price, comment="##insert long stop-loss comment here##")
+//SHORT  
+if (inDateRange and openshort and (close < ltts))
+    strategy.entry("OS", long=false, comment="##insert open short comment here##")
+if (inDateRange and closeshort)
+    strategy.close("OS", comment="##insert close short comment here##")
+if strategy.position_size < 0
+    strategy.exit("S-SL", stop=short_stop_price, comment="##inster short stop-loss comment here##")
+Expand (105 lines)

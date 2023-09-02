@@ -1,0 +1,217 @@
+Script Name: Pinbar trailing stop strategy
+Author: samgozman
+Description: The strategy finds the nearest pinbar pattern and opens a position (long or short). You choose your take profit and stop loss multiplier.
+
+ 
+  Take Profit - X times the pinbar size from it's highest point.
+  Stop loss - X times the pinbar size from it's lowest point.
+ 
+
+You can find more detailed screenshots and the source-code on my github page: ...
+PineScript code:
+
+Pine Script™ strategy
+Pinbar trailing stop strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+//@version=5
+// 
+// Pinbar strategy script by samgozman (https://github.com/samgozman)
+// 
+// Detailed instruction how to use this script: https://github.com/samgozman/pinbar-strategy-tradingview
+//
+// If you liked the script and want to support me: https://paypal.me/sgozman
+// 
+// ++++++++++ Warning: The script is provided for educational purposes only. ++++++++++ //
+strategy('Pinbar strategy', default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=10000, overlay = true)
+profitMultiplier = input.float(2.0, "Profit multiplier", minval=0.1, step=0.1, group="Profit options", tooltip="X times signal candle size from high")
+lossMultiplier =  input.float(1.0, "Loss multiplier", minval=0.1, step=0.1, group="Profit options", tooltip="X times signal candle size from low")
+isTrailingStop = input.bool(true, "Use trailing stops?", group="Trading options", tooltip="Highly recommended!")
+isCloseOnOppositSignal = input.bool(false, "Close trade if opposit signal occures?", group="Trading options", tooltip="Close long on short signal")
+isLongEligible = input.bool(true, "Enter long trades?", group="Trading options")
+isShortEligible = input.bool(false, "Enter short trades?", group="Trading options")
+useDateFilter = input.bool(true, title="Begin Backtest at Start Date", group="Backtest Time Period")
+backtestStartDate = input.time(timestamp("1 Jan 2021"), title="Start Date", group="Backtest Time Period")
+// Predefined time trading zone for back testing
+inTradeWindow = not useDateFilter or time >= backtestStartDate
+// HELPER FUNCTIONS //
+// calculate candle size for N bars back. Use 0 for current
+calcCandle(int periods) =>
+    math.abs(high[periods] - low[periods])
+// if body is below 50% and close/open below 30%
+isBearishPinbar(float candle) =>
+    lower30 = low + candle * 0.30
+    bottomHalf1 = close < hl2
+    bottomHalf2 = open < hl2
+    lowerRegion1 = close < lower30
+    lowerRegion2 = open < lower30
+    
+    con1 = bottomHalf1 and bottomHalf2
+    con2 = lowerRegion1 and lowerRegion2
+    con3 = high > high[1]
+    
+    con1 and con2 and con3
+// if body is above 50% and close/open above 30%  
+isBullishPinbar(float candle) =>
+    upper30 = high - candle * 0.30
+    topHalf1 = close > hl2
+    topHalf2 = open > hl2
+    upperRegion1 = close > upper30
+    upperRegion2 = open > upper30
+    
+    con1 = topHalf1 and topHalf2
+    con2 = upperRegion1 and upperRegion2
+    con3 = low < low[1]
+    
+    con1 and con2 and con3
+    
+barsSinceLastEntry() =>
+    strategy.opentrades > 0 ? bar_index - strategy.opentrades.entry_bar_index(strategy.opentrades - 1) : na
+// Calculate trading signals
+currentCandle = calcCandle(0)
+longSignal = isBullishPinbar(currentCandle) and inTradeWindow
+shortSignal = isBearishPinbar(currentCandle) and inTradeWindow
+// ENTER THE TRADE //
+if longSignal and isLongEligible and strategy.position_size == 0
+    strategy.entry("buy", strategy.long)
+if shortSignal and isShortEligible and strategy.position_size == 0
+    strategy.entry("sell", strategy.short)
+// CALCULATE STOPS //
+barsSinceEntry = barsSinceLastEntry()
+candleFromEntry = calcCandle(barsSinceEntry)
+// long
+long_take_limit = strategy.position_avg_price + (candleFromEntry*profitMultiplier)
+long_target_percent_profit = long_take_limit / strategy.position_avg_price - 1
+long_target_percent_loss = (long_target_percent_profit / profitMultiplier) * lossMultiplier
+long_stop_limit = low[barsSinceEntry] * (1 - long_target_percent_loss)
+//short
+short_take_limit = strategy.position_avg_price - (candleFromEntry*profitMultiplier)
+short_target_percent_profit = strategy.position_avg_price / short_take_limit - 1
+short_target_percent_loss = (short_target_percent_profit / profitMultiplier) * lossMultiplier
+short_stop_limit = high[barsSinceEntry] * (1 + short_target_percent_loss)
+// EXIT THE TRADE //
+if strategy.position_size != 0
+    if isTrailingStop
+        strategy.exit(id="exit", from_entry="buy", trail_price = long_take_limit, stop=long_stop_limit)
+        strategy.exit(id="exit", from_entry="sell", trail_price = short_take_limit, stop=short_stop_limit)
+    else
+        strategy.exit(id="exit", from_entry="buy", limit = long_take_limit, stop=long_stop_limit)
+        strategy.exit(id="exit", from_entry="sell", limit = short_take_limit, stop=short_stop_limit)
+    if isCloseOnOppositSignal and strategy.position_size > 0
+        if shortSignal
+            strategy.close("buy")
+    if isCloseOnOppositSignal and strategy.position_size < 0
+        if longSignal
+            strategy.close("sell")
+// PLOT SIGNALS //
+plotshape(longSignal, style=shape.arrowup, color=color.new(color.green, 0), size=size.large, location=location.belowbar)
+plotshape(shortSignal, style=shape.arrowdown, color=color.new(color.red, 0), size=size.large, location=location.abovebar)
+Expand (109 lines)

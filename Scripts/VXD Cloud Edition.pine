@@ -1,0 +1,430 @@
+Script Name: VXD Cloud Edition
+Author: Vvaz_
+Description: VXD Cloud Edition.   
+to overcome sideways market conditions this cloud configured for  low timeframe. 
+every TA is same as VXD Supercycle but show as cloud.
+
+ Symbols on chart show Premium and Discount Prices 
+    X-Cross = Engulfing Candle with weak volume .
+    O-circle - Engulfing Candle with strong volume . 
+
+ Pivot point and Rejected Block 
+    Pivot show...
+PineScript code:
+
+Pine Script™ strategy
+VXD Cloud Edition
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+// © Vvaz_
+//@version=5
+//This Strategy Combined the following indicators and conditioning by me
+//ATR , RSI , EMA , SMA , Linear regression curve and Andean Oscillator
+strategy("VXD Cloud", "VXD", overlay=true , initial_capital=100 ,currency = currency.USD , pyramiding = 1 , process_orders_on_close=true ,calc_on_every_tick= false)
+// INPUT BACKTEST RANGE 
+var string BTR1         = '════════ INPUT BACKTEST TIME RANGE ════════'
+i_startTime             = input.time(defval = timestamp("01 Jan 1945 00:00 +0000"), title = "Start", inline="timestart", group=BTR1)
+i_endTime               = input.time(defval = timestamp("01 Jan 2074 23:59 +0000"), title = "End", inline="timeend", group=BTR1)
+timeCond                = (time > i_startTime) and (time < i_endTime)
+// Strategy Setting
+leverage                = input.bool(title="Use Leverage?", defval = true , group='═ Strategy Setting ═', tooltip = 'If use "Position size" can be larger than Equity')
+riskPer                 = input.int(10, "Risk", minval = 1, group='═ Strategy Setting ═', tooltip = 'Lost per trade',inline='risk')
+risktype                = input.string('$', "", options=['$','%'] ,group='═ Strategy Setting ═',inline='risk')
+cond0                   = 'Break Cloud + Pivot' , cond1 = 'Break Cloud + Pivot + Subhag Filter' , cond2 = 'Cloud-MA(New)'
+conditype               = input.string(cond2, "Order Condition", options=[cond0,cond1, cond2] ,group='═ Strategy Setting ═')
+uselong                 = input.bool(title="Open Buy?", defval = true , group='═ Strategy Setting ═')
+useshort                = input.bool(title="Open Sell?", defval = true , group='═ Strategy Setting ═')
+useSL                   = input.bool(title="Use Take Profit/StopLoss?", defval = true , group='═ Strategy Setting ═',inline='Set')
+useSLbox                   = input.bool(title="Show Profit/StopLoss Box?", defval = false , group='═ Strategy Setting ═')
+useSLcl                 = input.color(defval=color.new(color.orange,0), title='Color', inline='Set', group='═ Strategy Setting ═')
+rrPer                   = input.float(3.00, "Risk:Reward TP1", minval = 1, step=0.1, group='═ Strategy Setting ═',inline='rr')
+rrPer2                  = input.float(4.00, "TP2", minval = 1, step=0.1, group='═ Strategy Setting ═',inline='rr')
+TPper                   = input.int(50, "Equity % Take Profit TP1", minval = 0 ,maxval = 100, step=5, group='═ Strategy Setting ═', tooltip='Take a snack and let profit run.',inline='tp%')
+TPper2                  = input.int(100, "TP2", minval = 0 ,maxval = 100, step=5, group='═ Strategy Setting ═',inline='tp%')
+/////////////////////////  ATR  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+Periods                 = input.int(title="ATR Period", defval=12 ,group='═ ATR Setting ═')
+Multiplier              = input.float(title="ATR Multiplier", step=0.1, defval=1.6,group='═ ATR Setting ═')
+ATR                     = ta.sma(ta.tr,Periods)
+downT                   = high + ATR * Multiplier
+upT                     = low  - ATR * Multiplier
+[supertrend, direction] = ta.supertrend(Multiplier, Periods)
+/////////////////////////  RSI  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+LengthRSI               = input.int(25,'RSI', minval=1, group='═ RSI Setting ═')
+rsibb                   = ta.rsi(close,LengthRSI)
+/////////////////////////  Andean Oscillator   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+LengthAO               = input.int(30,'Length', minval=1, group='═ Andean Oscillator Setting ═')
+var alpha = 2/(LengthAO+1)
+var up1 = 0.,var up2 = 0.
+var dn1 = 0.,var dn2 = 0.
+C = close , O = open
+up1 := nz(math.max(C, O, up1[1] - (up1[1] - C) * alpha), C)
+up2 := nz(math.max(C * C, O * O, up2[1] - (up2[1] - C * C) * alpha), C * C)
+dn1 := nz(math.min(C, O, dn1[1] + (C - dn1[1]) * alpha), C)
+dn2 := nz(math.min(C * C, O * O, dn2[1] + (C * C - dn2[1]) * alpha), C * C)
+//Components
+bull = math.sqrt(dn2 - dn1 * dn1)
+bear = math.sqrt(up2 - up1 * up1)
+/////////////////////////  MA  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+LengthMA                = input.int(30,'EMA fast', minval=1, group='═ MA Setting ═', tooltip = 'Act as Trend line')
+sma2cl                  = input.color(defval=color.new(color.purple,0), title='EMA Slow', group='═ MA Setting ═' ,inline = 'sma200')
+LengthMA2               = input.int(200,'Period', minval=1, group='═ MA Setting ═',inline = 'sma200')
+float MA_1              = ta.ema(close, LengthMA)
+MA_2                    = ta.ema(close, LengthMA2)
+////////////////////////// Linear regression curve  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+length                  = input.int(30, minval=1, group='═ Subhag Setting ═')
+smoothing               = input.int(30, minval=1, group='═ Subhag Setting ═')
+linreg                  = ta.ema(ta.linreg(close, length, 0),smoothing)
+isUplinreg              = ta.rising(linreg,2) , isDnlinreg = ta.falling(linreg,2)
+hullColor               = isUplinreg ? color.green : isDnlinreg ? color.red : color.yellow
+/////////////////////////  Pivot Setting  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+plotPVT                 = input.bool(defval=true, title='Plot Pivots', group='═ Pivots ═')
+pivotLookup             = input.int(defval=5, minval=1, maxval=8,title='Pivot Lookup', group='═ Pivots ═', tooltip='Minimum = 1, Maximum = 8')
+pivotsizing             = input.int(defval=50, minval=1, maxval=100,title='Pivot bars back for sizing', group='═ Pivots ═', tooltip='Minimum = 1, Maximum = 100')
+plotInThePast           = input(false, "Plot When Pivot is Detected" ,group='═ Pivots ═')
+pvtTopColor             = input.color(defval=color.new(#76b579,10), title='Pivot Top Color', group='═ Pivots ═', inline='PVT Top Color')
+pvtBottomColor          = input.color(defval=color.new(#d85884,10), title='Pivot Bottom Color', group='═ Pivots ═', inline='PVT Top Color')
+//////////////////////////////////// High Volume Bars Setting //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+plotHVB                 = input.bool(defval=true, title='Plot HVB', group='═ High Volume Bar ═', tooltip='A candle where the average volume is higher than last few bars.')
+hvbBullColor            = input.color(defval=color.new(color.green,0), title='Bullish HVB Color', inline='Set Custom Color', group='═ High Volume Bar ═')
+hvbBearColor            = input.color(defval=color.new(color.orange,0), title='Bearish HVB Color', inline='Set Custom Color', group='═ High Volume Bar ═')
+hvbEMAPeriod            = input.int(defval=6, minval=1, title='Volume EMA Period', group='═ High Volume Bar ═')
+hvbMultiplier           = input.float(defval=1.2, title='Volume Multiplier', minval=1, maxval=100, group='═ High Volume Bar ═')
+//////////////////////////////////// Cloud Setting //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+showcloud               = input.bool(title="Show Cloud?", defval = true , group='═ Cloud Setting ═')
+clhicl                  = input.color(defval=color.new(color.green,100), title='Cloud High Color', group='═ Cloud Setting ═' )
+cllocl                  = input.color(defval=color.new(color.red,100), title='Cloud Low Color', group='═ Cloud Setting ═')
+clbgclbull              = input.color(defval=color.green, title='Bull Cloud  Color', group='═ Cloud Setting ═')
+clbgclbear              = input.color(defval=color.red, title='Bear Cloud  Color', group='═ Cloud Setting ═')
+clbgclsway              = input.color(defval=color.yellow, title='Sideway Cloud  Color', group='═ Cloud Setting ═')
+cltranpl                = input.int(defval=80, title='Cloud  transparent', group='═ Cloud Setting ═')
+///////////////////////////////  define trend  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+AlphaTrend              = 0.0 , CloudMA                 = 0.0 ,cloudtrend              = 0,zonecl                  = color.white,ATcl                    = color.new(color.yellow,0)
+//cloud
+AlphaTrend              := conditype == cond2 ? (rsibb >= 50 ? upT < nz(AlphaTrend[1]) ? nz(AlphaTrend[1]) : upT : downT > nz(AlphaTrend[1]) ? nz(AlphaTrend[1]) : downT) : supertrend
+fastl                   = ta.ema(close,2)
+clohi                   = math.max(MA_1,linreg,AlphaTrend[2]) 
+clolo                   = math.min(MA_1,linreg,AlphaTrend[2]) 
+greenzone               = close > clohi
+redzone                 = close < clolo
+greenzoneB              = (close > clohi)  and isUplinreg 
+redzoneB                = (close < clolo)  and isDnlinreg 
+//CloudMA
+CloudMA                 := (bull > bear) ? clolo < nz(CloudMA[1]) ? nz(CloudMA[1]) : clolo : (bear > bull) ? clohi > nz(CloudMA[1]) ? nz(CloudMA[1]) : clohi : nz(CloudMA[1])
+ATisup                  = ta.rising(CloudMA,2)
+ATisdn                  = ta.falling(CloudMA,2)
+cloudtrend              := ATisup ? 1 : ATisdn ? -1 : cloudtrend[1]
+ATcl                    := ATisup ? clbgclbull  : ATisdn ? clbgclbear  : CloudMA[1] == CloudMA ? clbgclsway : ATcl[1]
+//plot cloud
+kline                   = plot(CloudMA, color=color.new(ATcl,0), linewidth=2)
+zonecl                  := greenzoneB and (conditype == cond1) ? color.new(clbgclbull,cltranpl) : redzoneB and (conditype == cond1) ? color.new(clbgclbear,cltranpl) : greenzone and (conditype == cond0) ? color.new(clbgclbull,cltranpl) : redzone and (conditype == cond0) ? color.new(clbgclbear,cltranpl) : (conditype == cond2) ? color.new(ATcl,cltranpl) : zonecl[1]
+main1                   = plot(clohi , title="Cloud High" , color=clhicl , linewidth=1)
+main2                   = plot(clolo , title="Cloud low" , color=cllocl , linewidth=1)
+fill(main1,main2,showcloud ? zonecl : na)
+main3                   = plot(MA_2 , title="SMA" , color=sma2cl , linewidth=2)
+//////////////////// Pivots //////////////////// 
+hih                     = ta.pivothigh(high, pivotLookup, pivotLookup)
+lol                     = ta.pivotlow(low , pivotLookup, pivotLookup)
+top                     = ta.valuewhen(hih, high[pivotLookup], 0)
+bottom                  = ta.valuewhen(lol, low [pivotLookup], 0)
+pvtop = plot(top, offset=plotInThePast ? 0 : -pivotLookup , linewidth=1, color=(top != top[1] ? na : (plotPVT ? pvtTopColor : na)), title="Pivot Top")
+pvdow = plot(bottom, offset=plotInThePast ? 0 : -pivotLookup, linewidth=1, color=(bottom != bottom[1] ? na : (plotPVT ? pvtBottomColor : na)), title="Pivot Bottom")
+////////////////// High Volume Bars //////////////////
+volEma                  = ta.sma(volume, hvbEMAPeriod)
+isHighVolume            = volume > (hvbMultiplier * volEma)
+//Functions
+isUp(index) =>
+    close[index] > open[index]
+isDown(index) =>
+    close[index] < open[index]
+barcolor(plotHVB and isUp(0) and isHighVolume ? hvbBullColor : na, title="Bullish HVB")
+barcolor(plotHVB and isDown(0) and isHighVolume ? hvbBearColor : na, title="Bearish HVB")
+//////////////////////////////////   Strategy condition   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+position_size               = strategy.position_size ,Eqty                        = strategy.equity , lotsize = 0.0,RR0 = 0.0 , RR1 = 0.0 ,SLbuy = 0.0 , SLsell = 0.0
+openoncel                   = strategy.opentrades == 0 or (position_size <= 0)
+openonces                   = strategy.opentrades == 0 or (position_size >= 0)
+exitshort                   =  (conditype == cond2) ? (ta.change(cloudtrend) and cloudtrend == 1) : (close > clohi) and (close > top)
+exitlong                    =  (conditype == cond2) ? (ta.change(cloudtrend) and cloudtrend == -1) : (close < clolo) and (close < bottom)
+//sizing by swing high and low
+highest                     = ta.highest(top,pivotsizing)
+lowest                      = ta.lowest(bottom,pivotsizing)
+percentrisk                 = risktype == '%' ? (riskPer/100)*Eqty : riskPer
+////condition
+LongCondition               =   openoncel and (close > top) and greenzone  and timeCond
+LongConditionB              =   openoncel and (close > top) and greenzoneB  and timeCond
+ShortCondition              =   openonces and (close < bottom) and redzone and timeCond
+ShortConditionB             =   openonces and (close < bottom) and redzoneB and timeCond
+LongConditionC              =   (cloudtrend > 0)   and openoncel  and greenzone  and timeCond
+ShortConditionC             =   (cloudtrend < 0)  and openonces  and redzone and timeCond
+actionbull                  = (conditype == cond1) ? (LongConditionB) : (conditype == cond0) ? ( LongCondition) : (conditype == cond2) ? (LongConditionC) : false
+actionbear                  = (conditype == cond1) ? (ShortConditionB): (conditype == cond0) ? (ShortCondition) : (conditype == cond2) ? (ShortConditionC) : false
+changetbull                 = ta.change(actionbull) ,changetbear             = ta.change(actionbear) ,buyprice                = 0.0 ,sellprice               = 0.0 ,mapast                  = 0.0  ,openprice               = strategy.opentrades.entry_price(0),TPbear   = 0.0,TPbull   = 0.0 , onebuy = 0, onesell = 0,TPbull2 = 0.0,TPbear2 = 0.0, stat_H = 0.0 , stat_L = 0.0
+lotsize                     := changetbull ? math.abs((percentrisk ) / (close - lowest)) : changetbear ? math.abs((percentrisk ) / (highest - close)) : lotsize[1]
+while not leverage and (lotsize * close ) > Eqty
+    lotsize := lotsize /2
+    lotsize
+buyprice                    := position_size >= 0 ? changetbull ? openprice : buyprice[1] : na
+sellprice                   := position_size <= 0 ? changetbear ? openprice : sellprice[1] : na
+RR1                         := changetbull ? buyprice * (1 + (((openprice - lowest)/openprice))*1) : changetbear ? sellprice * (1 - (((highest - openprice) / openprice))*1) : RR1[1]
+TPbull                      := changetbull ? buyprice * (1 + (((openprice - lowest)/openprice))*rrPer) : (position_size > 0) ? TPbull[1] :(position_size < 0)  ? 0.0 : 0.0 
+TPbull2                     := changetbull ? buyprice * (1 + (((openprice - lowest)/openprice))*rrPer2) : (position_size > 0) ? TPbull2[1] :(position_size < 0)  ? 0.0 : 0.0 
+TPbear                      := changetbear ? sellprice * (1 - (((highest - openprice) / openprice))*rrPer) : (position_size < 0) ? TPbear[1] :(position_size > 0)  ? 0.0 : 0.0 
+TPbear2                     := changetbear ? sellprice * (1 - (((highest - openprice) / openprice))*rrPer2) : (position_size < 0) ? TPbear2[1] :(position_size > 0)  ? 0.0 : 0.0 
+//stat
+stat_H                      := (position_size != 0) ? high > high[1] ? high : stat_H[1] : high
+stat_L                      := (position_size != 0) ? low < low[1] ? low : stat_L[1] : low
+SLbuy                       := exitshort ? lowest : (position_size > 0) and (stat_H > RR1) ? buyprice :  SLbuy[1]
+SLsell                      := exitlong ? highest :(position_size < 0) and (stat_L < RR1) ? sellprice :  SLsell[1]
+isslbuy = ta.crossunder(stat_L,SLbuy) , isslsell = ta.crossover(stat_H,SLsell)
+onebuy                      := (cloudtrend[1] != 1) and (cloudtrend == 1) ? 1 :  isslbuy ? 0 : (position_size > 0) ? 1 : (cloudtrend == -1) ? 0 : onebuy[1]
+onesell                     := (cloudtrend[1] != -1) and (cloudtrend == -1) ? 1 : isslsell ? 0 : (position_size < 0) ? 1 : (cloudtrend == 1) ?  0 : onesell[1]
+//plot
+linetp                      = plot(useSLbox ? (useSL and (position_size > 0) ? TPbull : useSL and (position_size < 0) ? TPbear : na): useSL and changetbull ? TPbull : useSL and changetbear ? TPbear : na , 'TP',useSLbox ? color.green : useSLcl,style=plot.style_linebr , linewidth=1 )
+linetp2                     = plot(useSLbox ? (useSL and (position_size > 0) ? TPbull2 : useSL and (position_size < 0) ? TPbear2 : na): useSL and changetbull ? TPbull2 : useSL and changetbear ? TPbear2 : na , 'TP2',useSLbox ? color.green : useSLcl,style=plot.style_linebr , linewidth=1 )
+lintsl                      = plot(useSLbox ? (useSL and (position_size > 0) ? SLbuy : useSL and (position_size < 0) ? SLsell : na): useSL and changetbull ? SLbuy : useSL and changetbear ? SLsell : na , 'SL',useSLbox ? color.red : useSLcl,style=plot.style_linebr , linewidth=1 )
+lineentry                   = plot(useSLbox and (position_size > 0) ? buyprice : useSLbox and (position_size < 0) ? sellprice : na , 'Entry',color.white,style=plot.style_linebr , linewidth=1 )
+fill(lineentry,linetp2,color.new(color.green,80))
+fill(lineentry,lintsl,color.new(color.red,80))
+//string message thank to @chaiyapruekr 
+//passphrase = 'xxxx' 
+string Alert_OpenLong       = 'Long Entry! on {{ticker}} \n Buy@ {{strategy.order.price}} \n Size = {{strategy.order.contracts}} \n SL @ '+str.tostring(SLbuy)
+string Alert_OpenShort      = 'Short Entry! on {{ticker}} \n Sell@ {{strategy.order.price}} \n Size = {{strategy.order.contracts}} \n SL @ '+str.tostring(SLsell)
+string Alert_LongTP         = 'TP/SL Long on {{ticker}} \n @ {{strategy.order.price}} \n Size = {{strategy.order.contracts}}'
+string Alert_ShortTP        = 'TP/SL Short on {{ticker}} \n @ {{strategy.order.price}} \n Size = {{strategy.order.contracts}}'
+var message_closelong       = 'Tailing Stop Long!!! on {{ticker}} \n @ {{strategy.order.price}}'
+var message_closeshort      = 'Tailing Stop Short!!! on {{ticker}} \n @ {{strategy.order.price}}'
+string Alert_StopLosslong   = 'StopLoss Long! on {{ticker}} \n @ {{strategy.order.price}}'
+string Alert_StopLossshort  = 'StopLoss Short! on {{ticker}} \n @ {{strategy.order.price}}'
+// exit order
+if (exitlong == true  )
+    strategy.close('long2', comment='TailingStop-L', alert_message=message_closelong)
+if (exitshort == true )
+    strategy.close('Short2', comment='TailingStop-S', alert_message=message_closeshort)
+// long
+if (uselong == true) and changetbull and (onebuy[1] == 0)
+    strategy.entry('long2', strategy.long   ,qty =lotsize , comment='Long', alert_message=Alert_OpenLong)
+// Short
+if (useshort == true) and changetbear and (onesell[1] == 0)
+    strategy.entry('Short2', strategy.short   ,qty =lotsize, comment='Short', alert_message=Alert_OpenShort)
+//TPSL
+if (position_size > 0) and useSL 
+    strategy.exit('TP1','long2', comment='SL/TP1',limit=TPbull , alert_message=Alert_LongTP , qty_percent=TPper, stop = SLbuy)
+    strategy.exit('TP2','long2', comment='SL/TP2',limit=TPbull2 , alert_message=Alert_LongTP , qty_percent=TPper2, stop = SLbuy)   
+    strategy.exit('SL','long2', comment='SL', stop = SLbuy  , alert_message=Alert_StopLosslong)
+if (position_size < 0) and useSL 
+    strategy.exit('STP1','Short2',comment= 'SL/TP1',limit=TPbear  , alert_message=Alert_ShortTP, qty_percent=TPper, stop=SLsell)
+    strategy.exit('STP2','Short2',comment= 'SL/TP2',limit=TPbear2  , alert_message=Alert_ShortTP, qty_percent=TPper2, stop=SLsell)    
+    strategy.exit('SSL','Short2',comment= 'SL', stop=SLsell , alert_message=Alert_StopLossshort)
+//////////////////////////////////    DATA WINDOW   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+import Naruephat/Cayoshi_Library/1 as fuLi
+show_Net = input.bool(true,'Show Net', inline = 'Lnet')
+position_ = input.string('top_right','Position', options = ['top_right','middle_right','bottom_right','top_center','middle_center','bottom_center','middle_left','bottom_left'] , inline = 'Lnet')
+size_i = input.string('normal','size', options = ['auto','tiny','small','normal'] , inline = 'Lnet') 
+color_Net = input.color(color.blue,"" , inline = 'Lnet')
+fuLi.NetProfit_Show(show_Net , position_ , size_i,  color_Net )
+//////////////////////////////////   By Vvaz_   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+Expand (206 lines)

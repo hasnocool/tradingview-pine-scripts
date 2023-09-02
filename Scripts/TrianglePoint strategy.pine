@@ -1,0 +1,188 @@
+Script Name: TrianglePoint strategy
+Author: mohanee
+Description: This is trend following strategy ...  when price is trading well above 200 ema and forms a triangle   (based on number of bars defined)
+
+BUY
+====
+when   fast ema >  200 ema
+check for triangle of last N bars  (default set to 9)
+
+EXIT
+======
+when  fast ema crosses down  middle term ema
+
+if  price reaches above  5%  of buy ,  it changes the color to purple. You can...
+PineScript code:
+
+Pine Script™ strategy
+TrianglePoint strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mohanee
+//@version=4
+strategy(title="TrianglePoint strategy", overlay=true,pyramiding=2, default_qty_value=3, default_qty_type=strategy.fixed,    initial_capital=10000, currency=currency.USD)
+// variables  BEGIN
+//find the index of highest high  of n periods 
+index_HH(pds) =>
+    tHH =0.00
+    HH_index=1
+    for i=1 to pds
+        if high[i]>tHH
+            tHH:=high[i]
+            HH_index:=i
+          
+    HH_index
+//find the index of lowest low  of n periods 
+index_LL(pds) =>
+    tLL = low[0]
+    LL_index=1
+    for i=1 to pds
+        if low[i]<tLL
+            tLL:=low[i]
+            LL_index:=i
+          
+    LL_index
+    
+numPeriods=input(9,title="Number of Bars")
+fastEMA = input(13, title="fast EMA", minval=1)
+slowEMA = input(65, title="slow EMA", minval=1)
+stopLoss = input(title="Stop Loss%", defval=5, minval=1)
+changeBarColor = input(true, title="chage bar color")
+//showAllTriangles = input(true, title="show All Triangles")
+HH = highest(close,numPeriods)
+LL = lowest(close,numPeriods)
+tringlePoint =  low > LL and high < HH
+//HH = highest(high,numPeriods)   ///close[1],numPeriod
+//LL = lowest(low,numPeriods)  //close[1],numPeriods
+fastEMAval= ema(close, fastEMA)
+slowEMAval= ema(close, slowEMA)
+two100EMAval= ema(close, 200)
+//plot emas
+plot(fastEMAval, color = color.green, linewidth = 1, transp=0)
+plot(slowEMAval, color = color.orange, linewidth = 1, transp=0)
+plot(two100EMAval, color = color.purple, linewidth = 2, transp=0)
+longCondition=fastEMAval>two100EMAval and tringlePoint //and close>two100EMAval
+// On the last price bar, make a new trend line
+HH_index=index_HH(numPeriods)
+LL_index=index_LL(numPeriods)
+if (longCondition and strategy.position_size<1 )  //and barstate.islast
+    line.new(x1=bar_index[LL_index ], y1=low[LL_index],
+         x2=bar_index, y2=close, color=color.red, width=2)
+    line.new(x1=bar_index[HH_index], y1=high[HH_index],
+         x2=bar_index, y2=close, color=color.green, width=2) 
+    line.new(x1=bar_index[HH_index], y1=high[HH_index],
+         x2=bar_index[LL_index], y2=low[LL_index], color=color.blue, width=2)           
+//Entry
+strategy.entry(id="TBT LE", comment="TBT LE" , long=true, stop=close[0]+0.10 ,when= longCondition and strategy.position_size<1 )   
+//Add
+strategy.entry(id="TBT LE", comment="Add" , long=true,  when= longCondition and strategy.position_size>=1 and close<strategy.position_avg_price)   
+//barcolor(strategy.position_size>=1 ? color.blue : na)
+//Take profit
+takeProfitVal=   strategy.position_size>=1 ?  (strategy.position_avg_price * (1+(stopLoss*0.01) )) : 0.00
+//strategy.close(id="TBT LE", comment="Profit Exit",  qty=strategy.position_size/2,  when=close>=takeProfitVal and close<open and close<fastEMAval)   //crossunder(close,fastEMAval)
+barcolor(strategy.position_size>=1  and changeBarColor==true ? (close>takeProfitVal? color.purple : color.blue): na)
+//Exit
+strategy.close(id="TBT LE", comment="TBT Exit",   when=crossunder(fastEMAval,slowEMAval))
+//stoploss
+stopLossVal=   strategy.position_size>=1 ?  (strategy.position_avg_price * (1-(stopLoss*0.01) )) : 0.00
+//stopLossVal= close> (strategy.position_avg_price * (1+(stopLoss*0.01) )) ? lowest(close,numPeriods) : (strategy.position_avg_price * (1-(stopLoss*0.01) ))
+strategy.close(id="TBT LE", comment="SL Exit",   when= close < stopLossVal)
+Expand (98 lines)

@@ -1,0 +1,292 @@
+Script Name: Inferential Statistics And Quick Metrics For Strategy Analysis.
+Author: pAulseperformance
+Description: Part of this script is used to calculate inferential statistics and metrics not available through the built in variables in the strategy tester.
+
+A label will be created on the last bar displaying important strategy results,  so you can test and analyze strategies quicker. 
+
+The built in strategy itself is just an example. You can copy and paste the metrics into...
+PineScript code:
+
+Pine Script™ strategy
+Inferential Statistics And Quick Metrics For Strategy Analysis.
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+//@version=4
+// Inferential Statistics and trading metrics for any strategy to help you quickly analyze strategy results.
+// The strategy itself is a momentum strategy that is meant for 4hr to Daily timeframes, but it is vey basic and is just showcasing the metrics
+// APPT: Average Profit Per Trade with confidence interval. Default is 95% confidence, but can be changed in the setting.
+// Trades Needed: Shows # of trades needed for statistical significance based on CI and CL
+// Trades Closed: Sum of all trades closed. Same as metric in strategy tester
+// Net Profit: Sum of all trades profit/loss including commission. Same as strategy Tester
+// Max Drawdown: Same as strategy tester. This metric could be improved, right now it's not very intuitive
+// Buy & Hold Return: Same as strategy tester.
+// Author: @Gammapips
+// Version: v0.2
+// Published: 2020.10.13 12:04:00 UTC
+strategy(shorttitle="Gammapips EMA Cross", 
+         title="GPX", 
+         overlay=true,
+         initial_capital=10000,
+         currency=currency.USD,
+         // ticks of slippage. This should be changed according to liquidity and position size of your target market.
+         slippage=5,
+         // This commission should match your broker/exchange. It could be higher or lower
+         commission_type=strategy.commission.percent,
+         commission_value=0.1,   
+         default_qty_type=strategy.percent_of_equity,
+         default_qty_value=1,
+         // 'FIFO' or 'ANY' Check with your broker. FOREX is FIFO
+         close_entries_rule='ANY',
+         process_orders_on_close=false
+         )
+// FUNCTION DEFINITIONS
+// Tracking Trades for Statistics since we don't have access to individual trades from built in variables and we need to measure variance.
+// Inferential Statistics
+i_CL = input(95, "Confidence Level", options=[80,85,90,95,99,99.5,99.9])
+i_CI = input(10, "Confidence Interval") / 100  // aka. Margin of Error
+f_getZScore() =>
+    // This value measures your degree of certainty regarding how well a sample represents the overall population 
+    // within your chosen margin of error.
+     _zScore = i_CL == 80 ? 1.282 : i_CL == 85 ? 1.440 : i_CL == 90 ? 1.645 : i_CL == 95 ? 1.960 : i_CL == 99 ? 2.576 : i_CL == 99.5 ? 2.87 : 3.291
+f_sampleSizeNeeded() =>
+    // ❗ : Not sure if this is being computed correctly yet.
+    // If our strategy doesn't take enough trades we can't be confident it's giving us the correct results.
+    // This will find the recommended amount of samples(trades) we need to take to be statistically significant.
+    // https://www.surveysystem.com/sscalc.htm#one
+    _zScore = f_getZScore()
+    _SD     = 0.5         // standard of deviation == .5
+    _N      = bar_index   // This population should represent the maximum amount of trades that could be taken for each bar.
+    _sampleSizeNeeded = round((pow(_zScore, 2)*_SD*(1-_SD)/pow(i_CI,2))/(1 + (pow(_zScore, 2)*_SD*(1-_SD)/(pow(i_CI,2)*_N))))
+f_findCI(_samples) =>
+    // Calculates the actual confidence interval according to the sample size. https://www.alchemer.com/resources/blog/how-to-calculate-confidence-intervals/
+    // https://www.scribbr.com/statistics/confidence-interval/
+    // _samples: Must be an array.float or array.integer.
+    // Returns a tuple containing the sample mean and positive confidence interval.
+    _n  = array.size(_samples)      // Sample size (amount), n
+    _x  = array.avg(_samples)       // Sample Mean (average), X
+    _SD = array.stdev(_samples)     // Standard Deviation, σ or s   the population standard deviation
+    _z = f_getZScore()              // the critical value of the z-distribution
+    _i = _z*(_SD/sqrt(_n))          // Interval. +-
+    [_x, _i]
+f_APPT() => 
+    // APPT - Average Profit Per Trade https://www.investopedia.com/articles/forex/07/profit_loss.asp
+    // APPT = (PW×AW) − (PL×AL) (Win Probability x Average Win) (Lose Probabaily x Average Loss)
+    _PW   = strategy.wintrades/strategy.closedtrades
+    _AW   = strategy.grossprofit/strategy.wintrades
+    _PL   = strategy.losstrades/strategy.closedtrades
+    _AL   = strategy.grossloss/strategy.losstrades
+    _APPT = ((_PW*_AW) - (_PL*_AL))
+f_PPT() =>
+    // For every closed trade we push the net profit to an array.
+    var a_PPT = array.new_float(0)
+    _profitPerTrade = strategy.netprofit - strategy.netprofit[1]
+    if strategy.closedtrades > strategy.closedtrades[1]  
+        array.push(a_PPT, _profitPerTrade)
+    a_PPT
+f_rD(_float) =>
+    // Round Decimal points
+    round(_float*10)/10
+f_buyAndHoldReturn() =>
+    _entryPrice = valuewhen(strategy.closedtrades == 0 and strategy.opentrades > 0, strategy.position_avg_price, 0)
+    ((strategy.initial_capital / _entryPrice) * close) - strategy.initial_capital
+    
+f_stratMetrics() =>
+    // Strategy Metrics for quick analysis
+    _stratMetrics = "Strategy Metrics\n====================="
+    
+    // Get Average Profit Per Trade: Method 1
+    // _stratMetrics := _stratMetrics + "APPT: " + tostring(f_rD(f_APPT()))
+    
+    // Average Profit Per Trade: Method 2 with confidence interval.
+    [_x, _i] = f_findCI(f_PPT()) 
+    _stratMetrics := _stratMetrics + "\nAPPT: " + tostring(f_rD(_x)) + " +- " + tostring(f_rD(_i))
+    // Trades needed to be i_CL confident within +- i_CI%  
+    //❗ Looking for help here
+    // _stratMetrics := _stratMetrics + "\nTrades Needed: " + tostring(f_sampleSizeNeeded())  
+    _stratMetrics := _stratMetrics + "\nTrades Closed: " + tostring(strategy.closedtrades)
+    // Sharp Ratio
+    // TODO
+    
+    // Net Profit & Max Drawdon
+    _stratMetrics := _stratMetrics + "\nNet Profit: " + tostring(f_rD(strategy.netprofit)) +
+                                     "\nMax Drawdown: " + tostring(f_rD(strategy.max_drawdown))
+    // Buy & Hold Return 
+    _stratMetrics := _stratMetrics + "\nBuy & Hold Return: " + tostring(f_rD(f_buyAndHoldReturn()))
+    
+    // Print to Chart
+    dt = time-time[1]
+    var statLabel = label.new(time + 5*dt, high, xloc=xloc.bar_time, text=_stratMetrics)
+    label.set_text(statLabel, _stratMetrics)
+    label.set_x(statLabel, time + 5*dt)
+    label.set_y(statLabel, high*(1.05))
+f_stratMetrics()
+// CALCULATIONS
+smaFast       = sma(close, 100)
+smaSlow       = sma(close, 200)
+emaFast       = ema(close, 12)
+emaSlow       = ema(close, 26)
+buyCondition  = crossunder(emaSlow, emaFast) and (close >= smaFast)  // if yellow crosses below red and price is above green -> Buy
+sellCondition = crossover(emaSlow, emaFast) and (close <= smaFast)   // if yellow crosses over red and price is below green -> SELL
+// plot() CALLS
+plotchar(sellCondition, char="🐻", title="Sell Condition", size=size.tiny, location=location.top)
+plotchar(buyCondition,  char="🐮", title="Buy Condition",  size=size.tiny, location=location.bottom)
+plot(smaFast, title="Fast SMA", color=color.green,  linewidth=4)
+plot(emaSlow, title="Slow EMA", color=color.yellow, linewidth=2)
+plot(emaFast, title="Fast EMA", color=color.red,    linewidth=1)
+// strategy.*() CALLS
+if (buyCondition)
+    strategy.entry("BE", strategy.long)
+if(sellCondition)
+    strategy.entry("SE", strategy.short)
+Expand (152 lines)

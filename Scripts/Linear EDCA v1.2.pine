@@ -1,0 +1,296 @@
+Script Name: Linear EDCA v1.2
+Author: stephan8306
+Description: Strategy Description:
+Linear EDCA (Linear Enhanced Dollar Cost Averaging) is an enhanced version of the DCA fixed investment strategy. It has the following features:
+1. Take the 1100-day SMA as a reference indicator, enter the buy range below the moving average, and enter the sell range above the moving average
+2. The order to buy and sell is carried out at...
+PineScript code:
+
+Pine Script™ strategy
+Linear EDCA v1.2
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// 
+// © Stephan-Gao
+//@version=5
+strategy("Linear EDCA v1.2.3", overlay=true, default_qty_type = strategy.percent_of_equity, 
+  default_qty_value = 1, initial_capital = 10000, currency = currency.USD, commission_type = strategy.commission.percent, commission_value = 0.2)
+strategy.risk.allow_entry_in(strategy.direction.long)
+// 单位定投比率
+defInvestRatio = input.float(0.025, title = "default invest ratio", tooltip = "The default fixed investment ratio, the strategy will calculate the position ratio of a single fixed investment based on this ratio and a linear function. The default 0.025 represents 2.5% of the position")
+// 最小单笔买卖头寸数量
+minPositionSize = input.float(0.001, title = "min position size", minval = 0)
+// 定买的线性函数斜率
+buySlope = input.float(-35, title = "buy slope", maxval = 0, tooltip = "the slope of the linear function of the order to buy, used to control the position ratio of a single buy")
+// 定卖的线性函数斜率
+sellSlope = input.float(-0.7, title = "sell slope", maxval = 0, tooltip = "the slope of the linear function of the order to sell, used to control the position ratio of a single sell")
+// 定卖的偏移度（如果是正数，则在均线以上一段距离还保持买入；如果是负数，则在偏离度为0时即开始卖出。一般对于牛市较长的市场，一般偏移为正数）
+sellOffset = input.float(0.6, title = "sell offset", tooltip = "The offset of the order to sell. If it is greater than 0, it will keep a small buy within a certain range to avoid starting to sell too early")
+// 最大卖出倍率（defInvestRatio * maxSellRate = 最大单次卖出仓位）
+maxSellRate = input.float(5, title = "max sell rate", minval = 0, tooltip = "Controls the maximum sell multiple. The maximum ratio of a single sell position does not exceed defInvestRatio * maxSellRate")
+// 最大买入倍率（defInvestRatio * maxBuyRate = 最大单次买入仓位）
+maxBuyRate = input.float(6, title = "max buy rate", minval = 0, tooltip = "Controls the maximum buy multiple. The maximum ratio of a single buy position does not exceed defInvestRatio * maxBuyRate")
+maPeriod = input(1100, "MA Period")
+smoothing = input.string(defval="SMA", options=["EMA", "SMA"])
+useDateFilter = input.bool(true, title="Filter Date Range of Backtest", group = "Backtest Date Range")
+settleOnEnd = input.bool(false, title="settle account on end", group = "Backtest Date Range")
+startDate = input.time(title="startDate", defval=timestamp("2013-11-30T00:00+00:00"), group = "Backtest Date Range")
+endDate = input.time(title="endDate", defval=timestamp("2022-09-16T00:00+00:00"), group = "Backtest Date Range")
+investDayofweek = input.int(2, title = "invest day of week", tooltip = "1 means Sunday, 2 means Monday, 7 means Saturday", minval = 1, maxval = 7, group = "Backtest Date Range")
+intervalDays = input.int(14, title="interval days", group = "Backtest Date Range")
+inTradeWindow = not useDateFilter or (time >= startDate and time < endDate)
+var int investBarIndex = 0
+isInvestDay() => timeframe.period == "D" and dayofweek == investDayofweek and bar_index >= (investBarIndex+intervalDays) and inTradeWindow
+ma(smoothing, src, length) => 
+    if smoothing == "EMA"
+        ta.ema(src, length)
+    else
+        if smoothing == "SMA"
+            ta.sma(src, length)
+calInvestRate(deviation) => 
+    float result = 0
+    
+    if deviation >= 0
+        result := sellSlope * deviation + sellOffset
+        result := math.abs(result) > maxSellRate ? -maxSellRate : result
+    else
+        result := buySlope * deviation + 1
+        result := math.abs(result) > maxBuyRate ? maxBuyRate : result
+    
+    result
+// 当前仓位净值
+positionValue() => strategy.position_size * close
+// 当前可动用的本金
+capitalValue() => strategy.equity - positionValue() > 0 ? strategy.equity - positionValue() : 0
+// 目标单笔投资的数量（order qty）
+orderQty(orderPercent) => 
+    float resultQty = 0
+    targetOrderValue = strategy.equity * math.abs(orderPercent)
+    if capitalValue() <= 0
+        resultQty := 0
+    else if capitalValue() > 0 and capitalValue() > targetOrderValue
+        resultQty := targetOrderValue / close
+    else if capitalValue() <= targetOrderValue
+        resultQty := capitalValue() / close
+    resultQty := math.round_to_mintick(resultQty)
+    if resultQty > 0
+        resultQty := resultQty < minPositionSize ? 0 : resultQty
+closeOrderQty(orderPercent) =>
+    float resultQty = 0
+    targetCloseValue = strategy.equity * math.abs(orderPercent)
+    if positionValue() <= 0
+        resultQty := 0
+    else if positionValue() > 0 and positionValue() > targetCloseValue
+        resultQty := targetCloseValue / close
+    else if positionValue() <= targetCloseValue
+        resultQty := positionValue() / close
+    resultQty := math.round_to_mintick(resultQty)
+    if resultQty > 0
+        resultQty := resultQty < minPositionSize ? 0 : resultQty
+//// Main ////
+movingAverage = ma(smoothing, close, maPeriod)
+plot(movingAverage, "MA", linewidth = 2, color = color.new(color.black, 0), display = display.all)
+deviation = (close - movingAverage) / movingAverage
+investRate = calInvestRate(deviation)
+orderPercent = defInvestRatio * investRate
+orderQty = orderQty(orderPercent)
+plot(orderQty, "orderQty", display = display.data_window)
+closeOrderQty = closeOrderQty(orderPercent)
+plot(closeOrderQty, "closeOrderQty", display = display.data_window)
+if isInvestDay()
+    if investRate > 0
+        if orderQty > 0
+            orderPer = orderQty * close / strategy.equity
+            strategy.order("Buy", strategy.long, qty = orderQty, comment = "Buy " + str.tostring(orderPer*100, "0.00") + "%")
+            investBarIndex := bar_index
+    else
+        if closeOrderQty > 0
+            closeOrderPer = closeOrderQty * close / strategy.equity
+            strategy.close("Buy", qty = closeOrderQty, comment = "Sell " + str.tostring(closeOrderPer*100, "0.00") + "%")
+            investBarIndex := bar_index
+if settleOnEnd and not inTradeWindow and inTradeWindow[1]
+    strategy.cancel_all()
+    strategy.close_all(comment="Date Range Exit")
+// for debug
+ror = 100 * (close - strategy.position_avg_price)/strategy.position_avg_price
+var float maxLoss = 0
+if ror < 0 and maxLoss > ror
+    maxLoss := ror
+var float maxGain = 0
+if ror > 0 and maxGain < ror
+    maxGain := ror
+plot(ror, "positionReturn%", color = color.new(color.red, 0), style = plot.style_columns, display = display.data_window)
+plot(maxLoss, "positionMaxFloatLoss%", color = color.new(color.red, 0), style = plot.style_columns, display = display.data_window + display.status_line)
+plot(maxGain, "positionMaxFloatGain%", color = color.new(color.green, 0), style = plot.style_columns, display = display.data_window + display.status_line)
+plot(strategy.max_drawdown, "max_drawdown", color = color.new(color.blue, 60), style = plot.style_histogram, display = display.all)
+plot(100 * deviation, "deviation%", display = display.data_window)
+plot(investRate, "investRate", display = display.data_window)
+plot(100*orderPercent, "orderPercent%", display = display.data_window)
+plot(100*positionValue()/strategy.equity, "positionPercent%", color = color.new(color.red, 0), display = display.data_window)
+plot(strategy.position_avg_price, "positionAvgPrice", linewidth = 1, color = color.new(color.green, 0), display = display.all)
+plot(strategy.position_size, "strategy.position_size", display = display.data_window)
+plot(strategy.equity, "strategy.equity", display = display.data_window)
+plot(strategy.openprofit, "strategy.openprofit", display = display.data_window)
+plot(strategy.netprofit, "strategy.netProfit", display = display.data_window)
+plot(positionValue(), "positionValue()", display = display.data_window)
+plot(capitalValue(), "capitalValue()", display = display.data_window)
+Expand (159 lines)

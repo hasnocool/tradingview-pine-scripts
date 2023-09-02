@@ -1,0 +1,414 @@
+Script Name: Fibonacci Moving Averages Input
+Author: Options360
+Description: (FibMAI) Fibonacci Moving Averages Input is a strategy based on moving averages cross-over or cross-under signals. The bullish golden cross appears on a chart when a stock's short-term moving average crosses above its long-term moving average. The bearish death cross appears on a chart when a stock’s short-term moving average, crosses below its long-term moving...
+PineScript code:
+
+Pine Script™ strategy
+Fibonacci Moving Averages Input
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+//@version=5
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Options360 : Fibonacci MAI (Moving Averages Input) beta 10/15/22
+// © Options360 original public release = 2/25/23
+// * This script uses altered pieces of code from my @Options360 "Fibonacci MA7" indicator*
+// 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811
+////
+strategy(title="Fibonacci Moving Averages Input", shorttitle = "FibMAI", overlay=true)
+src = input(ohlc4, 'source')
+//
+string  GRP = "Long or Short Settings"
+exponential1 = input(true, title="long EMA or SMA", tooltip="EMA checked or SMA unchecked", group = GRP)
+long = input.int(34, minval=1, title="long", tooltip="Signal Moving average long input")
+long1 = exponential1 ? ta.ema(src, long) : ta.sma(src, long)
+exponential2 = input(true, title="crossover EMA or SMA", tooltip="EMA checked or SMA unchecked")
+longer = input.int(144, minval=1, title="crossover", tooltip="Crossed over Moving average long input")
+long2 = exponential2 ? ta.ema(src, longer) : ta.sma(src, longer)
+exponential3 = input(true, title="short EMA or SMA", tooltip="EMA checked or SMA unchecked")
+short = input.int(55, minval=1, title="short", tooltip="Signal Moving average short input")
+short1 = exponential3 ? ta.ema(src, short) : ta.sma(src, short)
+exponential4 = input(false, title="crossunder EMA or SMA", tooltip="EMA checked or SMA unchecked")
+shorter = input.int(144, minval=1, title="crossunder", tooltip="Crossed under Moving average short input")
+short2 = exponential4 ? ta.ema(src, shorter) : ta.sma(src, shorter)
+//
+string  GRP2 = "Visual FibMA Settings"
+exponential = input(true, title="Fib EMA or SMA", tooltip="EMA checked or SMA unchecked", group = GRP2)
+//
+smaplot11 = input (true, title="MA1")
+len11 = input.int(1, minval=1, title="ma Length")
+out11 = exponential ? ta.ema(src, len11) : ta.sma(src, len11)
+up11 = out11 > out11[1]
+down11 = out11 < out11[1]
+mycolor11 = up11 ? #3cfe12 : down11 ? #ff0202 : #008eff
+plot(out11 and smaplot11 ? out11 :na, title="1", color=mycolor11, linewidth=1)
+smaplot18 = input (true, title="MA2")
+len18 = input.int(2, minval=1, title="ma Length")
+out18 = exponential ? ta.ema(src, len18) : ta.sma(src, len18)
+up18 = out18 > out18[1]
+down18 = out18 < out18[1]
+mycolor18 = up18 ? #3cfe12 : down18 ? #ff0202 : #008eff
+plot(out18 and smaplot18 ? out18 :na , title="2", color=mycolor18, linewidth=1)
+smaplot13 = input (true, title="MA3")
+len13 = input.int(3, minval=1, title="ma Length")
+out13 = exponential ? ta.ema(src, len13) : ta.sma(src, len13)
+up13 = out13 > out13[1]
+down13 = out13 < out13[1]
+mycolor13 = up13 ? #3cfe12 : down13 ? #ff0202 : #008eff
+plot(out13 and smaplot13 ? out13 :na , title="3", color=mycolor11, linewidth=1)
+smaplot9 = input (true, title="MA5")
+len9 = input.int(5, minval=1, title="ma Length")
+out9 = exponential ? ta.ema(src, len9) : ta.sma(src, len9)
+up9 = out9 > out9[1]
+down9 = out9 < out9[1]
+mycolor9 = up9 ? #3cfe12 : down9 ? #ff0202 : #008eff
+plot(out9 and smaplot9 ? out9 :na , title="5", color=mycolor9, linewidth=1)
+smaplot8 = input (true, title="MA8")
+len8 = input.int(8, minval=1, title="ma Length")
+out8 = exponential ? ta.ema(src, len8) : ta.sma(src, len8)
+up8 = out8 > out8[1]
+down8 = out8 < out8[1]
+mycolor8 = up8 ? #3cfe12 : down8 ? #ff0202 : #008eff
+plot(out8 and smaplot8 ? out8 :na , title="8", color=mycolor8, linewidth=1)
+smaplot7 = input (true, title="MA13")
+len7 = input.int(13, minval=1, title="ma Length")
+out7 = exponential ? ta.ema(src, len7) : ta.sma(src, len7)
+up7 = out7 > out7[1]
+down7 = out7 < out7[1]
+mycolor7 = up7 ? #3cfe12 : down7 ? #ff0202 : #008eff
+plot(out7 and smaplot7 ? out7 :na , title="13", color=mycolor7, linewidth=1)
+smaplot = input (true, title="MA21")
+len = input.int(21, minval=1, title="ma Length")
+out = exponential ? ta.ema(src, len) : ta.sma(src, len)
+up = out > out[1]
+down = out < out[1]
+mycolor = up ? #3cfe12 : down ? #ff0202 : #008eff
+plot(out and smaplot ? out :na, title="21", color=mycolor, linewidth=1)
+smaplot2 = input (true, title="MA34")
+len2 = input.int(34, minval=1, title="ma Length")
+out2 = exponential ? ta.ema(src, len2) : ta.sma(src, len2)
+up2 = out2 > out2[1]
+down2 = out2 < out2[1]
+mycolor2 = up2 ? #3cfe12 : down2 ? #ff0202 : #008eff
+plot(out2 and smaplot2 ? out2 :na , title="34", color=mycolor2, linewidth=1)
+smaplot3 = input (true, title="MA55")
+len3 = input.int(55, minval=1, title="ma Length")
+out3 = exponential ? ta.ema(src, len3) : ta.sma(src, len3)
+up3 = out3 > out3[1]
+down3 = out3 < out3[1]
+mycolor3 = up3 ? #3cfe12 : down3 ? #ff0202 : #008eff
+plot(out3 and smaplot3 ? out3 :na, title="55", color=mycolor3, linewidth=1)
+smaplot4 = input (true, title="MA89")
+len4 = input.int(89, minval=1, title="ma Length")
+out4 = exponential ? ta.ema(src, len4) : ta.sma(src, len4)
+up4 = out4 > out4[1]
+down4 = out4 < out4[1]
+mycolor4 = up4 ? #3cfe12 : down4 ? #ff0202 : #008eff
+plot(out4 and smaplot4 ? out4 :na , title="89", color=mycolor4, linewidth=1)
+smaplot5 = input (true, title="MA144")
+len5 = input.int(144, minval=1, title="ma Length")
+out5 = exponential ? ta.ema(src, len5) : ta.sma(src, len5)
+up5 = out5 > out5[1]
+down5 = out5 < out5[1]
+mycolor5 = up5 ? #3cfe12 : down5 ? #ff0202 : #008eff
+plot(out5 and smaplot5 ? out5 :na, title="144", color=mycolor5, linewidth=1)
+smaplot6 = input (true, title="MA233")
+len6 = input.int(233, minval=1, title="ma Length")
+out6 = exponential ? ta.ema(src, len6) : ta.sma(src, len6)
+up6 = out6 > out6[1]
+down6 = out6 < out6[1]
+mycolor6 = up6 ? #3cfe12 : down6 ? #ff0202 : #008eff
+plot(out6 and smaplot6 ? out6 :na , title="233", color=mycolor6, linewidth=1)
+smaplot10 = input (true, title="MA377")
+len10 = input.int(377, minval=1, title="ma Length")
+out10 = exponential ? ta.ema(src, len10) : ta.sma(src, len10)
+up10 = out10 > out10[1]
+down10 = out10 < out10[1]
+mycolor10 = up10 ? #3cfe12 : down10 ? #ff0202 : #008eff
+plot(out10 and smaplot10 ? out10 :na , title="377", color=mycolor10, linewidth=1)
+smaplot14 = input (true, title="MA610")
+len14 = input.int(610, minval=1, title="ma Length")
+out14 = exponential ? ta.ema(src, len14) : ta.sma(src, len14)
+up14 = out14 > out14[1]
+down14 = out14 < out14[1]
+mycolor14 = up14 ? #3cfe12 : down14 ? #ff0202 : #008eff
+plot(out14 and smaplot14 ? out14 :na , title="610", color=mycolor14, linewidth=1)
+smaplot15 = input (true, title="MA987")
+len15 = input.int(987, minval=1, title="ma Length")
+out15 = exponential ? ta.ema(src, len15) : ta.sma(src, len15)
+up15 = out15 > out15[1]
+down15 = out15 < out15[1]
+mycolor15 = up15 ? #3cfe12 : down15 ? #ff0202 : #008eff
+plot(out15 and smaplot15 ? out15 :na , title="987", color=mycolor15, linewidth=1)
+smaplot16 = input (true, title="MA1597")
+len16 = input.int(1597, minval=1, title="ma Length")
+out16 = exponential ? ta.ema(src, len16) : ta.sma(src, len16)
+up16 = out16 > out16[1]
+down16 = out16 < out16[1]
+mycolor16 = up16 ? #3cfe12 : down16 ? #ff0202 : #008eff
+plot(out16 and smaplot16 ? out16 :na , title="1597", color=mycolor16, linewidth=1)
+smaplot17 = input (true, title="MA2584")
+len17 = input.int(2584, minval=1, title="ma Length")
+out17 = exponential ? ta.ema(src, len17) : ta.sma(src, len17)
+up17 = out17 > out17[1]
+down17 = out17 < out17[1]
+mycolor17 = up17 ? #3cfe12 : down17 ? #ff0202 : #008eff
+plot(out17 and smaplot17 ? out17 :na , title="2584", color=mycolor17, linewidth=1)
+smaplot19 = input (true, title="MA4181")
+len19 = input.int(4181, minval=1, title="ma Length")
+out19 = exponential ? ta.ema(src, len19) : ta.sma(src, len19)
+up19 = out19 > out19[1]
+down19 = out19 < out19[1]
+mycolor19 = up19 ? #3cfe12 : down19 ? #ff0202 : #008eff
+plot(out19 and smaplot19 ? out19 :na , title="4181", color=mycolor19, linewidth=1)
+//
+string  GRP3 = "Visual MA Settings"
+exponential5 = input(false, title="EMA or SMA", tooltip="EMA checked or SMA unchecked", group = GRP3)
+smaplot50 = input (true, title="MA50")
+len50 = input.int(50, minval=1, title="ma Length")
+ma50 = exponential5 ? ta.ema(src, len50) : ta.sma(src, len50)
+up50 = ma50 > ma50[1]
+down50 = ma50 < ma50[1]
+mycolor50 = up50 ? #3cfe12 : down50 ? #ff0202 : #008eff
+plot(ma50 and smaplot50 ? ma50 :na , title="50", color=mycolor50, linewidth=1)
+smaplot100 = input (true, title="MA100")
+len100 = input.int(100, minval=1, title="ma Length")
+ma100 = exponential5 ? ta.ema(src, len100) : ta.sma(src, len100)
+up100 = ma100 > ma100[1]
+down100 = ma100 < ma100[1]
+mycolor100 = up100 ? #3cfe12 : down100 ? #ff0202 : #008eff
+plot(ma100 and smaplot100 ? ma100 :na , title="100", color=mycolor100, linewidth=1)
+smaplot150 = input (true, title="MA150")
+len150 = input.int(150, minval=1, title="ma Length")
+ma150 = exponential5 ? ta.ema(src, len150) : ta.sma(src, len150)
+up150 = ma150 > ma150[1]
+down150 = ma150 < ma150[1]
+mycolor150 = up150 ? #3cfe12 : down150 ? #ff0202 : #008eff
+plot(ma150 and smaplot150 ? ma150 :na , title="150", color=mycolor150, linewidth=1)
+smaplot200 = input (true, title="MA200")
+len200 = input.int(200, minval=1, title="ma Length")
+ma200 = exponential5 ? ta.ema(src, len200) : ta.sma(src, len200)
+up200 = ma200 > ma200[1]
+down200 = ma200 < ma200[1]
+mycolor200 = up200 ? #3cfe12 : down200 ? #ff0202 : #008eff
+plot(ma200 and smaplot200 ? ma200 :na , title="200", color=mycolor200, linewidth=1)
+//
+if (ta.crossover(long1, long2))
+    strategy.entry("maL", strategy.long, comment="maLong")
+if (ta.crossunder(short1, short2))
+    strategy.entry("maS", strategy.short, comment="maShort")
+////
+Expand (215 lines)

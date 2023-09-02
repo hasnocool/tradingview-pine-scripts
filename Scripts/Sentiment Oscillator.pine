@@ -1,0 +1,314 @@
+Script Name: Sentiment Oscillator
+Author: dannylimardi
+Description: Price moves when there are more market takers than there are market makers at a certain price (i.e. price moves up when there are more market buys than limit sells and vice versa). The idea of this indicator is to show the ratio between market takers and market makers in a way that is intuitive to technical analysis methods, and hopefully revealing the overall...
+PineScript code:
+
+Pine Script™ strategy
+Sentiment Oscillator
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © dannylimardi
+//@version=4
+strategy("Sentiment Oscillator with Backtest", "Sentiment Oscillator", overlay=false, initial_capital=100, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent, commission_value=0.08)
+//Inputs
+msLen = input(49, type=input.integer, title="Market Sentiment Lookback Length", group="Parameters")
+emaLen1 = input(40, type=input.integer, title="Fast EMA Length", group="Parameters")
+emaLen2 = input(204, type=input.integer, title="Slow EMA Length", group="Parameters")
+signalLen = input(20, type=input.integer, title="Signal Length", group="Parameters")
+showMs = input(false, type=input.bool, title="Show Market Sentiment Line?", group="Plots")
+showHist = input(true, type=input.bool, title="Show Momentum Histogram?", group="Plots")
+showMacd = input(true, type=input.bool, title="Show MACD Line?", group="Plots")
+showSignal = input(true, type=input.bool, title="Show Signal Line?", group="Plots")
+showDots = input(true, type=input.bool, title="Plot Dots when MACD and Signal Line cross?", group="Plots")
+showCpv = input(false, type=input.bool, title="[Show Change/Volume of Each Bar?]", group="Plots")
+showEma1 = input(false, type=input.bool, title="[Show Fast EMA?]", group="Plots")
+showEma2 = input(false, type=input.bool, title="[Show Slow EMA?]", group="Plots")
+longStrategy = input(true, type=input.bool, title="Backtest Long Strategy?", group="Long Strategy")
+entryVar1 = input(title="Long Entry Variable 1",defval="Histogram", options=["Market Sentiment", "Fast EMA", "Slow EMA", "MACD", "Signal Line", "Histogram"], group="Long Strategy")
+entryCond = input(title="Long Entry Condition", defval="Crossing Over", options=["Crossing Over", "Crossing Under"], group="Long Strategy")
+entryVar2 = input(title="Long Entry Variable 2", defval="Zero Line", options=["Market Sentiment", "Fast EMA", "Slow EMA", "MACD", "Signal Line", "Histogram", "Zero Line"], group="Long Strategy")
+exitVar1 = input(title="Long Exit Variable 1",defval="MACD", options=["Market Sentiment", "Fast EMA", "Slow EMA", "MACD", "Signal Line", "Histogram"], group="Long Strategy")
+exitCond = input(title="Long Exit Condition", defval="Crossing Under", options=["Crossing Over", "Crossing Under"], group="Long Strategy")
+exitVar2 = input(title="Long Exit Variable 2", defval="Zero Line", options=["Market Sentiment", "Fast EMA", "Slow EMA", "MACD", "Signal Line", "Histogram", "Zero Line"], group="Long Strategy")
+useCPV = input(false, type=input.bool, title="Use Alternate Calculation Method?", group="Other Settings", tooltip="If checked, the Market Sentiment will be the EMA of Change Per Volume of each bar, instead of the default calculation method (Price Change EMA divided by Volume EMA). The alternate method may be slightly more responsive, but will result in bigger fluctuations when there is a huge change in volume. If this method is checked, I recommend changing the Long Exit Strategy to 'Signal Line Crossing Under Zero'.")
+mcTheme = input(false, type=input.bool, title="Use Alternate Color Scheme?", group="Other Settings", tooltip="If checked, the MACD, Signal, and Histogram will all be plotted as areas and histograms")
+//Calculations
+priceChange = close - close[1]
+changePerVolume = (priceChange/volume) * 10000000  // (The 1000000 doesn't have any significance, it's just to avoid color-change errors when the values are too small.)
+priceChangeEma = ema(priceChange, msLen)
+volumeEma = ema(volume, msLen)
+marketSentiment = useCPV ? ema(changePerVolume, msLen) : priceChangeEma/volumeEma * 1000000000
+msEma1 = ema(marketSentiment, emaLen1)
+msEma2 = ema(marketSentiment, emaLen2)
+macd = msEma1-msEma2
+signal = ema(macd, signalLen)
+hist = macd-signal
+//Strategy Function and String Definitions
+var entryVar1_ = 0.0
+var entryVar2_ = 0.0
+var exitVar1_ = 0.0
+var exitVar2_ = 0.0
+if entryVar1 == "Market Sentiment" 
+    entryVar1_ := marketSentiment
+else if entryVar1 == "Fast EMA"
+    entryVar1_ := msEma1
+else if entryVar1 =="Slow EMA"
+    entryVar1_ := msEma2
+else if entryVar1 == "MACD"
+    entryVar1_ := macd
+else if entryVar1 == "Signal Line" 
+    entryVar1_ := signal
+else if entryVar1 == "Histogram" 
+    entryVar1_ := hist
+    
+if entryVar2 == "Market Sentiment" 
+    entryVar2_ := marketSentiment
+else if entryVar2 == "Fast EMA"
+    entryVar2_ := msEma1
+else if entryVar2 =="Slow EMA"
+    entryVar2_ := msEma2
+else if entryVar2 == "MACD"
+    entryVar2_ := macd
+else if entryVar2 == "Signal Line" 
+    entryVar2_ := signal
+else if entryVar2 == "Histogram" 
+    entryVar2_ := hist
+else if entryVar2 == "Zero Line"
+    entryVar2_ := 0
+    
+if exitVar1 == "Market Sentiment" 
+    exitVar1_ := marketSentiment
+else if exitVar1 == "Fast EMA"
+    exitVar1_ := msEma1
+else if exitVar1 =="Slow EMA"
+    exitVar1_ := msEma2
+else if exitVar1 == "MACD"
+    exitVar1_ := macd
+else if exitVar1 == "Signal Line" 
+    exitVar1_ := signal
+else if exitVar1 == "Histogram" 
+    exitVar1_ := hist
+    
+if exitVar2 == "Market Sentiment" 
+    exitVar2_ := marketSentiment
+else if exitVar2 == "Fast EMA"
+    exitVar2_ := msEma1
+else if exitVar2 =="Slow EMA"
+    exitVar2_ := msEma2
+else if exitVar2 == "MACD"
+    exitVar2_ := macd
+else if exitVar2 == "Signal Line" 
+    exitVar2_ := signal
+else if exitVar2 == "Histogram" 
+    exitVar2_ := hist
+else if exitVar2 == "Zero Line"
+    exitVar2_ := 0
+    
+entryCond_(entryVar1_, entryVar2_) =>
+    if entryCond == "Crossing Over"
+        crossover(entryVar1_, entryVar2_)
+    else if entryCond == "Crossing Under"
+        crossunder(entryVar1_, entryVar2_)
+exitCond_(exitVar1_, exitVar2_) =>
+    if exitCond == "Crossing Over"
+        crossover(exitVar1_, exitVar2_)
+    if exitCond == "Crossing Under"
+        crossunder(exitVar1_, exitVar2_)
+longEntry = entryCond_(entryVar1_, entryVar2_)
+longExit = exitCond_(exitVar1_, exitVar2_)
+up = crossover(macd, signal)
+down = crossunder(macd, signal)
+greenDot = up ? valuewhen(up, signal, 0) : na
+redDot = down ? valuewhen(down, signal, 0) : na
+//Plot colors
+col_grow_above = #26A69A
+col_grow_below = #FFCDD2
+col_fall_above = #B2DFDB
+col_fall_below = #EF5350
+col_macd = #0094ff
+col_signal = #ff6a00
+//Drawings
+plot(showMacd ? macd : na, title="MACD", color=mcTheme ? #6f62e3 : col_macd, transp=mcTheme ? 15 : 0,
+ style=mcTheme ? plot.style_histogram : plot.style_line)
+plot(showSignal ? signal : na, title="Signal", color=mcTheme ? (signal > 0 ? color.blue : color.orange) : col_signal, transp=mcTheme ? 85 : 0,
+ style=mcTheme ? plot.style_area : plot.style_line)
+plot(showHist ? hist : na, title="Histogram", style=mcTheme ? plot.style_columns : plot.style_area, 
+ color=mcTheme ? (hist > 0 ? color.teal : color.red) : (hist>=0 ? (hist[1] < hist ? col_grow_above : col_fall_above) : (hist[1] < hist ? col_grow_below : col_fall_below)), 
+ transp=mcTheme ? 15 : 20)
+plot(showDots ? greenDot : na, color=color.lime, style=plot.style_circles, linewidth=5, transp=40)
+plot(showDots ? redDot : na, color=color.red, style=plot.style_circles, linewidth=5, transp=40)
+plot(0, color=color.white, transp=80)
+plot(showEma1 ? msEma1 : na, color=color.aqua)
+plot(showEma2 ? msEma2 : na, color=color.yellow)
+plot(showMs ? marketSentiment : na, color=color.lime)
+plot(showCpv ? changePerVolume : na, color=changePerVolume > changePerVolume[1] ? color.teal : color.red)
+// if longEntry and valuewhen(longEntry, bar_index, 1) < valuewhen(longExit, bar_index, 0)
+//     label.new(bar_index, signal, "BUY", yloc=yloc.price, style=label.style_none, color=color.green, textcolor=color.blue)
+// if longExit and valuewhen(longExit, bar_index, 1) < valuewhen(longEntry, bar_index, 0)
+//     label.new(bar_index, signal, "SELL", yloc=yloc.price, style=label.style_none, color=color.red, textcolor=color.red)
+//Strategy
+if longStrategy
+    strategy.entry("Buy", strategy.long, when=longEntry)
+    strategy.close("Buy", when=longExit)
+Expand (161 lines)

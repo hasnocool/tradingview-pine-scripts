@@ -1,0 +1,163 @@
+Script Name: BankNifty_Bullish_Intraday
+Author: makarandpatil
+Description: The script uses following mechanism to give a signal of BUY if multiple parameters evaluated are all passed.
+
+ENTRY-
+1. 5 min MACD should be more than its previous tick
+2. 15 min MACD should be more than its previous tick
+3. 60 min MACD should be more than its previous tick
+4. ADX should be more than 12
+5. RSI should be more than 60
+6. Stochastic %k should have...
+PineScript code:
+
+Pine Script™ strategy
+BankNifty_Bullish_Intraday
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © makarandpatil
+// This strategy is for Bank Nifty instrument and for intraday purpose only
+// It checks for various indicators and gives a buy signal when all conditions are met 
+// Bank Nifty when in momentum gives 100-200 points in spot in 5-15 min which is how long the trade duration should be
+// Issues - The custom script as per TradingView Pinescripting has an issue of repaint
+// More information on repainting issue in this link - https://www.tradingview.com/pine-script-docs/en/v5/concepts/Repainting.html
+// Use the script alert only to get notified, however check all the parameters individually before taking the trade
+// Also, please perform a backtesting and deep backtesting of this strategy to see if the strategy gave correct buy signals in the past
+// The script is made for testing purposes only and is in beta mode. Please use at own risk.
+//@version=5
+strategy("BankNifty_Bullish_Intraday", overlay=true, margin_long = 100, margin_short = 100)
+// Variables
+StochLength = input(14, title="Stochastic Length")
+smoothK = input(3, title="%K Smoothing")
+smoothD = input(3, title="%D Smoothing")
+ 
+ 
+//INDICATOR CALCULATIONS
+ 
+// 1. MACD
+[macdLine, signalLine, histLine] = ta.macd(close[0],12,26,9)
+ 
+macd5 = request.security(syminfo.tickerid, "5", macdLine)
+macd15 = request.security(syminfo.tickerid,"15",macdLine)
+macd60 = request.security(syminfo.tickerid,"60",macdLine)
+ 
+// 2. RSI Calculation
+xRSI = ta.rsi(close, 14)
+ 
+// 3. ADX calculation
+[diplus, diminus, adx] = ta.dmi(14,14)
+// plot(adx,color = color.black)
+ 
+// 4. Stochastic Calculation
+k = ta.sma(ta.stoch(close, high, low, StochLength), smoothK)
+d = ta.sma(k, smoothD)
+ 
+// 5. Bollinger Band calculation
+[middle, upper, lower] = ta.bb(close, 20, 2)
+ 
+ 
+//CONDITIONS
+ 
+// 1. Conditions for MACD
+macd5Uptick = macd5[0] > macd5[1]
+macd15Uptick = macd15[0] > macd15[1]
+macd60Uptick = macd60[0] >= macd60[1]
+ 
+// 2. Condition for xRSI
+RSIStrong = xRSI > 60
+ 
+// 3. Condition for ADX
+ADXUngali = adx >= 12
+ 
+// 4. Condition for Stochastic
+StochPCO = k > d
+ 
+// 5. Condition for Bollinger Band
+BBCU = upper > upper [1]
+ 
+//Evaluate the long condition
+// longCondition = macd5Uptick and macd15Uptick and RSIStrong and ADXUngali and StochPCO and BBCU
+longCondition = macd5[0] > 0 and macd5Uptick and macd15Uptick and macd60Uptick and RSIStrong and ADXUngali and StochPCO and BBCU
+// longCondition = macd5Uptick and macd15Uptick and RSIStrong and ADXUngali and StochPCO and BBCU
+if (longCondition)
+    strategy.entry("Buy", strategy.long,alert_message = "BankNifty_Buy_Momentum")
+shortCondition = close < ta.ema(close,5)
+if (shortCondition)
+    strategy.entry("BuySquareoff", strategy.short, alert_message = "BankNifty_Closed_Below_5EMA")
+Expand (76 lines)

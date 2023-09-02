@@ -1,0 +1,2739 @@
+Script Name: Grid Tool
+Author: ramsay09
+Description: The core idea of this grid tool is that you have to concentrate less on the trade entries (this happens automatically time-independent but price-dependant) but rather on the validity of the macro trend. Exiting a trend when it is no longer valid is more important than entering a trade. But as long as the trend is valid, the trader participates exponentially in the...
+PineScript code:
+
+Pine Script™ strategy
+Grid Tool
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+540
+541
+542
+543
+544
+545
+546
+547
+548
+549
+550
+551
+552
+553
+554
+555
+556
+557
+558
+559
+560
+561
+562
+563
+564
+565
+566
+567
+568
+569
+570
+571
+572
+573
+574
+575
+576
+577
+578
+579
+580
+581
+582
+583
+584
+585
+586
+587
+588
+589
+590
+591
+592
+593
+594
+595
+596
+597
+598
+599
+600
+601
+602
+603
+604
+605
+606
+607
+608
+609
+610
+611
+612
+613
+614
+615
+616
+617
+618
+619
+620
+621
+622
+623
+624
+625
+626
+627
+628
+629
+630
+631
+632
+633
+634
+635
+636
+637
+638
+639
+640
+641
+642
+643
+644
+645
+646
+647
+648
+649
+650
+651
+652
+653
+654
+655
+656
+657
+658
+659
+660
+661
+662
+663
+664
+665
+666
+667
+668
+669
+670
+671
+672
+673
+674
+675
+676
+677
+678
+679
+680
+681
+682
+683
+684
+685
+686
+687
+688
+689
+690
+691
+692
+693
+694
+695
+696
+697
+698
+699
+700
+701
+702
+703
+704
+705
+706
+707
+708
+709
+710
+711
+712
+713
+714
+715
+716
+717
+718
+719
+720
+721
+722
+723
+724
+725
+726
+727
+728
+729
+730
+731
+732
+733
+734
+735
+736
+737
+738
+739
+740
+741
+742
+743
+744
+745
+746
+747
+748
+749
+750
+751
+752
+753
+754
+755
+756
+757
+758
+759
+760
+761
+762
+763
+764
+765
+766
+767
+768
+769
+770
+771
+772
+773
+774
+775
+776
+777
+778
+779
+780
+781
+782
+783
+784
+785
+786
+787
+788
+789
+790
+791
+792
+793
+794
+795
+796
+797
+798
+799
+800
+801
+802
+803
+804
+805
+806
+807
+808
+809
+810
+811
+812
+813
+814
+815
+816
+817
+818
+819
+820
+821
+822
+823
+824
+825
+826
+827
+828
+829
+830
+831
+832
+833
+834
+835
+836
+837
+838
+839
+840
+841
+842
+843
+844
+845
+846
+847
+848
+849
+850
+851
+852
+853
+854
+855
+856
+857
+858
+859
+860
+861
+862
+863
+864
+865
+866
+867
+868
+869
+870
+871
+872
+873
+874
+875
+876
+877
+878
+879
+880
+881
+882
+883
+884
+885
+886
+887
+888
+889
+890
+891
+892
+893
+894
+895
+896
+897
+898
+899
+900
+901
+902
+903
+904
+905
+906
+907
+908
+909
+910
+911
+912
+913
+914
+915
+916
+917
+918
+919
+920
+921
+922
+923
+924
+925
+926
+927
+928
+929
+930
+931
+932
+933
+934
+935
+936
+937
+938
+939
+940
+941
+942
+943
+944
+945
+946
+947
+948
+949
+950
+951
+952
+953
+954
+955
+956
+957
+958
+959
+960
+961
+962
+963
+964
+965
+966
+967
+968
+969
+970
+971
+972
+973
+974
+975
+976
+977
+978
+979
+980
+981
+982
+983
+984
+985
+986
+987
+988
+989
+990
+991
+992
+993
+994
+995
+996
+997
+998
+999
+1000
+1001
+1002
+1003
+1004
+1005
+1006
+1007
+1008
+1009
+1010
+1011
+1012
+1013
+1014
+1015
+1016
+1017
+1018
+1019
+1020
+1021
+1022
+1023
+1024
+1025
+1026
+1027
+1028
+1029
+1030
+1031
+1032
+1033
+1034
+1035
+1036
+1037
+1038
+1039
+1040
+1041
+1042
+1043
+1044
+1045
+1046
+1047
+1048
+1049
+1050
+1051
+1052
+1053
+1054
+1055
+1056
+1057
+1058
+1059
+1060
+1061
+1062
+1063
+1064
+1065
+1066
+1067
+1068
+1069
+1070
+1071
+1072
+1073
+1074
+1075
+1076
+1077
+1078
+1079
+1080
+1081
+1082
+1083
+1084
+1085
+1086
+1087
+1088
+1089
+1090
+1091
+1092
+1093
+1094
+1095
+1096
+1097
+1098
+1099
+1100
+1101
+1102
+1103
+1104
+1105
+1106
+1107
+1108
+1109
+1110
+1111
+1112
+1113
+1114
+1115
+1116
+1117
+1118
+1119
+1120
+1121
+1122
+1123
+1124
+1125
+1126
+1127
+1128
+1129
+1130
+1131
+1132
+1133
+1134
+1135
+1136
+1137
+1138
+1139
+1140
+1141
+1142
+1143
+1144
+1145
+1146
+1147
+1148
+1149
+1150
+1151
+1152
+1153
+1154
+1155
+1156
+1157
+1158
+1159
+1160
+1161
+1162
+1163
+1164
+1165
+1166
+1167
+1168
+1169
+1170
+1171
+1172
+1173
+1174
+1175
+1176
+1177
+1178
+1179
+1180
+1181
+1182
+1183
+1184
+1185
+1186
+1187
+1188
+1189
+1190
+1191
+1192
+1193
+1194
+1195
+1196
+1197
+1198
+1199
+1200
+1201
+1202
+1203
+1204
+1205
+1206
+1207
+1208
+1209
+1210
+1211
+1212
+1213
+1214
+1215
+1216
+1217
+1218
+1219
+1220
+1221
+1222
+1223
+1224
+1225
+1226
+1227
+1228
+1229
+1230
+1231
+1232
+1233
+1234
+1235
+1236
+1237
+1238
+1239
+1240
+1241
+1242
+1243
+1244
+1245
+1246
+1247
+1248
+1249
+1250
+1251
+1252
+1253
+1254
+1255
+1256
+1257
+1258
+1259
+1260
+1261
+1262
+1263
+1264
+1265
+1266
+1267
+1268
+1269
+1270
+1271
+1272
+1273
+1274
+1275
+1276
+1277
+1278
+1279
+1280
+1281
+1282
+1283
+1284
+1285
+1286
+1287
+1288
+1289
+1290
+1291
+1292
+1293
+1294
+1295
+1296
+1297
+1298
+1299
+1300
+1301
+1302
+1303
+1304
+1305
+1306
+1307
+1308
+1309
+1310
+1311
+1312
+1313
+1314
+1315
+1316
+1317
+1318
+1319
+1320
+1321
+1322
+1323
+1324
+1325
+1326
+1327
+1328
+1329
+1330
+1331
+1332
+1333
+1334
+1335
+1336
+1337
+1338
+1339
+1340
+1341
+1342
+1343
+1344
+1345
+1346
+1347
+1348
+1349
+1350
+1351
+1352
+1353
+1354
+1355
+1356
+1357
+1358
+1359
+1360
+1361
+1362
+1363
+1364
+1365
+1366
+1367
+1368
+1369
+1370
+1371
+1372
+1373
+1374
+1375
+1376
+1377
+1378
+1379
+1380
+1381
+1382
+1383
+1384
+1385
+1386
+1387
+1388
+1389
+1390
+1391
+1392
+1393
+1394
+1395
+1396
+1397
+1398
+1399
+1400
+1401
+1402
+1403
+1404
+1405
+1406
+1407
+1408
+1409
+1410
+1411
+1412
+1413
+1414
+1415
+1416
+1417
+1418
+1419
+1420
+1421
+1422
+1423
+1424
+1425
+1426
+1427
+1428
+1429
+1430
+1431
+1432
+1433
+1434
+1435
+1436
+1437
+1438
+1439
+1440
+1441
+1442
+1443
+1444
+1445
+1446
+1447
+1448
+1449
+1450
+1451
+1452
+1453
+1454
+1455
+1456
+1457
+1458
+1459
+1460
+1461
+1462
+1463
+1464
+1465
+1466
+1467
+1468
+1469
+1470
+1471
+1472
+1473
+1474
+1475
+1476
+1477
+1478
+1479
+1480
+1481
+1482
+1483
+1484
+1485
+1486
+1487
+1488
+1489
+1490
+1491
+1492
+1493
+1494
+1495
+1496
+1497
+1498
+1499
+1500
+1501
+1502
+1503
+1504
+1505
+1506
+1507
+1508
+1509
+1510
+1511
+1512
+1513
+1514
+1515
+1516
+1517
+1518
+1519
+1520
+1521
+1522
+1523
+1524
+1525
+1526
+1527
+1528
+1529
+1530
+1531
+1532
+1533
+1534
+1535
+1536
+1537
+1538
+1539
+1540
+1541
+1542
+1543
+1544
+1545
+1546
+1547
+1548
+1549
+1550
+1551
+1552
+1553
+1554
+1555
+1556
+1557
+1558
+1559
+1560
+1561
+1562
+1563
+1564
+1565
+1566
+1567
+1568
+1569
+1570
+1571
+1572
+1573
+1574
+1575
+1576
+1577
+1578
+1579
+1580
+1581
+1582
+1583
+1584
+1585
+1586
+1587
+1588
+1589
+1590
+1591
+1592
+1593
+1594
+1595
+1596
+1597
+1598
+1599
+1600
+1601
+1602
+1603
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ramsay09
+//@version=5
+strategy(title='Grid Tool', shorttitle='Grid', overlay=true, initial_capital=10000, pyramiding=3000, calc_on_every_tick=false, default_qty_type=strategy.fixed, default_qty_value=0.01, currency=currency.USD, 
+         commission_type=strategy.commission.percent, commission_value=0.075, margin_long=0, margin_short=0, max_lines_count=500)
+general_info        = input.bool(title='General Description', defval=false, 
+                     tooltip="This script can make you free from entry decisions. You just have to manage your exits or additionally manage your exits.  
+                     Exiting a trend is more important than enter a trade. Use a small time frame for the grid signals to get the distance between the trades as accurate as possible for the selected grid gap 
+                     distance since TV back tests are carried out with closed bars. Before set up the grid-tool: pre-analyse the market to make sure it is in a trend or will be soon.  
+                     Select the grid gap and grid position size that you are comfortable with. Define the start date for the grid (start of a new trend), select a signal and use optionally filters, 
+                     stop loss and  take profit. Monitor the trend and your exit levels. The default values are suitable for Bitcoin on ByBit (one tick = 0.5).")
+//-------------------------------------------------------------------------------------- inputs -----------------------------------------------------------------------------------------------
+entry_type          = input.string('Long', title='Trade Direction', options=['Long', 'Short', 'Both'], tooltip='Long = long entries only, Short = short entries only, both = long and short entries.')
+repaint             = input.string('Allowed', title='Repainting', options=['Not allowed', 'Allowed'], 
+                     tooltip='If repainting \'Not allowed\' is selected, then signals from higher time frames have a lag of an additional bar from the higher time frame but you trade what you have backtested.  
+                     If repainting \'Allowed\' is selected, singals can occure multiple times as long as the higher time frame bar is not closed but the first signal of these possible multiple signals is much earlier.  
+                     Signals on current time frame (\'Current\' time frame filter is selected) do not repaint by default.')
+panel               = input.bool(true, title='Plot Info Panel', tooltip='Info panel for current unrealized profit or loss for the open position.')
+plot_avg_price      = input.bool(true, title='Plot Position Avarage Price Line.', tooltip='This plots the position avarage price line. Green = position is in profit, red = position is in loss.')
+en_scalp_mode       = input.bool(false, title='Scalping Mode', tooltip='Works only with TP/SL and their enabled counter (output filters are optional). 
+                     Choose an entry signal and define the scalping signal using entry filters. Makes strategy entry signal idle between exit event and new scalping signal.')
+en_trig_lvl         = input.bool(false, title='Enable Strategy Switch/Trigger Level', group='Strategy trigger and border levels:', 
+                     tooltip='This enables the strategy price level that must be crossed. Otherwise the strategy entry signals will be ignored. The stop loss and take profit is not affected.')
+trig_lvl            = input.float(0, title='Strategy Switch/Trigger Level', minval=0, step=200, group='Strategy trigger and border levels:', 
+                     tooltip='Define the price level which must be crossed (up or down) to make the strategy entry signals work.')
+en_border_up        = input.bool(false, title='Enable Upper Border Level', group='Strategy trigger and border levels:', 
+                     tooltip='In case the market has crossed this level, the strategy entry signals will be turned off (long and short). The stop loss and take profit is not affected. 
+                     Works when "Strategy Switch/Trigger Level" is not activated or an activated trigger level was crossed.')
+bup_lvl             = input.float(0, title='Strategy Upper Border Level', minval=0, step=200, group='Strategy trigger and border levels:', 
+                     tooltip='Define strategy upper border level.')
+en_border_dn        = input.bool(false, title='Enable Lower Border Level', group='Strategy trigger and border levels:', 
+                     tooltip='In case the market has crossed this level, the strategy entry signals will be turned off (long and short). The stop loss and take profit is not affected. 
+                     Works when "Strategy Switch/Trigger Level" is not activated or an activated trigger level was crossed.')
+bdn_lvl             = input.float(0, title='Strategy Lower Border Level', minval=0, step=200, group='Strategy trigger and border levels:', 
+                     tooltip='Define strategy lower border level.')
+border_con          = input.string('Close All', title='Strategy Behaviour When A Border Level Is Crossed', options=['Turn Off Entries', 'Idle', 'Close All'], 
+                     group='Strategy trigger and border levels:', tooltip='Select the strategy behaviour when a border level is crossed. 
+                     "Turn Off Entries" = The strategy entry signals will be turned off (long and short). The stop loss and take profit is not affected. 
+                     "Idle" = The strategy remains idle. Affects entries, stop loss, take profit and exit filters. Position remains open. 
+                     "Close All" = The entire position will be closed and strategy remains idle.')
+extend_lines        = input.string('Right', title='Extend Lines', options=['Right', 'Both'], 
+                     group='Strategy trigger and border levels:', tooltip='Select the trigger and border line extention')
+en_close_stop       = input.bool(false, title='Enable "Close & Stop" Level', group='Strategy trigger and border levels:', 
+                     tooltip='In case the market has crossed this level, the entire position will be closed and the strategy remains idle. This Feature works on current bar and is independent of time and date.')
+cl_st_lvl           = input.float(0, title='"Close & Stop" Level', minval=0, step=100, group='Strategy trigger and border levels:', 
+                     tooltip='Define "Close & Stop" level.')
+//---------------------------- Backtest periode inputs -----------------------------------
+inst_grid           = input.bool(false, title='Instant Grid', group='Define the period of the grid/trend:', 
+                     tooltip='This enables the grid with current time and date. Do not change input settings while running an instant grid otherwise the grid will restart at current bar.')
+period_start        = input.time(title='', inline='start_timestamp', defval=timestamp('01 SEP 2022 00:00 +0000'), group='Define the period of the grid/trend:', 
+                     tooltip='Trend/grid start date and time. In case of live trading you have to set the period to the current date and time otherwise history trades will influence the position management.')
+period_stop         = input.time(title='', inline='end_timestamp', defval=timestamp('31 Dec 2122 00:00 +0000'), group='Define the period of the grid/trend:', tooltip='Trend/grid end date and time.')
+//backtesting lot size
+lot_size_b          = input.float(0.01, title='Lot Size - Backtesting', minval= 0, step= 0.01, 
+                     tooltip='Affects backtesting only.', group='Backtesting and live-trading lot size:') 
+//Alertatron lot size on Bybit
+lot_size_lv         = input.int(50, title='Lot Size - Live Trading', minval= 0, step= 50, 
+                     tooltip='Alertatron Bitcoin lot size string for Bybit exchange. Affects live trading only.', group='Backtesting and live-trading lot size:')
+//------------------------ entry signal inputs --------------------------
+x_opt_1             = input.string('Grid - reentry', title='--- 1st ENTRY SIGNAL ---', options=['---', 'Grid - reentry', 'Grid - counter trend', 'Fractals', 'Reverse fractal', 'Pin bar', 'BB reverse'], 
+                     tooltip='The grid entry signals are time independent. The Fractals signal is a breakout signal. The reverse fractal and the Pin bar signal are bottom fishing signal.', group='Entry signals:')
+x_opt_2             = input.string('---', title='--- 2nd ENTRY SIGNAL ---', options=['---', 'Grid - reentry', 'Grid - counter trend', 'Fractals', 'Reverse fractal', 'Pin bar', 'BB reverse'], 
+                     tooltip='The grid entry signals are time independent. The Fractals signal is a breakout signal. The reverse fractal and the pin bar signal are bottom fishing signals.', group='Entry signals:')
+//grid parameter
+grid_gap            = input.float(500, title='Grid Gap - Base Currency', minval=0, step=50, tooltip='The minimum trigger-gap between two trades in case of a selected grid signal.', group='Grid parameter:') 
+//---------------------------- 1st position factor inputs ------------------------------
+en_1st_pos_f        = input.bool(false, title='Enable First Position', group='First position size:', 
+                     tooltip='This enables the first position that will be opened when entry condition is met. In case all positions are closed, a new "first position" will be opened. 
+                     Works when no exit filters are selected.')
+inst_pos            = input.bool(false, title='Instantly On Current Bar Close', group='First position size:', 
+                     tooltip='This opens the first position immediately when the grid is placed and the current bar is closed.')
+pos_start_1st       = input.float(0.05, title='Position Start-Size - Backtesting', minval=0.000001, step=0.01, group='First position size:', 
+                     tooltip='This replaces the default strategy position size ("Lot Size - Backtesting") and is the starting position size. Backtesting only.')
+pos_start_1st_lv    = input.float(250, title='Position Start-Size - Live Trading', minval=0.000001, step=50, group='First position size:', 
+                     tooltip='This replaces the default strategy live trading position size ("Lot Size - Live Trading") and is the starting position size. Live trading only.')
+//-------------------------------- auto-increase of position inputs -----------------------------------
+en_pos_mart         = input.bool(false, title='Enable Position Auto-Increase', group='Automatic position size increase for each trade (Martingale):',
+                     tooltip='This enables the automatic increase in position size for each trade. With "Position Factor = 1" you get the martingale sequence.  
+                     This \'automatic increase\' works until a position has been closed. After a closing event, this function remains inactive. Works not with "Trade Direction" = "Both".')
+pos_factor          = input.float(0.5, title='Position Factor', minval=0.000001, step=0.1, group='Automatic position size increase for each trade (Martingale):', 
+                     tooltip='This factor controls the position size. The next position size is: strategy_position_size + strategy_position_size * position_factor. 
+                     Keep in mind that a take profit event reduces the current position size.')
+pos_count_in        = input.int(4, title='Position Count', minval=1, step=1, group='Automatic position size increase for each trade (Martingale):', 
+                     tooltip='This value determines how often the position is increased.')
+pos_start_mart      = input.float(0.01, title='Position Start-Size - Backtesting', minval=0.000001, step=0.001, group='Automatic position size increase for each trade (Martingale):', 
+                     tooltip='This replaces the default strategy position size ("Lot Size - Backtesting") and is the starting position size for "Auto-Increase". Backtesting only.')
+pos_start_mart_lv   = input.float(100, title='Position Start-Size - Live Trading', minval=0.000001, step=50, group='Automatic position size increase for each trade (Martingale):', 
+                     tooltip='This replaces the default live trading strategy position size ("Lot Size - Live Trading") and is the starting position size for "Auto-Increase". Live trading only.')
+//------------------------------ take average profit inputs --------------------------------
+av_tp_en            = input.bool(title='Enable Take Profit - Average-Position-Price Profit', defval=true, group='Take profit based on average-position-price:', 
+                     tooltip='Profit taking condition: current price >= average price of positions + "Take Average-Price Of Positions Profit..." AND current price >= average-price of positions + "Take Profit Step...". 
+                     Enable when scalping mode is used.')
+av_tp_qty           = input.float(10, title='Take Average-Position-Price Profit - Quantity Of Position (Percent)', minval=0, step=5, maxval=100, group='Take profit based on average-position-price:', 
+                     tooltip='Reduction of current position in percent. Affects backtesting and live trading.')
+av_tp               = input.float(500, title='Take Average-Position-Price Profit - Base Currency', minval=0, step=50, group='Take profit based on average-position-price:', 
+                     tooltip='The profit in points of base currency, calculated from the average price of all open trades.')
+avtp_step           = input.float(500, title='Take Profit Step - Base Currency', minval=0, step=50, group='Take profit based on average-position-price:', 
+                     tooltip='The minimum distance between two profit-taking events in case of "Take Average-Entry Profit - Quantity Of Position (Percent)" < 100.')
+en_tp_counter       = input.bool(title='Enable Take Profit Count', defval=false, group='Take profit based on average-position-price:', 
+                     tooltip='Enables "Take Profit Count". If disabled the stepwise take profit is endless. Enable when scalping mode is used.')
+tp_count            = input.int(3, title='Take Profit Count', minval=1, step=1, group='Take profit based on average-position-price:', 
+                     tooltip='Defines how many times a take profit event will happen before the entire position will be closed. Once the counter limit has been reached the counter gets reseted.')
+//---------------------------------- break even stop loss -----------------------------------
+break_even          = input.bool(title='Close On Break Even And Remain Idle', defval=false, group='Break even stop loss:', 
+                     tooltip='Sets the stop loss to break even after the first take profit event. Strategy remains idle after a break even close event. 
+                     Works on live trading too but the triggering lot size is the backtest lot size.')
+rep_even            = input.bool(title='Close Partly On Break Even', defval=false, group='Break even stop loss:', 
+                     tooltip='Sets a partly stop loss on break even. Strategy will not be further affected after a partly break even close event. 
+                     Works on live trading too but the triggering lot size is the backtest lot size.')
+rep_ev_qty          = input.int(50, title='Percent Close On Break Even', minval= 0, maxval= 100, step= 5, group='Break even stop loss:', 
+                     tooltip= 'Percent of position that will be closed after a break even event.')
+be_min_lot          = input.float(0.1, title='Min Lot Size (Backtesting lot size)', minval= 0, step= 0.01, group='Break even stop loss:', 
+                     tooltip= 'Min lot size to trigger break even partly close. Current lot size > "Min Lot Size"')
+//---------------------------- stop loss of average position inputs ------------------------------
+av_sl_en             = input.bool(title='Enable Stop Loss - Average-Position-Price Loss', defval=true, group='Stop loss based on average-position price or recent top/bottom:', 
+                     tooltip='Stop loss condition: current price <= average-position price of positions - "Stop Average-Entry Loss..." AND current price <= Average-Position Price Of Positions - "Stop Loss Step...". 
+                     Enable when scalping mode is used.')
+tb_tog              = input.bool(title='Toggle: Average-Position-Price Loss (Default) / Top/Bottom Based Loss', defval=true, group='Stop loss based on average-position price or recent top/bottom:', 
+                     tooltip='Stop loss condition top/bottom mode: current price <> last local top/bottom AND step condition. Stop loss condition average-position-price loss mode:  
+                     price <> average entry position price AND step condition. Default = selected.')
+av_sl_qty           = input.float(30, title='Stop Average-Position-Price Loss - Quantity Of Position (Percent)', minval=0, step=5, maxval=100, group='Stop loss based on average-position price or recent top/bottom:', 
+                     tooltip='Reduction of current position in percent. Affects backtesting and live trading.')
+av_sl               = input.float(500, title='Stop Average-Position-Price Loss - Base Currency', minval=0, step=50, group='Stop loss based on average-position price or recent top/bottom:', 
+                     tooltip='The loss in points of base currency, calculated from the average-position-price of all open trades.')
+avsl_step           = input.float(500, title='Stop Loss Step - Base Currency', minval=0, step=50, group='Stop loss based on average-position price or recent top/bottom:', 
+                     tooltip='The minimum distance between two stop-loss events in case of "Stop Average-Position-Price Loss - Quantity Of Position (Percent)" < 100.')
+sl_sen              = input.int(20, title='Top/Bottom Sensitivity', minval=1, step=1, group='Stop loss based on average-position price or recent top/bottom:', 
+                     tooltip='Number of past candles within the top and bottom are detected. For "Top/Bottom Based Loss" only.')
+en_sl_counter       = input.bool(title='Enable Stop Loss Count', defval=false, group='Stop loss based on average-position price or recent top/bottom:', 
+                     tooltip='Enables "Stop Loss Count". If disabled the stepwise stop loss is endless. Enable when scalping mode is used.')
+sl_count            = input.int(3, title='Stop Loss Count', minval=1, step=1, group='Stop loss based on average-position price or recent top/bottom:', 
+                     tooltip='Defines how many times a take profit event will happen before the entire position will be closed. Once the counter limit has been reached the counter gets reseted.')
+//---------------------------- entry filters and time frame inputs ------------------------------
+htf_entr_opt_1      = input.string('Current', title='Time Frame - Entry Filter 1', options=['Current', '5m', '10m', '15m', '30m', '1H', '2H', '3H', '4H', '6H', '8H', '12H', 'D', '3D', 'W', 'M'], 
+                     tooltip='The time frame for the 1st ENTRY SIGNAL filter. Choose always a higher time frame than the current. Lower time frames than the current may result in false values.', group='Entry filters:')
+htf_entr_opt_2      = input.string('Current', title='Time Frame - Entry Filter 2', options=['Current', '5m', '10m', '15m', '30m', '1H', '2H', '3H', '4H', '6H', '8H', '12H', 'D', '3D', 'W', 'M'], 
+                     tooltip='The time frame for the 2nd ENTRY SIGNAL filter. Choose always a higher time frame than the current. Lower time frames than the current may result in false values.', group='Entry filters:')
+entry_f_1           = input.string('---', title='Entry Filter 1', options=['---', 'Fractals trend lines filter (no tf filter)', 'Bar breakout 1 filter', 'Bar breakout 2 filter', 'SMA filter', 'MACD filter', 
+                     'MACD(fast) slope filter', 'RSI50 filter', 'Fractals filter', 'Segments filter (no tf filter)', 'Fractals 1-2-3 filter', 'Reverse fractal filter', 'EMA21/SMA20 filter', 
+                     'BB reverse filter (no tf filter)', 
+                     'ALMA slope filter', 'SuperTrend filter', 'EMA1 x EMA2 filter', 'ADX DMI filter', 'ADX slope filter', 'HMA slope filter', '2HMA cross filter', 'TRIX slope filter',  
+                     'Parabolic SAR filter', 'Price X Kumo filter', 'Price X Kijun filter', 'Kumo flip filter', 'Price filtered Kumo flip filter (no tf filter)', 'Chikou X price filter', 
+                     'Chikou X Kumo filter', 'Price X Tenkan filter', 'Tenkan X Kumo filter', 'Tenkan X Kijun filter'], tooltip='Various filter signals for the 1nd ENTRY SIGNAL.', group='Entry filters:')
+entry_f_2           = input.string('---', title='Entry Filter 2', options=['---', 'Fractals trend lines filter (no tf filter)', 'Bar breakout 1 filter', 'Bar breakout 2 filter', 'SMA filter', 'MACD filter', 
+                     'MACD(fast) slope filter', 'RSI50 filter', 'Fractals filter', 'Segments filter (no tf filter)', 'Fractals 1-2-3 filter', 'Reverse fractal filter', 'EMA21/SMA20 filter', 
+                     'BB reverse filter (no tf filter)', 
+                     'ALMA slope filter', 'SuperTrend filter', 'EMA1 x EMA2 filter', 'ADX DMI filter', 'ADX slope filter', 'HMA slope filter', '2HMA cross filter', 'TRIX slope filter',
+                     'Parabolic SAR filter', 'Price X Kumo filter', 'Price X Kijun filter', 'Kumo flip filter', 'Price filtered Kumo flip filter (no tf filter)', 'Chikou X price filter', 
+                     'Chikou X Kumo filter', 'Price X Tenkan filter', 'Tenkan X Kumo filter', 'Tenkan X Kijun filter'], tooltip='Various filter signals for the 2nd ENTRY SIGNAL.', group='Entry filters:')
+//-------------------------- exit filters and time frame inputs ----------------------------
+tog_exit            = input.bool(title='Toggle Exit Mode 1/2', defval=true, 
+                     tooltip='Mode 1: All open positions will be closed. Entry signals are not affected. Mode 2: All open positions will be closed. New entry signals are inactive while exit signal is valid. 
+                     Mode 1 = default = selected.', group='Exit filters:')
+qyt_exit            = input.int(100, title='Exit Quantity', minval= 0, maxval= 100, step= 5, tooltip= 'Percent of position that will be closed. Affects backtesting and live trading.', group='Exit filters:')
+htf_exit_opt_1      = input.string('Current', title='Time Frame - Exit Filter 1', options=['Current', '5m', '10m', '15m', '30m', '1H', '2H', '3H', '4H', '6H', '8H', '12H', 'D', '3D', 'W', 'M'], 
+                     tooltip='The time frame for Exit filter 1. Choose always a higher time frame than the current. Lower time frames than the current may result in false values.', group='Exit filters:')
+htf_exit_opt_2      = input.string('Current', title='Time Frame - Exit Filter 2', options=['Current', '5m', '10m', '15m', '30m', '1H', '2H', '3H', '4H', '6H', '8H', '12H', 'D', '3D', 'W', 'M'], 
+                     tooltip='The time frame for Exit filter 2. Choose always a higher time frame than the current. Lower time frames than the current may result in false values.', group='Exit filters:')
+exit_f_1            = input.string('---', title='Exit filter 1', options=['---', 'Fractals trend lines filter (no tf-filter)', 'ALMA slope exit', 'Reverse fractal exit', 'SMA exit', 'MACD exit', 'MACD(fast) slope exit', 
+                     'HMA slope exit', '2HMA cross exit', 'EMA1 x EMA2 exit', 'ADX slope exit', 'ADX Threshold exit', 'DMI exit', 'TRIX slope exit', 'BB reverse exit',  
+                     'RSI50 exit', 'Fractals exit', 'SuperTrend exit', 'Parabolic SAR exit', 'Cloud exit', 'Kijun exit'], 
+                     tooltip='Various exit signals for the 1nd ENTRY SIGNAL and the 2nd ENTRY SIGNAL. The exit signals are OR connected.', group='Exit filters:')
+exit_f_2            = input.string('---', title='Exit filter 2', options=['---', 'Fractals trend lines filter (no tf-filter)', 'ALMA slope exit', 'Reverse fractal exit', 'SMA exit', 'MACD exit', 'MACD(fast) slope exit', 
+                     'HMA slope exit', '2HMA cross exit', 'EMA1 x EMA2 exit', 'ADX slope exit', 'ADX Threshold exit', 'DMI exit', 'TRIX slope exit', 'BB reverse exit',  
+                     'RSI50 exit', 'Fractals exit', 'SuperTrend exit', 'Parabolic SAR exit', 'Cloud exit', 'Kijun exit'], 
+                     tooltip='Various exit signals for both the 1nd ENTRY SIGNAL and the 2nd ENTRY SIGNAL. The exit signals are OR connected.', group='Exit filters:')
+//------------------------- Signal parameter inputs ----------------------------
+p_bar_sens_1        = input.float(0.6, title='Pin Bar Sensitivity 1', step=0.02, tooltip='Condition: candle wick > candle body * "Pin bar sensitivity".  
+                     The smaller the factor, the more wicks are detected as part of a pin bar.', group='Pin bar and segment parameters:')
+p_bar_sens_2        = input.int(1, title='Pin Bar Sensitivity 2', step=1, minval=0, tooltip='Condition: high/low >< last two high/low.', group='Pin bar and segment parameters:')
+sb                  = input.int(title='Segment Max Bars', defval=10, minval=0, step=1, tooltip='The Maximum bars between two segment highs or lows.', group='Pin bar and segment parameters:')
+//--------------------- filters inputs --------------------
+fr_period           = input.int(2, title='Fractals Period', minval=1, group='Entry and filter signal parameters:')
+rsi_period          = input.int(14, title='RSI Period', minval=1, group='Entry and filter signal parameters:')
+ma_period           = input.int(50, title='MA Period', minval=1, group='Entry and filter signal parameters:')
+mult                = input.float(3, title='SuperTrend Multiplier', minval=1, step=0.1, group='Entry and filter signal parameters:')
+len                 = input.int(6, title='SuperTrend Length', minval=1, group='Entry and filter signal parameters:')
+start               = 0.02  //input(0.02, title= "PSAR Start (Filter/Entry)", minval= 0)
+inc                 = 0.02  //input(0.02, title= "PSAR Increment (Filter/Entry)", minval= 0)
+max                 = 0.2   //input(.2, title= "PSAR Maximum (Filter/Entry)", minval= 0)
+windowsize_f        = input.int(title="ALMA Window Size", defval=9, minval=1, step=1, group='Entry and filter signal parameters:', tooltip='')
+offset_f            = input.float(title="ALMA Offset", defval=0.85, minval=0, step=0.05, group='Entry and filter signal parameters:', tooltip='')
+sigma_f             = input.float(title="ALMA Sigma", defval=6, minval=1, step=1, group='Entry and filter signal parameters:', tooltip='')
+di_length_s         = input.int(10, title='DMI ADX Length', minval=1, group='Entry and filter signal parameters:')
+adx_smooth_s        = input.int(10, title='DMI ADX Smooth', minval=1, group='Entry and filter signal parameters:')
+adx_thres_s         = input.int(25, title='DMI ADX Threshold', minval=1, group='Entry and filter signal parameters:')
+slope_len           = input.int(1, minval=1, title='MACD MacdlLine Slope Lenth', tooltip='MACD\'s fast line', group='Entry and filter signal parameters:')
+hma_len_f           = input.int(100, minval=1, step=5, title='HMA Length', group='Entry and filter signal parameters:')
+hma2_len_f          = input.int(25, title = "2HMA Period", minval=1, step=1, group='Entry and filter signal parameters:')
+ema1_len_f          = input.int(10, minval=1, step=2, title='EMA1 Length', group='Entry and filter signal parameters:')
+ema2_len_f          = input.int(20, minval=1, step=2, title='EMA2 Length', group='Entry and filter signal parameters:')
+trix_len_f          = input.int(10, title="TRIX Length", minval=1, group='Entry and filter signal parameters:')
+bb_length_s         = input.int(20, minval=1, title='BB Length (signal)', group='Entry and filter signal parameters:', tooltip='')
+bb_std_fac_s        = input.float(2, minval=0.1, step=0.2, title='BB StdDev Factor (signal)', group='Entry and filter signal parameters:', tooltip='')
+bb_length_f         = input.int(20, minval=1, step=10, title='BB Length (filter)', group='Entry and filter signal parameters:', 
+                     tooltip='Formula to adapt BB length of a lower TF to a higher TF: (higher TF in minutes) / (lower TF) * (BB Length of higher TF)')
+bb_std_fac_f        = input.float(2, minval=0.1, step=0.2, title='BB StdDev Factor (filter)', group='Entry and filter signal parameters:', tooltip='')
+//--------------------- exits inputs --------------------
+fr_period_x         = input.int(2, title='Exit Fractals - Period', minval=1, group='Exit signal parameters:')
+fr_past_x           = input.int(0, title='Exit Fractals - Past Fractal', minval=0, group='Exit signal parameters:')
+rsi_period_x        = input.int(14, title='Exit RSI Period', minval=1, group='Exit signal parameters:')
+ma_period_x         = input.int(50, title='Exit MA Period', minval=1, group='Exit signal parameters:')
+mult_x              = input.float(2, title='Exit SuperTrend Multiplier', minval=1, group='Exit signal parameters:')
+len_x               = input.int(5, title='Exit SuperTrend Length', minval=1, group='Exit signal parameters:')
+di_length_x         = input.int(10, title='Exit DMI ADX Length', minval=1, group='Exit signal parameters:')
+adx_smooth_x        = input.int(10, title='Exit DMI ADX Smooth', minval=1, group='Exit signal parameters:')
+adx_thres_x         = input.int(25, title='Exit DMI ADX Threshold', minval=1, group='Exit signal parameters:')
+slope_len_x         = input.int(1, minval=1, title='Exit MACD MacdlLine Slope Lenth', tooltip='MACD\'s fast line', group='Exit signal parameters:')
+hma_len_x           = input.int(100, minval=1, step=5, title='EXIT HMA Length', group='Exit signal parameters:')
+hma2_len_x          = input.int(25, title = "Exit 2HMA Period", minval=1, step=1, group='Exit signal parameters:')
+ema1_len_x          = input.int(10, minval=1, step=2, title='Exit EMA1 Length', group='Exit signal parameters:')
+ema2_len_x          = input.int(20, minval=1, step=2, title='Exit EMA2 Length', group='Exit signal parameters:')
+windowsize_x        = input.int(9, title="Exit ALMA Window Size", minval=1, step=1, group='Exit signal parameters:', tooltip='')
+offset_x            = input.float(0.85, title="Exit ALMA Offset", minval=0, step=0.05, group='Exit signal parameters:', tooltip='')
+sigma_x             = input.float(6, title="Exit ALMA Sigma", minval=1, step=1, group='Exit signal parameters:', tooltip='')
+trix_len_x          = input.int(10, title="Exit TRIX Length", minval=1, group='Exit signal parameters:', tooltip='')
+bb_length_x         = input.int(20, minval=1, title='Exit BB Length', group='Exit signal parameters:', tooltip='')
+bb_std_fac_x        = input.float(2, minval=0.1, step=0.2, title='Exit BB StdDev Factor', group='Exit signal parameters:', tooltip='')
+//--------------- Current unrealized profit or loss for the open position -------------------
+if panel
+    var info_panel = table.new(position = position.bottom_left, columns = 1, rows = 2, bgcolor=color.new(color.blue, 92), frame_width=1, border_width=1)
+    text0   = "Position Size:                " + str.tostring(strategy.position_size, "#.0000")
+    text1   = "Unrealized Profit/Loss: " + str.tostring(strategy.openprofit, "#.00")
+    table.cell(table_id=info_panel, column=0, row=0, text=text0, text_halign=text.align_left, text_size= size.small, text_color=color.new(color.silver, 0))
+    table.cell(table_id=info_panel, column=0, row=1, text=text1, text_halign=text.align_left, text_size= size.small, text_color=color.new(color.silver, 0))
+//------------------------- entry direction --------------------------
+long                    = entry_type != 'Short'     // long or both
+short                   = entry_type != 'Long'      // short or both
+both                    = entry_type == 'Both'      // both
+//----------------------- Backtest periode --------------------------------
+backtest_period() =>
+    time >= period_start and time <= period_stop ? true : false
+//-------------------------------- plots ----------------------------
+//plot trigger level
+trig_line           = en_trig_lvl ? line.new(x1=period_start, x2=time, xloc = xloc.bar_time, y1=trig_lvl, y2=trig_lvl, 
+                     extend=extend_lines == 'Right' ? extend.right : extend.both, color=color.new(color.yellow, 40), style=line.style_solid, width=2) : na
+//plot upper border level
+bup_line            = en_border_up ? line.new(x1=period_start, x2=time, xloc = xloc.bar_time, y1=bup_lvl, y2=bup_lvl, 
+                     extend=extend_lines == 'Right' ? extend.right : extend.both, color=color.new(color.red, 40), style=line.style_solid, width=3) : na
+//plot lower border level
+bdn_line            = en_border_dn ? line.new(x1=period_start, x2=time, xloc = xloc.bar_time, y1=bdn_lvl, y2=bdn_lvl, 
+                     extend=extend_lines == 'Right' ? extend.right : extend.both, color=color.new(color.green, 40), style=line.style_solid, width=3) : na
+//plot "close & stop" level
+clst_line           = en_close_stop ? line.new(x1=bar_index[1], x2=bar_index, y1=cl_st_lvl, y2=cl_st_lvl, 
+                     extend=extend.right, color=color.new(color.white, 10), style=line.style_solid, width=1) : na
+line.delete(trig_line[1])
+line.delete(bup_line[1])
+line.delete(bdn_line[1])
+line.delete(clst_line[1])
+//average price plot
+plot(plot_avg_price ? strategy.position_avg_price : na, linewidth=1, color=close > strategy.position_avg_price and long or close < strategy.position_avg_price and short ? color.new(color.green, 30) : 
+     color.new(color.red, 30), title='position_avg_price')
+//-------------------- Ichimoku --------------------
+TKlength            = 9  //input(9, "Tenkan-sen length", minval= 1)
+KJlength            = 26  //input(26, "Kijun-sen length", minval= 1)
+CSHSlength          = 26  //input(26, "Chikouspan length/horizontal shift", minval= 1)
+SBlength            = 52  //input(52, "SenkouspanB length", minval= 1)
+// calculation
+TK                  = math.avg(ta.lowest(TKlength), ta.highest(TKlength))
+KJ                  = math.avg(ta.lowest(KJlength), ta.highest(KJlength))
+CS                  = close
+SB                  = math.avg(ta.lowest(SBlength), ta.highest(SBlength))
+SA                  = math.avg(TK, KJ)
+kumo_high           = math.max(SA[CSHSlength - 1], SB[CSHSlength - 1])
+kumo_low            = math.min(SA[CSHSlength - 1], SB[CSHSlength - 1])
+//----------------------------------------------------------------------- Filters and entry signals ------------------------------------------------------------------------
+//---------------------- Ichimoku filters ------------------------
+// cross conditions for "Strong" filtered signals
+var bool sasb_x = true
+if ta.crossover(SA, SB) and low > kumo_high
+    sasb_x := true
+    sasb_x
+if ta.crossunder(SA, SB) and high < kumo_low
+    sasb_x := false
+    sasb_x
+var bool tkkj_x = true
+if ta.crossover(TK, KJ) and TK > kumo_high and KJ > kumo_high
+    tkkj_x := true
+    tkkj_x
+if ta.crossunder(TK, KJ) and TK < kumo_low and KJ < kumo_low
+    tkkj_x := false
+    tkkj_x
+// Ichimoku filters
+kijun_buy_f                         = close > KJ
+kumo_buy_f                          = close > kumo_high
+kumo_flip_buy_f                     = SA > SB
+price_filtered_kumo_flip_buy_f      = sasb_x and low > kumo_high
+chikou_X_price_buy_f                = CS > high[26 - 1]
+chikou_X_kumo_buy_f                 = CS > kumo_high[26 - 1]
+price_X_tenkan_buy_f                = close > TK
+tenkan_X_kumo_buy_f                 = TK > kumo_high
+tenkan_X_kijun_buy_f                = TK > KJ
+kumo_filtered_tenkan_X_kijun_buy_f  = tkkj_x and TK > kumo_high and KJ > kumo_high and TK > KJ
+kijun_sell_f                        = close < KJ
+kumo_sell_f                         = close < kumo_low
+kumo_flip_sell_f                    = SA < SB
+price_filtered_kumo_flip_sell_f     = not sasb_x and high < kumo_low
+chikou_X_price_sell_f               = CS < low[26 - 1]
+chikou_X_kumo_sell_f                = CS < kumo_low[26 - 1]
+price_X_tenkan_sell_f               = close < TK
+tenkan_X_kumo_sell_f                = TK < kumo_low
+tenkan_X_kijun_sell_f               = TK < KJ
+kumo_filtered_tenkan_X_kijun_sell_f = not tkkj_x and TK < kumo_low and KJ < kumo_low and TK < KJ
+// Ichimoku exits
+kijun_buy_x                         = tog_exit ? ta.crossover(high, KJ) : high > KJ
+kijun_sell_x                        = tog_exit ? ta.crossunder(low, KJ) : low < KJ
+kumo_buy_x                          = tog_exit ? ta.crossover(high, kumo_high) : high > kumo_high
+kumo_sell_x                         = tog_exit ? ta.crossunder(low, kumo_low) : low < kumo_low
+//--------------------- Bollinger Bands ------------------------
+f_stdev(_bb_len)                    => ta.stdev(close, _bb_len)
+f_sma(_sma_len)                     => ta.sma(close, _sma_len)
+dev_s                               = bb_std_fac_s * f_stdev(bb_length_s)
+dev_f                               = bb_std_fac_f * f_stdev(bb_length_f)
+dev_x                               = bb_std_fac_x * f_stdev(bb_length_x)
+//signal
+upper_bb_s                          = f_sma(bb_length_s) + dev_s
+lower_bb_s                          = f_sma(bb_length_s) - dev_s
+bb_long_s                           = low < lower_bb_s  // ta.crossunder(low, lower_bb_s) 
+bb_short_s                          = high > upper_bb_s // ta.crossover(high, upper_bb_s)
+//filter
+upper_bb_f                          = f_sma(bb_length_f) + dev_f
+lower_bb_f                          = f_sma(bb_length_f) - dev_f
+var bool bb_dnx_buy                 = false
+var bool bb_upx_sell                = false
+if low < lower_bb_f and backtest_period() 
+    bb_dnx_buy  := true
+    bb_upx_sell := false
+if high > upper_bb_f and backtest_period()
+    bb_upx_sell := true
+    bb_dnx_buy  := false
+bb_long_f                           = bb_dnx_buy        // [pine]  [/pine]
+bb_short_f                          = bb_upx_sell
+//exit
+upper_bb_x                          = f_sma(bb_length_x) + dev_x
+lower_bb_x                          = f_sma(bb_length_x) - dev_x
+bb_long_x                           = tog_exit ? ta.crossunder(low, lower_bb_x) : low < lower_bb_x
+bb_short_x                          = tog_exit ? ta.crossover(high, upper_bb_x) : high > upper_bb_x
+//-------------------------- trix --------------------------
+trix_f                              = 10000 * ta.change(ta.ema(ta.ema(ta.ema(math.log(close), trix_len_f), trix_len_f), trix_len_f))
+trix_x                              = 10000 * ta.change(ta.ema(ta.ema(ta.ema(math.log(close), trix_len_x), trix_len_x), trix_len_x))
+trix_slo_up_f                       = ta.rising(trix_f, 1)  
+trix_slo_up_x                       = tog_exit ? ta.rising(trix_x, 1) and not ta.rising(trix_x, 1)[1] : ta.rising(trix_x, 1)
+trix_slo_dn_x                       = tog_exit ? ta.falling(trix_x, 1) and not ta.falling(trix_x, 1)[1] : ta.falling(trix_x, 1)
+//------------------------- hma ----------------------------
+hma_f                               = ta.hma(close, hma_len_f)                                                                          // entry filter   //[repaint == 'Allowed' ? 0 : 1] 
+hma_x                               = ta.hma(close, hma_len_x)                                                                          // exit 
+hma_up_f                            = ta.rising(hma_f, 1)
+hma_dn_f                            = ta.falling(hma_f, 1)                                                                              // entry filter
+hma_up_x                            = tog_exit ? ta.rising(hma_x, 1) and not ta.rising(hma_x, 1)[1] : ta.rising(hma_x, 1)               // exit 
+hma_dn_x                            = tog_exit ? ta.falling(hma_x, 1) and not ta.falling(hma_x, 1)[1] : ta.falling(hma_x, 1)
+//------------------- 2hma cross -----------------------
+f_hma3(_src, _len)   =>  ta.wma(ta.wma(close, (_len/2)/3)*3 - ta.wma(close, (_len/2)/2) - ta.wma(close, (_len/2)), (_len/2))    
+//entry filter
+hma_n_f                             = ta.hma(hl2, hma2_len_f)      //[repaint == 'Allowed' ? 0 : 1]          
+hma_m_f                             = f_hma3(hl2, hma2_len_f)      //[repaint == 'Allowed' ? 0 : 1]
+hma_c_up_f                          = hma_m_f > hma_n_f
+hma_c_dn_f                          = hma_m_f < hma_n_f
+//exit
+hma_n_x                             = ta.hma(hl2, hma2_len_x)      //[repaint == 'Allowed' ? 0 : 1]          
+hma_m_x                             = f_hma3(hl2, hma2_len_x)      //[repaint == 'Allowed' ? 0 : 1]
+hma_c_up_x                          = tog_exit ? ta.crossover(hma_m_x, hma_n_x) : hma_m_x > hma_n_x
+hma_c_dn_x                          = tog_exit ? ta.crossunder(hma_m_x, hma_n_x) : hma_m_x < hma_n_x
+//---------------- williams fractals trend lines -----------------
+up_w_fr                             = ta.pivothigh(2, 2)
+dn_w_fr                             = ta.pivotlow(2, 2)
+y1_frup_1                           = ta.valuewhen(up_w_fr, high[2], 1)
+y0_frup_0                           = ta.valuewhen(up_w_fr, high[2], 0)
+y1_frdn_1                           = ta.valuewhen(dn_w_fr, low[2], 1)
+y0_frdn_0                           = ta.valuewhen(dn_w_fr, low[2], 0)
+// bar-id loops to get x1 and x2 for line.new()
+xup0 = 2
+for i = 1 to 25 by 1
+    if high[i + 2] >= high[i + 3] and high[i + 2] > high[i + 4] and high[i + 2] > high[i + 1] and high[i + 2] >= high[i + 0]
+        break
+    xup0 := xup0 + 1
+    xup0
+xup1 = xup0
+for i = xup1 to 40 by 1
+    if high[i + 2] >= high[i + 3] and high[i + 2] > high[i + 4] and high[i + 2] > high[i + 1] and high[i + 2] >= high[i + 0]
+        break
+    xup1 := xup1 + 1
+    xup1
+xdn0 = 2
+for i = 1 to 25 by 1
+    if low[i + 2] <= low[i + 3] and low[i + 2] < low[i + 4] and low[i + 2] < low[i + 1] and low[i + 2] <= low[i + 0]
+        break
+    xdn0 := xdn0 + 1
+    xdn0
+xdn1 = xdn0
+for i = xdn1 to 40 by 1
+    if low[i + 2] <= low[i + 3] and low[i + 2] < low[i + 4] and low[i + 2] < low[i + 1] and low[i + 2] <= low[i + 0]
+        break
+    xdn1 := xdn1 + 1
+    xdn1
+// y-linebreak values for upper_line and lower_line
+y_up_lvl        = (y0_frup_0 - y1_frup_1) / (xup1 + 2 - xup0) * xup0 + y0_frup_0  // y = slope * x0 + y0
+y_dn_lvl        = (y0_frdn_0 - y1_frdn_1) / (xdn1 + 2 - xdn0) * xdn0 + y0_frdn_0
+// exit / filter
+//frup_buy        = ta.crossover(high, y0_frup_0)
+//frdn_sell       = ta.crossunder(low, y0_frdn_0)
+buy_up_line     = tog_exit ? ta.crossover(high, y_up_lvl) : high > y_up_lvl// or frup_buy
+sell_dn_line    = tog_exit ? ta.crossunder(low, y_dn_lvl) : low < y_dn_lvl// or frdn_sell
+//------------------------ grid --------------------------
+re_grid = 0.
+re_grid := nz(high > re_grid[1] + grid_gap or low < re_grid[1] - grid_gap ? close : re_grid[1])
+grid_ct_buy         = re_grid < re_grid[1]
+grid_ct_sell        = re_grid > re_grid[1]
+grid_re_buy         = re_grid > re_grid[1]
+grid_re_sell        = re_grid < re_grid[1]
+//plot(re_grid,"Plot Entry Grid ", color= color.yellow, linewidth= 2)
+//---------------------- reverse fractal signal and filter --------------------------
+up_bar              = close[0] > open[0]
+dn_bar              = close[0] < open[0]
+hl                  = low[0] > low[1]
+lh                  = high[0] < high[1]
+rev_up_fr_sell      = ta.pivothigh(high, 3, 0) and dn_bar and up_bar[1] or ta.pivothigh(high, 4, 1) and dn_bar and up_bar[1] or ta.pivothigh(high, 4, 1) and lh and up_bar and up_bar[1]
+rev_dn_fr_buy       = ta.pivotlow(low, 3, 0) and up_bar and dn_bar[1] or ta.pivotlow(low, 4, 1) and up_bar and dn_bar[1] or ta.pivotlow(low, 4, 1) and hl and dn_bar and dn_bar[1]
+//-------------------------- pin bar entry signal-------------------------------
+candle_body         = math.abs(open - close)
+pivot_up            = ta.pivothigh(high, p_bar_sens_2, 0)
+pivot_dn            = ta.pivotlow(low, p_bar_sens_2, 0)
+up_wick             = close > open ? high - close : high - open
+dn_wick             = close > open ? open - low : close - low
+pin_up_def          = high - open > p_bar_sens_1 * candle_body and close < open or high - close > p_bar_sens_1 * candle_body and close > open
+pin_dn_def          = open - low > p_bar_sens_1 * candle_body and close > open or close - low > p_bar_sens_1 * candle_body and close < open
+p_bar_sell          = pin_up_def and pivot_up and up_wick > dn_wick
+p_bar_buy           = pin_dn_def and pivot_dn and up_wick < dn_wick
+//------------------ ema21/sma20 filter -------------------------
+ema_f(src, ema_len) => ta.ema(src, ema_len)                     // ma function definition
+sma_f(src, sma_len) => ta.sma(src, sma_len)
+ema_21              = ema_f(close, 21) 
+sma_20              = sma_f(close, 20)
+ma_cross_buy        = high > ema_21 and high > sma_20 and ema_21 > sma_20
+ma_cross_sell       = low < ema_21 and low < sma_20 and ema_21 < sma_20
+//------------------------ ema1 x ema2 ---------------------------
+ema1_f                              = ema_f(close, ema1_len_f)
+ema2_f                              = ema_f(close, ema2_len_f)
+ema1_x                              = ema_f(close, ema1_len_x)
+ema2_x                              = ema_f(close, ema2_len_x)
+ema_1x2_buy_f                       = ema1_f > ema2_f
+ema_1x2_buy_x                       = tog_exit ?  ta.crossover(ema1_x, ema2_x) : ema1_x > ema2_x
+ema_1x2_sell_x                      = tog_exit ?  ta.crossunder(ema1_x, ema2_x) : ema1_x < ema2_x
+//--------------------- alma ------------------------
+//filters
+alma_f                              = ta.alma(close, windowsize_f, offset_f, sigma_f)
+alma_slo_up_f                       = ta.rising(alma_f, 1)  
+//exits
+alma_x                              = ta.alma(close, windowsize_x, offset_x, sigma_x)
+alma_slo_up_x                       = tog_exit ? ta.rising(alma_x, 1) and not ta.rising(alma_x, 1)[1] : ta.rising(alma_x, 1)
+alma_slo_dn_x                       = tog_exit ? ta.falling(alma_x, 1) and not ta.falling(alma_x, 1)[1] : ta.falling(alma_x, 1)
+//----------------------- macd filter -----------------------
+[macdLine_f, signalLine_f, histLine_f]  = ta.macd(close, 12, 26, 9)
+//filters
+macd_buy                                = macdLine_f > signalLine_f
+macd_sell                               = macdLine_f < signalLine_f
+//exit
+macd_buy_x                              = tog_exit ? ta.crossover(macdLine_f, signalLine_f) : macdLine_f > signalLine_f
+macd_sell_x                             = tog_exit ? ta.crossunder(macdLine_f, signalLine_f) : macdLine_f < signalLine_f
+//macd fast line slope
+macd_slope_up                           = ta.rising(macdLine_f, slope_len)                                                                                                              //entry and filter
+macd_slope_up_x                         = tog_exit ? ta.rising(macdLine_f, slope_len_x) and not ta.rising(macdLine_f, slope_len_x)[1] : ta.rising(macdLine_f, slope_len_x)              //exit
+macd_slope_dn_x                         = tog_exit ? ta.falling(macdLine_f, slope_len_x) and not ta.falling(macdLine_f, slope_len_x)[1] : ta.falling(macdLine_f, slope_len_x)
+//---------------------- rsi filters and entry signal------------------------
+//entry
+rsi_f           = ta.rsi(close, rsi_period)
+rsi_f_buy       = rsi_f > 50
+rsi_f_sell      = rsi_f < 50
+//filters
+rsi_f_buy_f     = rsi_f > 50
+rsi_f_sell_f    = rsi_f < 50
+//exit
+rsi_f_x         = ta.rsi(close, rsi_period_x)
+rsi_f_buy_x     = tog_exit ? ta.crossover(rsi_f_x, 50) : rsi_f_x > 50
+rsi_f_sell_x    = tog_exit ? ta.crossunder(rsi_f_x, 50) : rsi_f_x < 50
+//---------------- Bill Williams Fractals (filter and entry signal) -----------------
+up_fr           = ta.pivothigh(fr_period, fr_period)
+dn_fr           = ta.pivotlow(fr_period, fr_period)
+fractal_up_v    = ta.valuewhen(up_fr, high[fr_period], 0)
+fractal_dn_v    = ta.valuewhen(dn_fr, low[fr_period], 0)
+//entry signal
+fr_upx          = ta.crossover(high, fractal_up_v)
+fr_dnx          = ta.crossunder(low, fractal_dn_v)
+//filters
+fr_upx_f        = high > fractal_up_v
+fr_dnx_f        = low < fractal_dn_v
+//exit
+up_fr_x         = ta.pivothigh(fr_period_x, fr_period_x)
+dn_fr_x         = ta.pivotlow(fr_period_x, fr_period_x)
+fractal_up_v_x  = ta.valuewhen(up_fr_x, high[fr_period_x], fr_past_x)
+fractal_dn_v_x  = ta.valuewhen(dn_fr_x, low[fr_period_x], fr_past_x)
+fr_upx_x        = tog_exit ? ta.crossover(high, fractal_up_v_x) : high > fractal_up_v_x
+fr_dnx_x        = tog_exit ? ta.crossunder(low, fractal_dn_v_x) : low < fractal_dn_v_x
+//----------- higher low and higher high - lower high and lower low - entry --------------
+fractal_dn_v_1  = ta.valuewhen(dn_fr, low[fr_period], 1)
+fractal_up_v_1  = ta.valuewhen(up_fr, high[fr_period], 1)
+hl_hh_buy       = fractal_dn_v > fractal_dn_v_1 and high > fractal_up_v  // 123 signal and filter
+lh_ll_sell      = fractal_up_v < fractal_up_v_1 and low < fractal_dn_v
+//-------------------- SuperTrend filter and entry signal ---------------------
+//entry
+[SuperTrend, Dir]       = ta.supertrend(mult, len)
+sup_buy                 = high > SuperTrend
+sup_sell                = low < SuperTrend
+//filters
+sup_buy_f               = high > SuperTrend
+sup_sell_f              = low < SuperTrend
+//exit
+[SuperTrend_x, Dir_x]   = ta.supertrend(mult_x, len_x)
+sup_buy_x               = tog_exit ? ta.crossover(high, SuperTrend_x) : high > SuperTrend_x
+sup_sell_x              = tog_exit ? ta.crossunder(low, SuperTrend_x) : low < SuperTrend_x
+//----------------- Parabolic SAR Signal (pb/ps) and filter -------------------
+psar_buy                = tog_exit ? ta.crossover(high, ta.sar(start, inc, max)) : high > ta.sar(start, inc, max)[0]
+psar_sell               = tog_exit ? ta.crossunder(low, ta.sar(start, inc, max)) : low < ta.sar(start, inc, max)[0]
+//-------------------------- ADX entry and filter ---------------------------
+//adx signal 1/2 and filter
+[diplus_s, diminus_s, adx_s]        = ta.dmi(di_length_s, adx_smooth_s)
+adx_above_thres                     = adx_s > adx_thres_s
+long_1                              = diplus_s > diminus_s and adx_s < diplus_s and adx_s > diminus_s                           // ADX DMI entry and filter classic
+short_1                             = diplus_s < diminus_s and adx_s > diplus_s and adx_s < diminus_s
+long_2                              = diplus_s > diminus_s and adx_above_thres
+short_2                             = diplus_s < diminus_s and adx_above_thres
+//filter
+adx_up_f                            = ta.rising(adx_s, 1)                                                                       // ADX filter rising/falling
+//exit
+[diplus_x, diminus_x, adx_x]        = ta.dmi(di_length_x, adx_smooth_x)
+adx_thres_f_x                       = tog_exit ? ta.crossunder(adx_x, adx_thres_x) : adx_x < adx_thres_x                        // ADX exit classic
+dmi_long_x                          = tog_exit ? ta.crossover(diplus_x, diminus_x) : diplus_x > diminus_x                       // dmi exit 
+dmi_short_x                         = tog_exit ? ta.crossunder(diplus_x, diminus_x) : diplus_x < diminus_x
+adx_dn_x                            = tog_exit ? ta.falling(adx_x, 1) and not ta.falling(adx_x, 1)[1] : ta.falling(adx_x, 1)    // ADX exit falling 
+//-------------------------- SMA50 filter and entry---------------------------
+//entry
+sma_buy             = close[2] > ema_f(close, ma_period)
+sma_sell            = close[2] < ema_f(close, ma_period)
+//filters
+sma_buy_f           = close[2] > sma_f(close, ma_period)
+sma_sell_f          = close[2] < sma_f(close, ma_period)
+//exit
+sma_buy_x           = tog_exit ? ta.crossover(close[1], sma_f(close, ma_period_x)) : close[1] > sma_f(close, ma_period_x)
+sma_sell_x          = tog_exit ? ta.crossunder(close[1], sma_f(close, ma_period_x)) : close[1] < sma_f(close, ma_period_x)
+//--------------------------- Segments signal ----------------------------
+count1_l                    = 0
+count2_l                    = 0
+segment_1_stat_l            = false
+segment_2_stat_l            = false
+segment_3_stat_l            = false
+higher_low                  = low > low[1]
+var line segment_low_1_l    = na
+var line segment_low_2_l    = na
+var line segment_low_3_l    = na
+// long segments
+for i = 0 to sb by 1
+    count1_l := count1_l + 1
+    if low[1] > low[i + 2] and higher_low
+        segment_1_stat_l := true
+        break
+for i = count1_l to sb + count1_l by 1
+    count2_l := count2_l + 1
+    if low[1 + count1_l] > low[i + 2] and segment_1_stat_l
+        segment_2_stat_l := true
+        break
+for i = count2_l to sb + count2_l by 1
+    if low[1 + count1_l + count2_l] > low[i + 2 + count1_l] and segment_2_stat_l
+        segment_3_stat_l := true
+        break
+// short segments
+count1_s            = 0
+count2_s            = 0
+segment_1_stat_s    = false
+segment_2_stat_s    = false
+segment_3_stat_s    = false
+lower_high = high < high[1]
+var line segment_high_1 = na
+var line segment_high_2 = na
+var line segment_high_3 = na
+for i = 0 to sb by 1
+    count1_s := count1_s + 1
+    if high[1] < high[i + 2] and lower_high
+        segment_1_stat_s := true
+        break
+for i = count1_s to sb + count1_s by 1
+    count2_s := count2_s + 1
+    if high[1 + count1_s] < high[i + 2] and segment_1_stat_s
+        segment_2_stat_s := true
+        break
+for i = count2_s to sb + count2_s by 1
+    if high[1 + count1_s + count2_s] < high[i + 2 + count1_s] and segment_2_stat_s
+        segment_3_stat_s := true
+        break
+// segments signals
+seg_stat_l          = segment_1_stat_l and segment_2_stat_l and segment_3_stat_l
+seg_stat_s          = segment_1_stat_s and segment_2_stat_s and segment_3_stat_s
+//entry
+segments_buy        = high > high[1] and seg_stat_l[1]
+segments_sell       = low < low[1] and seg_stat_s[1]
+//filters
+segments_buy_f      = high > high[1] and seg_stat_l[1]
+segments_sell_f     = low < low[1] and seg_stat_s[1]
+//-------------------------------------------------------------------------- Entry Signal Options ----------------------------------------------------------------------
+// buy signal options 1
+opt_sig_buy_1       = x_opt_1 == '---' ? false : 
+                     x_opt_1 == 'BB reverse' ? bb_long_s : 
+                     x_opt_1 == 'Grid - counter trend' ? grid_ct_buy : 
+                     x_opt_1 == 'Grid - reentry' ? grid_re_buy : 
+                     x_opt_1 == 'Pin bar' ? p_bar_buy : 
+                     x_opt_1 == 'Fractals' ? fr_upx : 
+                     x_opt_1 == 'Reverse fractal' ? rev_dn_fr_buy : false
+// sell signal options 1
+opt_sig_sell_1      = x_opt_1 == '---' ? false : 
+                     x_opt_1 == 'BB reverse' ? bb_short_s : 
+                     x_opt_1 == 'Grid - counter trend' ? grid_ct_sell : 
+                     x_opt_1 == 'Grid - reentry' ? grid_re_sell : 
+                     x_opt_1 == 'Pin bar' ? p_bar_sell : 
+                     x_opt_1 == 'Fractals' ? fr_dnx : 
+                     x_opt_1 == 'Reverse fractal' ? rev_up_fr_sell : false
+// buy signal options 2
+opt_sig_buy_2       = x_opt_2 == '---' ? false : 
+                     x_opt_2 == 'BB reverse' ? bb_long_s :
+                     x_opt_2 == 'Grid - counter trend' ? grid_ct_buy : 
+                     x_opt_2 == 'Grid - reentry' ? grid_re_buy : 
+                     x_opt_2 == 'Pin bar' ? p_bar_buy : 
+                     x_opt_2 == 'Fractals' ? fr_upx : 
+                     x_opt_2 == 'Reverse fractal' ? rev_dn_fr_buy : false
+// sell signal options 2
+opt_sig_sell_2      = x_opt_2 == '---' ? false : 
+                     x_opt_2 == 'BB reverse' ? bb_short_s :
+                     x_opt_2 == 'Grid - counter trend' ? grid_ct_sell : 
+                     x_opt_2 == 'Grid - reentry' ? grid_re_sell : 
+                     x_opt_2 == 'Pin bar' ? p_bar_sell : 
+                     x_opt_2 == 'Fractals' ? fr_dnx : 
+                     x_opt_2 == 'Reverse fractal' ? rev_up_fr_sell : false
+//------------------------------------------------------------------------------ entry filters -----------------------------------------------------------------------------
+f_secureSecurity(_symbol, _res, _src) => request.security(_symbol, _res, _src[repaint == 'Allowed' ? 0 : 1])                        // no repainting - taken from PineCoders 
+                            
+entry_filter_sig_buy_1      = entry_f_1 == '---' ? true : 
+                             entry_f_1 == 'TRIX slope filter' ? trix_slo_up_f : 
+                             entry_f_1 == 'EMA1 x EMA2 filter' ? ema_1x2_buy_f : 
+                             entry_f_1 == '2HMA cross filter' ? hma_c_up_f : 
+                             entry_f_1 == 'HMA slope filter' ? hma_up_f : 
+                             entry_f_1 == 'MACD(fast) slope filter' ? macd_slope_up : 
+                             entry_f_1 == 'MACD filter' ? macd_buy : 
+                             entry_f_1 == 'RSI50 filter' ? rsi_f_buy_f : 
+                             entry_f_1 == 'Fractals filter' ? fr_upx_f : 
+                             entry_f_1 == 'SuperTrend filter' ? sup_buy_f : 
+                             entry_f_1 == 'Parabolic SAR filter' ? psar_buy : 
+                             entry_f_1 == 'SMA filter' ? sma_buy_f : 
+                             entry_f_1 == 'ADX slope filter' ? adx_up_f : 
+                             entry_f_1 == 'ADX DMI filter' ? adx_above_thres : 
+                             entry_f_1 == 'Fractals 1-2-3 filter' ? hl_hh_buy : 
+                             entry_f_1 == 'Reverse fractal filter' ? rev_dn_fr_buy : 
+                             entry_f_1 == 'EMA21/SMA20 filter' ? ma_cross_buy : 
+                             entry_f_1 == 'ALMA slope filter' ? alma_slo_up_f : 
+                             entry_f_1 == 'Price X Kumo filter' ? kumo_buy_f : 
+                             entry_f_1 == 'Price X Kijun filter' ? kijun_buy_f : 
+                             entry_f_1 == 'Kumo flip filter' ? kumo_flip_buy_f : 
+                             entry_f_1 == 'Chikou X price filter' ? chikou_X_price_buy_f : 
+                             entry_f_1 == 'Chikou X Kumo filter' ? chikou_X_kumo_buy_f : 
+                             entry_f_1 == 'Price X Tenkan filter' ? price_X_tenkan_buy_f : 
+                             entry_f_1 == 'Tenkan X Kumo filter' ? tenkan_X_kumo_buy_f : 
+                             entry_f_1 == 'Tenkan X Kijun filter' ? tenkan_X_kijun_buy_f : true
+entry_filter_sig_sell_1     = entry_f_1 == '---' ? true : 
+                             entry_f_1 == 'TRIX slope filter' ? not trix_slo_up_f :
+                             entry_f_1 == 'EMA1 x EMA2 filter' ? not ema_1x2_buy_f :
+                             entry_f_1 == '2HMA cross filter' ? hma_c_dn_f : 
+                             entry_f_1 == 'HMA slope filter' ? hma_dn_f : 
+                             entry_f_1 == 'MACD(fast) slope filter' ? not macd_slope_up : 
+                             entry_f_1 == 'MACD filter' ? macd_sell : 
+                             entry_f_1 == 'RSI50 filter' ? rsi_f_sell_f : 
+                             entry_f_1 == 'Fractals filter' ? fr_dnx_f : 
+                             entry_f_1 == 'SuperTrend filter' ? sup_sell_f : 
+                             entry_f_1 == 'Parabolic SAR filter' ? psar_sell : 
+                             entry_f_1 == 'SMA filter' ? sma_sell_f : 
+                             entry_f_1 == 'ADX slope filter' ? not adx_up_f : 
+                             entry_f_1 == 'ADX DMI filter' ? adx_above_thres : 
+                             entry_f_1 == 'Fractals 1-2-3 filter' ? lh_ll_sell : 
+                             entry_f_1 == 'Reverse fractal filter' ? rev_up_fr_sell : 
+                             entry_f_1 == 'EMA21/SMA20 filter' ? ma_cross_sell : 
+                             entry_f_1 == 'ALMA slope filter' ? not alma_slo_up_f : 
+                             entry_f_1 == 'Price X Kumo filter' ? kumo_sell_f : 
+                             entry_f_1 == 'Price X Kijun filter' ? kijun_sell_f : 
+                             entry_f_1 == 'Kumo flip filter' ? kumo_flip_sell_f : 
+                             entry_f_1 == 'Chikou X price filter' ? chikou_X_price_sell_f : 
+                             entry_f_1 == 'Chikou X Kumo filter' ? chikou_X_kumo_sell_f : 
+                             entry_f_1 == 'Price X Tenkan filter' ? price_X_tenkan_sell_f : 
+                             entry_f_1 == 'Tenkan X Kumo filter' ? tenkan_X_kumo_sell_f : 
+                             entry_f_1 == 'Tenkan X Kijun filter' ? tenkan_X_kijun_sell_f : true
+entry_filter_sig_buy_2      = entry_f_2 == '---' ? true : 
+                             entry_f_2 == 'TRIX slope filter' ? trix_slo_up_f :
+                             entry_f_2 == 'EMA1 x EMA2 filter' ? ema_1x2_buy_f :
+                             entry_f_2 == '2HMA cross filter' ? hma_c_up_f : 
+                             entry_f_2 == 'HMA slope filter' ? hma_up_f : 
+                             entry_f_2 == 'MACD(fast) slope filter' ? macd_slope_up : 
+                             entry_f_2 == 'MACD filter' ? macd_buy : 
+                             entry_f_2 == 'RSI50 filter' ? rsi_f_buy_f : 
+                             entry_f_2 == 'Fractals filter' ? fr_upx_f : 
+                             entry_f_2 == 'SuperTrend filter' ? sup_buy_f : 
+                             entry_f_2 == 'Parabolic SAR filter' ? psar_buy : 
+                             entry_f_2 == 'SMA filter' ? sma_buy_f : 
+                             entry_f_2 == 'ADX slope filter' ? adx_up_f : 
+                             entry_f_2 == 'ADX DMI filter' ? adx_above_thres : 
+                             entry_f_2 == 'Fractals 1-2-3 filter' ? hl_hh_buy : 
+                             entry_f_2 == 'Reverse fractal filter' ? rev_dn_fr_buy : 
+                             entry_f_2 == 'EMA21/SMA20 filter' ? ma_cross_buy : 
+                             entry_f_2 == 'ALMA slope filter' ? alma_slo_up_f : 
+                             entry_f_2 == 'Price X Kumo filter' ? kumo_buy_f : 
+                             entry_f_2 == 'Price X Kijun filter' ? kijun_buy_f : 
+                             entry_f_2 == 'Kumo flip filter' ? kumo_flip_buy_f : 
+                             entry_f_2 == 'Chikou X price filter' ? chikou_X_price_buy_f : 
+                             entry_f_2 == 'Chikou X Kumo filter' ? chikou_X_kumo_buy_f : 
+                             entry_f_2 == 'Price X Tenkan filter' ? price_X_tenkan_buy_f : 
+                             entry_f_2 == 'Tenkan X Kumo filter' ? tenkan_X_kumo_buy_f : 
+                             entry_f_2 == 'Tenkan X Kijun filter' ? tenkan_X_kijun_buy_f : true
+entry_filter_sig_sell_2     = entry_f_2 == '---' ? true : 
+                             entry_f_2 == 'TRIX slope filter' ? not trix_slo_up_f :
+                             entry_f_2 == 'EMA1 x EMA2 filter' ? not ema_1x2_buy_f :
+                             entry_f_2 == '2HMA cross filter' ? hma_c_dn_f : 
+                             entry_f_2 == 'HMA slope filter' ? hma_dn_f: 
+                             entry_f_2 == 'MACD(fast) slope filter' ? not macd_slope_up : 
+                             entry_f_2 == 'MACD filter' ? macd_sell : 
+                             entry_f_2 == 'RSI50 filter' ? rsi_f_sell_f : 
+                             entry_f_2 == 'Fractals filter' ? fr_dnx_f : 
+                             entry_f_2 == 'SuperTrend filter' ? sup_sell_f : 
+                             entry_f_2 == 'Parabolic SAR filter' ? psar_sell : 
+                             entry_f_2 == 'SMA filter' ? sma_sell_f : 
+                             entry_f_2 == 'ADX slope filter' ? not adx_up_f : 
+                             entry_f_2 == 'ADX DMI filter' ? adx_above_thres : 
+                             entry_f_2 == 'Fractals 1-2-3 filter' ? lh_ll_sell : 
+                             entry_f_2 == 'Reverse fractal filter' ? rev_up_fr_sell : 
+                             entry_f_2 == 'EMA21/SMA20 filter' ? ma_cross_sell : 
+                             entry_f_2 == 'ALMA slope filter' ? not alma_slo_up_f : 
+                             entry_f_2 == 'Price X Kumo filter' ? kumo_sell_f : 
+                             entry_f_2 == 'Price X Kijun filter' ? kijun_sell_f : 
+                             entry_f_2 == 'Kumo flip filter' ? kumo_flip_sell_f : 
+                             entry_f_2 == 'Chikou X price filter' ? chikou_X_price_sell_f : 
+                             entry_f_2 == 'Chikou X Kumo filter' ? chikou_X_kumo_sell_f : 
+                             entry_f_2 == 'Price X Tenkan filter' ? price_X_tenkan_sell_f : 
+                             entry_f_2 == 'Tenkan X Kumo filter' ? tenkan_X_kumo_sell_f : 
+                             entry_f_2 == 'Tenkan X Kijun filter' ? tenkan_X_kijun_sell_f : true
+//entry buy filter 1 
+entry_filter_buy_1          = htf_entr_opt_1 == 'current' ? entry_filter_sig_buy_1[repaint == 'Allowed' ? 0 : 1] : 
+                             f_secureSecurity(syminfo.tickerid, 
+                             htf_entr_opt_1 == '5m' ? '5' : htf_entr_opt_1 == '10m' ? '10' : htf_entr_opt_1 == '15m' ? '15' : htf_entr_opt_1 == '30m' ? '30' : htf_entr_opt_1 == '1H' ? '60' : htf_entr_opt_1 == '2H' ? '120' : 
+                             htf_entr_opt_1 == '3H' ? '180' : htf_entr_opt_1 == '4H' ? '240' : htf_entr_opt_1 == '6H' ? '360' : htf_entr_opt_1 == '8H' ? '480' : htf_entr_opt_1 == '12H' ? '720' : 
+                             htf_entr_opt_1 == 'D' ? 'D' : htf_entr_opt_1 == '3D' ? '3D' : htf_entr_opt_1 == 'W' ? 'W' : htf_entr_opt_1 == 'M' ? 'M' : na, entry_filter_sig_buy_1)
+entry_filter_buy_11         = entry_f_1 == 'Fractals trend lines filter (no tf filter)' ? buy_up_line[repaint == 'Allowed' ? 0 : 1] : 
+                             entry_f_1  == 'Segments filter (no tf filter)' ? segments_buy[repaint == 'Allowed' ? 0 : 1] : 
+                             entry_f_1  == 'BB reverse filter (no tf filter)' ? bb_long_f[repaint == 'Allowed' ? 0 : 1] : 
+                             entry_f_1  == 'Price filtered Kumo flip filter (no tf filter)' ? price_filtered_kumo_flip_buy_f[repaint == 'Allowed' ? 0 : 1] : true
+//entry sell filter 1 
+entry_filter_sell_1         = htf_entr_opt_1 == 'Current' ? entry_filter_sig_sell_1[repaint == 'Allowed' ? 0 : 1] : 
+                             f_secureSecurity(syminfo.tickerid, 
+                             htf_entr_opt_1 == '5m' ? '5' : htf_entr_opt_1 == '10m' ? '10' : htf_entr_opt_1 == '15m' ? '15' : 
+                             htf_entr_opt_1 == '30m' ? '30' : htf_entr_opt_1 == '1H' ? '60' : htf_entr_opt_1 == '2H' ? '120' : htf_entr_opt_1 == '3H' ? '180' : htf_entr_opt_1 == '4H' ? '240' : 
+                             htf_entr_opt_1 == '6H' ? '360' : htf_entr_opt_1 == '8H' ? '480' : htf_entr_opt_1 == '12H' ? '720' : htf_entr_opt_1 == 'D' ? 'D' : htf_entr_opt_1 == '3D' ? '3D' : 
+                             htf_entr_opt_1 == 'W' ? 'W' : htf_entr_opt_1 == 'M' ? 'M' : na, entry_filter_sig_sell_1)
+entry_filter_sell_11        = entry_f_1 == 'Fractals trend lines filter (no tf filter)' ? sell_dn_line[repaint == 'Allowed' ? 0 : 1] : 
+                             entry_f_1  == 'Segments filter (no tf filter)' ? segments_sell[repaint == 'Allowed' ? 0 : 1] : 
+                             entry_f_1  == 'BB reverse filter (no tf filter)' ? bb_short_f[repaint == 'Allowed' ? 0 : 1] : 
+                             entry_f_1  == 'Price filtered Kumo flip filter (no tf filter)' ? price_filtered_kumo_flip_sell_f[repaint == 'Allowed' ? 0 : 1] : true
+//entry buy filter 2 
+entry_filter_buy_2          = htf_entr_opt_2 == 'Current' ? entry_filter_sig_buy_2[repaint == 'Allowed' ? 0 : 1] : 
+                             f_secureSecurity(syminfo.tickerid, 
+                             htf_entr_opt_2 == '5m' ? '5' : htf_entr_opt_2 == '10m' ? '10' : htf_entr_opt_2 == '15m' ? '15' : 
+                             htf_entr_opt_2 == '30m' ? '30' : htf_entr_opt_2 == '1H' ? '60' : htf_entr_opt_2 == '2H' ? '120' : htf_entr_opt_2 == '3H' ? '180' : htf_entr_opt_2 == '4H' ? '240' : 
+                             htf_entr_opt_2 == '6H' ? '360' : htf_entr_opt_1 == '8H' ? '480' : htf_entr_opt_2 == '12H' ? '720' : htf_entr_opt_2 == 'D' ? 'D' : htf_entr_opt_2 == '3D' ? '3D' : 
+                             htf_entr_opt_2 == 'W' ? 'W' : htf_entr_opt_2 == 'M' ? 'M' : na, entry_filter_sig_buy_2)
+entry_filter_buy_22         = entry_f_2 == 'Fractals trend lines filter (no tf filter)' ? buy_up_line[repaint == 'Allowed' ? 0 : 1] : 
+                             entry_f_2  == 'Segments filter (no tf filter)' ? segments_buy[repaint == 'Allowed' ? 0 : 1] : 
+                             entry_f_2  == 'BB reverse filter (no tf filter)' ? bb_long_f[repaint == 'Allowed' ? 0 : 1] : 
+                             entry_f_2  == 'Price filtered Kumo flip filter (no tf filter)' ? price_filtered_kumo_flip_buy_f[repaint == 'Allowed' ? 0 : 1] : true
+//entry sell filter 2 
+entry_filter_sell_2         = htf_entr_opt_2 == 'Current' ? entry_filter_sig_sell_2[repaint == 'Allowed' ? 0 : 1] : 
+                             f_secureSecurity(syminfo.tickerid, 
+                             htf_entr_opt_2 == '5m' ? '5' : htf_entr_opt_2 == '10m' ? '10' : htf_entr_opt_2 == '15m' ? '15' : 
+                             htf_entr_opt_2 == '30m' ? '30' : htf_entr_opt_2 == '1H' ? '60' : htf_entr_opt_2 == '2H' ? '120' : htf_entr_opt_2 == '3H' ? '180' : htf_entr_opt_2 == '4H' ? '240' : 
+                             htf_entr_opt_2 == '6H' ? '360' : htf_entr_opt_1 == '8H' ? '480' : htf_entr_opt_2 == '12H' ? '720' : htf_entr_opt_2 == 'D' ? 'D' : htf_entr_opt_2 == '3D' ? '3D' : 
+                             htf_entr_opt_2 == 'W' ? 'W' : htf_entr_opt_2 == 'M' ? 'M' : na, entry_filter_sig_sell_2)
+entry_filter_sell_22        = entry_f_2 == 'Fractals trend lines filter (no tf filter)' ? sell_dn_line[repaint == 'Allowed' ? 0 : 1] : 
+                             entry_f_2  == 'Segments filter (no tf filter)' ? segments_sell[repaint == 'Allowed' ? 0 : 1] : 
+                             entry_f_2  == 'BB reverse filter (no tf filter)' ? bb_short_f[repaint == 'Allowed' ? 0 : 1] : 
+                             entry_f_2  == 'Price filtered Kumo flip filter (no tf filter)' ? price_filtered_kumo_flip_sell_f[repaint == 'Allowed' ? 0 : 1] : true
+//----------------------------------------------------------------------- exit filters ------------------------------------------------------------------------
+exit_sig_buy_1              = exit_f_1 == '---' ? false : 
+                             exit_f_1 == 'BB reverse exit' ? bb_long_x :
+                             exit_f_1 == 'TRIX slope exit' ? trix_slo_up_x :
+                             exit_f_1 == 'EMA1 x EMA2 exit' ? ema_1x2_buy_x :
+                             exit_f_1 == '2HMA cross exit' ? hma_c_up_x : 
+                             exit_f_1 == 'HMA slope exit' ? hma_up_x : 
+                             exit_f_1 == 'ALMA slope exit' ? alma_slo_up_x : 
+                             exit_f_1 == 'Reverse fractal exit' ? rev_dn_fr_buy : 
+                             exit_f_1 == 'MACD(fast) slope exit' ? macd_slope_up_x : 
+                             exit_f_1 == 'MACD exit' ? macd_buy_x : 
+                             exit_f_1 == 'RSI50 exit' ? rsi_f_buy_x : 
+                             exit_f_1 == 'Fractals exit' ? fr_upx_x : 
+                             exit_f_1 == 'SuperTrend exit' ? sup_buy_x : 
+                             exit_f_1 == 'Parabolic SAR exit' ? psar_buy : 
+                             exit_f_1 == 'SMA exit' ? sma_buy_x : 
+                             exit_f_1 == 'DMI exit' ? dmi_long_x : 
+                             exit_f_1 == 'ADX slope exit' ? adx_dn_x : 
+                             exit_f_1 == 'ADX Threshold exit' ? adx_thres_f_x : 
+                             exit_f_1 == 'Cloud exit' ? kumo_buy_x : 
+                             exit_f_1 == 'Kijun exit' ? kijun_buy_x : false
+exit_sig_sell_1             = exit_f_1 == '---' ? false : 
+                             exit_f_1 == 'BB reverse exit' ? bb_short_x :
+                             exit_f_1 == 'TRIX slope exit' ? trix_slo_dn_x :
+                             exit_f_1 == 'EMA1 x EMA2 exit' ? ema_1x2_sell_x :
+                             exit_f_1 == '2HMA cross exit' ? hma_c_dn_x : 
+                             exit_f_1 == 'HMA slope exit' ? hma_dn_x : 
+                             exit_f_1 == 'ALMA slope exit' ? alma_slo_dn_x : 
+                             exit_f_1 == 'Reverse fractal exit' ? rev_up_fr_sell : 
+                             exit_f_1 == 'MACD(fast) slope exit' ? macd_slope_dn_x : 
+                             exit_f_1 == 'MACD exit' ? macd_sell_x : 
+                             exit_f_1 == 'RSI50 exit' ? rsi_f_sell_x : 
+                             exit_f_1 == 'Fractals exit' ? fr_dnx_x : 
+                             exit_f_1 == 'SuperTrend exit' ? sup_sell_x : 
+                             exit_f_1 == 'Parabolic SAR exit' ? psar_sell : 
+                             exit_f_1 == 'SMA exit' ? sma_sell_x : 
+                             exit_f_1 == 'DMI exit' ? dmi_short_x : 
+                             exit_f_1 == 'ADX slope exit' ? adx_dn_x :
+                             exit_f_1 == 'ADX Threshold exit' ? adx_thres_f_x : 
+                             exit_f_1 == 'Cloud exit' ? kumo_sell_x : 
+                             exit_f_1 == 'Kijun exit' ? kijun_sell_x : false
+exit_sig_buy_2              = exit_f_2 == '---' ? false : 
+                             exit_f_2 == 'BB reverse exit' ? bb_long_x :
+                             exit_f_2 == 'TRIX slope exit' ? trix_slo_up_x :
+                             exit_f_2 == 'EMA1 x EMA2 exit' ? ema_1x2_buy_x :
+                             exit_f_2 == '2HMA cross exit' ? hma_c_up_x : 
+                             exit_f_2 == 'HMA slope exit' ? hma_up_x : 
+                             exit_f_2 == 'ALMA slope exit' ? alma_slo_up_x : 
+                             exit_f_2 == 'Reverse fractal exit' ? rev_dn_fr_buy : 
+                             exit_f_2 == 'MACD(fast) slope exit' ? macd_slope_up_x : 
+                             exit_f_2 == 'MACD exit' ? macd_buy_x : 
+                             exit_f_2 == 'RSI50 exit' ? rsi_f_buy_x : 
+                             exit_f_2 == 'Fractals exit' ? fr_upx_x : 
+                             exit_f_2 == 'SuperTrend exit' ? sup_buy_x : 
+                             exit_f_2 == 'Parabolic SAR exit' ? psar_buy : 
+                             exit_f_2 == 'SMA exit' ? sma_buy_x : 
+                             exit_f_2 == 'DMI exit' ? dmi_long_x : 
+                             exit_f_2 == 'ADX slope exit' ? adx_dn_x : 
+                             exit_f_2 == 'ADX Threshold exit' ? adx_thres_f_x : 
+                             exit_f_2 == 'Cloud exit' ? kumo_buy_x : 
+                             exit_f_2 == 'Kijun exit' ? kijun_buy_x : false
+exit_sig_sell_2             = exit_f_2 == '---' ? false : 
+                             exit_f_2 == 'BB reverse exit' ? bb_short_s :
+                             exit_f_2 == 'TRIX slope exit' ? trix_slo_dn_x :
+                             exit_f_2 == 'EMA1 x EMA2 exit' ? ema_1x2_sell_x :
+                             exit_f_2 == '2HMA cross exit' ? hma_c_dn_x : 
+                             exit_f_2 == 'HMA slope exit' ? hma_dn_x : 
+                             exit_f_2 == 'ALMA slope exit' ? alma_slo_dn_x : 
+                             exit_f_2 == 'Reverse fractal exit' ? rev_up_fr_sell : 
+                             exit_f_2 == 'MACD(fast) slope exit' ? macd_slope_dn_x : 
+                             exit_f_2 == 'MACD exit' ? macd_sell_x : 
+                             exit_f_2 == 'RSI50 exit' ? rsi_f_sell_x : 
+                             exit_f_2 == 'Fractals exit' ? fr_dnx_x : 
+                             exit_f_2 == 'SuperTrend exit' ? sup_sell_x : 
+                             exit_f_2 == 'Parabolic SAR exit' ? psar_sell : 
+                             exit_f_2 == 'SMA exit' ? sma_sell_x : 
+                             exit_f_2 == 'DMI exit' ? dmi_short_x : 
+                             exit_f_2 == 'ADX slope exit' ? adx_dn_x : 
+                             exit_f_2 == 'ADX Threshold exit' ? adx_thres_f_x : 
+                             exit_f_2 == 'Cloud exit' ? kumo_sell_x : 
+                             exit_f_2 == 'Kijun exit' ? kijun_sell_x : false
+// higher timeframe filter
+//short exit buy filter 1
+exit_filter_buy_1   = htf_exit_opt_1 == 'Current' ? exit_sig_buy_1[repaint == 'Allowed' ? 0 : 1] : 
+                     f_secureSecurity(syminfo.tickerid, 
+                     htf_exit_opt_1 == '5m' ? '5' : htf_exit_opt_1 == '10m' ? '10' : htf_exit_opt_1 == '15m' ? '15' : 
+                     htf_exit_opt_1 == '30m' ? '30' : htf_exit_opt_1 == '1H' ? '60' : htf_exit_opt_1 == '2H' ? '120' : htf_exit_opt_1 == '3H' ? '180' : htf_exit_opt_1 == '4H' ? '240' : 
+                     htf_exit_opt_1 == '6H' ? '360' : htf_entr_opt_1 == '8H' ? '480' : htf_exit_opt_1 == '12H' ? '720' : htf_exit_opt_1 == 'D' ? 'D' : htf_exit_opt_1 == '3D' ? '3D' : htf_exit_opt_1 == 'W' ? 'W' : 
+                     htf_exit_opt_1 == 'M' ? 'M' : na, exit_sig_buy_1)
+                     
+exit_filter_buy_11  = exit_f_1 == 'Fractals trend lines filter (no tf-filter)' ? buy_up_line[repaint == 'Allowed' ? 0 : 1] : false
+//long exit sell filter 1 
+exit_filter_sell_1  = htf_exit_opt_1 == 'Current' ? exit_sig_sell_1[repaint == 'Allowed' ? 0 : 1] : 
+                     f_secureSecurity(syminfo.tickerid, 
+                     htf_exit_opt_1 == '5m' ? '5' : htf_exit_opt_1 == '10m' ? '10' : htf_exit_opt_1 == '15m' ? '15' : 
+                     htf_exit_opt_1 == '30m' ? '30' : htf_exit_opt_1 == '1H' ? '60' : htf_exit_opt_1 == '2H' ? '120' : htf_exit_opt_1 == '3H' ? '180' : htf_exit_opt_1 == '4H' ? '240' : htf_exit_opt_1 == '6H' ? '360' : 
+                     htf_entr_opt_1 == '8H' ? '480' : htf_exit_opt_1 == '12H' ? '720' : htf_exit_opt_1 == 'D' ? 'D' : htf_exit_opt_1 == '3D' ? '3D' : htf_exit_opt_1 == 'W' ? 'W' : htf_exit_opt_1 == 'M' ? 'M' : na, 
+                     exit_sig_sell_1)
+exit_filter_sell_11 = exit_f_1 == 'Fractals trend lines filter (no tf-filter)' ? sell_dn_line[repaint == 'Allowed' ? 0 : 1] : false
+//short exit buy filter 2 
+exit_filter_buy_2   = htf_exit_opt_2 == 'Current' ? exit_sig_buy_2[repaint == 'Allowed' ? 0 : 1] : 
+                     f_secureSecurity(syminfo.tickerid, 
+                     htf_exit_opt_2 == '5m' ? '5' : htf_exit_opt_2 == '10m' ? '10' : htf_exit_opt_2 == '15m' ? '15' : 
+                     htf_exit_opt_2 == '30m' ? '30' : htf_exit_opt_2 == '1H' ? '60' : htf_exit_opt_2 == '2H' ? '120' : htf_exit_opt_2 == '3H' ? '180' : htf_exit_opt_2 == '4H' ? '240' : htf_exit_opt_2 == '6H' ? '360' : 
+                     htf_entr_opt_1 == '8H' ? '480' : htf_exit_opt_2 == '12H' ? '720' : htf_exit_opt_2 == 'D' ? 'D' : htf_exit_opt_2 == '3D' ? '3D' : htf_exit_opt_2 == 'W' ? 'W' : htf_exit_opt_2 == 'M' ? 'M' : na, 
+                     exit_sig_buy_2)
+exit_filter_buy_22  = exit_f_2 == 'Fractals trend lines filter (no tf-filter)' ? buy_up_line[repaint == 'Allowed' ? 0 : 1] : false
+//long exit sell filter 2 
+exit_filter_sell_2  = htf_exit_opt_2 == 'Current' ? exit_sig_sell_2[repaint == 'Allowed' ? 0 : 1] : 
+                     f_secureSecurity(syminfo.tickerid, 
+                     htf_exit_opt_2 == '5m' ? '5' : htf_exit_opt_2 == '10m' ? '10' : htf_exit_opt_2 == '15m' ? '15' : 
+                     htf_exit_opt_2 == '30m' ? '30' : htf_exit_opt_2 == '1H' ? '60' : htf_exit_opt_2 == '2H' ? '120' : htf_exit_opt_2 == '3H' ? '180' : htf_exit_opt_2 == '4H' ? '240' : htf_exit_opt_2 == '6H' ? '360' : 
+                     htf_entr_opt_1 == '8H' ? '480' : htf_exit_opt_2 == '12H' ? '720' : htf_exit_opt_2 == 'D' ? 'D' : htf_exit_opt_2 == '3D' ? '3D' : htf_exit_opt_2 == 'W' ? 'W' : htf_exit_opt_2 == 'M' ? 'M' : na, 
+                     exit_sig_sell_2)
+exit_filter_sell_22 = exit_f_2 == 'Fractals trend lines filter (no tf-filter)' ? sell_dn_line[repaint == 'Allowed' ? 0 : 1] : false
+//------------------------------------------------------------ trigger and border levels -------------------------------------------------------
+//close & stop level
+var bool cl_st_sw       = false
+if (ta.cross(high, cl_st_lvl) or ta.cross(low, cl_st_lvl)) and barstate.isrealtime
+    cl_st_sw := true
+strat_cl_st             = en_close_stop and cl_st_sw
+//trigger level
+var bool trig_sw        = false
+if (ta.cross(high, trig_lvl) or ta.cross(low, trig_lvl)) and backtest_period()
+    trig_sw := true
+en_strat_st             = en_trig_lvl ? trig_sw : true
+//upper border level
+var bool upper_sw       = true
+if (ta.cross(high, bup_lvl) or ta.cross(low, bup_lvl)) and en_strat_st and backtest_period()
+    upper_sw := false
+en_strat_bup            = en_border_up ? upper_sw : true
+//lower border level
+var bool lower_sw       = true
+if (ta.cross(high, bdn_lvl) or ta.cross(low, bdn_lvl)) and en_strat_st and backtest_period()
+    lower_sw := false
+en_strat_bdn            = en_border_dn ? lower_sw : true
+border_close            = en_strat_st and (not en_strat_bup or not en_strat_bdn)                        // border level close
+en_strat                = en_strat_st and en_strat_bup and en_strat_bdn                                 // stops entries 
+var bool en_idle        = false
+var bool en_close       = false
+if border_con == 'Idle'
+    en_idle := true
+if border_con == 'Close All'
+    en_close := true
+strat_idle              = en_idle ? en_strat : true                                 // makes entire strategy idle if borders are crossed
+//----------------------------------------------------------- entry and exit conditions -----------------------------------------------------------
+exit_long               = exit_filter_sell_1 or exit_filter_sell_2 or exit_filter_sell_11 or exit_filter_sell_22
+exit_short              = exit_filter_buy_1 or exit_filter_buy_2 or exit_filter_buy_11 or exit_filter_buy_22
+long_filter             = entry_filter_buy_1 and entry_filter_buy_2 and entry_filter_buy_11 and entry_filter_buy_22
+short_filter            = entry_filter_sell_1 and entry_filter_sell_2 and entry_filter_sell_11 and entry_filter_sell_22
+es_l_cond               = not exit_long and en_strat
+es_s_cond               = not exit_short and en_strat
+entry_long_1            = opt_sig_buy_1 and long_filter and es_l_cond
+entry_long_2            = opt_sig_buy_2 and long_filter and es_l_cond
+entry_short_1           = opt_sig_sell_1 and short_filter and es_s_cond
+entry_short_2           = opt_sig_sell_2 and short_filter and es_s_cond
+//-------------------------------------------------------------- take average profit --------------------------------------------------------------
+tp_step                 = 0.
+tp_step                 := nz(high > tp_step[1] + avtp_step or low < tp_step[1] - avtp_step ? close : tp_step[1])
+tp_step_l               = tp_step > tp_step[1]
+tp_step_s               = tp_step < tp_step[1]
+av_profit_l             = close - strategy.position_avg_price > av_tp and tp_step_l and long
+av_profit_s             = strategy.position_avg_price - close > av_tp and tp_step_s and short
+//--------------------------------------------------------- stop loss of average position --------------------------------------------------------
+sl_step                 = 0.
+sl_step                 := nz(high > sl_step[1] + avsl_step or low < sl_step[1] - avsl_step ? close : sl_step[1])
+sl_step_l               = sl_step < sl_step[1]
+sl_step_s               = sl_step > sl_step[1]
+top                     = .0
+top                     := nz(ta.pivothigh(high, sl_sen, 0), top[1])
+bottom                  = .0
+bottom                  := nz(ta.pivotlow(low, sl_sen, 0), bottom[1])
+av_loss_l               = tb_tog ? strategy.position_avg_price - close > av_sl and sl_step_l and long : top - close > av_sl and sl_step_l and long
+av_loss_s               = tb_tog ? close - strategy.position_avg_price > av_sl and sl_step_s and short : close - bottom > av_sl and sl_step_s and short
+//---------------------------------------------------------------- tp and sl counter ---------------------------------------------------------------
+no_open_pos             = strategy.position_size == 0
+//break even
+var first_close_be      = false
+first_close_be          := strategy.netprofit > 0                                                                           // enables break even. Profit of all completed trades. 
+var even_sw             = false
+if ta.cross(close, strategy.position_avg_price)[repaint == 'Allowed' ? 0 : 1] and first_close_be and (inst_grid ? barstate.isrealtime : backtest_period()) 
+    even_sw := true
+break_ev                = break_even and even_sw
+//tp counter
+var tp_ev_count_l       = 0
+var tp_ev_count_s       = 0
+if av_profit_l and long
+    tp_ev_count_l := tp_ev_count_l +1
+if  av_profit_s and short
+    tp_ev_count_s := tp_ev_count_s +1
+count_con_tp_l          = tp_ev_count_l >= tp_count or exit_long or no_open_pos                                                           // counter exit condition - longs
+count_con_tp_s          = tp_ev_count_s >= tp_count or exit_short or no_open_pos                                                           // counter exit condition - shorts
+if count_con_tp_l                                                                                                           // counter reset condioton for filter - longs
+    tp_ev_count_l := 0
+if count_con_tp_s                                                                                                           // counter reset condioton for filter - shorts.
+    tp_ev_count_s := 0
+av_tp_qty_c_l           = count_con_tp_l and en_tp_counter ? 100 : av_tp_qty                                                // counter switch for tp - longs
+av_tp_qty_c_s           = count_con_tp_s and en_tp_counter ? 100 : av_tp_qty                                                // counter switch for tp - shorts
+//sl counter
+var sl_ev_count_l       = 0
+var sl_ev_count_s       = 0
+if av_loss_l and long
+    sl_ev_count_l := sl_ev_count_l +1
+if av_loss_s and short
+    sl_ev_count_s := sl_ev_count_s +1
+count_con_sl_l          = sl_ev_count_l >= sl_count or exit_long or no_open_pos
+count_con_sl_s          = sl_ev_count_s >= sl_count or exit_short or no_open_pos
+if count_con_sl_l 
+    sl_ev_count_l := 0
+if count_con_sl_s 
+    sl_ev_count_s := 0
+av_sl_qty_c_l           = count_con_sl_l and en_sl_counter ? 100 : av_sl_qty
+av_sl_qty_c_s           = count_con_sl_s and en_sl_counter ? 100 : av_sl_qty
+//scalping mode
+var scalp_sw            = false
+if long and long_filter and not long_filter[1] or short and short_filter and not short_filter[1] or both and (long_filter and not long_filter[1] or short_filter and not short_filter[1])
+    scalp_sw := true
+if strategy.opentrades[1] != 0 and strategy.opentrades == 0
+    scalp_sw := false
+enabled_sl_tp           = av_tp_en and av_sl_en and en_tp_counter and en_sl_counter
+scalp_l                 = (entry_long_1 or entry_long_2) and en_scalp_mode and scalp_sw and enabled_sl_tp// and tp_ev_count_l < tp_count
+scalp_s                 = (entry_short_1 or entry_short_2) and en_scalp_mode and scalp_sw and enabled_sl_tp// and tp_ev_count_s < tp_count
+//---------------------------------------------------------- 1st position factor and auto-increase of position calc -----------------------------------------------------------------
+var first_close_mr      = false
+first_close_mr          := strategy.closedtrades == 0                                                                   // makes martingale working until the first close
+pos_c_cond              = pos_count_in > strategy.opentrades                                                            // trade counter condition
+no_exit_filter          = exit_f_1 == '---' and exit_f_2 == '---'                                                       // makes first position factor only working when no exit filters are active
+// calc and cond - backtesting
+pos_qty                 = en_pos_mart and pos_c_cond and first_close_mr and not both and no_exit_filter ? 
+                         no_open_pos ? 
+                         pos_start_mart : math.abs(strategy.position_size) * pos_factor : 
+                         en_1st_pos_f ? 
+                         no_open_pos ? 
+                         pos_start_1st : lot_size_b : lot_size_b                                                         // martingale calc and sw - condition for martingale and 1st position - backtesting
+// calc and cond - live trading
+var float mart_lot_size = pos_start_mart_lv 
+mart_lot_size           := mart_lot_size * pos_factor + mart_lot_size[1]
+pos_qty_lv              = en_pos_mart and pos_c_cond and first_close_mr and not both and no_exit_filter ? 
+                         no_open_pos ? 
+                         pos_start_mart_lv : mart_lot_size : 
+                         en_1st_pos_f ? 
+                         no_open_pos ? 
+                         pos_start_1st_lv : lot_size_lv : lot_size_lv                                                    // martingale calc and sw - condition for martingale and 1st position - live trading
+                                                                                                                         // something like "get position_size" for lot size on bybit is needed for live trading.
+//------------------------------------- repetitive break even condition ----------------------------------
+rep_even_long           = rep_even and low[1] > strategy.position_avg_price and low < strategy.position_avg_price and not no_open_pos and math.abs(strategy.position_size) > be_min_lot
+rep_even_short          = rep_even and high[1] < strategy.position_avg_price and high > strategy.position_avg_price and not no_open_pos and math.abs(strategy.position_size) > be_min_lot
+  
+//rep_even_long_lv        = rep_even and low[1] > strategy.position_avg_price and low < strategy.position_avg_price and not no_open_pos and math.abs(strategy.position_size) > be_min_lot
+//rep_even_short_lv       = rep_even and high[1] < strategy.position_avg_price and high > strategy.position_avg_price and not no_open_pos and math.abs(strategy.position_size) > be_min_lot  
+                                                                                                                         // something like "get position_size" for lot size on bybit is needed for live trading.
+//---------------------------------------------------------------------- strategy entries and exits ---------------------------------------------------------------------
+// strategy entries and exits (backtesting)
+if inst_grid ? barstate.isrealtime and strat_idle and not break_ev[1] and not strat_cl_st[1] : backtest_period() and strat_idle and not break_ev[1] and not strat_cl_st[1]
+    if long
+        if entry_long_1 and not en_scalp_mode
+            strategy.entry('os_b', strategy.long,       qty= pos_qty)                     
+        
+        if entry_long_2 and not en_scalp_mode
+            strategy.entry('os_b', strategy.long,       qty= pos_qty)                     
+        if inst_pos and en_1st_pos_f and no_open_pos and en_strat and not en_scalp_mode
+            strategy.entry('os_b', strategy.long,       qty= pos_qty)
+        if scalp_l
+            strategy.entry('os_b', strategy.long,       qty= pos_qty)    
+        if av_tp_en and av_profit_l and not no_open_pos
+            strategy.close('os_b',                      qty_percent= av_tp_qty_c_l) 
+        if av_sl_en and av_loss_l and not no_open_pos
+            strategy.close('os_b',                      qty_percent= av_sl_qty_c_l) 
+        if exit_long and not exit_long[1] and not no_open_pos
+            strategy.close('os_b',                      qty_percent= qyt_exit)
+        if border_close and en_close and not no_open_pos
+            strategy.close('os_b',                      qty_percent= 100)
+        if break_ev and not no_open_pos
+            strategy.close('os_b',                      qty_percent= 100)
+        if strat_cl_st and not no_open_pos
+            strategy.close('os_b',                      qty_percent= 100)
+        if rep_even_long
+            strategy.close('os_b',                      qty_percent= rep_ev_qty)
+    if short
+        if entry_short_1 and not en_scalp_mode 
+            strategy.entry('os_s', strategy.short,      qty= pos_qty)                   
+        if entry_short_2 and not en_scalp_mode 
+            strategy.entry('os_s', strategy.short,      qty= pos_qty)                   
+        if inst_pos and en_1st_pos_f and no_open_pos and en_strat and not en_scalp_mode 
+            strategy.entry('os_s', strategy.short,      qty= pos_qty)  
+        if scalp_s
+            strategy.entry('os_s', strategy.short,      qty= pos_qty)  
+        if av_tp_en and av_profit_s and not no_open_pos
+            strategy.close('os_s',                      qty_percent= av_tp_qty_c_s) 
+        if av_sl_en and av_loss_s and not no_open_pos
+            strategy.close('os_s',                      qty_percent= av_sl_qty_c_s)
+        if exit_short and not exit_short[1] and not no_open_pos
+            strategy.close('os_s',                      qty_percent= qyt_exit)
+        if border_close and en_close and not no_open_pos
+            strategy.close('os_s',                      qty_percent= 100)
+        if break_ev and not no_open_pos
+            strategy.close('os_s',                      qty_percent= 100)
+        if strat_cl_st and not no_open_pos
+            strategy.close('os_s',                      qty_percent= 100)
+        if rep_even_short
+            strategy.close('os_s',                      qty_percent= rep_ev_qty)
+// strategy entries and exits (live trading with alertatron on bybit ) - alert messages - same conditions like strategy....()
+var float av_tp_qty_c_l_var     = 100 - av_tp_qty_c_l                                                                           // calc because of alertatron syntax string
+var float av_sl_qty_c_l_var     = 100 - av_sl_qty_c_l
+var float av_tp_qty_c_s_var     = 100 - av_tp_qty_c_s 
+var float av_sl_qty_c_s_var     = 100 - av_sl_qty_c_s
+var float qyt_exit_var          = 100 - qyt_exit
+var float rep_ev_qty_var        = 100 - rep_ev_qty
+if inst_grid ? barstate.isrealtime and strat_idle and not break_ev[1] and not strat_cl_st[1] : backtest_period() and strat_idle and not break_ev[1] and not strat_cl_st[1]
+//entries
+    if   long and (entry_long_1 or entry_long_2)  
+        alert(message= 'BybitAPI(BTCUSD) { continue(if=positionShort); market(position= 0); } 
+                         BybitAPI(BTCUSD) { wait(0.5s); market(side=buy, amount=' + str.tostring(pos_qty_lv) + '); } \n #bot', freq= alert.freq_once_per_bar)
+    if   long and inst_pos and en_1st_pos_f and no_open_pos and en_strat
+        alert(message= 'BybitAPI(BTCUSD) { continue(if=positionShort); market(position= 0); } 
+                         BybitAPI(BTCUSD) { wait(0.5s); market(side=buy, amount=' + str.tostring(pos_qty_lv) + '); } \n #bot', freq= alert.freq_once_per_bar)
+    if   short and (entry_short_1 or entry_short_2) 
+        alert(message= 'BybitAPI(BTCUSD) { continue(if=positionLong); market(position= 0); } 
+                         BybitAPI(BTCUSD) { wait(0.5s); market(side=sell, amount=' + str.tostring(pos_qty_lv) + '); } \n #bot', freq= alert.freq_once_per_bar)
+    if   short and inst_pos and en_1st_pos_f and no_open_pos and en_strat
+        alert(message= 'BybitAPI(BTCUSD) { continue(if=positionLong); market(position= 0); } 
+                         BybitAPI(BTCUSD) { wait(0.5s); market(side=sell, amount=' + str.tostring(pos_qty_lv) + '); } \n #bot', freq= alert.freq_once_per_bar)
+//tp and sl
+    if   long and av_tp_en and av_profit_l and not no_open_pos
+        alert(message= 'BybitAPI(BTCUSD) { market(position= ' + str.tostring(av_tp_qty_c_l_var) + ' %p); } \n #bot', freq= alert.freq_once_per_bar)
+    if   long and av_sl_en and av_loss_l and not no_open_pos
+        alert(message= 'BybitAPI(BTCUSD) { market(position=' + str.tostring(av_sl_qty_c_l_var) + ' %p); } \n #bot', freq= alert.freq_once_per_bar)
+    if   short and av_tp_en and av_profit_s and not no_open_pos
+        alert(message= 'BybitAPI(BTCUSD) { market(position= ' + str.tostring(av_tp_qty_c_s_var) + ' %p); } \n #bot', freq= alert.freq_once_per_bar)
+    if   short and av_sl_en and av_loss_s and not no_open_pos 
+        alert(message= 'BybitAPI(BTCUSD) { market(position=' + str.tostring(av_sl_qty_c_s_var) + ' %p); } \n #bot', freq= alert.freq_once_per_bar)
+//exit filters
+    if   long and not no_open_pos and exit_long and not exit_long[1] or short and exit_short and not exit_short[1]
+        alert(message= 'BybitAPI(BTCUSD) { market(position=' + str.tostring(qyt_exit_var) + ' %p); } \n #bot', freq= alert.freq_once_per_bar)
+//start strategy, border exits 
+    if   border_close and en_close and not no_open_pos 
+        alert(message= 'BybitAPI(BTCUSD) { market(position= 0); }  \n #bot', freq= alert.freq_once_per_bar)
+//break even
+    if   break_ev and not no_open_pos
+        alert(message= 'BybitAPI(BTCUSD) { market(position= 0); }  \n #bot', freq= alert.freq_once_per_bar)
+//close & stop
+    if   strat_cl_st and not no_open_pos
+        alert(message= 'BybitAPI(BTCUSD) { market(position= 0); }  \n #bot', freq= alert.freq_once_per_bar)
+//repetitive break even
+    if rep_even_long
+        alert(message= 'BybitAPI(BTCUSD) { market(position=' + str.tostring(rep_ev_qty_var) + ' %p); } \n #bot', freq= alert.freq_once_per_bar)
+    if rep_even_short
+        alert(message= 'BybitAPI(BTCUSD) { market(position=' + str.tostring(rep_ev_qty_var) + ' %p); } \n #bot', freq= alert.freq_once_per_bar)
+Expand (1603 lines)

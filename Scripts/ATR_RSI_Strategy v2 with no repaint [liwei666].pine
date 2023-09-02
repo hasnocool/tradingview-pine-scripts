@@ -1,0 +1,202 @@
+Script Name: ATR_RSI_Strategy v2 with no repaint [liwei666]
+Author: liwei666
+Description: 🎲 Overview
+
+🎯 this is a optimized version based on ATR_RSI_Strategy with no-repaint. 
+Sharpe ratio: 1.4, trade times: 116 ,
+trade symbol:  BINANCE:BTCUSDTPERP  15M
+you can get same backtesting result with the correct settings.
+
+🎲 Strategy Logic
+
+🎯 the core logic is quite simple, use ATR and RSI and SMA
+1. when price is in high volatility ( atr_value > atr_ma);
+2....
+PineScript code:
+
+Pine Script™ strategy
+ATR_RSI_Strategy v2 with no repaint [liwei666]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+// © liwei666
+//@version=5
+// # ========================================================================= #
+// #                   |   Strategy  |
+// # ========================================================================= #
+strategy(
+ title                = "ATR_RSI_Strategy v2[liwei666]",
+ shorttitle           = "ATR_RSI_Strategy",
+ overlay              =  true,
+ max_lines_count                 =  500, 
+ max_labels_count                =  500, 
+ max_boxes_count                 =  500,
+ max_bars_back = 5000,
+ initial_capital = 10000,
+ default_qty_type=strategy.percent_of_equity, 
+ default_qty_value=10, commission_type=strategy.commission.percent, pyramiding=1, 
+ commission_value=0.05
+ )
+// # ========================================================================= #
+// #                   |   Strategy  |
+// # ========================================================================= #
+atr_length  = input.int(26, "atr_length", minval = 6, maxval = 100, step=1)
+atr_ma_length = input.int(45, "atr_ma_length", minval = 6, maxval = 100, step=1)
+rsi_length = input.int(15, "rsi_length", minval = 6, maxval = 100, step=1)
+rsi_entry = input.int(10, "rsi_entry", minval = 6, maxval = 100, step=1)
+atr_ma_norm_min = input.float(0.3, "atr_ma_norm_min", minval = 0.1, maxval = 0.5, step=0.1)
+atr_ma_norm_max = input.float(0.7, "atr_ma_norm_max", minval = 0.5, maxval = 1, step=0.1)
+trailing_percent= input.float(1.5, "trailing_stop_percent", minval = 0.1, maxval = 2, step=0.1)
+var rsi_buy = 50 + rsi_entry
+var rsi_sell = 50 - rsi_entry
+sma_norm_h_45() => 
+    source = high
+    n = 45
+    sma = ta.sma(source, n) 
+    sma_norm = (sma - ta.lowest(sma, n)) / (ta.highest(sma,n) - ta.lowest(sma, n))
+    sma_norm
+atr_value = ta.atr(atr_length)
+atr_ma = ta.sma(atr_value, atr_ma_length) 
+rsi_value = ta.rsi(close, length = rsi_length) 
+atr_ma_norm = atr_ma / close * 100
+sma_norm = sma_norm_h_45()
+var intra_trade_high = 0.0
+var intra_trade_low = 0.0
+var long_sl = 0.0
+var long_tp = 0.0
+var short_sl = 0.0
+var short_tp = 0.0
+if strategy.position_size == 0
+    intra_trade_high := high
+    intra_trade_low := low
+    // when in living trading, enter after freq_once_per_bar_close
+    if atr_ma_norm >= atr_ma_norm_min and atr_ma_norm <= atr_ma_norm_max
+        if atr_value > atr_ma
+            if rsi_value > rsi_buy
+                strategy.entry("B1", strategy.long, limit = close + 5 )
+                alert("Long B1", alert.freq_once_per_bar_close)
+            else if rsi_value < rsi_sell
+                strategy.entry("S1", strategy.short, limit = close - 5 )
+                alert("Short S1", alert.freq_once_per_bar_close)
+else if strategy.position_size > 0
+    intra_trade_high := math.max(intra_trade_high, high)
+    intra_trade_low := low
+    long_sl := intra_trade_high * (1 - trailing_percent / 100)
+    long_tp := strategy.position_avg_price * 1.03
+    strategy.exit("Exit B1", from_entry="B1", stop = long_sl, limit = long_tp)
+else if strategy.position_size < 0
+    intra_trade_high := high
+    intra_trade_low := math.min(intra_trade_low, low) 
+    short_sl := intra_trade_low * (1 + trailing_percent / 100)
+    short_tp := strategy.position_avg_price * 0.94
+    strategy.exit("Exit S1", from_entry="S1", stop = short_sl, limit = short_tp)
+// when in living trading, SL and TP should use freq_once_per_bar
+// you can compare with trade_list of backtest result
+// long Exit alert
+if strategy.position_size > 0 and low < long_sl
+    alert("B1 Stop_loss", alert.freq_once_per_bar)
+else if strategy.position_size > 0 and high > long_tp
+    alert("B1 Take_profit", alert.freq_once_per_bar) 
+// short Exit alert
+if strategy.position_size < 0 and high > short_sl
+    alert("S1 Stop_loss", alert.freq_once_per_bar)
+else if strategy.position_size > 0 and low < short_tp
+    alert("S1 Take_profit", alert.freq_once_per_bar)
+Expand (99 lines)

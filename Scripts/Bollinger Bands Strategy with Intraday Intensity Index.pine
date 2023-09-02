@@ -1,0 +1,157 @@
+Script Name: Bollinger Bands Strategy with Intraday Intensity Index
+Author: SparkyFlary
+Description: For Educational Purposes. Results can differ on different markets and can fail at any time. Profit is not guaranteed.
+
+This only works in a few markets and in certain situations. Changing the settings can give better or worse results for other markets.
+This is a mean reversion strategy based on Bollinger Bands and the Intraday Intensity Index (a volume indicator)....
+PineScript code:
+
+Pine Script™ strategy
+Bollinger Bands Strategy with Intraday Intensity Index
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// Bollinger Bands Strategy with Intraday Intensity Index
+// by SparkyFlary
+//For Educational Purposes
+//Results can differ on different markets and can fail at any time. Profit is not guaranteed.
+strategy(title="Bollinger Bands Strategy with Intraday Intensity Index", shorttitle="Bollinger Bands Strategy", overlay=true)
+BBlength = input(20, title="Bollinger Bands length")
+BBtype = input("EMA", title="Bollinger Bands and Standard deviation type", type=input.string, options=["EMA", "SMA"])
+BBprice = input(close, title="source")
+timeStop = input(20, title="Time-based stop length")
+BBmult = input(2.0, title="Bollinger Bands Standard Deviation")
+withIII = input(false, title="with Intraday Intensity Index?")
+IIIlength = input(21, title="Intraday Intensity Index length")
+positionMode = input("Both long and short", options=["Both long and short", "Long only", "Short only"])
+earlyExit = input(false)
+//function for choosing moving averages
+f_ma(type_, src_, len_) =>
+    float result = 0
+    if type_ == "SMA"
+        result := sma(src_, len_)
+    if type_ == "EMA"
+        result := ema(src_, len_)
+    result
+//Intraday Intensity Index
+k1 = (2 * close - high - low) * volume
+k2 = high != low ? high - low : 1
+i = k1 / k2
+iSum = sum(i, IIIlength)
+//standard deviation with exponential option
+StdDev_(type_, src_, len_) =>
+    mean = 0.0
+    sumSqr = 0.0
+    variance = 0.0
+    if len_ > 0
+        mean := f_ma( type_, src_, len_ )
+        sumSqr := 0
+        for counter = 0 to len_ - 1
+            sumSqr := sumSqr + pow( src_[counter] - mean, 2 )
+        variance := sumSqr / len_
+        stdDev = sqrt( variance )
+    else
+        stdDev = -1
+//Bollinger Bands
+BBdev = BBmult * StdDev_(BBtype, BBprice, BBlength)
+BBbasis = f_ma(BBtype, BBprice, BBlength)
+BBupper = BBbasis + BBdev
+BBlower = BBbasis - BBdev
+plot(BBupper, title="Bollinger Bands Upper Line")
+plot(BBlower, title="Bollinger Bands Lower Line")
+plot(BBbasis, title="Bollinger Bands Mid line", color=color.maroon)
+//Strategy
+buy = close[1]<BBlower[1] and close>BBlower and (withIII ? iSum>0 : 1)
+sell = close>BBbasis or (earlyExit?strategy.openprofit>0:0) or barssince(buy)>timeStop
+short = close[1]>BBupper[1] and close<BBupper and (withIII ? iSum<0 : 1)
+cover = close<BBbasis or (earlyExit?strategy.openprofit>0:0) or barssince(short)>timeStop
+if positionMode=="Long only"
+    strategy.entry(id="enter long", long=true, when=buy)
+    strategy.close(id="enter long", comment="exit long", when=sell)
+else if positionMode=="Short only"
+    strategy.entry(id="enter short", long=false, when=short)
+    strategy.close(id="enter short", comment="exit short", when=cover)
+else
+    strategy.entry(id="enter long", long=true, when=buy)
+    strategy.close(id="enter long", comment="exit long", when=sell)
+    strategy.entry(id="enter short", long=false, when=short)
+    strategy.close(id="enter short", comment="exit short", when=cover)
+Expand (78 lines)

@@ -1,0 +1,489 @@
+Script Name: Stoch-RSI 4h-1h-15min
+Author: MoonFlag
+Description: !!!! Note: Run this on the 15min timeframe (Important) !!!!
+Note the default settings on this indicator are best for BTC/USDT. For other pairs it might take some fiddling with variables to get a useful result (if a useful result is obtainable with the selected pair)
+Generally, select between the options (RSI/Stoch) and (15min/1hour) and (1hour/4hours) - to find a...
+PineScript code:
+
+Pine Script™ strategy
+Stoch-RSI 4h/1h/15min
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © MoonFlag
+//@version=4
+strategy(title="(Stoch/RSI/RVSI/MACD/TimeframeConfluence)", overlay=true, precision=2, initial_capital=100, commission_type=strategy.commission.percent, commission_value=0.07, default_qty_type = strategy.percent_of_equity, default_qty_value=100, pyramiding=1, calc_on_order_fills=false, calc_on_every_tick = false)
+Pair      = input(title="Trading Pair (For reference only)",  type=input.string,  defval="DOGE")
+Wunderbit = input(title="Use strategy comments below (paste below for webhooks bots)",     defval=false)
+Enter_Long     = input(title="Enter Long  ",  type=input.string,  defval="")
+Exit_Long      = input(title="Exit Long   ",  type=input.string,  defval="")
+Enter_Short    = input(title="Enter Short ",  type=input.string,  defval="")
+Exit_Short     = input(title="Exit Short  ",  type=input.string,  defval="")
+Longs   = input(title='Include Long  Trades', defval = true)
+Shorts  = input(title='Include Short Trades', defval = true)
+useMACDRVSI   = input(title="Use MACD/RVSI", defval=true)
+MACDonBuySell = true//input(title="MACDonBuySell", defval=true)
+resolution    = input(title="MACD/RVSI Confluence Resolution", type=input.resolution, defval="15")
+avl = 5
+l1  = 10
+maFast =3
+maSlow =10
+nv = cum((change(close)) * volume)
+av = ema(nv, avl)
+RVSI = rsi(av, l1)
+xSlow = ema(RVSI, maSlow)
+xFast = ema(RVSI, maFast)
+xSlowR=security(syminfo.tickerid, resolution, xSlow)
+xFastR=security(syminfo.tickerid, resolution, xFast)
+histRVSI_R = xFastR - xSlowR
+src = close
+signal_length = 9
+sma_source = false
+sma_signal = false
+fast_ma = sma_source ? sma(src, maFast) : ema(src, maFast)
+slow_ma = sma_source ? sma(src, maSlow) : ema(src, maSlow)
+macd = fast_ma - slow_ma
+macd_R = security(syminfo.tickerid, resolution, macd)
+signal = sma_signal ? sma(macd, signal_length) : ema(macd, signal_length)
+signal_R = security(syminfo.tickerid, resolution, signal)
+histMACD_R = macd_R - signal_R
+var maxMACD =0.
+var maxRVSI =0.
+var minMACD =0.
+var minRVSI =0.
+if (maxRVSI < histRVSI_R)
+    maxRVSI := histRVSI_R
+if (minRVSI > histRVSI_R)
+    minRVSI := histRVSI_R
+if (maxMACD < histMACD_R)
+    maxMACD := histMACD_R
+if (minMACD > histMACD_R)
+    minMACD := histMACD_R
+if maxRVSI < -1*minRVSI
+    maxRVSI := -1*minRVSI
+if maxMACD < -1*minMACD
+    maxMACD := -1*minMACD
+bothSameSign = false
+if ((histRVSI_R * histMACD_R) > 0)
+    bothSameSign := true
+bothSignalsCombined = bothSameSign?(((histRVSI_R/maxRVSI)+(histMACD_R/maxMACD))/2):na
+var maxBoth =0.
+var minBoth =0.
+if (maxBoth < bothSignalsCombined)
+    maxBoth := bothSignalsCombined
+if (minBoth > bothSignalsCombined)
+    minBoth := bothSignalsCombined
+if maxBoth < -1*minBoth
+    maxBoth := -1*minBoth
+buyBackground = color.green
+regular = #0000FF
+sellBackground = color.red 
+color notrading = na
+sessioncolor = regular
+buyRVSIMACD = false
+sellRVSIMACD = false
+if (bothSignalsCombined > 0)
+    sessioncolor := buyBackground
+    buyRVSIMACD := true//useMACDRVSI
+if (bothSignalsCombined < 0)
+    sessioncolor := sellBackground
+    sellRVSIMACD := true//useMACDRVSI
+bgcolor(bothSignalsCombined != 0? sessioncolor:na, title="MACD/RVSI Confluence", transp=85)
+RSIclause    = input(title="RSI clause", defval=true)//, inline="RSI2", group="RSI2")
+timeframeRSI = input(title="Timeframe RSI",  type=input.resolution,  defval="5" )
+rsi_Longs__Crossover   = 31//input(title="RSI Longs  Crossover  %", type=input.float, defval=31, maxval=100, minval=1, step=1)  // how much (percentage) can price fall before exiting the trade
+rsi_Shorts_Crossunder  = 69//input(title="RSI Shorts Crossunder %", type=input.float, defval=69, maxval=100, minval=1, step=1)  // how much (percentage) can price fall before exiting the trade
+useRSI2            = true
+RSItimeframe2chart = false
+RSIlength2         = 14//input(title="Length RSI", defval=14)//, inline="RSI2", group="RSI2")
+RSIsrc2            = close
+RSIsmaLength2      = 3//input(title="RSI SMA Length", defval=3)//, inline="RSI2 sma", group="RSI2")
+RSIup2   = rma(max(change(RSIsrc2), 0), RSIlength2)
+RSIdown2 = rma(-min(change(RSIsrc2), 0), RSIlength2)
+RSI2     = RSIdown2 == 0 ? 100 : RSIup2 == 0 ? 0 : 100 - (100 / (1 + RSIup2 / RSIdown2))
+RSIplot2 = security(syminfo.tickerid, timeframeRSI, RSI2[barstate.isrealtime ? 1 : 0], gaps = barmerge.gaps_off, lookahead = barmerge.lookahead_off)[barstate.isrealtime ? 0 : 1]
+RSIsma2  = sma(RSIplot2, RSIsmaLength2)
+var RSIprevious =0.
+if RSIprevious == 0.
+    RSIprevious:=-1
+if crossunder (RSIsma2, rsi_Shorts_Crossunder) 
+    RSIprevious:= -1
+if crossover (RSIsma2, rsi_Longs__Crossover) 
+    RSIprevious:= 1
+var RSIonUpwards = false
+var RSIonDownwards = false
+RSIonUpwards  := false
+RSIonDownwards := false
+if RSIclause and RSIprevious ==  1
+    RSIonUpwards := true
+if RSIclause and RSIprevious == -1
+    RSIonDownwards := true
+if not RSIclause
+    RSIonUpwards   := true
+    RSIonDownwards := true
+lookback1     = 4//input(title="lookback 1",  type=input.integer,  defval=4)
+lookback2     = 8//input(title="lookback 2",  type=input.integer,  defval=8)
+BuyComment_Long                 = Pair + " Long"
+BuyComment_Short                = Pair + " Short"
+SellCommentTP_Long              = "Take Profit"
+SellCommentTP_Short             = "Take Profit"
+SellCommentTrend_Long           = "Trend Shift"
+SellCommentTrend_Short          = "Trend Shift"
+SellCommentTrailStopLoss_Long   = "Trail StopLoss"
+SellCommentTrailStopLoss_Short  = "Trail StopLoss"
+SellCommentRisingStopLoss_Long  = "Ramp StopLoss"
+SellCommentRisingStopLoss_Short = "Ramp StopLoss"
+if Wunderbit
+    BuyComment_Long       := Enter_Long
+    SellCommentTP_Long    := Exit_Long
+    BuyComment_Short      := Enter_Short
+    SellCommentTP_Short   := Exit_Short
+    SellCommentTrend_Long           := SellCommentTP_Long
+    SellCommentTrailStopLoss_Long   := SellCommentTP_Long
+    SellCommentRisingStopLoss_Long  := SellCommentTP_Long
+    SellCommentTrend_Short          := SellCommentTP_Short
+    SellCommentTrailStopLoss_Short  := SellCommentTP_Short
+    SellCommentRisingStopLoss_Short := SellCommentTP_Short
+timeframe1 = timeframe.period//input(title="Fast Stoch Timeframe ",  type=input.resolution,  defval="15" )
+timeframe2 = input(group="Stochastic",title="Slow Stoch Timeframe (should be approx 4X present timeframe",  type=input.resolution,  defval="60" )
+// get input 
+i_length        = input(group="Stochastic", title="Stochastic Length", minval=1, defval=18)                                     
+i_k             = input(group="Stochastic", title="Stochastic %K", minval=1, defval=2)
+i_d             = input(group="Stochastic", title="Stochastic %D", minval=1, defval=10)
+i_sellThreshold_Longs  = input(group="Stochastic Buy/Sell", title="LONGS:  Stoch Sell/Close Threshold", type=input.float, defval=85.0, maxval=100, minval=0.0, step=5) 
+i_buyThreshold_Longs   = input(group="Stochastic Buy/Sell", title="LONGS:  Stoch Buy/Open   Threshold", type=input.float, defval=40.0, maxval=100, minval=0.0, step=5) 
+i_sellThreshold_Shorts = input(group="Stochastic Buy/Sell", title="SHORTS: Stoch Sell/Close Threshold", type=input.float, defval=30.0, maxval=100, minval=0.0, step=5) 
+i_buyThreshold_Shorts  = input(group="Stochastic Buy/Sell", title="SHORTS: Stoch Buy/Open   Threshold", type=input.float, defval=50.0, maxval=100, minval=0.0, step=5) 
+stopLossLine = input(group="Trade Settings",title='Ramp Stop Loss Line % per candle', step=0.01,defval = 0.15 )/100
+long_sl_inp  = input(group="Trade Settings",title='Ramp Stop Loss Start %'          , step=0.1 ,defval = 3.5 )/100
+long_stop_level =0.0
+long_stop_level :=long_stop_level[1]
+stopLineLongLevel = 0.
+stopLineLongLevel :=stopLineLongLevel[1]
+i_trailStopPercent     = input(group="Trade Settings", title="Trailing Stop Percent", type=input.float, defval=3, maxval=100, minval=0.1, step=0.5)/100 
+i_takeProfit           = input(group="Trade Settings", title="Take Profit", type=input.float, defval=2.5, maxval=100, minval=0.1, step=0.5)/100  
+sto = stoch(close, high, low, i_length)
+K   = sma(sto, i_k)
+D   = sma(K, i_d)
+stoch_A        = security(syminfo.tickerid, timeframe1, D)
+stoch_B        = security(syminfo.tickerid, timeframe2, D)
+stoch_A_upTrend      = stoch_A     >  stoch_A[1]
+stoch_A_downTrend    = stoch_A     <  stoch_A[1]
+stoch_B_upTrend      = (stoch_B[lookback1] >= stoch_B[lookback2])
+stoch_B_downTrend    = (stoch_B[lookback1] <= stoch_B[lookback2])
+var recentHigh  = 0.0
+var entryPrice    = 0.0
+var trailStop   = 0.0
+if Longs and barstate.isconfirmed
+    if strategy.position_size == 0
+        if (stoch_A < i_buyThreshold_Longs) and stoch_A_upTrend and stoch_B_upTrend 
+            if RSIonUpwards 
+                if useMACDRVSI==false or (MACDonBuySell?buyRVSIMACD:(not sellRVSIMACD))
+                    entryPrice   := close   
+                    recentHigh   := close
+                    trailStop    := (close * (1-i_trailStopPercent))
+                    long_stop_level := entryPrice * (1 - long_sl_inp)
+                    stopLineLongLevel :=long_stop_level
+                    strategy.entry(id="Long", long=strategy.long, comment=BuyComment_Long)
+    if strategy.position_size > 0
+        if close > recentHigh 
+            recentHigh := close
+            trailStop  := (recentHigh * (1-i_trailStopPercent))
+        strategy.exit(id="Long", stop=trailStop, comment=SellCommentTrailStopLoss_Long)     //if (D[1] >= 80) and (D < 80)     //    strategy.close(id="Long", comment=SellCommentTrend)
+        if crossunder(stoch_A, i_sellThreshold_Longs) // and barstate.isconfirmed and strategy.position_size > 0
+            strategy.close(id="Long", comment=SellCommentTrend_Long)
+        if close > (entryPrice * (1+i_takeProfit)) //and barstate.isconfirmed and strategy.position_size > 0
+            strategy.close(id="Long", comment=SellCommentTP_Long)
+        //if strategy.position_size > 0
+        stopLineLongLevel := stopLineLongLevel* (1+ stopLossLine)
+        if close < stopLineLongLevel //and barstate.isconfirmed and strategy.position_size > 0
+            strategy.close(id="Long", comment=SellCommentRisingStopLoss_Long )
+//else
+if Shorts and barstate.isconfirmed 
+    if strategy.position_size == 0
+        if (stoch_A > i_buyThreshold_Shorts) and stoch_A_downTrend and stoch_B_downTrend 
+            if RSIonDownwards 
+                if useMACDRVSI==false or (MACDonBuySell?sellRVSIMACD:(not buyRVSIMACD)) 
+                    entryPrice   := close   
+                    recentHigh   := close
+                    trailStop    := (close * (1+i_trailStopPercent))
+                    long_stop_level := entryPrice * (1 + long_sl_inp)
+                    stopLineLongLevel :=long_stop_level
+                    strategy.entry(id="Short", long=strategy.short, comment=BuyComment_Short)
+    if strategy.position_size < 0
+        if close < recentHigh 
+            recentHigh := close
+            trailStop  := (recentHigh * (1+i_trailStopPercent))
+        strategy.exit(id="Short", stop=trailStop, comment=SellCommentTrailStopLoss_Short)
+        if crossover(stoch_A, (i_sellThreshold_Shorts))
+            strategy.close(id="Short", comment=SellCommentTrend_Short)
+        if close < (entryPrice * (1-i_takeProfit)) 
+            strategy.close(id="Short", comment=SellCommentTP_Short)
+        stopLineLongLevel := stopLineLongLevel* (1 - stopLossLine)
+        if close > stopLineLongLevel 
+            strategy.close(id="Short", comment=SellCommentRisingStopLoss_Short )
+plot(strategy.position_size != 0 ? stopLineLongLevel : na, style=plot.style_linebr, color=color.red, linewidth=1, title="Ramp StopLoss")
+//plot(K, title="%K", color=color.blue, linewidth=1)
+//plot(stoch_A, title="Stoch A", color=color.orange, linewidth=1)
+//plot(stoch_B, title="Stoch B", color= stoch_B_upTrend ? color.green : color.red, style=plot.style_stepline)
+//upperBand  = hline(i_sellThreshold, title="Upper Limit", linestyle=hline.style_dashed)
+//middleBand = hline(50, title="Midline", linestyle=hline.style_dotted)
+//lowerBand  = hline(i_buyThreshold, title="Lower Limit", linestyle=hline.style_dashed)
+//fill(lowerBand, upperBand, color=color.purple, transp=75)
+//bgC = color.black
+//if strategy.position_size != 0
+//    bgC := color.green
+//bgcolor(bgC)
+Expand (253 lines)

@@ -1,0 +1,186 @@
+Script Name: EMA_HMA_RSI_Strategy
+Author: mohanee
+Description: This strategy BUYS when  HMA is below EMA  (default setting is 200)   and  HMA turning to green  and   RSI 13 is below 70
+
+Adds to existing position when current price is below BUY price and  RSI crossing above 30 or 40
+
+Exits the long position when HMA crosses down EMA 
+
+when you select Take Profit setting ,   partial profits are taken when  current price > BUY...
+PineScript code:
+
+Pine Script™ strategy
+EMA_HMA_RSI_Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mohanee
+//@version=4
+strategy(title="EMA_HMA_RSI_Strategy", overlay=true, pyramiding=2,     default_qty_type=strategy.cash, default_qty_value=10000, initial_capital=10000, currency=currency.USD)  //default_qty_value=10, default_qty_type=strategy.fixed, 
+//longCondition = crossover(sma(close, 14), sma(close, 28))
+//if (longCondition)
+    //strategy.entry("My Long Entry Id", strategy.long)
+//shortCondition = crossunder(sma(close, 14), sma(close, 28))
+//if (shortCondition)
+  //  strategy.entry("My Short Entry Id", strategy.short)
+//HMA
+HMA(src1, length1) =>  wma(2 * wma(src1, length1/2) - wma(src1, length1), round(sqrt(length1)))
+var stopLossVal=0.00
+//variables BEGIN
+length=input(200,title="EMA and HMA Length")   //square root of 13
+rsiLength=input(13, title="RSI Length")
+takePartialProfits = input(true, title="Take Partial Profits (if this selected, RSI 13 higher reading over 80 is considered for partial closing ) ")
+stopLoss = input(title="Stop Loss%", defval=8, minval=1)
+//variables  END
+//RSI 
+rsi13=rsi(close,rsiLength)
+ema200=ema(close,length)
+hma200=HMA(close,length)
+//exitOnAroonOscCrossingDown = input(true, title="Exit when Aroon Osc cross down zero ")
+// Drawings
+//Aroon oscillator
+arronUpper = 100 * (highestbars(high, length+1) + length)/length
+aroonLower = 100 * (lowestbars(low, length+1) + length)/length
+aroonOsc  = arronUpper - aroonLower
+aroonMidpoint = 0
+//oscPlot = plot(aroonOsc, color=color.green)
+//midLine= plot(aroonMidpoint, color=color.green)
+//topLine = plot(90,style=plot.style_circles, color=color.green)
+//bottomLine = plot(-90,style=plot.style_circles, color=color.red)
+//fill(oscPlot, midLine, color=aroonOsc>0?color.green:color.red, transp=50)
+//fill(topLine,bottomLine, color=color.blue)
+//fill(topLine,oscPlot, color=aroonOsc>90?color.purple:na, transp=25)
+// RSI 
+//plot(rsi13, title="RSI", linewidth=2, color=color.purple)
+//hline(50, title="Middle Line", linestyle=hline.style_dotted)
+//obLevel = hline(80, title="Overbought", linestyle=hline.style_dotted)
+//osLevel = hline(30, title="Oversold", linestyle=hline.style_dotted)
+//fill(obLevel, osLevel, title="Background", color=rsi13 >=30 ? color.green:color.purple, transp=65)  // longTermRSI >=50
+hullColor = hma200 > hma200[2] ? #00ff00 : #ff0000
+plot(hma200, title="HULL 200", color=hullColor,  transp=25)
+plot(ema200, title="EMA 200", color=color.orange)
+//Entry--
+strategy.entry(id="Long Entry", comment="LE", qty=(strategy.initial_capital * 0.10)/close, long=true,  when=strategy.position_size<1 and hma200 < ema200   and  hma200 > hma200[2]  and rsi13<70 )     //  // aroonOsc<0
+//Add
+if(strategy.position_size>=1 and  close < strategy.position_avg_price and  ( crossover(rsi13,30) or  crossover(rsi13,40) ) )   // hma200 < ema200   and  hma200 > hma200[2]   and hma200[2] < hma200[3] )  //and crossover(rsi13,30)  aroonOsc<0    //and hma200 > hma200[2]  and hma200[2] <= hma200[3]  //crossover(rsi13,30)
+    qty1=(strategy.initial_capital * 0.10)/close
+    //stopLossVal:= abs(strategy.position_size)>1 ?  ( (close > close[1] and close > open and close>strategy.position_avg_price) ? close[1]*(1-stopLoss*0.01) : stopLossVal ) : 0.00 
+    strategy.entry(id="Long Entry", comment="Add", qty=qty1, long=true )     //crossover(close,ema34)  //and close>ema34  //crossover(rsi5Val,rsiBuyLine)  --   SL="+tostring(stopLossVal, "####.##")
+//stopLossVal:= abs(strategy.position_size)>1 ? strategy.position_avg_price*(1-0.5) : 0.00 
+stopLossVal:= abs(strategy.position_size)>1 ?  ( (close > close[1] and close > open and close>strategy.position_avg_price) ? close[1]*(1-stopLoss*0.01) : stopLossVal ) : 0.00 
+//stopLossVal:= abs(strategy.position_size)>1 ?  strategy.position_avg_price*(1-stopLoss*0.01) :  0.00
+barcolor(color=strategy.position_size>=1? rsi13>80 ? color.purple: color.blue:na)
+//close partial
+if(takePartialProfits==true)
+    strategy.close(id="Long Entry", comment="Partial X  points="+tostring(close - strategy.position_avg_price, "####.##"),  qty_percent=20 , when=abs(strategy.position_size)>=1 and crossunder(rsi13, 80)  and close > strategy.position_avg_price  )   //close<ema55 and rsi5Val<20 //ema34<ema55
+//close All
+//if(exitOnAroonOscCrossingDown)
+  //  strategy.close(id="Long Entry", comment="Exit All points="+tostring(close - strategy.position_avg_price, "####.##"),  when=abs(strategy.position_size)>=1 and crossunder(aroonOsc, 0) )   //close<ema55 and rsi5Val<20 //ema34<ema55  //close<ema89
+//close All on stop loss
+strategy.close(id="Long Entry", comment="Stoploss X points="+tostring(close - strategy.position_avg_price, "####.##"),  when=abs(strategy.position_size)>=1 and close < stopLossVal  )  //close<ema55 and rsi5Val<20 //ema34<ema55  //close<ema89
+strategy.close(id="Long Entry", comment="hmaXema X points="+tostring(close - strategy.position_avg_price, "####.##"),  when=abs(strategy.position_size)>=1 and close > strategy.position_avg_price  and  crossunder(hma200,ema200)  )  //close<ema55 and rsi5Val<20 //ema34<ema55  //close<ema89
+    
+Expand (104 lines)

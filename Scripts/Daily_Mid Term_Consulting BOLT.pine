@@ -1,0 +1,235 @@
+Script Name: Daily_Mid Term_Consulting BOLT
+Author: murdocksilva
+Description: Daily Mid Term Consulting BOLT   es una estrategia a mediano y largo plazo creada para detectar los cambios tendenciales en zonas de tiempo diarias. se basa en el análisis de los cambios porcentuales que sufre el precio contra las distintas medias móviles simples definidas en la estrategia. el uso de osciladores como el MACD , RSI y EFI apoyan la decisión de...
+PineScript code:
+
+Pine Script™ strategy
+Daily_Mid Term_Consulting BOLT
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © murdocksilva
+//@version=5
+strategy("Daily_Mid Term_Consulting BOLT")
+//calculo longuitud
+longuitud = input(58, title= "longitud_sma")
+px = ta.sma(close, 1)
+px2 = ta.sma(low, 1)
+Length1 = input.int(18)
+Length2 = input.int(18)
+Length3 = input.int(26)
+Length4 = input.int(36)
+Length5 = input.int(78)
+Length6 = input.int(1)
+Length7 = input.int(1500)
+Length8 = input.int(58)
+Length9 = input.int(3000)
+Length10 = input.int(2)
+Length11 = input.int(14)
+ma1 = ta.sma(low, Length1)
+ma2 = ta.sma(high, Length2)
+ma3 = ta.sma(close, Length3)
+ma4 = ta.sma(close, Length4)
+ma5 = ta.sma(close, Length5)
+ma6 = ta.sma(close, Length6)
+ma7 = ta.sma(close, Length7)
+ma8 = ta.sma(close, Length8)
+ma9 = ta.sma(close, Length9)
+ma10 = ta.sma(close, Length10)
+ma11 = ta.sma(close, Length11)
+// calculo EFI
+efi = (close[1]-close) * volume / 1000
+efi_indicador = (efi[1] + efi) / 2
+//Variable  RSI - calculo desv estandar
+b = (px-ma10)*(px-ma10)
+b2 = (px[1]-ma10[1])*(px[1]-ma10[1])
+c = b + b2
+c2 = c / 2
+desv = math.sqrt(c2)/10
+//calculo MACD
+macd = ma4 - ma5
+//calculo RSI
+rsi = ta.rsi(close, 9)
+// calculo Divergencia
+ma = ta.sma(close, longuitud)
+dist = close - ma
+porcentaje = dist * 100 / close
+ma_dista = ta.sma(porcentaje, 333)
+//condición de entrada y salida long
+long = ma1[1] < ma1 and ma2[1] < ma2 and macd > 0 and px > ma3 and efi_indicador < 9 and px > ma7 and macd[1] < macd
+clong = efi_indicador > 22000 and px < ma8
+strategy.entry("BUY", strategy.long, when = long)
+strategy.close("BUY", when = clong)
+//condición de entrada y salida short
+short = ma1[1] > ma1 and ma2[1] > ma2 and macd < 0 and px < ma3 and efi_indicador > 9 and macd[1] > macd 
+cshort =  efi_indicador < 14000 and px > ma8 and ma11 > desv
+strategy.entry("SELL", strategy.short, when = short)
+strategy.close("SELL", when = cshort)
+//SL Y TP
+//strategy.exit("long exit", "Daily_Mid Term_Consulting BOLT", profit = close * 40 / syminfo.mintick, loss = close * 0.02 / syminfo.mintick)
+//strategy.exit("shot exit", "Daily_Mid Term_Consulting BOLT", profit = close * 40 / syminfo.mintick, loss = close * 0.02 / syminfo.mintick)
+// GRAFICA smas
+plot(ma1, color=color.new(color.orange, 0))
+plot(ma2, color=color.new(color.orange, 0))
+plot(ma3, color=color.new(color.orange, 0))
+plot(ma4, color=color.new(color.orange, 0))
+plot(ma5, color=color.new(color.orange, 0))
+plot(ma6, color=color.new(color.green, 0))
+plot(ma7, color=color.new(color.orange, 0))
+plot(ma8, color=color.new(color.orange, 0))
+plot(ma9, color=color.new(color.orange, 0))
+//GRAFICA MACD
+plot(macd, color=color.new(color.red, 0), style = plot.style_columns)
+//GRAFICA DIVERGENCIA
+plot(porcentaje, style = plot.style_columns)
+//GRAFICA MA DIVERGENCIA
+plot(ma_dista, color=color.new(color.white, 0))
+//GRAFICA MA DIVERGENCIA
+plot(desv, color=color.new(color.blue, 0))
+//GRAFICA EFI
+plot(efi_indicador, color=color.new(color.yellow, 0))
+// GRAFICA RSI
+l1 = hline(70, color=color.new(color.green, 0))
+l2 = hline(30, color=color.new(color.green, 0))
+plot(rsi, color=color.new(color.white, 0))
+//prueba 1 stop loss and take profit
+//sl = 0.05
+//tp = 0.1    
+//calculo de precio para sl y tp
+//longstop=strategy.position_avg_price*(1-sl)
+//longprofit=strategy.position_avg_price*(1+tp)
+//shortstop=strategy.position_avg_price*(1+sl)
+//shortprofit=strategy.position_avg_price*(1-tp)
+//if (long)
+  //  strategy.exit("BUY", strategy.long)
+//sl and tp  long|short
+//if strategy.entry("BUY", strategy.long)
+//if strategy.position_avg_price > 0
+//strategy.exit("BUY", limit = longprofit, stop = longstop)
+//if strategy.position_avg_price < 0
+//strategy.exit("SELL", limit = shortprofit, stop=shortstop)
+Expand (125 lines)

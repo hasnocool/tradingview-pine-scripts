@@ -1,0 +1,213 @@
+Script Name: Flying Dragon Trend Strategy
+Author: MarkoP010
+Description: Flying Dragon Trend Strategy can be used to indicate the trend on all timeframes by finetuning the input settings.
+The Flying Dragon Trend family includes both the strategy and the indicator, where the strategy supports of selecting the optimal set of inputs for the indicator in each scenario. Highly recommended to get familiar with the strategy first to get the...
+PineScript code:
+
+Pine Script™ strategy
+Flying Dragon Trend Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © MarkoP010 2023
+//@version=5
+//The basic idea of the strategy is to select the best set of MAs, types, lenghts and offsets, which draws red trend bands for downtrend (and green for uptrend).
+//Strategy executes by selected risk level either when there is MA crossover with price (Leading MA Offset1 on Highest risk level, Lagging MA on Low risk level) or three bands with the same color at the same time (on Lowest risk level, Leading MA Offset1 crossover with Lagging MA). 
+//Strategy plots user selectable Moving Average lines, a colored trend band between the MA lines and pivot indicators. The trend bands can be turned off individually if required. Also pivot indicators can be turned off if required.
+//The Offset option shifts the selected MA with the set number of steps to the right. That is where the Magic happens and the Dragon roars!
+//Strategy version history:
+//Version 1 - Initial script
+//Version 2 - Bug fix for Lowest risk level to show the indicator
+//Version 3 - Updated graph picture
+//Version 4 - Alert function and pivot indicators added, alerts are enabled when indicators are on. Inlining the code with the corresponding indicator.
+strategy("Flying Dragon Trend Strategy", shorttitle="Flying Dragon Trend Strategy", overlay=true, pyramiding=3, initial_capital=100000, default_qty_type=strategy.percent_of_equity, default_qty_value=5, commission_type=strategy.commission.cash_per_order, commission_value=10, calc_on_order_fills=false, process_orders_on_close=true)
+//Moving Averages function
+MA(source, length, type) =>
+    type == "EMA" ? ta.ema(source, length) :
+     type == "HMA" ? ta.hma(source, length) :
+     type == "RMA" ? ta.rma(source, length) :
+     type == "SMA" ? ta.sma(source, length) :
+     type == "SWMA" ? ta.swma(source) :
+     type == "VWMA" ? ta.vwma(source, length) :
+     type == "WMA" ? ta.wma(source, length) :
+     na
+//Strategy options
+strDirection = input.string(defval="Both", title="Strategy Direction", options=["Both", "Long", "Short"], group="Strategy Options") //Strategy direction selector by DashTrader
+strSelection = strDirection == "Long" ? strategy.direction.long : strDirection == "Short" ? strategy.direction.short : strategy.direction.all //Strategy direction selector by DashTrader
+strategy.risk.allow_entry_in(strSelection)
+riskLevel = input.string(defval="Medium", title="Risk Level", options=["Highest", "High", "Medium", "Low", "Lowest"], inline="Options", group="Strategy Options")
+indicatorsOn = input(defval=true, title="Indicators", inline="Options", tooltip="Turn on or off pivot indicators. Strategy execution criteria. When risk level Highest then Leading MA Offset1 crossover with price triggers the indicator and executes the strategy, when Low then Lagging MA crossover with price, when Lowest then all the Bands are the same color (Leading MA Offset1 crossover with Lagging MA). Alerts are enabled when indicators are on. Create Alert on selected equity and timeframe, select on Condition this strategy and alert criteria (for example: Alert () function calls only), Create.", group="Strategy Options")
+useStop = input(defval=false, title="Use Stop Loss", inline="SL", group="Strategy Options")
+stopPrct = input.int(defval=10, title=" %", minval=0, maxval=100, step=1, inline="SL", group="Strategy Options") / 100
+//Inputs
+ma1Type = input.string(defval="HMA", title="", inline="MA1", options=["EMA", "HMA", "RMA", "SMA","SWMA", "VWMA", "WMA"], group="Leading Moving Average") 
+ma1Length = input.int(defval=35, title="",minval=1, inline="MA1", group="Leading Moving Average")
+ma1Source = input(defval=close, title="", tooltip="For short timeframes, minutes to hours, instead of Default values try Lowest risk level and HMA75 with Offsets 0,1,4 and SMA12 with Offset 6.", inline="MA1", group="Leading Moving Average")
+ma1Color  = input(defval=color.purple, title="", inline="MA-1", group="Leading Moving Average")
+ma1Offset = input.int(defval=0, title="Offset1 Steps", minval=0, maxval=10, step=1, tooltip="The Magic happens here! The offset to move the line to the right.", inline="MA-1", group="Leading Moving Average")
+ma1 = MA(ma1Source, ma1Length, ma1Type)[ma1Offset]
+ma2Color  = input(defval=color.lime, title="", inline="MA-2", group="Leading Moving Average")
+ma2Offset = input.int(defval=4, title="Offset2 Steps", minval=0, maxval=10, step=1, tooltip="The Magic happens here! The offset to move the line to the right.", inline="MA-2", group="Leading Moving Average")
+ma2 = ma1[ma2Offset]
+ma3Color  = input(defval=color.aqua, title="", inline="MA-3", group="Leading Moving Average")
+ma3Offset = input.int(defval=6, title="Offset3 Steps", minval=0, maxval=10, step=1, tooltip="The Magic happens here! The offset to move the line to the right.", inline="MA-3", group="Leading Moving Average")
+ma3 = ma1[ma3Offset]
+ma4Type = input.string(defval="SMA", title="", inline="MA4", options=["EMA", "HMA", "RMA", "SMA","SWMA", "VWMA", "WMA"], group="Lagging Moving Average") 
+ma4Length = input.int(defval=22, title="",minval=1, inline="MA4", group="Lagging Moving Average")
+ma4Source = input(defval=close, title="", inline="MA4", group="Lagging Moving Average")
+ma4Color  = input(defval=color.yellow, title="", inline="MA-4", group="Lagging Moving Average")
+ma4Offset = input.int(defval=2, title="Offset Steps", minval=0, maxval=10, step=1, tooltip="The Magic happens here! The offset to move the line to the right.", inline="MA-4", group="Lagging Moving Average")
+ma4 = MA(ma4Source, ma4Length, ma4Type)[ma4Offset]
+bandTransp = input.int(defval=60, title="Band Transparency", minval=20, maxval=80, step=10, group="Banding")
+useBand1 = input(defval=true, title="Band 1", inline="Band", group="Banding")
+band1Transp = useBand1 ? bandTransp : 100
+band1clr = ma1 > ma2 ? color.new(#00ff00, transp=band1Transp) : color.new(#ff0000, transp=band1Transp)
+useBand2 = input(defval=true, title="Band 2", inline="Band", group="Banding")
+band2Transp = useBand2 ? bandTransp : 100
+band2clr = ma1 > ma3 ? color.new(#00ff00, transp=band2Transp) : color.new(#ff0000, transp=band2Transp)
+useBand3 = input(defval=true, title="Band 3", tooltip="Up trend green, down trend red. Colors get reversed if MA1 lenght is greater than MA2 lenght, or they are different type and MA2 quicker. In that case, just reverse your selections for MA1 and MA2, or let it be as is.", inline="Band", group="Banding")
+band3Transp = useBand3 ? bandTransp : 100
+band3clr = ma1 > ma4 ? color.new(#00ff00, transp=band3Transp) : color.new(#ff0000, transp=band3Transp)
+//Graphs
+piirto1 = plot(ma1, color = ma1Color, title="MA1")
+piirto2 = plot(ma2, color = ma2Color, title="MA2")
+piirto3 = plot(ma3, color = ma3Color, title="MA3")
+piirto4 = plot(ma4, color = ma4Color, title="MA4")
+fill(piirto1, piirto2, color=band1clr)
+fill(piirto1, piirto3, color=band2clr)
+fill(piirto1, piirto4, color=band3clr)
+//Strategy entry and stop conditions, indicator plot conditions
+longCondition = riskLevel == "Highest" ? ma1Source > ma1 : riskLevel == "High" ? ma1Source > ma2 : riskLevel == "Medium" ? ma1Source > ma3 : riskLevel == "Low" ? ma4Source > ma4 : riskLevel == "Lowest" ? ma1 > ma4 : na
+shortCondition = riskLevel == "Highest" ? ma1Source < ma1 : riskLevel == "High" ? ma1Source < ma2 : riskLevel == "Medium" ? ma1Source < ma3 : riskLevel == "Low" ? ma4Source < ma4 : riskLevel == "Lowest" ? ma1 < ma4 : na
+pivotUp = longCondition and shortCondition[1] and indicatorsOn ? true : na
+pivotDown = shortCondition and longCondition[1] and indicatorsOn ? true : na
+plotshape(pivotUp, title="Up", style=shape.triangleup, location=location.belowbar, color=color.green, size=size.small)
+plotshape(pivotDown, title="Down", style=shape.triangledown, location=location.abovebar, color=color.red, size=size.small)
+stopLprice = useStop == true ? strategy.position_avg_price * (1-stopPrct) : na
+stopSprice = useStop == true ? strategy.position_avg_price * (1+stopPrct) : na
+if longCondition
+    strategy.entry("Long",strategy.long)
+    strategy.exit("Long Stop", "Long", stop=stopLprice)    
+if shortCondition
+    strategy.entry("Short",strategy.short)
+    strategy.exit("Short Stop", "Short", stop=stopSprice)
+//Alerts
+if pivotUp
+    alertMessage = syminfo.ticker + ' - ' + timeframe.period + ": Pivot Up!"
+    alert(alertMessage, alert.freq_once_per_bar_close)
+if pivotDown
+    alertMessage = syminfo.ticker + ' - ' + timeframe.period + ": Pivot Down!"
+    alert(alertMessage, alert.freq_once_per_bar_close)
+//End
+Expand (112 lines)

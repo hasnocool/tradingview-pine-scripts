@@ -1,0 +1,70 @@
+Script Name: Donchian Channels Strategy - Long Term Trend
+Author: SparkyFlary
+Description: For Educational Purposes. Results can differ on different markets and can fail at any time. Profit is not guaranteed.
+
+This only works in a few markets and in certain situations. Changing the settings can give better or worse results for other markets. This is a longer term trend following strategy that uses Donchian Channels for trend following and uses the upper...
+PineScript code:
+
+Pine Script™ strategy
+Donchian Channels Strategy - Long Term Trend
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// Donchian Channels Strategy - Long Term Trend
+// by SparkyFlary
+//For Educational Purposes
+//Results can differ on different markets and can fail at any time. Profit is not guaranteed.
+strategy("Donchian Channels Strategy - Long Term Trend", shorttitle="Donchian Channels LT Strategy", overlay=true)
+length = input(20, title="Donchian Channel length")
+option = input("double", title="Middleband length: regular or double", options=["regular","double"])
+upperband = highest(high, length)[1]
+lowerband = lowest(low, length)[1]
+middlebandLength = option=="double"?length*2:length
+middleband = avg(highest(high, middlebandLength)[1], lowest(low, middlebandLength)[1])
+//Plots
+ubP = plot(upperband, title="Upperband", style=plot.style_line, linewidth=2)
+lbP = plot(lowerband, title="Lowerband", style=plot.style_line, linewidth=2)
+mbP = plot(middleband, title="Middleband", style=plot.style_line, color=color.maroon, linewidth=2)
+//Strategy
+buy = close > upperband
+sell = close < middleband
+short = close < lowerband
+cover = close > middleband
+strategy.entry(id="enter long", long=true, when=buy)
+strategy.close(id="enter long", comment="exit long", when=sell)
+strategy.entry(id="enter short", long=false, when=short)
+strategy.close(id="enter short", comment="exit short", when=cover)
+Expand (33 lines)

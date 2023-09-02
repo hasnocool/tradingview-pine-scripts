@@ -1,0 +1,192 @@
+Script Name: ATR + STC + MA
+Author: Romedius
+Description: This Script was wrote to backtest, in its current form it appears to be unprofitable
+PineScript code:
+
+Pine Script™ strategy
+ATR + STC + MA
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Romedius
+//@version=5
+strategy("My Strategy", overlay=true, margin_long=100, margin_short=100)
+// STC
+EEEEEE=input(12,"Length",group="STC")
+BBBB=input(26,"FastLength",group="STC")
+BBBBB=input(50,"SlowLength",group="STC")
+AAAA(BBB, BBBB, BBBBB) =>
+    fastMA = ta.ema(BBB, BBBB)
+    slowMA = ta.ema(BBB, BBBBB)
+    AAAA = fastMA - slowMA
+    AAAA
+    
+AAAAA(EEEEEE, BBBB, BBBBB) => 
+    //AAA=input(0.5)
+    var AAA = 0.5
+    var CCCCC = 0.0
+    var DDD = 0.0
+    var DDDDDD = 0.0
+    var EEEEE = 0.0
+    BBBBBB = AAAA(close,BBBB,BBBBB)     
+    CCC = ta.lowest(BBBBBB, EEEEEE)
+    CCCC = ta.highest(BBBBBB, EEEEEE) - CCC    
+    CCCCC := (CCCC > 0 ? ((BBBBBB - CCC) / CCCC) * 100 : nz(CCCCC[1])) 
+    DDD := (na(DDD[1]) ? CCCCC : DDD[1] + (AAA * (CCCCC - DDD[1]))) 
+    DDDD = ta.lowest(DDD, EEEEEE) 
+    DDDDD = ta.highest(DDD, EEEEEE) - DDDD     
+    DDDDDD := (DDDDD > 0 ? ((DDD - DDDD) / DDDDD) * 100 : nz(DDDDDD[1])) 
+    EEEEE := (na(EEEEE[1]) ? DDDDDD : EEEEE[1] + (AAA * (DDDDDD - EEEEE[1])))
+    EEEEE
+mAAAAA = AAAAA(EEEEEE,BBBB,BBBBB)
+stc = mAAAAA > mAAAAA[1] ? true : false
+stc_sig = stc == true and stc[1] == false ? 1 : stc == false and stc[1] == true ? -1 : 0
+stc_long = stc_sig == 1
+stc_short = stc_sig == -1
+// STC end
+// ATR stops
+nATRPeriod = input(5,group="ATR Stops")
+nATRMultip = input(3.5,group="ATR Stops")
+xATR = ta.atr(nATRPeriod)
+nLoss = nATRMultip * xATR
+xATRTrailingStop = 0.0
+xATRTrailingStop := close > nz(xATRTrailingStop[1], 0) and close[1] > nz(xATRTrailingStop[1], 0) ? math.max(nz(xATRTrailingStop[1]), close - nLoss) : close < nz(xATRTrailingStop[1], 0) and close[1] < nz(xATRTrailingStop[1], 0) ? math.min(nz(xATRTrailingStop[1]), close + nLoss) : close > nz(xATRTrailingStop[1], 0) ? close - nLoss : close + nLoss
+pos = 0
+pos := close[1] < nz(xATRTrailingStop[1], 0) and close > nz(xATRTrailingStop[1], 0) ? 1 : close[1] > nz(xATRTrailingStop[1], 0) and close < nz(xATRTrailingStop[1], 0) ? -1 : nz(pos[1], 0)
+atr_sig = pos == -1 ? false : true
+// ATR stops end
+// ma
+ma_len = input(200, title="MA Length", group="Moving Average")
+ma = ta.sma(close, 200)
+ma_sig = close < ma ? false : true
+// ma end
+// strategy entries
+tp_mult = input(2, title="Take Profit ATR Multiplier", group="Strategy")
+sl_mult = input(1, title="Stop Loss ATR Multiplier", group="Strategy")
+early_stop = input(true, title="Close position when ATR changes color")
+atr_stop = if close < xATRTrailingStop
+    close - (close - xATRTrailingStop) * sl_mult
+else
+    close + (xATRTrailingStop - close) * sl_mult
+longCondition = atr_sig == true and stc_sig == 1 and ma_sig == true
+shortCondition = atr_sig == false and stc_sig == -1 and ma_sig == false
+if (longCondition)
+    strategy.entry("Long", strategy.long)
+    strategy.exit("Exit Long", "Long", limit=close + xATR * tp_mult, stop=atr_stop)
+else if atr_sig == false and early_stop
+    strategy.close("Long")
+if (shortCondition)
+    strategy.entry("Short", strategy.short)
+    strategy.exit("Exit Short", "Short", limit=close - xATR * tp_mult, stop=atr_stop)
+else if atr_sig == true and early_stop
+    strategy.close("Short")
+    
+// plot stuff
+atr_color = pos == -1 ? color.red: pos == 1 ? color.green : color.blue
+plot(atr_stop, title="ATR Stop", color=atr_color)
+ma_color = ma_sig ? color.green : color.red
+plot(ma, title="Moving Average", color=ma_color)
+stc_color = stc_long ? color.green : color.red
+plotshape(stc_long, style=shape.triangleup, color=stc_color, title="STC Long Signal", size=size.tiny)
+plotshape(stc_short, style=shape.triangledown, color=stc_color, title="STC Short Signal", size=size.tiny)
+// plot stuff end
+Expand (100 lines)

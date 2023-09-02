@@ -1,0 +1,780 @@
+Script Name: Monthly Strategy Performance Table
+Author: ZenAndTheArtOfTrading
+Description: What Is This? 
+
+This script code adds a Monthly Strategy Performance Table to your Pine Script strategy scripts so you can see a month-by-month and year-by-year breakdown of your P&L as a percentage of your account balance.
+
+The table is based on realized equity rather than open equity, so it only updates the metrics when a trade is closed. 
+
+That's why some...
+PineScript code:
+
+Pine Script™ strategy
+Monthly Strategy Performance Table
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ZenAndTheArtOfTrading
+// Version 2 (Last Updated 29th June, 2023)
+// Huge thanks to Marc (https://www.tradingview.com/u/Mrcrbw/) for providing
+// major improvements and fixes to the code that made this script much better!
+// @version=5
+//////////////////////////////////////////////////////////////////////////
+// EXAMPLE STRATEGY (REPLACE THIS CODE WITH YOUR OWN)                   //
+// Replace lines 15 -> 69 with your own strategy script code!           //
+// This example system is my Simple Pullback Strategy                   //
+// Check my TradingView profile for more info about this script         //
+//////////////////////////////////////////////////////////////////////////
+strategy("Monthly Performance Table", 
+     overlay=true, 
+     initial_capital=100000,
+     default_qty_type=strategy.percent_of_equity, 
+     default_qty_value=100,
+     commission_type=strategy.commission.cash_per_contract, 
+     commission_value=0.005)
+// Get user input
+i_ma1           = input.int(title="MA 1 Length", defval=200, step=10, group="Strategy Parameters", tooltip="Long-term MA")
+i_ma2           = input.int(title="MA 2 Length", defval=10, step=10, group="Strategy Parameters", tooltip="Short-term MA")
+i_stopPercent   = input.float(title="Stop Loss Percent", defval=0.10, step=0.1, group="Strategy Parameters", tooltip="Failsafe Stop Loss Percent Decline")
+i_lowerClose    = input.bool(title="Exit On Lower Close", defval=false, group="Strategy Parameters", tooltip="Wait for a lower-close before exiting above MA2")
+i_startTime     = input.time(title="Start Filter", defval=timestamp("01 Jan 1995 13:30 +0000"), group="Time Filter", tooltip="Start date & time to begin searching for setups")
+i_endTime       = input.time(title="End Filter", defval=timestamp("1 Jan 2099 19:30 +0000"), group="Time Filter", tooltip="End date & time to stop searching for setups")
+// Get indicator values
+ma1 = ta.sma(close, i_ma1)
+ma2 = ta.sma(close, i_ma2)
+// Check filter(s)
+f_dateFilter = time >= i_startTime and time <= i_endTime
+// Check buy/sell conditions
+var float buyPrice = 0
+buyCondition    = close > ma1 and close < ma2 and strategy.position_size == 0 and f_dateFilter
+sellCondition   = close > ma2 and strategy.position_size > 0 and (not i_lowerClose or close < low[1])
+stopDistance    = strategy.position_size > 0 ? ((buyPrice - close) / close) : na
+stopPrice       = strategy.position_size > 0 ? buyPrice - (buyPrice * i_stopPercent) : na
+stopCondition   = strategy.position_size > 0 and stopDistance > i_stopPercent
+// Enter positions
+if buyCondition
+    strategy.entry(id="Long", direction=strategy.long, comment="Equity = $" + str.tostring(strategy.equity, "#.##"))
+if buyCondition[1]
+    buyPrice := strategy.position_avg_price
+// Exit positions
+if sellCondition or stopCondition
+    strategy.close(id="Long", comment="Exit" + (stopCondition ? "SL=true" : ""))
+    buyPrice := na
+// Draw pretty colors
+plot(buyPrice, color=color.lime, style=plot.style_linebr)
+plot(stopPrice, color=color.red, style=plot.style_linebr, offset=-1)
+plot(ma1, color=color.blue)
+plot(ma2, color=color.orange)
+////////////////////////////////////////////////////////////
+// END EXAMPLE STRATEGY (REPLACE THIS CODE WITH YOUR OWN) //
+////////////////////////////////////////////////////////////
+//-------------------------------------------------------------------------//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MONTHLY TABLE based on the script written by QuantNomad - Copy & Paste code from here down into your strategy script /{
+// Original Script: https://tradingview.com/script/kzp8e4X3-Monthly-Returns-in-PineScript-Strategies/                   //
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+var string GROUP_PERFORMANCE_TABLE = "Monthly Performance Table"
+mptable_on = input.bool(title="Turn On |", defval=true, display=display.none, group=GROUP_PERFORMANCE_TABLE, inline="MPT_Toggles")
+mptable_debug = input.bool(title="Debug Mode |", defval=false, display=display.none, group=GROUP_PERFORMANCE_TABLE, inline="MPT_Toggles")
+mptable_precision = input.int(title="Decimal Precision", defval=2, minval=1, display=display.none, group=GROUP_PERFORMANCE_TABLE, inline="MPT_Toggles", tooltip="Decimal precision of each cell")
+mptable_titleColor = input.color(title="Title Cell Color", defval=#cccccc, display=display.none, group=GROUP_PERFORMANCE_TABLE, inline="MPT_Colors")
+mptable_titleTextColor = input.color(title="Title Text Color", defval=#363a45, display=display.none, group=GROUP_PERFORMANCE_TABLE, inline="MPT_Colors")
+mptable_textColor = input.color(title="Cell Text Color", defval=color.white, display=display.none, group=GROUP_PERFORMANCE_TABLE, inline="MPT_Colors")
+mptable_ProfitColor = input.color(title="Year Profit Color", defval=color.new(color.green, 50), display=display.none, group=GROUP_PERFORMANCE_TABLE, inline="MPT_Colors")
+mptable_LossColor = input.color(title="Year Loss Color", defval=color.new(color.red, 50), display=display.none, group=GROUP_PERFORMANCE_TABLE, inline="MPT_Colors")
+mptable_BreakEvenColor = input.color(title="Year B/E Color", defval=color.new(color.white, 50), display=display.none, group=GROUP_PERFORMANCE_TABLE, inline="MPT_Colors")
+mptable_pageNumber = input.int(title="Page Number", defval=1, minval=1, step=1, maxval=10, display=display.none, group=GROUP_PERFORMANCE_TABLE, tooltip="Which page of results to display") - 1 // -1 is for corection for arrays. Aaray index start with 0 
+mptable_pageSize = input.int(title="Page Size (Rows)", defval=20, minval=1, display=display.none, group=GROUP_PERFORMANCE_TABLE, tooltip="How many rows to display") - 1  // 9 is used to show 10 rows of data due to array start from 0
+mptable_tableTextSize = input.string(title="Text Size", defval="Small", options=["Auto",  "Huge",  "Large", "Normal", "Small", "Tiny"], display=display.none, group=GROUP_PERFORMANCE_TABLE)
+// Custom function for getting table text sized based on user input
+table_text_size(_size) =>
+    switch _size
+        "Auto"   => size.auto   
+        "Huge"   => size.huge   
+        "Large"  => size.large  
+        "Normal" => size.normal 
+        "Small"  => size.small
+        => size.tiny
+tableTextSize = table_text_size(mptable_tableTextSize)
+// Custom function for getting decimal precision based on given number 
+// (eg. if number is > 0 but < 0.05 or < 0 and > -0.05, set precision to 3 to avoid rounding to 0 which is misleading)
+GetRoundingPrecision(float num) =>
+    if (num > 0 and num < 0.05) or (num < 0 and num > -0.05)
+        3
+    else
+        mptable_precision
+// Define an open trade's cost (used to calculate commission cost)
+type TradeCost
+    int entryTime
+    float entryPrice
+    float cost
+// Define a monthly/yearly return type
+type StrategyReturn
+    float profit
+    float drawdown
+    float peak
+    int timestamp
+// Store accumulated P&L values
+var float accumulatedMonthlyPL = 0
+var float accumulatedYearlyPL = 0
+var float bestAccumulatedMonthlyPL = 0
+var float bestAccumulatedYearlyPL = 0
+// Store drawdown values
+var float equityPeak = strategy.initial_capital
+var float yearlyEquityHigh = 0
+var float currentYearlyDrawdown = 0
+var float yearlyMaxDrawdown = 0
+var float worstDrawdown = 0
+var float monthlyEquityHigh = 0
+var float currentMonthlyDrawdown = 0
+var float monthlyMaxDrawdown = 0
+var int currentDrawdownBars = 0
+var int maxDrawdownBars = 0
+// Store stat arrays
+var totalDrawdownBars = array.new<int>(0)
+var totalDrawdowns = array.new<float>(0)
+// Store long & short trade count
+var int totalBreakEvenTrades = 0
+var int totalLongTrades = 0
+var int totalLongTradeWins = 0
+var int totalShortTrades = 0
+var int totalShortTradeWins = 0
+// Store open trade commission costs in array
+var costOfOpenTrades = array.new<TradeCost>(0)
+// Detect opened trade and save cost of trade (I tried many methods to get my numbers to match the Cumulative Profit list in the Strategy Tester, no idea why, but none of them worked without doing this)
+if strategy.opentrades != strategy.opentrades[1] and strategy.closedtrades == strategy.closedtrades[1]
+    costOfTrade = strategy.grossloss - strategy.grossloss[1]
+    costOfOpenTrades.push(TradeCost.new(strategy.opentrades.entry_time(strategy.opentrades - 1), strategy.opentrades.entry_price(strategy.opentrades - 1), costOfTrade))
+// Detect a closed trade
+// TV Documentation: Trade List's Cumulative Profit % Formula = TradeProfit / (InitialCapital + Cumulative Profit of the previous trades) * 100%
+if strategy.closedtrades != strategy.closedtrades[1]
+    
+    // Retrieve trade cost for the closed trade
+    float tradeCost = 0
+    int removeIdx = -1
+    if costOfOpenTrades.size() > 0
+        for i = 0 to costOfOpenTrades.size() - 1
+            TradeCost tc = costOfOpenTrades.get(i)
+            if tc.entryTime == strategy.closedtrades.entry_time(strategy.closedtrades - 1) and tc.entryPrice == strategy.closedtrades.entry_price(strategy.closedtrades - 1)
+                tradeCost := tc.cost
+                removeIdx := i 
+                break
+    
+    // Remove cost
+    if removeIdx != -1
+        costOfOpenTrades.remove(removeIdx)
+    // Calculate equity before trade closed (strategy.equity will not do, because it changes bar-by-bar based on open P&L not realized P&L)
+    float preEquity = strategy.initial_capital + strategy.netprofit[1]
+    // Calculate P&L + cost of this trade
+    float profitLoss = 0 
+    if strategy.losstrades > strategy.losstrades[1]
+        profitLoss := (strategy.grossloss - (strategy.grossloss[1] - tradeCost)) * -1
+    else
+        profitLoss := strategy.grossprofit - strategy.grossprofit[1]
+    
+    // Check if this was a long or short trade and if it won or lost
+    if strategy.position_size[1] > 0
+        totalLongTrades := totalLongTrades + 1
+        if profitLoss > 0
+            totalLongTradeWins := totalLongTradeWins + 1
+    else if strategy.position_size[1] < 0
+        totalShortTrades := totalShortTrades + 1
+        if profitLoss > 0
+            totalShortTradeWins := totalShortTradeWins + 1
+        
+    // Check if the trade broke even
+    if profitLoss == 0
+        totalBreakEvenTrades := totalBreakEvenTrades + 1
+    // Calculate cumulative profit % for this trade 
+    float cumulativeProfitPercent = (profitLoss / preEquity) * 100
+    // Store highest peak value of equity (we can now use strategy.equity since equity has updated to realized P&L on this bar)
+    if strategy.equity > equityPeak
+        equityPeak := strategy.equity
+    // Calculate total system drawdown %
+    float equityDD = ((strategy.equity - equityPeak) / equityPeak) * 100
+    if equityDD < worstDrawdown
+        worstDrawdown := equityDD
+    // Store accumulated monthly + yearly P&L
+    accumulatedMonthlyPL := cumulativeProfitPercent + accumulatedMonthlyPL[1]
+    accumulatedYearlyPL := accumulatedYearlyPL + cumulativeProfitPercent
+    // Save max favourable excursion for this month (ie. peak return as %)
+    if accumulatedMonthlyPL > bestAccumulatedMonthlyPL
+        bestAccumulatedMonthlyPL := accumulatedMonthlyPL
+    // Save max favourable excursion for this year (ie. peak return as %)
+    if accumulatedYearlyPL > bestAccumulatedYearlyPL
+        bestAccumulatedYearlyPL := accumulatedYearlyPL
+    // Track max equity high over current year for max yearly drawdown calculation
+    if accumulatedYearlyPL > yearlyEquityHigh
+        yearlyEquityHigh := accumulatedYearlyPL
+    
+    // Check if our yearly realized equity high minus current realized equity exceeds our stored max drawdown for the year, update if necessary, and save worst drawdown
+    if accumulatedYearlyPL - yearlyEquityHigh < 0
+        currentYearlyDrawdown := accumulatedYearlyPL - yearlyEquityHigh
+        if currentYearlyDrawdown < yearlyMaxDrawdown
+            yearlyMaxDrawdown := currentYearlyDrawdown
+        currentDrawdownBars := currentDrawdownBars + 1
+    
+    // Track max equity high over current month for max monthly drawdown calculation
+    if accumulatedMonthlyPL > monthlyEquityHigh
+        monthlyEquityHigh := accumulatedMonthlyPL
+    
+    // Check if our monthly realized equity high minus current realized equity exceeds our stored max drawdown for the month, update if necessary, and save worst drawdown
+    if accumulatedMonthlyPL - monthlyEquityHigh < 0
+        currentMonthlyDrawdown := accumulatedMonthlyPL - monthlyEquityHigh
+        if currentMonthlyDrawdown < monthlyMaxDrawdown
+            monthlyMaxDrawdown := currentMonthlyDrawdown
+    
+    // Debug label
+    if mptable_debug
+        string debugTip = "Equity = $" + str.tostring(strategy.equity, "#.##") + 
+         "\nP&L=" + str.tostring(cumulativeProfitPercent) + "%" +
+         "\nAccumMonthlyP&L=" + str.tostring(math.round(accumulatedMonthlyPL, GetRoundingPrecision(accumulatedMonthlyPL))) + "%" +
+         "\nAccumYearlyP&L=" + str.tostring(math.round(accumulatedYearlyPL, GetRoundingPrecision(accumulatedYearlyPL))) + "%" +
+         "\nMonthlyMaxDD=" + str.tostring(math.round(monthlyMaxDrawdown, GetRoundingPrecision(monthlyMaxDrawdown))) + "%" +
+         "\nYearlyMaxDD=" + str.tostring(math.round(yearlyMaxDrawdown, GetRoundingPrecision(yearlyMaxDrawdown))) + "%" +
+         "\nTotalMaxDD=" + str.tostring(math.round(worstDrawdown, GetRoundingPrecision(worstDrawdown))) + "%" +
+         "\nCurrentDDBars=" + str.tostring(currentDrawdownBars) +
+         "\nMaxDDBars=" + str.tostring(maxDrawdownBars) +
+         "\nTotalBreakEven=" + str.tostring(totalBreakEvenTrades) +
+         "\nTotalLongs=" + str.tostring(totalLongTrades) +
+         "\nTotalLongWins=" + str.tostring(totalLongTradeWins) +
+         "\nTotalShorts=" + str.tostring(totalShortTrades) +
+         "\nTotalShortWins=" + str.tostring(totalShortTradeWins)
+        label.new(bar_index, high + (high * 0.01), "P&L " + str.tostring(math.round(cumulativeProfitPercent, GetRoundingPrecision(cumulativeProfitPercent))) + "%", tooltip=debugTip, textcolor=color.white)
+// Calculate drawdown since last equity high (NOT max drawdown, just the current max DD since we were out of DD)
+float t_equityDD = ((strategy.equity - equityPeak) / equityPeak) * 100
+var float currentMaxDrawdownSinceLast = 0
+// Update Max Drawdown bar count and current DD if equity is under water, check isconfirmed to prevent double-counting bars with recalc_on_order_fills on
+if strategy.equity < equityPeak and barstate.isconfirmed
+    currentDrawdownBars := currentDrawdownBars + 1
+    if currentDrawdownBars > maxDrawdownBars
+        maxDrawdownBars := currentDrawdownBars
+    if t_equityDD < currentMaxDrawdownSinceLast
+        currentMaxDrawdownSinceLast := t_equityDD
+else
+    if currentDrawdownBars > 0
+        totalDrawdownBars.push(currentDrawdownBars)
+        totalDrawdowns.push(currentMaxDrawdownSinceLast)
+    currentDrawdownBars := 0
+    currentMaxDrawdownSinceLast := 0
+// Prepare arrays to store Yearly and Monthly P&Ls
+var monthlyReturns = array.new<StrategyReturn>(0)
+var yearlyReturns = array.new<StrategyReturn>(0)
+var bool firstEntryTime = false
+// Retrieve entry time of initial entry in open position
+if not firstEntryTime and strategy.opentrades.entry_time(0)
+    firstEntryTime := true
+// Detect new month and year
+new_month = month(time) != month(time[1])
+new_year = year(time) != year(time[1])
+// Detect a new month and store its return profile
+if not barstate.isfirst and new_month and firstEntryTime or barstate.islastconfirmedhistory
+    StrategyReturn mr = StrategyReturn.new(accumulatedMonthlyPL, monthlyMaxDrawdown, bestAccumulatedMonthlyPL, time[1]) // time)
+    monthlyReturns.push(mr)
+    accumulatedMonthlyPL := 0
+    monthlyMaxDrawdown := 0
+    monthlyEquityHigh := 0
+    currentMonthlyDrawdown := 0
+    bestAccumulatedMonthlyPL := 0
+    // Detect a new year and reset tracking variables
+if not barstate.isfirst and new_year and firstEntryTime or barstate.islastconfirmedhistory
+    StrategyReturn yr = StrategyReturn.new(accumulatedYearlyPL, yearlyMaxDrawdown, bestAccumulatedYearlyPL, time[1])
+    yearlyReturns.push(yr)
+    accumulatedYearlyPL := 0
+    yearlyMaxDrawdown := 0
+    yearlyEquityHigh := 0
+    currentYearlyDrawdown := 0
+    bestAccumulatedYearlyPL := 0
+// DEBUG code
+bgcolor(mptable_debug and new_month ? color.lime : na, title="New Month", display=display.none)
+bgcolor(mptable_debug and new_year ? color.red : na, title="New Year", display=display.none)
+// END DEBUG CODE
+// Define Monthly P&L Table    
+var table performance_table = table(na)
+//Adjust mptable_pageSize if the years are less than the mptable_pageSize
+if yearlyReturns.size() < mptable_pageSize
+    mptable_pageSize := yearlyReturns.size()
+// Caluclate the start and end of page to display
+startIndex = math.max(math.min(yearlyReturns.size() - 1, yearlyReturns.size() - 1 - (mptable_pageSize + 1) * mptable_pageNumber), mptable_pageSize - 1)
+endIndex = math.max(startIndex - mptable_pageSize, 0)
+mptable_pageSize := endIndex <= mptable_pageSize ? endIndex : mptable_pageSize
+// If this is the last bar on our chart, display the performance table
+var int EXTRA_STAT_ROWS = 5 // This ensures table includes enough rows for CAGR etc
+if mptable_on and monthlyReturns.size() > 0 and barstate.islastconfirmedhistory
+    // Create table (100 rows = 100 years of data, should be plenty for all markets!)
+    performance_table := table.new(position.bottom_right, columns=17, rows=yearlyReturns.size() + EXTRA_STAT_ROWS, border_width=1)
+    // Set column headers
+    performance_table.cell(0, 0, "Year", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(1, 0, "Jan", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(2, 0, "Feb", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(3, 0, "Mar", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(4, 0, "Apr", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(5, 0, "May", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(6, 0, "Jun", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(7, 0, "Jul", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(8, 0, "Aug", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(9, 0, "Sep", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(10, 0, "Oct", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(11, 0, "Nov", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(12, 0, "Dec", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(13, 0, "TOTAL", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(14, 0, "MaxDD", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    // Set yearly values
+    for year_index = startIndex to yearlyReturns.size() == 0 ? na : endIndex
+        
+        // Get yearly return for this loop, set year number in first column, determine color of cell
+        StrategyReturn yearlyReturn = yearlyReturns.get(year_index)
+        // Set year title and determine color
+        performance_table.cell(0, year_index + 1, str.tostring(year(yearlyReturn.timestamp)), bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+        color y_color = yearlyReturn.profit > 0 ? mptable_ProfitColor : yearlyReturn.profit == 0 ? mptable_BreakEvenColor : mptable_LossColor
+        // Populate yearly cell values
+        string yearlyTip = "MaxDD: " + str.tostring(math.round(yearlyReturn.drawdown, GetRoundingPrecision(yearlyReturn.drawdown))) + "%" +
+             "\nMFE: " + str.tostring(math.round(yearlyReturn.peak, GetRoundingPrecision(yearlyReturn.peak))) + "%"
+        performance_table.cell(13, year_index + 1, (yearlyReturn.profit > 0 ? "+" : "") + str.tostring(math.round(yearlyReturn.profit, GetRoundingPrecision(yearlyReturn.profit))) + "%", bgcolor=y_color, text_color=color.white, text_size=tableTextSize, tooltip=yearlyTip)
+        performance_table.cell(14, year_index + 1, str.tostring(math.round(yearlyReturn.drawdown, GetRoundingPrecision(yearlyReturn.drawdown))) + "%", bgcolor=mptable_BreakEvenColor, text_color=color.white, text_size=tableTextSize)
+        // Set monthly values
+        for month_index = 0 to monthlyReturns.size() - 1
+            // Get monthly return for this loop, get current year for this loop, then calculate the corresponding table column and row
+            StrategyReturn monthlyReturn = monthlyReturns.get(month_index)
+            int yearOfMonth = year(monthlyReturn.timestamp)
+            int monthCol = month(monthlyReturn.timestamp)
+            
+            // populate monthly profit only if the years of the yearly return match with the monthly return. 
+            if yearOfMonth == year(yearlyReturn.timestamp)
+                 // Determine color for monthly P&L
+                color m_color = monthlyReturn.profit > 0 ? color.new(mptable_ProfitColor, color.t(mptable_ProfitColor) + 20) : monthlyReturn.profit == 0 ? color.new(mptable_BreakEvenColor, color.t(mptable_BreakEvenColor) + 20) : color.new(mptable_LossColor, color.t(mptable_LossColor) + 20)
+                
+                // Set monthly P&L cell
+                string monthlyTip = "MaxDD: " + str.tostring(math.round(monthlyReturn.drawdown, GetRoundingPrecision(monthlyReturn.drawdown))) + "%" +
+                     "\nMFE: " + str.tostring(math.round(monthlyReturn.peak, GetRoundingPrecision(monthlyReturn.peak))) + "%"
+                performance_table.cell(monthCol, year_index + 1, str.tostring(math.round(monthlyReturn.profit, GetRoundingPrecision(monthlyReturn.profit))), bgcolor=m_color, text_color=color.white, text_size=tableTextSize, tooltip=monthlyTip)
+    float percentReturn = (strategy.netprofit / strategy.initial_capital) * 100
+    float cagr = (math.pow((strategy.netprofit + strategy.initial_capital) / strategy.initial_capital, 1 / yearlyReturns.size()) - 1) * 100
+    float mar = cagr / math.abs(worstDrawdown)
+    lastMonthRowIndex = startIndex < 5 ? 5 : startIndex
+    // Populate table data
+    float totalWinRate = (strategy.wintrades / strategy.closedtrades) * 100
+    float longWinRate = nz((totalLongTradeWins / totalLongTrades) * 100)
+    float shortWinRate = nz((totalShortTradeWins / totalShortTrades) * 100)
+    string returnTip = "Based on a total of " + str.tostring(strategy.closedtrades) + " trades" +
+         "\nWin Rate = " + str.tostring(math.round(totalWinRate, GetRoundingPrecision(totalWinRate))) + "%" +
+         "\nLong Trades = " + str.tostring(totalLongTrades) + " (Win " + str.tostring(math.round(longWinRate, GetRoundingPrecision(longWinRate))) + "%)" +
+         "\nShort Trades = " + str.tostring(totalShortTrades) + " (Win " + str.tostring(math.round(shortWinRate, GetRoundingPrecision(shortWinRate))) + "%)"
+    performance_table.cell(15, lastMonthRowIndex, "Return: " + (percentReturn > 0 ? "+" : "") + str.tostring(math.round(percentReturn, GetRoundingPrecision(percentReturn))) + "%", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_font_family=font.family_monospace, text_size=tableTextSize, tooltip=returnTip)
+    performance_table.cell(15, lastMonthRowIndex - 1, "MAR: " + str.tostring(mar, "#.##"), bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_font_family=font.family_monospace, text_size=tableTextSize, tooltip="Measure of return adjusted for risk: CAGR divided by Max Drawdown. Indicates how comfortable the system might be to trade. Higher than 0.5 is ideal, 1.0 and above is very good, and anything 3.0 or above should be considered suspicious.")
+    performance_table.cell(15, lastMonthRowIndex - 2, "DD Bars: " + str.tostring(maxDrawdownBars), bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_font_family=font.family_monospace, text_size=tableTextSize, tooltip="Average Drawdown Bars: " + str.tostring(totalDrawdownBars.avg(), "#.#") + "\n\nThis is how many bars it took to recover the longest drawdown (note: this is different to the MAX drawdown, and represents time drawdown)")
+    performance_table.cell(15, lastMonthRowIndex - 3, "MaxDD: " + str.tostring(math.round(worstDrawdown, GetRoundingPrecision(worstDrawdown))) + "%", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_font_family=font.family_monospace, text_size=tableTextSize, tooltip="Average Drawdown: " + str.tostring(totalDrawdowns.avg(), "#.##") + "%\n\nThis number is different to the Strategy Tester because this number is based on closed trade equity while the Tester's MaxDD is based on open equity.")
+    performance_table.cell(15, lastMonthRowIndex - 4, "CAGR: " + (cagr > 0 ? "+" : "") + str.tostring(math.round(cagr, GetRoundingPrecision(cagr))) + "%", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_font_family=font.family_monospace, text_size=tableTextSize, tooltip="Compounded annual growth rate")
+    performance_table.cell(15, lastMonthRowIndex - 5, "REALIZED P&L", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_font_family=font.family_monospace, text_size=tableTextSize, tooltip="These numbers are based on Realized equity (closed trades)")
+// } END MONTHLY TABLE
+/////////// END OF PERFORMANCE TABLE CODE. ///////////
+Expand (410 lines)

@@ -1,0 +1,136 @@
+Script Name: Lawyers Trend Pro Strategy
+Author: ErdemDemir
+Description: This indicator basilcy has 1 line
+
+This indicator basicly using 2 different calculations average.
+
+And you can see this average as line on this script.
+
+ This line has 2 functions 
+
+ 1. Buy and Sell Strategy 
+
+-İf the line colored BLUE this means you can BUY (Long)
+
+-İf the line colored RED this means you can SELL (Short)
+
+  
+
+
+As you can see the picture you can...
+PineScript code:
+
+Pine Script™ strategy
+Lawyers Trend Pro Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ErdemDemir
+//@version=4
+strategy("Lawyers Trend Pro Strategy", shorttitle="Lawyers Trend Pro Strategy", overlay=true)
+src = close
+mult = 2.0
+basis = sma(src, 20)
+dev = mult * stdev(src, 20)
+upper = basis + dev
+lower = basis - dev
+offset = 0
+lower2 = lowest(20)
+upper2 = highest(20)
+basis2 = avg(upper2, lower2)
+MB= (basis+basis2)/2
+col1=close>MB
+col3=MB>close
+colorE = col1 ? color.blue : col3 ? color.red : color.yellow
+p3=plot(MB, color=colorE, linewidth=3)
+// Deternine if we are currently LONG
+isLong = false
+isLong := nz(isLong[1], false)
+// Determine if we are currently SHORT
+isShort = false
+isShort := nz(isShort[1], false)
+// Buy only if the buy signal is triggered and we are not already long
+buySignal = not isLong and crossover(close,MB)
+// Sell only if the sell signal is triggered and we are not already short
+sellSignal= not isShort and crossover(MB,close)
+if (buySignal)
+    isLong := true
+    isShort := false
+if (sellSignal)
+    isLong := false
+    isShort := true
+/// LONG
+strategy.entry("long", true , when = buySignal, comment="Open Long")
+strategy.close("long", when=sellSignal, comment = "Close Long")
+/// SHORT
+strategy.entry("short", false,  when = sellSignal, comment="Open Short")
+strategy.close("short", when=buySignal, comment = "Close Short")
+Expand (69 lines)

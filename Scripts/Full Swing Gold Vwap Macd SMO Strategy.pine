@@ -1,0 +1,118 @@
+Script Name: Full Swing Gold Vwap Macd SMO Strategy
+Author: exlux99
+Description: This is a full strategy designed for gold market using 12h timeframe chart.
+
+Its components are:
+VWAP monthly
+SMO oscillator
+MACD histogram
+
+
+Rules for entry:
+For long: when enter when close of the candle is above vwap monthly, current histogram is higher than the previous one and SMO oscillator is above 0
+For long: when enter when close of the candle is below...
+PineScript code:
+
+Pine Script™ strategy
+Full Swing Gold Vwap Macd SMO Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © exlux99
+//@version=4
+strategy("VWAP Gold strategy", overlay = true, default_qty_type = strategy.percent_of_equity, default_qty_value = 10000, calc_on_every_tick = true, commission_type = strategy.commission.percent, commission_value = 0.005)
+source = input(low)
+//vwap monthly
+timeframeM = time("M")
+beginningM = na(timeframeM[1]) or timeframeM > timeframeM[1]
+sumsourceM = source * volume
+sumVolM = volume
+sumsourceM := beginningM ? sumsourceM : sumsourceM + sumsourceM[1]
+sumVolM := beginningM ? sumVolM : sumVolM + sumVolM[1]
+vwapMonthly= sumsourceM / sumVolM
+//macd
+fast_length = input(title="Fast Length", type=input.integer, defval=12)
+slow_length = input(title="Slow Length", type=input.integer, defval=26)
+src = input(title="Source", type=input.source, defval=close)
+signal_length = input(title="Signal Smoothing", type=input.integer, minval = 1, maxval = 50, defval = 9)
+fast_ma = ema(src, fast_length)
+slow_ma = ema(src, slow_length)
+macd = fast_ma - slow_ma
+signal =  ema(macd, signal_length)
+hist = macd - signal
+//SMO
+longlen = input(22, minval=1, title="Long Length SMO")
+shortlen = input(6, minval=1, title="Short Length SMO")
+siglen = input(5, minval=1, title="Signal Line Length SMO")
+erg = tsi(close, shortlen, longlen)
+sig = ema(erg, siglen)
+osc = erg - sig
+shortCondition =  close < vwapMonthly and hist < hist[1] and osc < 0
+longCondition =  close > vwapMonthly and hist> hist[1] and osc > 0
+tplong=input(0.085, step=0.005, title="Take profit % for long")
+sllong=input(0.03, step=0.005, title="Stop loss % for long")
+tpshort=input(0.05, step=0.005, title="Take profit % for short")
+slshort=input(0.025, step=0.005, title="Stop loss % for short")
+strategy.entry("long",1,when=longCondition)
+strategy.entry("short",0,when=shortCondition)
+strategy.exit("short_tp/sl", "long", profit=close * tplong / syminfo.mintick, loss=close * sllong / syminfo.mintick, comment='LONG EXIT',  alert_message = 'closeshort')
+strategy.exit("short_tp/sl", "short", profit=close * tpshort / syminfo.mintick, loss=close * slshort / syminfo.mintick, comment='SHORT EXIT',  alert_message = 'closeshort')
+Expand (59 lines)

@@ -1,0 +1,228 @@
+Script Name: Key Performance Indicator
+Author: TechnicusCapital
+Description: We are happy to introduce the Key Performance Indicator by Detlev Matthes. This is an amazing tool to quantify the efficiency of a trading system and identify potential spots of improvement.
+
+
+ Abstract 
+A key performance indicator with high explanatory value for the quality of trading systems is introduced. Quality is expressed as an indicator and comprises the...
+PineScript code:
+
+Pine Script™ strategy
+Key Performance Indicator
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+//@version=5
+strategy("Key Performance Indicator", overlay = true, initial_capital = 0)
+Round(num) =>
+    math.round(num, 2)
+// -----------------------------------------------------------------------------------------------------------------------------
+start_date = input.time(timestamp("1 Jul 1899"), title="Start Date")
+gc = close > open
+rc = close < open
+var sl_price = float(na)
+var tgt_price = float(na)
+var entry_price = float(na)
+long_cond  = gc and gc[1] and gc[2] and strategy.position_size == 0
+short_cond = rc and rc[1] and rc[2] and strategy.position_size == 0
+if time > start_date
+    if long_cond
+        strategy.entry("Long Entry", strategy.long )
+        sl_price  := low
+        tgt_price  := close + (close - low)*2
+    
+    if short_cond
+        strategy.entry("Short Entry", strategy.short )
+        sl_price  := high
+        tgt_price  := close - (high - close)*2
+strategy.exit("Long Exit",  "Long Entry",  stop = sl_price , limit = tgt_price )
+strategy.exit("Short Exit", "Short Entry", stop = sl_price , limit = tgt_price)
+// ------------------------------------------------------------------------------------------------------------------------------
+systemPnL = strategy.netprofit
+totalMaxOpenTradePnl = 0.0
+totalMinOpenTradePnl = 0.0
+for idx = 0 to strategy.closedtrades - 1
+    totalMaxOpenTradePnl := totalMaxOpenTradePnl + Round(strategy.closedtrades.max_runup(idx))
+    totalMinOpenTradePnl := totalMinOpenTradePnl + Round(strategy.closedtrades.max_drawdown(idx))
+openPnLRatio    = Round(totalMaxOpenTradePnl/(totalMaxOpenTradePnl + totalMinOpenTradePnl))
+profitTakingEff = Round(systemPnL/totalMaxOpenTradePnl)
+// --------------------------------------------------------------------------------------------------------------------------------------
+var highestEquity = strategy.initial_capital
+highestEquity := math.max(highestEquity, strategy.initial_capital + strategy.netprofit)
+equity = strategy.initial_capital + strategy.netprofit
+drawdown = highestEquity - equity
+var OpenMaxDrawdown = 0.0
+OpenMaxDrawdown := math.max(OpenMaxDrawdown, drawdown)
+var closedMaxDDArr = array.new_float(na)
+if highestEquity > highestEquity[1]
+    array.push(closedMaxDDArr, OpenMaxDrawdown)
+    OpenMaxDrawdown := 0
+totalClosedMaxDD = array.sum(closedMaxDDArr)
+maxDUDDRatio = nz(Round(highestEquity / (highestEquity + totalClosedMaxDD + OpenMaxDrawdown)))
+// ----------------------------------------------------------------------------------------------------------------------------------------
+ddEquity = 0.0
+equityValArr = array.new_float(na)
+realDistArr = array.new_float(na)
+fRealDistArr = array.new_float(na)
+idealDistArr = array.new_float(na)
+absDistanceArr = array.new_float(na)
+for idx = 0 to strategy.closedtrades - 1
+    ddEquity := ddEquity + Round(strategy.closedtrades.profit(idx))
+    array.push(equityValArr, ddEquity)
+equityHigh = 0.0
+for row = 0 to array.size(equityValArr) - 1 by 1
+    equityHigh := math.max(equityHigh, array.get(equityValArr, row) )
+    i = array.indexof(equityValArr, equityHigh) + 1
+    array.push(realDistArr, i)
+if array.size(realDistArr) > 0
+    for idx = 0 to array.size(realDistArr) - 1 by 1
+        if not(array.includes(fRealDistArr, array.get(realDistArr, idx)))
+            array.push(fRealDistArr, array.get(realDistArr, idx))
+distance = int(array.size(equityValArr) / array.size(fRealDistArr))
+for i = 0 to array.size(fRealDistArr) - 1
+    array.push(idealDistArr, distance + i*distance)
+for i = 0 to array.size(fRealDistArr) - 1
+    array.push(absDistanceArr, math.abs(array.get(fRealDistArr, i) - array.get(idealDistArr, i) ) )
+m = strategy.closedtrades
+n = array.size(fRealDistArr)
+maxDrawupDensity = Round(1 - array.sum(absDistanceArr)/m/n)
+kpi = math.avg(profitTakingEff, openPnLRatio, maxDrawupDensity, maxDUDDRatio)
+table perfTable = table.new(position.top_right, 2, 6, border_color = color.yellow, border_width = 1)
+table.cell(perfTable, 0, 0, "Aspect",       text_color = color.white)
+table.cell(perfTable, 1, 0, "Aspect Value", text_color = color.white)   
+table.cell(perfTable, 0, 1, "Profit-taking system efficiency", text_color = color.white)
+table.cell(perfTable, 1, 1, str.tostring(profitTakingEff), text_color = color.green)
+table.cell(perfTable, 0, 2, "Open profit/loss system ratio", text_color = color.white)
+table.cell(perfTable, 1, 2, str.tostring(openPnLRatio), text_color = color.green)
+table.cell(perfTable, 0, 3, "MaxDrawup density", text_color = color.white)
+table.cell(perfTable, 1, 3, str.tostring(maxDrawupDensity), text_color = color.green)
+table.cell(perfTable, 0, 4, "MaxDrawup/Drawdown Ratio", text_color = color.white)
+table.cell(perfTable, 1, 4, str.tostring(maxDUDDRatio), text_color = color.green)
+table.cell(perfTable, 0, 5, "KPI", text_color = color.white)
+table.cell(perfTable, 1, 5, str.tostring(kpi), text_color = color.red)
+Expand (127 lines)

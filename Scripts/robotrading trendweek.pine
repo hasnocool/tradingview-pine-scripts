@@ -1,0 +1,81 @@
+Script Name: robotrading trendweek
+Author: ROBO_Trading
+Description: The blue line is the closing price of the week.
+
+ Strategy 
+
+If the price is above the blue line - this is uptrend.
+If the price is below the blue line - it is downtrend.
+
+If the low candlestick is above the line - you should open a long position (and close a short position, if open).
+If the high candle is below the line - you should open a short position (and...
+PineScript code:
+
+Pine Script™ strategy
+robotrading trendweek
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+//@version=4
+//Noro
+//2019
+strategy(title="robotrading trendweek", shorttitle="trendweek", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100, pyramiding=0)
+//Settings 
+needlong = input(true, title="Long")
+needshort = input(true, title="Short")
+capital = input(100, minval=1, maxval=10000, title="Capital, %")
+startTime = input(defval = timestamp("01 Jan 2000 00:00 +0000"), title = "Start Time", type = input.time, inline = "time1")
+finalTime = input(defval = timestamp("31 Dec 2099 23:59 +0000"), title = "Final Time", type = input.time, inline = "time1")
+//Week
+w = security(syminfo.tickerid, 'W', close)
+plot(w, linewidth = 3)
+//Trend
+trend = 0
+trend := low > w ? 1 : high < w ? -1 : trend[1]
+//Signals
+up = trend == 1 and trend[1] == -1
+dn = trend == -1 and trend[1] == 1
+//Trading
+lot = strategy.equity / close * capital / 100
+if up
+    strategy.entry("Long", strategy.long, needlong == false ? 0 : lot, when = time > startTime and time < finalTime)
+if dn
+    strategy.entry("Short", strategy.short, needshort == false ? 0 : lot, when = time > startTime and time < finalTime)
+if time > finalTime
+    strategy.close_all()
+    strategy.cancel("Long")
+    strategy.cancel("Short")
+Expand (35 lines)

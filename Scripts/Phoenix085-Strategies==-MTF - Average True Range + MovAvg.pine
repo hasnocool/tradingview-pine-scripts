@@ -1,0 +1,248 @@
+Script Name: Phoenix085-Strategies==-MTF - Average True Range + MovAvg
+Author: Phoenix085
+Description: FIRSTLY, Here are a few who have influenced my pinescripting immensely recently: 
+@JustUncleL
+@BigBitsIO
+@TheArtofTrading
+@QuantNomad
+@SquigglesNiggles and many many many more.
+
+Overview:
+> This indicator is a simple crossover of Moving Averages.
+> In addition I am using ATR rising as an indication for Trending Price.
+> The entry is made once the smaller moving...
+PineScript code:
+
+Pine Script™ strategy
+Phoenix085-Strategies==>MTF - Average True Range + MovAvg
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Phoenix085
+//@version=4
+strategy("Phoenix085-Strategy_ATR+MovAvg", shorttitle="Strategy_ATR+MovAvg", overlay=true)
+// // ######################>>>>>>>>>>>>Inputs<<<<<<<<<<<#########################
+// // ######################>>>>>>>>>>>>Strategy Inputs<<<<<<<<<<<#########################
+TakeProfitPercent = input(50, title="Take Profit %", type=input.float, step=.25)
+StopLossPercent = input(5, title="Stop Loss %", type=input.float, step=.25)
+ProfitTarget = (close * (TakeProfitPercent / 100)) / syminfo.mintick
+LossTarget = (close * (StopLossPercent / 100)) / syminfo.mintick
+len_S = input(title="Shorter MA Length", defval=8, minval=1)
+len_L = input(title="Longer MA Length", defval=38, minval=1)
+TF = input(defval="", title="Session TF for calc only", type=input.session,options=[""])
+TF_ = "1"
+if TF == "3"
+    TF_ == "1"
+else 
+    if TF == "5" 
+        TF_ == "3"
+    else 
+        if TF == "15"
+            TF_ == "5"
+        else 
+            if TF == "30"
+                TF_ == "15"
+            else 
+                if TF == "1H"
+                    TF_ == "30"
+                else 
+                    if TF == "2H"
+                        TF_ == "1H"
+                    else 
+                        if TF == "4H"
+                            TF_ == "3H"
+                        else 
+                            if TF == "1D"
+                                TF_ == "4H"
+                            else
+                                if TF == "1W"
+                                    TF_ == "1H"
+                                else 
+                                    if TF == "1M"
+                                        TF_ == "1W"
+                                    else
+                                        if TF =="3H"
+                                            TF_ == "2H"
+Src = security(syminfo.tickerid, TF, close[1], barmerge.lookahead_on)
+Src_ = security(syminfo.tickerid, TF_, close, barmerge.lookahead_off)
+// ######################>>>>>>>>>>>>ATR Inputs<<<<<<<<<<<#########################
+length = input(title="ATR Length", defval=4, minval=1)
+smoothing = input(title="ATR Smoothing", defval="RMA", options=["RMA", "SMA", "EMA", "WMA"])
+// //######################>>>>>>>>>>>>Custom Functions Declarations<<<<<<<<<<<#########################
+// ######################>>>>>>>>>>>>ATR<<<<<<<<<<<#########################
+ma_function(source, length) =>
+    if smoothing == "RMA"
+        rma(Src, length)
+    else
+        if smoothing == "SMA"
+            sma(Src, length)
+        else
+            if smoothing == "EMA"
+                ema(Src, length)
+            else
+                wma(Src, length)
+ATR=ma_function(tr(true), length)
+// //######################>>>>>>>>>>>>Conditions<<<<<<<<<<<#########################
+ATR_Rise = ATR>ATR[1] and ATR[1]<ATR[2] and ATR[2]<ATR[3]
+longCondition = crossover(sma(Src_, len_S), sma(Src_, len_L)) and sma(Src_, len_L) < sma(Src_, len_S) and (sma(Src_, len_S) < Src_[1])
+shortCondition = crossunder(sma(Src_, len_S), sma(Src_, len_L)) and sma(Src_, len_L) > sma(Src_, len_S) 
+plot(sma(Src_, len_S), color=color.lime, transp=90)
+col = longCondition ? color.lime : shortCondition ? color.red : color.gray
+plot(sma(Src_, len_L),color=col,linewidth=2)
+bool IsABuy = longCondition 
+bool IsASell = shortCondition
+// // ######################>>>>>>>>>>>>Strategy<<<<<<<<<<<#########################
+testStartYear = input(2015, "Backtest Start Year", minval=1980)
+testStartMonth = input(1, "Backtest Start Month", minval=1, maxval=12)
+testStartDay = input(1, "Backtest Start Day", minval=1, maxval=31)
+testPeriodStart = timestamp(testStartYear, testStartMonth, testStartDay, 0, 0)
+testStopYear = input(9999, "Backtest Stop Year", minval=1980)
+testStopMonth = input(12, "Backtest Stop Month", minval=1, maxval=12)
+testStopDay = input(31, "Backtest Stop Day", minval=1, maxval=31)
+testPeriodStop = timestamp(testStopYear, testStopMonth, testStopDay, 0, 0)
+testPeriod() =>
+    time >= testPeriodStart and time <= testPeriodStop ? true : false
+inDateRange = time >= testPeriodStart and time <= testPeriodStop
+bgcolor(inDateRange ? color.green : na, 90)
+// //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<//
+// // ######################>>>>>>LongEntries<<<<<<<#########################
+if inDateRange and ATR_Rise and IsABuy 
+    strategy.entry("longCondition",true,when = longCondition)
+    strategy.close("shortCondition")
+    strategy.exit("Take Profit or Stop Loss", "longCondition",trail_points = close * 0.05 / syminfo.mintick ,trail_offset = close * 0.05 / syminfo.mintick, loss = LossTarget)
+// strategy.risk.max_drawdown(10, strategy.percent_of_equity)
+    
+// // ######################>>>>>>ShortEntries<<<<<<<#########################
+if inDateRange and ATR_Rise and IsASell  
+    strategy.entry("shortCondition",false,when = shortCondition)
+    strategy.exit("Take Profit or Stop Loss", "shortCondition",trail_points = close * 0.05 / syminfo.mintick ,trail_offset = close * 0.05 / syminfo.mintick, loss = LossTarget)
+    strategy.close("longCondition")
+Expand (129 lines)

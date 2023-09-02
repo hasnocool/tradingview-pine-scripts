@@ -1,0 +1,114 @@
+Script Name: Combined EMA & MA crossovers [CDI]
+Author: JMLSlop
+Description: Implementation of the strategy of moving averages crossings combining two fast   and two slow   that are used to confirm the entry.
+
+The purpose is to be able to quickly see a backtesting of the strategy by easily configuring the profit / loss percentage. In this script the profit percentage is used for the loss percentage as well.
+
+Additionally you can see the...
+PineScript code:
+
+Pine Script™ strategy
+Combined EMA & MA crossovers [CDI]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © JMLSlop
+//@version=4
+src = close
+strategy("Crossover moving averages", shorttitle="Cross MA-EMA", overlay=true, calc_on_order_fills=false)
+// first fast EMA
+len = input(8, "Length", type=input.integer, minval=1)
+doma1 = input(true, title="EMA")
+out1 = ema(src, len) 
+//Second fast EMA
+len2 = input(21, minval=1, title="Length")
+doma2 = input(true, title="EMA")
+out2 = ema(src, len2)
+//First slow MA
+len3 = input(50, minval=1, title="Length")
+doma3 = input(true, title="SMA")
+out3 = sma(src, len3)
+//Second slow MA
+len4 = input(200, minval=1, title="Length")
+doma4 = input(true, title="SMA")
+out4 = sma(src, len4)
+// Profit
+profit = input(8, "Profit/lost %", type=input.float, minval=1) * 0.01
+plot(doma1 and out1 ? out1: na, color=color.blue, linewidth=1, title="1st EMA")
+plot(doma2 and out2 ? out2: na, color=color.red, linewidth=1, title="2nd EMA")
+plot(doma3 and out3 ? out3: na, color=color.green, linewidth=2, title="1st MA")
+plot(doma4 and out4 ? out4: na, color=color.orange, linewidth=3, title="2nd MA")
+// Orders config
+takeProfitPrice =
+     (strategy.position_size > 0) ? strategy.position_avg_price + open*profit : (strategy.position_size < 0) ? strategy.position_avg_price - (open*profit) : na
+longStopPrice  = strategy.position_avg_price * (1 - profit)
+shortStopPrice = strategy.position_avg_price * (1 + profit)
+longCondition2 = (out2>out3 and (crossover(out1, out4) or crossover(out1[1], out4[1]) or crossover(out1[2], out4[2]) or (crossover(out1[3], out4[3]))) or (out2>out3 and (crossover(out1, out3) or crossover(out1[1], out3[1]) or crossover(out1[2], out3[2]) or crossover(out1[3], out3[3]))))
+if (longCondition2)
+    strategy.entry("Enter L", strategy.long)
+shortCondition2 = (out2<out3 and (crossunder(out1, out4) or crossunder(out1[1], out4[1]) or crossunder(out1[2], out4[2]) or crossunder(out1[3], out4[3]))) or (out2<out3 and (crossunder(out1, out3) or crossunder(out1[1], out3[1]) or crossunder(out1[2], out3[2]) or crossunder(out1[3], out3[3])))
+if (shortCondition2)
+    strategy.entry("Enter S", strategy.short)
+if (strategy.position_size > 0)
+    strategy.exit("Exit L", limit=takeProfitPrice, stop=longStopPrice)
+if (strategy.position_size < 0)
+    strategy.exit("Exit S", limit=takeProfitPrice, stop=shortStopPrice)
+Expand (59 lines)

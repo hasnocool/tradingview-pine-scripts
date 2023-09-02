@@ -1,0 +1,214 @@
+Script Name: JS-TechTrading- Supertrend-Strategy_Basic version
+Author: JS_TechTrading
+Description: Are you looking for a reliable and profitable algorithmic trading strategy for TradingView? If so, you might be interested in our Supertrend basic strategy, which is based on three powerful indicators: Supertrend (ATR), RSI and EMA.
+
+Supertrend is a trend-following indicator that helps you identify the direction and strength of the market. It also gives you clear...
+PineScript code:
+
+Pine Script™ strategy
+JS-TechTrading: Supertrend-Strategy_Basic version
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © JS_TechTrading
+//@version=5
+strategy("Supertrend", overlay=true,default_qty_type =strategy.percent_of_equity,default_qty_value = 1,process_orders_on_close = false)
+// group string////
+var string group_text000="Choose Strategy"
+var string group_text0="Supertrend Settings"
+var string group_text0000="Ema Settings"
+var string group_text00="Rsi Settings"
+var string group_text1="Backtest Period"
+var string group_text2="Trade Direction"
+// var string group_text3="Quantity Settings"
+var string group_text4="Sl/Tp Settings"
+////////////////////
+option_ch=input.string('Pullback',title = "Type Of Strategy",options =['Pullback','Simple'])
+//atr period input supertrend 
+atrPeriod = input(10, "ATR Length",group = group_text0)
+factor = input.float(3.0, "Factor", step = 0.01,group=group_text0)
+[supertrend, direction] = ta.supertrend(factor, atrPeriod)
+bodyMiddle = plot((open + close) / 2, display=display.none)
+upTrend = plot(direction < 0 ? supertrend : na, "Up Trend", color = color.green, style=plot.style_linebr)
+downTrend = plot(direction < 0? na : supertrend, "Down Trend", color = color.red, style=plot.style_linebr)
+fill(bodyMiddle, upTrend, color.new(color.green, 90), fillgaps=false)
+fill(bodyMiddle, downTrend, color.new(color.red, 90), fillgaps=false)
+long=direction < 0 ? supertrend : na
+short=direction < 0? na : supertrend
+longpos=false
+shortpos=false
+longpos :=long?true :short?false:longpos[1]
+shortpos:=short?true:long?false:shortpos[1]
+fin_pullbuy= (ta.crossunder(low[1],long) and long and high>high[1])
+fin_pullsell=(ta.crossover(high[1],short) and short and low<low[1]) 
+//Ema 1
+on_ma=input.bool(true,"Ema Condition On/Off",group=group_text0000)
+ma_len= input.int(200, minval=1, title="Ema Length",group = group_text0000)
+ma_src = input.source(close, title="Ema Source",group = group_text0000)
+ma_out = ta.ema(ma_src, ma_len)
+ma_buy=on_ma?close>ma_out?true:false:true
+ma_sell=on_ma?close<ma_out?true:false:true
+// rsi indicator and condition
+// Get user input
+en_rsi    = input.bool(true,"Rsi Condition On/Off",group = group_text00)
+rsiSource = input(title='RSI Source', defval=close,group = group_text00)
+rsiLength = input(title='RSI Length', defval=14,group = group_text00)
+rsiOverbought = input(title='RSI BUY Level', defval=50,group = group_text00)
+rsiOversold   = input(title='RSI SELL Level', defval=50,group = group_text00)
+// Get RSI value
+rsiValue = ta.rsi(rsiSource, rsiLength)
+rsi_buy=en_rsi?rsiValue>=rsiOverbought ?true:false:true
+rsi_sell=en_rsi?rsiValue<=rsiOversold?true:false:true
+// final condition
+buy_cond=option_ch=='Simple'?long and not(longpos[1]) and rsi_buy and ma_buy:option_ch=='Pullback'?fin_pullbuy and rsi_buy and ma_buy:na
+sell_cond=option_ch=='Simple'?short and not(shortpos[1]) and rsi_sell and ma_sell:option_ch=='Pullback'?fin_pullsell and rsi_sell and ma_sell:na
+//backtest engine
+start = input.time(timestamp('2005-01-01'), title='Start calculations from',group=group_text1)
+end=input.time(timestamp('2045-03-01'), title='End calculations',group=group_text1)
+time_cond = time >= start and time<=end
+// Make input option to configure trade direction
+tradeDirection = input.string(title='Trade Direction', options=['Long', 'Short', 'Both'], defval='Both',group = group_text2)
+// Translate input into trading conditions
+longOK  = (tradeDirection == "Long") or (tradeDirection == "Both")
+shortOK = (tradeDirection == "Short") or (tradeDirection == "Both")
+// strategy start
+if buy_cond and longOK and time_cond and strategy.position_size==0
+    strategy.entry('long',direction = strategy.long)
+if sell_cond and shortOK and time_cond and strategy.position_size==0
+    strategy.entry('short',direction =strategy.short)
+// fixed percentage based stop loss and take profit 
+// User Options to Change Inputs (%)
+stopPer = input.float(1.0,step=0.10, title='Stop Loss %',group =group_text4) / 100
+takePer = input.float(1.0,step =0.10, title='Take Profit %',group =group_text4) / 100
+// Determine where you've entered and in what direction
+longStop  = strategy.position_avg_price * (1 - stopPer)
+shortStop = strategy.position_avg_price * (1 + stopPer)
+shortTake = strategy.position_avg_price * (1 - takePer)
+longTake  = strategy.position_avg_price * (1 + takePer)
+if strategy.position_size > 0
+    strategy.exit(id='Close Long',stop=longStop, limit=longTake)
+if strategy.position_size < 0
+    strategy.exit(id='Close Short',stop=shortStop, limit=shortTake)
+//PLOT FIXED SLTP LINE
+plot(strategy.position_size > 0 ? longStop : na, style=plot.style_linebr, color=color.new(color.red, 0), linewidth=1, title='Long Fixed SL')
+plot(strategy.position_size < 0 ? shortStop :na, style=plot.style_linebr, color=color.new(color.red, 0), linewidth=1, title='Short Fixed SL')
+plot(strategy.position_size > 0 ? longTake : na, style=plot.style_linebr, color=color.new(color.green, 0), linewidth=1, title='Long Take Profit')
+plot(strategy.position_size < 0 ? shortTake : na, style=plot.style_linebr, color=color.new(color.green, 0), linewidth=1, title='Short Take Profit')
+//
+Expand (117 lines)

@@ -1,0 +1,619 @@
+Script Name: Multi Trend Cross Strategy Template
+Author: TradeAutomation
+Description: Today I am sharing with the community trend cross strategy template that incorporates any combination of over 20 built in indicators. Some of these indicators are in the Pine library, and some have been custom coded and contributed over time by the beloved Pine Coder community. Identifying a trend cross is a common trend following strategy and a common custom-code...
+PineScript code:
+
+Pine Script™ strategy
+Multi Trend Cross Strategy Template
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// @version=5
+// Author = TradeAutomation
+strategy(title="Multi Trend Cross Strategy Template", shorttitle="Multi Trend Cross Strategy", process_orders_on_close=true, overlay=true, commission_type=strategy.commission.cash_per_contract, commission_value=0.0035, initial_capital = 1000000, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+// Backtest Date Range Inputs // 
+StartTime = input.time(defval=timestamp('01 Jan 2000 05:00 +0000'), group="Date Range", title='Start Time')
+EndTime = input.time(defval=timestamp('01 Jan 2099 00:00 +0000'), group="Date Range", title='End Time')
+InDateRange = time>=StartTime and time<=EndTime
+// Trend Selector //
+TrendSelectorInput = input.string(title="Fast Trend Selector", defval="EMA", group="Core Settings", options=["ALMA", "DEMA", "DSMA", "EMA", "HMA", "JMA", "KAMA", "Linear Regression (LSMA)", "RMA", "SMA", "SMMA", "Price Source", "TEMA", "TMA", "VAMA", "VIDYA", "VMA", "VWMA", "WMA", "WWMA", "ZLEMA"], tooltip="Select your fast trend")
+TrendSelectorInput2 = input.string(title="Slow Trend Selector", defval="EMA", group="Core Settings", options=["ALMA", "DEMA", "DSMA", "EMA", "HMA", "JMA", "KAMA", "Linear Regression (LSMA)", "RMA", "SMA", "SMMA", "Price Source", "TEMA", "TMA", "VAMA", "VIDYA", "VMA", "VWMA", "WMA", "WWMA", "ZLEMA"], tooltip="Select your slow trend")
+src = input.source(close, "Price Source", group="Core Settings", tooltip="This is the price source being used for the trends to calculate based on")
+length = input.int(10, "Fast Trend Length", group="Core Settings", step=5, tooltip="A long is entered when the selected fast trend crosses over the selected slow trend")
+length2 = input.int(200, "Slow Trend Length", group="Core Settings", step=5, tooltip="A long is entered when the selected fast trend crosses over the selected slow trend")
+LineWidth = input.int(1, "Line Width", group="Core Settings", tooltip="This is the width of the line plotted that represents the selected trend")
+// Individual Moving Average / Regression Setting //
+AlmaOffset = input.float(0.85, "ALMA Offset", group="Individual Trend Settings", tooltip="This only applies when ALMA is selected")
+AlmaSigma = input.float(6, "ALMA Sigma", group="Individual Trend Settings", tooltip="This only applies when ALMA is selected")
+ATRFactor = input.float(3, "ATR Multiplier For SuperTrend", group="Individual Trend Settings", tooltip="This only applies when SuperTrend is selected")
+ATRLength = input.int(12, "ATR Length For SuperTrend", group="Individual Trend Settings", tooltip="This only applies when SuperTrend is selected")
+ssfLength = input.int(20, "DSMA Super Smoother Filter Length", minval=1, tooltip="This only applies when EDSMA is selected", group="Individual Trend Settings")
+ssfPoles = input.int(2, "DSMA Super Smoother Filter Poles", options=[2, 3], tooltip="This only applies when EDSMA is selected", group="Individual Trend Settings")
+JMApower = input.int(2, "JMA Power Parameter", group="Individual Trend Settings", tooltip="This only applies when JMA is selected")
+phase = input.int(-45, title="JMA Phase Parameter", step=10, minval=-110, maxval=110, group="Individual Trend Settings", tooltip="This only applies when JMA is selected")
+KamaAlpha = input.float(3, "KAMA's Alpha", minval=1,step=0.5, group="Individual Trend Settings", tooltip="This only applies when KAMA is selected")
+LinRegOffset = input.int(0, "Linear Regression Offset", group="Individual Trend Settings", tooltip="This only applies when Linear Regression is selected")
+VAMALookback =input.int(12, "VAMA Volatility lookback", group="Individual Trend Settings", tooltip="This only applies when VAMA is selected")
+// Trend Indicators With Library Functions //
+ALMA = ta.alma(src, length, AlmaOffset, AlmaSigma) 
+EMA = ta.ema(src, length)
+HMA = ta.hma(src, length)
+LinReg = ta.linreg(src, length, LinRegOffset)
+RMA = ta.rma(src, length)
+SMA = ta.sma(src, length)
+VWMA = ta.vwma(src, length)
+WMA = ta.wma(src, length)
+ALMA2 = ta.alma(src, length2, AlmaOffset, AlmaSigma) 
+EMA2 = ta.ema(src, length2)
+HMA2 = ta.hma(src, length2)
+LinReg2 = ta.linreg(src, length2, LinRegOffset)
+RMA2 = ta.rma(src, length2)
+SMA2 = ta.sma(src, length2)
+VWMA2 = ta.vwma(src, length2)
+WMA2 = ta.wma(src, length2)
+// Additional Trend Indicators Built In And/Or Open Sourced //
+//DEMA
+de1 = ta.ema(src, length)
+de2 = ta.ema(de1, length)
+DEMA = 2 * de1 - de2
+de3 = ta.ema(src, length2)
+de4 = ta.ema(de3, length2)
+DEMA2 = 2 * de3 - de4
+// Ehlers Deviation-Scaled Moving Average - DSMA [Everget]
+PI = 2 * math.asin(1)
+get2PoleSSF(src, length) =>
+    arg = math.sqrt(2) * PI / length
+    a1 = math.exp(-arg)
+    b1 = 2 * a1 * math.cos(arg)
+    c2 = b1
+    c3 = -math.pow(a1, 2)
+    c1 = 1 - c2 - c3
+    var ssf = 0.0
+    ssf := c1 * src + c2 * nz(ssf[1]) + c3 * nz(ssf[2])
+get3PoleSSF(src, length) =>
+    arg = PI / length
+    a1 = math.exp(-arg)
+    b1 = 2 * a1 * math.cos(1.738 * arg)
+    c1 = math.pow(a1, 2)
+    coef2 = b1 + c1
+    coef3 = -(c1 + b1 * c1)
+    coef4 = math.pow(c1, 2)
+    coef1 = 1 - coef2 - coef3 - coef4
+    var ssf = 0.0
+    ssf := coef1 * src + coef2 * nz(ssf[1]) + coef3 * nz(ssf[2]) + coef4 * nz(ssf[3])
+zeros = src - nz(src[2])
+avgZeros = (zeros + zeros[1]) / 2
+// Ehlers Super Smoother Filter 
+ssf = ssfPoles == 2
+     ? get2PoleSSF(avgZeros, ssfLength)
+     : get3PoleSSF(avgZeros, ssfLength)
+// Rescale filter in terms of Standard Deviations
+stdev = ta.stdev(ssf, length)
+scaledFilter = stdev != 0
+     ? ssf / stdev
+     : 0
+alpha1 = 5 * math.abs(scaledFilter) / length
+EDSMA = 0.0
+EDSMA := alpha1 * src + (1 - alpha1) * nz(EDSMA[1])
+get2PoleSSF2(src, length2) =>
+    arg = math.sqrt(2) * PI / length2
+    a1 = math.exp(-arg)
+    b1 = 2 * a1 * math.cos(arg)
+    c2 = b1
+    c3 = -math.pow(a1, 2)
+    c1 = 1 - c2 - c3
+    var ssf2 = 0.0
+    ssf2 := c1 * src + c2 * nz(ssf2[1]) + c3 * nz(ssf2[2])
+get3PoleSSF2(src, length2) =>
+    arg = PI / length2
+    a1 = math.exp(-arg)
+    b1 = 2 * a1 * math.cos(1.738 * arg)
+    c1 = math.pow(a1, 2)
+    coef2 = b1 + c1
+    coef3 = -(c1 + b1 * c1)
+    coef4 = math.pow(c1, 2)
+    coef1 = 1 - coef2 - coef3 - coef4
+    var ssf2 = 0.0
+    ssf2 := coef1 * src + coef2 * nz(ssf2[1]) + coef3 * nz(ssf2[2]) + coef4 * nz(ssf2[3])
+// Ehlers Super Smoother Filter 
+ssf2 = ssfPoles == 2
+     ? get2PoleSSF2(avgZeros, ssfLength)
+     : get3PoleSSF2(avgZeros, ssfLength)
+// Rescale filter in terms of Standard Deviations
+stdev2 = ta.stdev(ssf2, length2)
+scaledFilter2 = stdev2 != 0
+     ? ssf2 / stdev2
+     : 0
+alpha12 = 5 * math.abs(scaledFilter2) / length2
+EDSMA2 = 0.0
+EDSMA2 := alpha12 * src + (1 - alpha12) * nz(EDSMA2[1])
+//JMA [Everget]
+phaseRatio = phase < -100 ? 0.5 : phase > 100 ? 2.5 : phase / 100 + 1.5
+beta = 0.45 * (length - 1) / (0.45 * (length - 1) + 2)
+alpha = math.pow(beta, JMApower)
+var JMA = 0.0
+var e0 = 0.0
+e0 := (1 - alpha) * src + alpha * nz(e0[1])
+var e1 = 0.0
+e1 := (src - e0) * (1 - beta) + beta * nz(e1[1])
+var e2 = 0.0
+e2 := (e0 + phaseRatio * e1 - nz(JMA[1])) * math.pow(1 - alpha, 2) + math.pow(alpha, 2) * nz(e2[1])
+JMA := e2 + nz(JMA[1])
+beta2 = 0.45 * (length2 - 1) / (0.45 * (length2 - 1) + 2)
+alpha2 = math.pow(beta2, JMApower)
+var JMA2 = 0.0
+var e02 = 0.0
+e02 := (1 - alpha2) * src + alpha2 * nz(e02[1])
+var e12 = 0.0
+e12 := (src - e02) * (1 - beta2) + beta2 * nz(e12[1])
+var e22 = 0.0
+e22 := (e02 + phaseRatio * e12 - nz(JMA2[1])) * math.pow(1 - alpha2, 2) + math.pow(alpha2, 2) * nz(e22[1])
+JMA2 := e22 + nz(JMA2[1])
+//KAMA [Everget]
+var KAMA = 0.0
+fastAlpha = 2.0 / (KamaAlpha + 1)
+slowAlpha = 2.0 / 31
+momentum = math.abs(ta.change(src, length))
+volatility = math.sum(math.abs(ta.change(src)), length)
+efficiencyRatio = volatility != 0 ? momentum / volatility : 0
+smoothingConstant = math.pow((efficiencyRatio * (fastAlpha - slowAlpha)) + slowAlpha, 2)
+KAMA := nz(KAMA[1], src) + smoothingConstant * (src - nz(KAMA[1], src))
+var KAMA2 = 0.0
+momentum2 = math.abs(ta.change(src, length2))
+volatility2 = math.sum(math.abs(ta.change(src)), length2)
+efficiencyRatio2 = volatility2 != 0 ? momentum2 / volatility2 : 0
+smoothingConstant2 = math.pow((efficiencyRatio2 * (fastAlpha - slowAlpha)) + slowAlpha, 2)
+KAMA2 := nz(KAMA2[1], src) + smoothingConstant2 * (src - nz(KAMA2[1], src))
+//SMMA
+var SMMA = 0.0
+SMMA := na(SMMA[1]) ? ta.sma(src, length) : (SMMA[1] * (length - 1) + src) / length
+var SMMA2 = 0.0
+SMMA2 := na(SMMA2[1]) ? ta.sma(src, length2) : (SMMA2[1] * (length2 - 1) + src) / length2
+//TEMA
+t1 = ta.ema(src, length)
+t2 = ta.ema(t1, length)
+t3 = ta.ema(t2, length)
+TEMA = 3 * (t1 - t2) + t3
+t12 = ta.ema(src, length2)
+t22 = ta.ema(t12, length2)
+t32 = ta.ema(t22, length2)
+TEMA2 = 3 * (t12 - t22) + t32
+//TMA
+TMA = ta.sma(ta.sma(src, math.ceil(length / 2)), math.floor(length / 2) + 1)
+TMA2 = ta.sma(ta.sma(src, math.ceil(length2 / 2)), math.floor(length2 / 2) + 1)
+//VAMA [Duyck]
+mid=ta.ema(src,length)
+dev=src-mid
+vol_up=ta.highest(dev,VAMALookback)
+vol_down=ta.lowest(dev,VAMALookback)
+VAMA = mid+math.avg(vol_up,vol_down)
+mid2=ta.ema(src,length2)
+dev2=src-mid2
+vol_up2=ta.highest(dev2,VAMALookback)
+vol_down2=ta.lowest(dev2,VAMALookback)
+VAMA2 = mid2+math.avg(vol_up2,vol_down2)
+//VIDYA [KivancOzbilgic]
+var VIDYA=0.0
+VMAalpha=2/(length+1)
+ud1=src>src[1] ? src-src[1] : 0
+dd1=src<src[1] ? src[1]-src : 0
+UD=math.sum(ud1,9)
+DD=math.sum(dd1,9)
+CMO=nz((UD-DD)/(UD+DD))
+VIDYA := na(VIDYA[1]) ? ta.sma(src, length) : nz(VMAalpha*math.abs(CMO)*src)+(1-VMAalpha*math.abs(CMO))*nz(VIDYA[1])
+var VIDYA2=0.0
+VMAalpha2=2/(length2+1)
+ud12=src>src[1] ? src-src[1] : 0
+dd12=src<src[1] ? src[1]-src : 0
+UD2=math.sum(ud12,9)
+DD2=math.sum(dd12,9)
+CMO2=nz((UD2-DD2)/(UD2+DD2))
+VIDYA2 := na(VIDYA2[1]) ? ta.sma(src, length2) : nz(VMAalpha2*math.abs(CMO2)*src)+(1-VMAalpha2*math.abs(CMO2))*nz(VIDYA2[1])
+//VMA [LazyBear]
+sc = 1/length
+pdm = math.max((src - src[1]), 0)
+mdm = math.max((src[1] - src), 0)
+var pdmS = 0.0
+var mdmS = 0.0
+pdmS := ((1 - sc)*nz(pdmS[1]) + sc*pdm)
+mdmS := ((1 - sc)*nz(mdmS[1]) + sc*mdm)
+s = pdmS + mdmS
+pdi = pdmS/s
+mdi = mdmS/s
+var pdiS = 0.0
+var mdiS = 0.0
+pdiS := ((1 - sc)*nz(pdiS[1]) + sc*pdi)
+mdiS := ((1 - sc)*nz(mdiS[1]) + sc*mdi)
+d = math.abs(pdiS - mdiS)
+s1 = pdiS + mdiS
+var iS = 0.0
+iS := ((1 - sc)*nz(iS[1]) + sc*d/s1)
+hhv = ta.highest(iS, length) 
+llv = ta.lowest(iS, length) 
+d1 = hhv - llv
+vi = (iS - llv)/d1
+var VMA=0.0
+VMA := na(VMA[1]) ? ta.sma(src, length) : sc*vi*src + (1 - sc*vi)*nz(VMA[1])
+sc2 = 1/length2
+pdm2 = math.max((src - src[1]), 0)
+mdm2 = math.max((src[1] - src), 0)
+var pdmS2 = 0.0
+var mdmS2 = 0.0
+pdmS2 := ((1 - sc2)*nz(pdmS2[1]) + sc2*pdm2)
+mdmS2 := ((1 - sc2)*nz(mdmS2[1]) + sc2*mdm2)
+s2 = pdmS2 + mdmS2
+pdi2 = pdmS2/s2
+mdi2 = mdmS2/s2
+var pdiS2 = 0.0
+var mdiS2 = 0.0
+pdiS2 := ((1 - sc2)*nz(pdiS2[1]) + sc2*pdi2)
+mdiS2 := ((1 - sc2)*nz(mdiS2[1]) + sc2*mdi2)
+d2 = math.abs(pdiS2 - mdiS2)
+s12 = pdiS2 + mdiS2
+var iS2 = 0.0
+iS2 := ((1 - sc2)*nz(iS2[1]) + sc2*d2/s12)
+hhv2 = ta.highest(iS2, length) 
+llv2 = ta.lowest(iS2, length) 
+d12 = hhv2 - llv2
+vi2 = (iS2 - llv2)/d12
+var VMA2=0.0
+VMA2 := na(VMA2[1]) ? ta.sma(src, length2) : sc2*vi2*src + (1 - sc2*vi2)*nz(VMA2[1])
+//WWMA
+var WWMA=0.0
+WWMA := (1/length)*src + (1-(1/length))*nz(WWMA[1])
+var WWMA2=0.0
+WWMA2 := (1/length2)*src + (1-(1/length2))*nz(WWMA2[1])
+//Zero Lag EMA [KivancOzbilgic]
+EMA1a = ta.ema(src,length)
+EMA2a = ta.ema(EMA1a,length)
+Diff = EMA1a - EMA2a
+ZLEMA = EMA1a + Diff
+EMA12 = ta.ema(src,length2)
+EMA22 = ta.ema(EMA12,length2)
+Diff2 = EMA12 - EMA22
+ZLEMA2 = EMA12 + Diff2
+// Trend Mapping and Plotting //
+FastTrend = TrendSelectorInput == "ALMA" ? ALMA : TrendSelectorInput == "DEMA" ? DEMA : TrendSelectorInput == "DSMA" ? EDSMA : TrendSelectorInput == "EMA" ? EMA : TrendSelectorInput == "HMA" ? HMA : TrendSelectorInput == "JMA" ? JMA : TrendSelectorInput == "KAMA" ? KAMA : TrendSelectorInput == "Linear Regression (LSMA)" ? LinReg : TrendSelectorInput == "RMA" ? RMA : TrendSelectorInput == "SMA" ? SMA : TrendSelectorInput == "SMMA" ? SMMA : TrendSelectorInput == "Price Source" ? src : TrendSelectorInput == "TEMA" ? TEMA : TrendSelectorInput == "TMA" ? TMA : TrendSelectorInput == "VAMA" ? VAMA : TrendSelectorInput == "VIDYA" ? VIDYA : TrendSelectorInput == "VMA" ? VMA : TrendSelectorInput == "VWMA" ? VWMA : TrendSelectorInput == "WMA" ? WMA : TrendSelectorInput == "WWMA" ? WWMA : TrendSelectorInput == "ZLEMA" ? ZLEMA : SMA
+SlowTrend = TrendSelectorInput2 == "ALMA" ? ALMA2 : TrendSelectorInput2 == "DEMA" ? DEMA2 : TrendSelectorInput2 == "DSMA" ? EDSMA2 : TrendSelectorInput2 == "EMA" ? EMA2 : TrendSelectorInput2 == "HMA" ? HMA2 : TrendSelectorInput2 == "JMA" ? JMA2 : TrendSelectorInput2 == "KAMA" ? KAMA2 : TrendSelectorInput2 == "Linear Regression (LSMA)" ? LinReg2 : TrendSelectorInput2 == "RMA" ? RMA2 : TrendSelectorInput2 == "SMA" ? SMA2 : TrendSelectorInput2 == "SMMA" ? SMMA2 : TrendSelectorInput2 == "Price Source" ? src : TrendSelectorInput2 == "TEMA" ? TEMA2 : TrendSelectorInput2 == "TMA" ? TMA2 : TrendSelectorInput2 == "VAMA" ? VAMA2 : TrendSelectorInput2 == "VIDYA" ? VIDYA2 : TrendSelectorInput2 == "VMA" ? VMA2 : TrendSelectorInput2 == "VWMA" ? VWMA2 : TrendSelectorInput2 == "WMA" ? WMA2 : TrendSelectorInput2 == "WWMA" ? WWMA2 : TrendSelectorInput2 == "ZLEMA" ? ZLEMA2 : SMA2
+plot(FastTrend, color=color.green, linewidth=LineWidth)
+plot(SlowTrend, color=color.red, linewidth=LineWidth)
+//Short & Long Options
+Long = input.bool(true, "Model Long Trades", group="Core Settings")
+Short = input.bool(false, "Model Short Trades", group="Core Settings")
+// Entry & Exit Functions //
+if (InDateRange and Long==true and FastTrend>SlowTrend)
+    strategy.entry("Long", strategy.long, alert_message="Long")
+if (InDateRange and Long==true and FastTrend<SlowTrend)
+    strategy.close("Long", alert_message="Close Long")
+if (InDateRange and Short==true and FastTrend<SlowTrend)
+    strategy.entry("Short", strategy.short, alert_message="Short")
+if (InDateRange and Short==true and FastTrend>SlowTrend)
+    strategy.close("Short", alert_message="Cover Short")  
+if (not InDateRange)
+    strategy.close_all(alert_message="End of Date Range")
+    
+Expand (325 lines)

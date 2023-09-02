@@ -1,0 +1,102 @@
+Script Name: Simple and efficient MACD crypto strategy with risk management
+Author: SoftKill21
+Description: Today I am glad to bring you another great creation suited for crypto markets.
+
+
+MARKET
+Its a simple and efficient strategy, designed for crypto markets( btcusd , btcusdt and so on), and suited for for higher time charts : like 1hour, 4hours, 1 day and so on.
+Preferably to use 1h time charts.
+
+
+COMPONENTS
+MACD with simple moving average
+
+
+ENTRY DESCRIPTION
+For...
+PineScript code:
+
+Pine Script™ strategy
+Simple and efficient MACD crypto strategy with risk management
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © SoftKill21
+//@version=4
+strategy("MACD crypto strategy", overlay=true)
+// Getting inputs
+//fast_length = input(title="Fast Length", type=input.integer, defval=12)
+//slow_length = input(title="Slow Length", type=input.integer, defval=26)
+//src = input(title="Source", type=input.source, defval=close)
+//signal_length = input(title="Signal Smoothing", type=input.integer, minval = 1, maxval = 50, defval = 9)
+//sma_source = input(title="Simple MA(Oscillator)", type=input.bool, defval=true)
+//sma_signal = input(title="Simple MA(Signal Line)", type=input.bool, defval=false)
+fast_length = 12
+slow_length = 26
+src = input(title="Source", type=input.source, defval=close)
+signal_length = 9
+sma_source = true
+sma_signal = false
+// Calculating
+fast_ma = sma_source ? sma(src, fast_length) : ema(src, fast_length)
+slow_ma = sma_source ? sma(src, slow_length) : ema(src, slow_length)
+macd = fast_ma - slow_ma
+signal = sma_signal ? sma(macd, signal_length) : ema(macd, signal_length)
+hist = macd - signal
+longcondition = hist > 0 
+shortcondition = hist < 0 
+//sl = input(0.5, title="SL")
+//tp = input(0.1, title="tp")
+strategy.entry("long",1,when=longcondition)
+strategy.entry("short",0,when=shortcondition)
+//strategy.exit("x_long", "long" ,loss = close * sl / syminfo.mintick, profit = close * tp / syminfo.mintick , alert_message = "closelong")
+//strategy.entry("short",0, when= loss = close * sl / syminfo.mintick)
+//strategy.exit("x_short", "short" , loss = close * sl / syminfo.mintick, profit  = close * tp / syminfo.mintick,alert_message = "closeshort")
+risk = input(2, type=input.float,title="Risk percentage of BALANCE")
+strategy.risk.max_intraday_loss(risk, strategy.percent_of_equity)
+Expand (46 lines)

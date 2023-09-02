@@ -1,0 +1,58 @@
+Script Name: BB Strategy tooba
+Author: Abbas1987
+Description: bollinger bands strategy with added upper basis and lower line on the chart.
+when we use BB strategy in trading view unfortunately the upper, lower and basis line did not display.
+so we solve the problem with just a little script codes and bring back the lines to the chart
+PineScript code:
+
+Pine Script™ strategy
+BB Strategy tooba
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+//@version=5
+strategy("BB Strategy tooba", overlay=true)
+source = close
+length = input.int(20, minval=1)
+mult = input.float(2.0, minval=0.001, maxval=50)
+direction = input.int(0, title = "Strategy Direction", minval=-1, maxval=1)
+strategy.risk.allow_entry_in(direction == 0 ? strategy.direction.all : (direction < 0 ? strategy.direction.short : strategy.direction.long))
+basis = ta.sma(source, length)
+dev = mult * ta.stdev(source, length)
+upper = basis + dev
+lower = basis - dev
+if (ta.crossover(source, lower))
+    strategy.entry("BBandLE", strategy.long, stop=lower, oca_name="BollingerBands", oca_type=strategy.oca.cancel, comment="BBandLE")
+else
+    strategy.cancel(id="BBandLE")
+if (ta.crossunder(source, upper))
+    strategy.entry("BBandSE", strategy.short, stop=upper, oca_name="BollingerBands", oca_type=strategy.oca.cancel, comment="BBandSE")
+else
+    strategy.cancel(id="BBandSE")
+plot(upper,title="upper",color=color.gray, linewidth=1)
+plot(lower,title="lower",color=color.gray, linewidth=1)
+plot(basis,title="lower",color=color.orange, linewidth=1)
+//plot(strategy.equity, title="equity", color=color.red, linewidth=2, style=plot.style_areabr)
+Expand (24 lines)

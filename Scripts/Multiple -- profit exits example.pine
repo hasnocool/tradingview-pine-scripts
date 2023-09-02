@@ -1,0 +1,63 @@
+Script Name: Multiple -- profit exits example
+Author: adolgov
+Description: This example show how to make multiple take profits in percent.
+PineScript code:
+
+Pine Script™ strategy
+Multiple %% profit exits example
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © adolgov
+//@version=4
+strategy("Multiple %% profit exits example", overlay=false, default_qty_value = 100)
+longCondition = crossover(sma(close, 14), sma(close, 28))
+if (longCondition)
+    strategy.entry("My Long Entry Id", strategy.long)
+shortCondition = crossunder(sma(close, 14), sma(close, 28))
+if (shortCondition)
+    strategy.entry("My Short Entry Id", strategy.short)
+percentAsPoints(pcnt) =>
+    strategy.position_size != 0 ? round(pcnt / 100 * strategy.position_avg_price / syminfo.mintick) : float(na)
+lossPnt = percentAsPoints(2)
+strategy.exit("x1", qty_percent = 25, profit = percentAsPoints(1), loss = lossPnt)
+strategy.exit("x2", qty_percent = 25, profit = percentAsPoints(2), loss = lossPnt)
+strategy.exit("x3", qty_percent = 25, profit = percentAsPoints(3), loss = lossPnt)
+strategy.exit("x4", profit = percentAsPoints(4), loss = lossPnt)
+profitPercent(price) =>
+    posSign = strategy.position_size > 0 ? 1 : strategy.position_size < 0 ? -1 : 0
+    (price - strategy.position_avg_price) / strategy.position_avg_price * posSign * 100
+p1 = plot(profitPercent(high), style=plot.style_linebr, title = "open profit % upper bound")
+p2 = plot(profitPercent(low), style=plot.style_linebr, title = "open profit % lower bound")
+fill(p1, p2, color = color.red)
+Expand (31 lines)

@@ -1,0 +1,199 @@
+Script Name: BTC 30m Script
+Author: jerrygarciame
+Description: What are your thoughts on this script?  I connected it to Coinbase Pro via AWS lambda for auto-trading.  I'm waiting for BTC to start bullish again before turning it on in production.  Thoughts?  Thank you!  John
+PineScript code:
+
+Pine Script™ strategy
+BTC 30m Script
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+//@version=5
+strategy('John Day Stop Loss', overlay=false, pyramiding=1, default_qty_type=strategy.cash, default_qty_value=10000, initial_capital=10000, currency='USD', precision=2)
+strategy.risk.allow_entry_in(strategy.direction.long) 
+from_day = input.int(defval=1, title='From Day', minval=1)
+from_month = input.int(defval=1, title='From Month', minval=1)
+from_year = input.int(defval=2021, title='From Year', minval=2020)
+to_day = input.int(defval=1, title='To Day', minval=1)
+to_month = input.int(defval=1, title='To Month', minval=1)
+to_year = input.int(defval=2025, title='To Year', minval=2020)
+time_cond = time > timestamp(from_year, from_month, from_day, 00, 00) and time < timestamp(to_year, to_month, to_day, 00, 00)
+//time_cond = true
+//Stop Loss
+longProfitPerc = input.float(title="Stop Loss Profit (%)", defval=2.1) / 100
+longExitPrice  = strategy.position_avg_price * (1 - longProfitPerc)
+//RSI - yellow
+up = ta.rma(math.max(ta.change(close), 0), 14)
+down = ta.rma(-math.min(ta.change(close), 0), 14)
+rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+plot(rsi, "RSI", color=#00FFFF)
+buy_rsi = true // rsi < 40
+sell_rsi = true //rsi > 70
+//MFI - cyan
+mf = ta.mfi(hlc3, 14)
+plot(mf, "MF", color=#FFFF00)
+buy_mfi = mf < input.int(defval=23, title='Max MF', minval=1)
+sell_mfi = mf > input.int(defval=80, title='Min MF', minval=1)
+//Stoch RSI
+OverBought_StochRSI = input(80)
+OverSold_StochRSI = input(34)
+smoothK = input.int(3, "K", minval=1)
+smoothD = input.int(2, "D", minval=1)
+lengthRSI = input.int(14, "RSI Length", minval=1)
+lengthStoch = input.int(14, "Stochastic Length", minval=1)
+srcRSI = input(close, title="RSI Source")
+rsi1 = ta.rsi(srcRSI, lengthRSI)
+kStochRSI = ta.sma(ta.stoch(rsi1, rsi1, rsi1, lengthStoch), smoothK)
+d = ta.sma(kStochRSI, smoothD)
+co = ta.crossover(kStochRSI,d)
+cu = ta.crossunder(kStochRSI,d)
+buy_stochRSI = co and kStochRSI < OverSold_StochRSI
+sell_stochRSI = cu and kStochRSI > OverBought_StochRSI
+plot(kStochRSI, "K", color=#2962FF)
+plot(d, "D", color=#FF6D00)
+h0 = hline(OverBought_StochRSI, "Upper Band", color=#787B86)
+h1 = hline(OverSold_StochRSI, "Lower Band", color=#787B86)
+fill(h0, h1, color=color.rgb(33, 150, 243, 90), title="Background")
+//MACD
+// Getting inputs
+fast_length = input(title="Fast Length", defval=12)
+slow_length = input(title="Slow Length", defval=26)
+src = input(title="Source", defval=close)
+signal_length = input.int(title="Signal Smoothing",  minval = 1, maxval = 50, defval = 9)
+sma_source = input.string(title="Oscillator MA Type",  defval="EMA", options=["SMA", "EMA"])
+sma_signal = input.string(title="Signal Line MA Type", defval="EMA", options=["SMA", "EMA"])
+// Plot colors
+//col_macd = input(#2962FF, "MACD Line  ", group="Color Settings", inline="MACD")
+//col_signal = input(#FF6D00, "Signal Line  ", group="Color Settings", inline="Signal")
+//col_grow_above = input(#26A69A, "Above   Grow", group="Histogram", inline="Above")
+//col_fall_above = input(#B2DFDB, "Fall", group="Histogram", inline="Above")
+//col_grow_below = input(#FFCDD2, "Below Grow", group="Histogram", inline="Below")
+//col_fall_below = input(#FF5252, "Fall", group="Histogram", inline="Below")
+// Calculating
+fast_ma = sma_source == "SMA" ? ta.sma(src, fast_length) : ta.ema(src, fast_length)
+slow_ma = sma_source == "SMA" ? ta.sma(src, slow_length) : ta.ema(src, slow_length)
+macd = fast_ma - slow_ma
+signal = sma_signal == "SMA" ? ta.sma(macd, signal_length) : ta.ema(macd, signal_length)
+hist = macd - signal
+buy_MACD = macd < signal and hist < 0 
+sell_MACD = macd > signal and hist > 0 
+//buy_MACD = true 
+//sell_MACD = true
+//plot(hist, title="Histogram", style=plot.style_columns, color=(hist>=0 ? (hist[1] < hist ? col_grow_above : col_fall_above) : (hist[1] < hist ? col_grow_below : col_fall_below)))
+//plot(macd, title="MACD", color=col_macd)
+//plot(signal, title="Signal", color=col_signal)
+sessionColor = color(na)
+if time_cond
+    if (not na(kStochRSI) and not na(d))
+        cmt = str.tostring(close)
+        if (buy_stochRSI and buy_MACD and buy_mfi and buy_rsi)
+            strategy.entry("BUY", strategy.long, comment='BUY @ ' + cmt)
+            if longProfitPerc != 0
+                strategy.exit(id="x", stop=longExitPrice, comment='EXIT @ ' + str.tostring(longExitPrice))
+            sessionColor := input.color(#0000FF, "buy") //red
+        if (sell_stochRSI and sell_MACD and sell_mfi and sell_rsi)
+            strategy.entry("SELL", strategy.short, comment='SELL @ ' + cmt)
+            sessionColor := input.color(#FF0000, "sell") //green
+        
+bgcolor(sessionColor)
+Expand (102 lines)

@@ -1,0 +1,77 @@
+Script Name: Simple EMA20 Strategy + Stochastic
+Author: DragoLite
+Description: This is a Trend Following Strategy.
+The intent of this strategy is to catchthe price as it trends higher than the 20-period EMA and sell immediately after the price closes below it.
+I have implemented calculations from Stochastic to make sure the price is coming from an oversold area.
+There is also a check to see if the 20-period EMA is trending higher than before.
+PineScript code:
+
+Pine Script™ strategy
+Simple EMA20 Strategy + Stochastic
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+// ©dragolite95
+//@version=5
+strategy("Simple EMA20 Strat", overlay=true, margin_long=100, margin_short=100)
+// Stochastic
+periodK = input.int(14, title="%K Length", minval=1)
+smoothK = input.int(1, title="%K Smoothing", minval=1)
+periodD = input.int(3, title="%D Smoothing", minval=1)
+k = ta.sma(ta.stoch(close, high, low, periodK), smoothK)
+d = ta.sma(k, periodD)
+// Input for long and short entries
+longCheck = input.bool(true, title="Long Entries")
+shortCheck = input.bool(true, title="Short Entries")
+// EMA
+emaLength = input.int(20, title="EMA Period", minval=1)
+ema = ta.ema(close, emaLength)
+// Plotting EMA on chart
+plot(series=ema, title="ema 20", color=color.blue)
+// Long
+if(longCheck)
+    if(low > ema and k > d and ema > ema[20] and barstate.isconfirmed)
+        strategy.entry("long", strategy.long)
+    if(close < ema)
+        strategy.close("long")
+    
+// Short
+if(shortCheck)
+    if(high < ema and k < d and ema < ema[20] and barstate.isconfirmed)
+        strategy.entry("short", strategy.short)
+    if(close > ema)
+        strategy.close("short")
+Expand (35 lines)

@@ -1,0 +1,170 @@
+Script Name: TradeIQ Darvas Box Backtest
+Author: xxy_theone
+Description: This script has been made to backtest the strategy explained in this video link:
+www.youtube.com
+
+Publicly available scripts explained in the video were copy pasted and therefore merged into one single script. Open and short entries were made according to the rules of the video.
+PineScript code:
+
+Pine Script™ strategy
+TradeIQ Darvas Box Backtest
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © xxy_theone
+// https://www.youtube.com/watch?v=YYxlnFOX9sQ
+// This strategy script has been made to backtest the strategy explained in the video above
+//@version=5
+strategy(shorttitle = "Darvas Box Test", title="TradeIQ Darvas Box Test", overlay=true, pyramiding=0, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=100, currency=currency.USD)
+// === INPUT BACKTEST RANGE ===
+var GRP1 = "Backtest Range"
+fromDate = input.time(timestamp("7 Mar 2022 00:00 +0000"), "From", group=GRP1)
+toDate = input.time(timestamp("19 Mar 2022 23:59 +0000"), "To", group=GRP1)
+window() =>  // create function "within window of time"
+    time >= fromDate and time <= toDate ? true : false
+var GRP3 = "Darvas Box"
+boxp=input(5, "Box Length", group=GRP3)
+LL = ta.lowest(low,boxp)
+k1=ta.highest(high,boxp)
+k2=ta.highest(high,boxp-1)
+k3=ta.highest(high,boxp-2)
+NH =  ta.valuewhen(high>k1[1],high,0)
+box1 =k3<k2
+TopBox = ta.valuewhen(ta.barssince(high>k1[1])==boxp-2 and box1, NH, 0)
+BottomBox = ta.valuewhen(ta.barssince(high>k1[1])==boxp-2 and box1, LL, 0)
+plot(TopBox, linewidth=3, color=color.green, title="TBbox") 
+plot(BottomBox, linewidth=3, color=color.red, title="BBbox")
+var GRP4 = "MavilimW"
+fmal=input(3,"First Moving Average length", group=GRP4)
+smal=input(5,"Second Moving Average length", group=GRP4)
+tmal=fmal+smal
+Fmal=smal+tmal
+Ftmal=tmal+Fmal
+Smal=Fmal+Ftmal
+M1= ta.wma(close, fmal)
+M2= ta.wma(M1, smal)
+M3= ta.wma(M2, tmal)
+M4= ta.wma(M3, Fmal)
+M5= ta.wma(M4, Ftmal)
+MAVW= ta.wma(M5, Smal)
+col1= MAVW>MAVW[1]
+col3= MAVW<MAVW[1]
+colorM = col1 ? color.blue : col3 ? color.red : color.yellow
+plot(MAVW, color=colorM, linewidth=2, title="MAVW")
+var GRP5 = "Relative Vigor Index"
+len = input.int(10, title="Length", minval=1, group=GRP5)
+rvi = math.sum(ta.swma(close-open), len)/math.sum(ta.swma(high-low),len)
+sig = ta.swma(rvi)
+offset = input.int(0, "Offset", minval = -500, maxval = 500, group=GRP5)
+//plot(rvi, color=#008000, title="RVGI", offset = offset)
+//plot(sig, color=#FF0000, title="Signal", offset = offset)
+var longStopSet = false
+long = ta.crossover(close,TopBox) and close > MAVW ? true : false
+longClose = strategy.opentrades.profit(strategy.opentrades-1)>0 and ta.crossunder(rvi,sig) ? true : false
+strategy.entry("Long Position", strategy.long, when = long and window() and strategy.position_size==0 and strategy.closedtrades<100)
+if(longStopSet==false and strategy.position_size > 0)
+    strategy.exit("exit", "Long Position", stop=BottomBox)
+    longStopSet := true
+if(strategy.position_size==0)
+    longStopSet := false
+strategy.close("Long Position", when = longClose)
+var shortStopSet = false
+short = ta.crossunder(close,BottomBox) and close < MAVW ? true : false
+shortClose = strategy.opentrades.profit(strategy.opentrades-1)>0 and ta.crossover(rvi,sig) ? true : false
+strategy.entry("Short Position", strategy.short, when = short and window() and strategy.position_size==0 and strategy.closedtrades<100)
+if(shortStopSet==false and strategy.position_size < 0)
+    strategy.exit("exit", "Short Position", stop=TopBox)
+    shortStopSet := true
+if(strategy.position_size==0)
+    shortStopSet := false
+strategy.close("Short Position", when = shortClose)
+Expand (90 lines)

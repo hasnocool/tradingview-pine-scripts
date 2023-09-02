@@ -1,0 +1,84 @@
+Script Name: Stochastic Trend
+Author: FieryTrading
+Description: Dear community,
+
+I've made another simple trading bot for you to use. This bot is based on the Stochastic Oscillator. It only produces long trades currently.
+
+I changed the oscillation period to a much longer one, which in turn creates opportunities to trade long term trends.
+The bot goes long when the Entry lines is crossed from below and it will close its long...
+PineScript code:
+
+Pine Script™ strategy
+Stochastic Trend
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+//@version=4
+strategy(title="Stochastic Trend", overlay=false, pyramiding=1, commission_value=0.2, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+// Stochastic
+periodK = input(200, title="K", minval=1, step=10)
+periodD = input(3, title="D", minval=1)
+smoothK = input(100, title="Smooth", minval=1, step=10)
+k = sma(stoch(close, high, low, periodK), smoothK)
+d = sma(k, periodD)
+// Entry / Exit lines
+Enter = input(50)
+Exit = input(60)
+// Plots
+plot(k, title="%K", color=color.blue)
+plot(d, title="%D", color=color.blue)
+plot(Enter, "Upper Band", color=color.green)
+plot(Exit, "Lower Band", color=color.red)
+// Conditions
+long = crossover(k, Enter)
+longclose = crossunder(k, Exit)
+// Alert messages - feel free to edit
+LongAlert = 'LONG'
+CloseAlert = 'Close Position'
+// Strategy
+if long
+    strategy.entry("long", strategy.long, alert_message=LongAlert)
+if longclose
+    strategy.close("long", alert_message=CloseAlert)
+    
+Expand (42 lines)

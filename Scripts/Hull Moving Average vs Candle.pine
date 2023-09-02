@@ -1,0 +1,101 @@
+Script Name: Hull Moving Average vs Candle
+Author: SeaSide420
+Description: A Hull moving average is applied to the chart with settings for user to change the period of the Hull MA.
+And a value of a previous candle is compared to the HMA. If the HMA is above the previous candle value, then the strategy will buy.
+If below, it will sell. The default setting for the HMA is 50 and the Candle is D1 (Daily timeframe)
+So basically if the HMA...
+PineScript code:
+
+Pine Script™ strategy
+Hull Moving Average vs Candle
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © SeaSide420. Any timeFrame/pair , Hull Moving Average vs Candle
+//@version=4
+strategy("Hull Moving Average vs Candle",shorttitle="HMA-vs-Candle",overlay=true,default_qty_type=strategy.percent_of_equity,default_qty_value=100,commission_type=strategy.commission.cash_per_order,commission_value=1.00,slippage=1)
+Period=input(title="Hull MA Period",type=input.integer,defval=50,minval=1)
+Resolution=input(title="Candle Resolution", type=input.resolution,defval="D")
+Price=input(title="Source of Price",type=input.source,defval=open)
+HMA=hma(Price,Period)
+Candle=security(syminfo.tickerid,Resolution,Price,barmerge.gaps_off,barmerge.lookahead_off)
+change_color=HMA>Candle?color.green:color.red
+plot1=plot(Candle,color=change_color,title="Candle Line",linewidth=2,transp=50)
+plot2=plot(HMA[1],color=change_color,title="Hull MA Line",linewidth=2,transp=50)
+fill(plot1,plot2,color=change_color,transp=50)
+strategy.close("BUY",when=Price<HMA and HMA<Candle,comment="close buy entry")
+strategy.close("SELL",when=Price>HMA and HMA>Candle,comment="close sell entry")
+if (Price>HMA and HMA>Candle and Price>Price[1])
+    strategy.entry("BUY",strategy.long)
+if (Price<HMA and HMA<Candle and Price<Price[1])
+    strategy.entry("SELL",strategy.short)
+//                                                                   /L'-, 
+//                               ,'-.           /MM . .             /  L '-, 
+//     .                    _,--dMMMM\         /MMM  `..           /       '-, 
+//     :             _,--,  )MMMMMMMMM),.      `QMM   ,<>         /_      '-,' 
+//     ;     ___,--. \MM(    `-'   )M//MM\       `  ,',.;      .-'* ;     .' 
+//     |     \MMMMMM) \MM\       ,dM//MMM/     ___ < ,; `.      )`--'    / 
+//     |      \MM()M   MMM)__   /MM(/MP'  ___, \  \ `  `. `.   /__,    ,' 
+//     |       MMMM/   MMMMMM( /MMMMP'__, \     | /      `. `-,_\     / 
+//     |       MM     /MMM---' `--'_ \     |-'  |/         `./ .\----.___ 
+//     |      /MM'   `--' __,-  \""   |-'  |_,               `.__) . .F. )-. 
+//     |     `--'       \   \    |-'  |_,     _,-/            J . . . J-'-. `-., 
+//     |         __  \`. |   |   |         \    / _           |. . . . \   `-.  F 
+//     |   ___  /  \  | `|   '      __  \   |  /-'            F . . . . \     '` 
+//     |   \  \ \  /  |        __  /  \  |  |,-'        __,- J . . . . . \ 
+//     |    | /  |/     __,-  \  ) \  /  |_,-     __,--'     |. .__.----,' 
+//     |    |/    ___     \    |'.  |/      __,--'           `.-;;;;;;;;;\ 
+//     |     ___  \  \     |   |  `   __,--'                  /;;;;;;;;;;;;. 
+//     |     \  \  |-'\    '    __,--'                       /;;;;;;;;;;;;;;\ 
+// \   |      | /  |      __,--'                             `--;;/     \;-'\ 
+//  \  |      |/    __,--'                                   /  /         \  \ 
+//   \ |      __,--'                                        /  /           \  \ 
+//    \|__,--'                                          _,-;M-K,           ,;-;\ 
+//                                                     <;;;;;;;;           '-;;;; 
+//                                                                                        ~ priceless artwork by SeaSide420
+Expand (46 lines)

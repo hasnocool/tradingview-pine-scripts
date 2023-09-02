@@ -1,0 +1,90 @@
+Script Name: Grab Trading System
+Author: LonesomeTheBlue
+Description: Hello All,
+
+
+This is "Grab Trading System" script defined in the book "Trend Following" by Michael W. Covel. also named as "Two-box system". I made small changes and I guess that it can be improved more.
+
+The definition: Far box defines major trend; system trades only in same direction as major trend, meanwhile fading the signals of near box. Last trade in each...
+PineScript code:
+
+Pine Script™ strategy
+Grab Trading System
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © LonesomeTheBlue
+//@version=4
+strategy("Grab Trading System", overlay = true)
+flb = input(defval = 80, title = "Longterm Period", minval = 1)
+slb = input(defval = 21, title = "Shortterm Period", minval = 1)
+showtarget = input(defval = true, title = "Show Target")
+showtrend = input(defval = true, title = "Show Trend")
+major_resistance = highest(flb)
+major_support = lowest(flb)
+minor_resistance = highest(slb)
+minor_support = lowest(slb)
+ 
+var int trend = 0
+trend := high > major_resistance[1] ? 1 : low < major_support[1] ? -1 : trend
+strategy.entry("Buy", true, when = trend == 1 and low[1] == minor_support[1] and low > minor_support)
+strategy.entry("Sell", false, when = trend == -1 and high[1] == minor_resistance[1] and high < minor_resistance)
+if strategy.position_size > 0
+    strategy.exit("Buy", stop = major_support, comment = "Stop Buy")
+    if high[1] == minor_resistance[1] and high < minor_resistance
+        strategy.close("Buy", comment ="Close Buy")
+    
+if strategy.position_size < 0
+    strategy.exit("Sell", stop = major_resistance, comment = "Stop Sell")
+    if low[1] == minor_support[1] and low > minor_support
+        strategy.close("Sell", comment ="Close Sell")
+if strategy.position_size != 0 and change(trend)
+    strategy.close_all()
+    
+majr = plot(major_resistance, color = showtrend and trend == -1 and trend[1] == -1 ? color.red : na)
+majs = plot(major_support, color = showtrend and trend == 1 and trend[1] == 1 ? color.lime : na)
+minr = plot(minor_resistance, color = showtarget and trend == 1 and strategy.position_size > 0 ? color.yellow : na, style = plot.style_circles)
+mins = plot(minor_support, color = showtarget and trend == -1 and strategy.position_size < 0 ? color.yellow : na, style = plot.style_circles)
+fill(majs, mins, color = showtrend and trend == 1 and trend[1] == 1 ? color.new(color.lime, 85) : na)
+fill(majr, minr, color = showtrend and trend == -1 and trend[1] == -1 ? color.new(color.red, 85) : na)
+Expand (41 lines)

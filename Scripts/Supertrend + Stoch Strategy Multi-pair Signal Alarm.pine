@@ -1,0 +1,227 @@
+Script Name: Supertrend + Stoch Strategy Multi-pair Signal Alarm
+Author: Nyaichi
+Description: BITSTAMP:BTCUSD 
+
+An entry alarm on  Supertrend Stoch Strategy . It can monitor 10 trading pairs in one alarm.
+
+Use this script on any trading pair and deploy the alarm. The alert comment shows the pair name, direction, entry point, sl/tp, and percentage of your position you should cost.
+
+I currently use it as a signal for my grid trading.
+PineScript code:
+
+Pine Script™ strategy
+Supertrend + Stoch Strategy Multi-pair Signal Alarm
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+//@version=4
+// It's a signal-only strategy
+strategy(title="Supertrend + Stoch Strategy Multi-pair Signal Alarm", overlay=true)
+// ---inputs---
+pl = input(1.5, title="P/L", minval=0.1)
+lossPercentage = input(1, title="Loss Percentage", minval=1, maxval=100)
+atrPeriod = input(10, "ATR Length")
+factor = input(3, "Supertrend Factor")
+periodK = input(8, title="%K Length", minval=1)
+smoothK = input(3, title="%K Smoothing", minval=1)
+periodD = input(3, title="%D Smoothing", minval=1)
+ema1l = input(25, title="EMA 1 Length", minval=1)
+ema2l = input(50, title="EMA 2 Length", minval=1)
+ema3l = input(100, title="EMA 3 Length", minval=1)
+ema4l = input(200, title="EMA 4 Length", minval=1)
+s1 = input("BINANCE:BTCUSDTPERP", type=input.symbol)
+s2 = input("BINANCE:ETHUSDTPERP", type=input.symbol)
+s3 = input("BINANCE:BNBUSDTPERP", type=input.symbol)
+s4 = input("BINANCE:SOLUSDTPERP", type=input.symbol)
+s5 = input("BINANCE:ADAUSDTPERP", type=input.symbol)
+s6 = input("BINANCE:AXSUSDTPERP", type=input.symbol)
+s7 = input("BINANCE:THETAUSDTPERP", type=input.symbol)
+s8 = input("BINANCE:ALGOUSDTPERP", type=input.symbol)
+s9 = input("BINANCE:MANAUSDTPERP", type=input.symbol)
+s10 = input("BINANCE:BCHUSDTPERP", type=input.symbol)
+// ---methods---
+f() => [open, high, low, close]
+atrRewrite(o, h, l, c, period) => rma(max(h - l, abs(h - c[1]), abs(l - c[1])), period)
+supertrendRewrite(o, h, l, c, fa, period) =>
+    atr = atrRewrite(o, h, l, c, period)
+    src = (h + l) / 2
+    up = src - fa * atr
+    up1 = nz(up[1], up)
+    up := c[1] > up1 ? max(up, up1) : up
+    dn = src + fa * atr
+    dn1 = nz(dn[1], dn)
+    dn := c[1] < dn1 ? min(dn, dn1) : dn
+    trend = 1
+    trend := nz(trend[1], trend)
+    trend := trend == -1 and c > dn1 ? 1 : trend == 1 and c < up1 ? -1 : trend
+    [trend > 0 ? up : dn, -trend]
+check(symbol) =>
+    [o, h, l, c] = security(symbol, timeframe.period, f())
+    // ---lines---
+    ema1 = ema(c, ema1l)
+    ema2 = ema(c, ema2l)
+    ema3 = ema(c, ema3l)
+    ema4 = ema(c, ema4l)
+    trendUpper = ema1 > ema2 and ema3 > ema4
+    trendLower = ema1 < ema2 and ema3 < ema4
+    [supertrend, direction] = supertrendRewrite(o, h, l, c, factor, atrPeriod)
+    supertrendUpper = direction < 0
+    supertrendLower = direction > 0
+    k = sma(stoch(c, h, l, periodK), smoothK)
+    d = sma(k, periodD)
+    stochCrossOver = crossover(k, d)
+    stochCrossUnder = crossunder(k, d)
+    // ---stop place compute---
+    edge = 0.  // periodly high/low
+    edge := stochCrossOver ? h : stochCrossUnder ? l : k > d ? max(edge[1], h) : k < d ? min(edge[1], l) : edge[1]
+    // ---trade condition---
+    longCond = trendUpper and supertrendUpper and stochCrossOver
+    shortCond = trendLower and supertrendLower and stochCrossUnder
+    // ---stop & take---
+    stop = 0.
+    stop := nz(stop[1], stop)
+    take = 0.
+    take := nz(take[1], take)
+    if longCond
+        stop := edge[1]
+        take := c + (c - stop) * pl
+    if shortCond
+        stop := edge[1]
+        take := c - (stop - c) * pl
+    // ---trade---
+    qty = strategy.equity / abs(stop - c) / 100 * lossPercentage
+    qtyPer = round(1 / abs(stop - c) * c, 1) * lossPercentage
+    comment = (longCond ? "Long" : shortCond ? "Short" : na) 
+          + " - " + symbol + " - entry=" + tostring(c) 
+              + ", stop=" + tostring(stop) + ", take=" + tostring(take)
+                  + ", qtyPer=" + tostring(qtyPer) + "%."
+    strategy.entry("Buy: " + symbol, strategy.long, when=longCond, qty=qty, comment=comment)
+    strategy.exit("Close Buy","Buy: " + symbol, limit=c, stop=c)
+    strategy.entry("Sell: " + symbol, strategy.short, when=shortCond, qty=qty, comment=comment)
+    strategy.exit("Close Sell","Sell: " + symbol, limit=c, stop=c)
+    
+    strategy.close_all(longCond or shortCond)
+// ---main---
+check(s1)
+check(s2)
+check(s3)
+check(s4)
+check(s5)
+check(s6)
+check(s7)
+check(s8)
+check(s9)
+check(s10)
+Expand (114 lines)

@@ -1,0 +1,56 @@
+Script Name: [SMT] Buy & Sell Renko Based - Strategy
+Author: SMTraderTradingCrypto
+Description: This is a custom indicator that implements a trading strategy based on Renko charts, but they can be used on regular candlestick charts and on any time frame. Renko charts are known for filtering market noise and displaying price movements in a clearer way. However, it is important to note that this indicator is provided for educational and informational purposes...
+PineScript code:
+
+Pine Script™ strategy
+[SMT] Buy & Sell Renko Based - Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+//@version=5
+strategy(title='[SMT] Buy & Sell Renko Based - Strategy', shorttitle='[SMT] B&S Renko', overlay=true)
+//INPUTS
+renkoATRLength = input.int(10, minval=1, title='ATR Length')
+//CALCULATION
+param = ticker.renko(syminfo.tickerid, 'ATR', renkoATRLength)
+renkoClose = request.security(param, timeframe.period, close)
+renkoOpen = request.security(param, timeframe.period, open)
+buySignal = ta.crossunder(renkoOpen, renkoClose)
+sellSignal = ta.crossover(renkoOpen, renkoClose)
+col = renkoClose < renkoOpen ? #F23645 : #089981
+//PLOTS
+plot(renkoOpen, title="Renko Open", style=plot.style_line, linewidth=2, color=col)
+plotshape(buySignal, "Buy", shape.labelup, location.belowbar, #089981, 0, "Buy", color.white)
+plotshape(sellSignal, "Sell", shape.labeldown, location.abovebar, #F23645, 0, "Sell", color.white)
+// STRATEGY
+if (buySignal)
+    strategy.entry("Long", strategy.long)
+if (sellSignal)
+    strategy.entry("Short", strategy.short)
+Expand (27 lines)

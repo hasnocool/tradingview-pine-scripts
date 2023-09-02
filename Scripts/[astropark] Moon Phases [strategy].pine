@@ -1,0 +1,239 @@
+Script Name: [astropark] Moon Phases [strategy]
+Author: astropark
+Description: Dear Followers,
+
+today I'm glad to present you an indicator which calculates Moon Phases and let's you backtest the simplest strategy over it: buy/sell on full moon and do the opposite on new moon.
+
+This is a public free indicator based on the public one by @paaax:
+
+
+I added my usual backtesting logic, plus some more customization inputs for easy coloring.
+The...
+PineScript code:
+
+Pine Script™ strategy
+[astropark] Moon Phases [strategy]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// @version=4
+strategy(title="[astropark] Moon Phases [strategy]", overlay=true, pyramiding = 10, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, initial_capital = 100000, currency = currency.USD, commission_value = 0.1)
+// INPUT    --- {
+newMoonColor = input(color.black, "New Moon Color")
+fullMoonColor = input(color.white, "Full Moon Color")
+fillBackground = input(true, "Fill Background?")
+newMoonBackgroundColor = input(#fffff0aa, "New Moon Background Color")
+fullMoonBackgroundColor = input(#aaaaaaaa, "Full Moon Background Color")
+//} --- INPUT
+// FUNCTION --- {
+normalize(_v) =>
+    x = _v
+    x := x - floor(x)
+    if x < 0
+        x := x + 1
+    x
+calcPhase(_year, _month, _day) =>
+    int y = na
+    int m = na
+    float k1 = na 
+    float k2 = na 
+    float k3 = na
+    float jd = na
+    float ip = na
+    y := _year - floor((12 - _month) / 10)       
+    m := _month + 9
+    if m >= 12 
+        m := m - 12
+    
+    k1 := floor(365.25 * (y + 4712))
+    k2 := floor(30.6 * m + 0.5)
+    k3 := floor(floor((y / 100) + 49) * 0.75) - 38
+    
+    jd := k1 + k2 + _day + 59
+    if jd > 2299160
+        jd := jd - k3
+    
+    ip := normalize((jd - 2451550.1) / 29.530588853)
+    age = ip * 29.53
+//} --- FUNCTION
+// INIT     --- {
+age = calcPhase(year, month, dayofmonth)
+moon = 
+     floor(age)[1] > floor(age) ? 1 : 
+     floor(age)[1] < 15 and floor(age) >= 15 ? -1 : na
+//} --- INIT
+// PLOT     --- {
+plotshape(
+     moon==1, 
+     "Full Moon", 
+     shape.circle, 
+     location.top, 
+     color.new(newMoonColor, 20), 
+     size=size.normal
+     )   
+plotshape(
+     moon==-1, 
+     "New Moon", 
+     shape.circle, 
+     location.bottom, 
+     color.new(fullMoonColor, 20), 
+     size=size.normal
+     )   
+var color col = na
+if moon == 1 and fillBackground
+    col := fullMoonBackgroundColor
+if moon == -1 and fillBackground
+    col := newMoonBackgroundColor
+bgcolor(col, title="Moon Phase", transp=10)
+//} --- PLOT
+// STRATEGY     --- {
+strategy = input("buy on new moon, sell on full moon", options=["buy on new moon, sell on full moon","sell on new moon, buy on full moon"])
+longCond = strategy == "buy on new moon, sell on full moon" ? moon == -1 : moon == 1
+shortCond = strategy == "buy on new moon, sell on full moon" ? moon == 1 : moon == -1
+weAreInLongTrade = false
+weAreInShortTrade = false
+weAreInLongTrade := (longCond or weAreInLongTrade[1]) and shortCond == false
+weAreInShortTrade := (shortCond or weAreInShortTrade[1]) and longCond == false
+buySignal = longCond and weAreInLongTrade[1] == false
+sellSignal = shortCond and weAreInShortTrade[1] == false
+showBuySellSignals = input(defval=true, title = "Show Buy/Sell Signals")
+longEnabled = input(true, title="Long enabled")
+shortEnabled = input(true, title="Short enabled")
+analysisStartYear = input(2017, "Backtesting From Year", minval=1980)
+analysisStartMonth = input(1, "And Month", minval=1, maxval=12)
+analysisStartDay = input(1, "And Day", minval=1, maxval=31)
+analysisStartHour = input(0, "And Hour", minval=0, maxval=23)
+analysisStartMinute = input(0, "And Minute", minval=0, maxval=59)
+analyzeFromTimestamp = timestamp(analysisStartYear, analysisStartMonth, analysisStartDay, analysisStartHour, analysisStartMinute)
+plotshape(showBuySellSignals and buySignal, title="Buy Label", text="Buy", location=location.belowbar, style=shape.labelup, size=size.tiny, color=color.green, textcolor=color.white, transp=0)
+plotshape(showBuySellSignals and sellSignal, title="Sell Label", text="Sell", location=location.abovebar, style=shape.labeldown, size=size.tiny, color=color.red, textcolor=color.white, transp=0)
+strategy.entry("long", strategy.long, when = time > analyzeFromTimestamp and buySignal and longEnabled)
+strategy.entry("short", strategy.short, when = time > analyzeFromTimestamp and sellSignal and shortEnabled)
+strategy.close("long", when = sellSignal)
+strategy.close("short", when = buySignal)
+//} --- STRATEGY
+Expand (125 lines)

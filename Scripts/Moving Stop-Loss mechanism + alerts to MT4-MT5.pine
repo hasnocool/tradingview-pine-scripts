@@ -1,0 +1,161 @@
+Script Name: Moving Stop-Loss mechanism + alerts to MT4-MT5
+Author: Peter_O
+Description: "How to code moving stop-loss mechanism", is one of the most often repeating questions in private messages I receive, so just to focus on this mechanism, I made a spin-off from my previous script:  TradingView-Alerts-to-MT4-MT5-dynamic-variables-NON-REPAINTING .
+
+The logic here moves the stop-loss each time a trade is running and a new pivot high/low is detected....
+PineScript code:
+
+Pine Script™ strategy
+Moving Stop-Loss mechanism + alerts to MT4/MT5
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Peter_O
+//@version=5
+strategy(title='Moving Stop-Loss mechanism', commission_type=strategy.commission.cash_per_order, commission_value=0.00003, overlay=true, default_qty_value=100000, initial_capital=1000)
+// This script was created for educational purposes only and it is a spin-off of my previous script:
+// https://www.tradingview.com/script/9MJO3AgE-TradingView-Alerts-to-MT4-MT5-dynamic-variables-NON-REPAINTING/
+// This spin-off adds very often requested Moving Stop-Loss Mechanism - the logic here moves the stop-loss each time 
+// a new pivot is detected.
+//
+// Last lines of the script include alert() function calls, with a syntax compatible with TradingConnector
+// for execution in Forex/indices/commodities/crypto markets via MetaTrader.
+// Please note that "tradeid=" variable must be passed with each alert, so that MetaTrader knows which
+// trade to modify.
+TakeProfitLevel = input(400)
+// **** Entries logic, based on Stoch **** {
+periodK = 13  //input(13, title="K", minval=1)
+periodD = 3  //input(3, title="D", minval=1)
+smoothK = 4  //input(4, title="Smooth", minval=1)
+k = ta.sma(ta.stoch(close, high, low, periodK), smoothK)
+d = ta.sma(k, periodD)
+GoLong = ta.crossover(k, d) and k < 80
+GoShort = ta.crossunder(k, d) and k > 20
+// } End of entries logic
+// **** Pivot-points and stop-loss logic **** {
+piv_high = ta.pivothigh(high, 1, 1)
+piv_low = ta.pivotlow(low, 1, 1)
+var float stoploss_long = low
+var float stoploss_short = high
+pl = ta.valuewhen(piv_low, piv_low, 0)
+ph = ta.valuewhen(piv_high, piv_high, 0)
+if GoLong
+    stoploss_long := low < pl ? low : pl
+    stoploss_long
+if GoShort
+    stoploss_short := high > ph ? high : ph
+    stoploss_short
+plot(stoploss_long, color=color.new(color.red, 0), title='stoploss_long')
+plot(stoploss_short, color=color.new(color.lime, 0), title='stoploss_short')
+// Stop-Loss Updating mechanism
+enable_stoploss_mechanism = input(true, title='Enable Stoploss Modification Mechanism')
+UpdateLongStopLoss = strategy.position_size > 0 and strategy.position_size[1] > 0 and piv_low and pl != stoploss_long and not GoLong and enable_stoploss_mechanism
+UpdateShortStopLoss = strategy.position_size < 0 and strategy.position_size[1] < 0 and piv_high and ph != stoploss_short and not GoShort and enable_stoploss_mechanism
+if UpdateLongStopLoss
+    stoploss_long := pl
+    stoploss_long
+if UpdateShortStopLoss
+    stoploss_short := ph
+    stoploss_short
+plotshape(UpdateLongStopLoss ? stoploss_long[1] - 300 * syminfo.mintick : na, location=location.absolute, style=shape.labelup, color=color.new(color.lime, 0), textcolor=color.new(color.white, 0), text='SL\nmove')
+plotshape(UpdateShortStopLoss ? stoploss_short[1] + 300 * syminfo.mintick : na, location=location.absolute, style=shape.labeldown, color=color.new(color.red, 0), textcolor=color.new(color.black, 0), text='SL\nmove')
+// } End of Pivot-points and stop-loss logic
+strategy.entry('Long', strategy.long, when=GoLong)
+strategy.exit('XLong', from_entry='Long', stop=stoploss_long, profit=TakeProfitLevel)
+strategy.entry('Short', strategy.short, when=GoShort)
+strategy.exit('XShort', from_entry='Short', stop=stoploss_short, profit=TakeProfitLevel)
+if GoLong
+    alertsyntax_golong = 'long slprice=' + str.tostring(stoploss_long) + ' tp=' + str.tostring(TakeProfitLevel)
+    alert(message=alertsyntax_golong, freq=alert.freq_once_per_bar_close)
+if GoShort
+    alertsyntax_goshort = 'short slprice=' + str.tostring(stoploss_short) + ' tp=' + str.tostring(TakeProfitLevel)
+    alert(message=alertsyntax_goshort, freq=alert.freq_once_per_bar_close)
+if UpdateLongStopLoss
+    alertsyntax_updatelongstoploss = 'slmod slprice=' + str.tostring(stoploss_long)
+    alert(message=alertsyntax_updatelongstoploss, freq=alert.freq_once_per_bar_close)
+if UpdateShortStopLoss
+    alertsyntax_updateshortstoploss = 'slmod slprice=' + str.tostring(stoploss_short)
+    alert(message=alertsyntax_updateshortstoploss, freq=alert.freq_once_per_bar_close)
+Expand (83 lines)

@@ -1,0 +1,138 @@
+Script Name: TheBigBangTraders Breakout
+Author: TheSocialCryptoClub
+Description: Name:  TheBigBangTraders Breakout 
+
+Category:  Trend Follower 
+
+Operating mode:  Spot  
+
+Trades duration:  Intraday 
+
+Timeframe:  1H 
+
+Suggested usage:  the purpose of this strategy is to help to investigate if the asset is sensitive to breakout approach. 
+
+Entry:  Trigger point can be choose by the user between:
+ 
+  High of the N days ago
+  High of the N weeks...
+PineScript code:
+
+Pine Script™ strategy
+TheBigBangTraders Breakout
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+// This source code is subject to the terms of the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
+// © TheSocialCryptoClub
+//@version=5
+strategy("The Bing Bang Traders - High Breakout Strategy",
+         initial_capital=10000,
+         default_qty_value=10,
+         default_qty_type=strategy.percent_of_equity, 
+         commission_type=strategy.commission.percent,
+         commission_value=0.075, 
+         slippage = 1, 
+         backtest_fill_limits_assumption = 1)
+// ----------------------------------------------------------------------------- 
+// Input
+// ----------------------------------------------------------------------------- 
+momentum_filter_activated = input.bool(true, inline="momentum", title="")
+momentum_filter_treshold = input.float(1, inline="momentum", title="Treshold") // definisco l'input per il momentum filter
+trend_filter_activated = input.bool(true, inline="trend", title="")
+trend_filter_period = input.int(223, inline="trend", title="Period")
+// Momentum Filter 
+opend = request.security(syminfo.tickerid, "1D", open) // richiamo il valore della open del giorno (opend) per calcolare quando "paga" la coin 
+momentum_filter = momentum_filter_activated ? (close-opend)/opend*100 > momentum_filter_treshold : true // calcolo il filtro momentum valutando la variazione percentuale, in questo caso maggiore di 1 (cosa succede se vario questo parametro anche in negtivo e se lo rendo configurabile da input?) 
+// Trend Filter
+trend_filter = trend_filter_activated ? close > ta.ema(close, trend_filter_period): true
+// ------------- Input -----------------
+daily_plot   = input.bool(false, "Daily High Plot")
+weekly_plot  = input.bool(false, "Weekly High Plot")
+periods_ago  = input.int(0, "Max of periods")
+high_daily_input  = input.bool(true, "Use Daily High")
+high_weekly_input = input.bool(false, "Use Weekly High")
+// ------------- Security -----------------
+high_daily = request.security(syminfo.tickerid, 'D', high[periods_ago])
+plot(daily_plot ? high_daily : na, "Daily High", color.aqua, 2)
+high_weekly = request.security(syminfo.tickerid, 'W', high[periods_ago])
+plot(weekly_plot ? high_weekly : na, "Weekly High", color.purple, 2)
+// ------------- Condition -----------------
+cond_long = ta.crossover(close, high_daily_input? high_daily : high_weekly_input ? high_weekly : na) and momentum_filter and trend_filter
+cond_exit =  ((hour == 23 and minute == 00) and timeframe.period == "60") 
+if cond_long
+    strategy.entry("EL", strategy.long)
+if cond_exit
+    strategy.close("EL")
+   
+// ------------- Table -----------------
+   
+alert_message = "Attenzione: Utilizzare timeframe 1H per avere l'uscita corretta"
+if timeframe.period != '60' 
+    alert_table = table.new(position=position.bottom_left, columns=1, rows=1)
+    table.cell(alert_table, 0, 0, alert_message, text_color=color.red, text_size=size.tiny)
+Expand (66 lines)

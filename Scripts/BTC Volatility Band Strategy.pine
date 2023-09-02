@@ -1,0 +1,167 @@
+Script Name: BTC Volatility Band Strategy
+Author: gary_trades
+Description: This script/strategy is a pullback system designed for securities with high volatility so naturally Bitcoin is an excellent choice for trading this. This could be used both on a daily chart or on lower timeframes (I found good results on 3hr timeframe but haven't tested it on anything under 1hr).
+
+A volatility band is created by comparing the candle close price of...
+PineScript code:
+
+Pine Script™ strategy
+BTC Volatility Band Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © gary_trades
+//This script is designed to be used on volatile securities/tickers so is best suited for day charts on Crypto (particularly good for BTC).
+//It takes both long and short trades and the main indicator settings can be changed by the use so they can test for ideal settings for ticker of interest.
+//@version=4
+strategy("BTC Volatility Band Strategy", shorttitle="Vol Band Strategy", overlay=false, margin_long=100, margin_short=100)
+//VOLATILTY
+CandleChange = ((close - close[1])/close)*100         //OR CandleChange = ((close[2] - close[1])/close)*100
+plot(CandleChange, color=color.red, linewidth = 1)
+//VOLATILITY BANDS 
+MAlen = input(7, minval=3, maxval=30, title=" MA Length")
+MAout = sma(CandleChange, MAlen)
+plot(MAout, color=color.black, display=display.none)
+InnerBand = input(1.0, minval=0.5, maxval=5, title="Inner Band")
+OuterBand = input(2.00, minval=0.5, maxval=10, title="Outer Band")
+devInner = InnerBand * stdev(CandleChange, MAlen)
+devOuter = OuterBand * stdev(CandleChange, MAlen)
+upper1 = MAout + devInner
+lower1 = MAout - devInner
+b1 = plot(upper1, "Upper Inner", color=color.gray)
+b2 = plot(lower1, "Lower Inner", color=color.gray)
+upper2 = MAout + devOuter
+lower2 = MAout - devOuter
+b3 = plot(upper2, "Upper Outer", color=color.gray)
+b4 = plot(lower2, "Lower Outer", color=color.gray)
+fill(b1, b3, color.rgb(250,145,175,70), title="Background")
+fill(b2, b4, color.rgb(250,145,175,70), title="Background")
+band1 = hline(25, "Upper Band", color=color.gray, linestyle=hline.style_dotted, linewidth=2)
+band0 = hline(-25, "Lower Band", color=color.gray, linestyle=hline.style_dotted, linewidth=2)
+//LONG FILTER
+VolFilterL = CandleChange <= lower1 and CandleChange > lower2
+SMAFilterL = close[1] > sma(close[1], 50)
+PriceFilterL = close > lowest(close,7)
+LongFilter = VolFilterL and SMAFilterL and PriceFilterL
+bgcolor(LongFilter ? color.new(color.green, 80) : na)
+//SHORT FILTER
+VolFilterS = CandleChange >= upper1 and CandleChange < upper2
+SMAFilterS = close[1] < sma(close[1], 50)
+PriceFilterS = close < highest(close,7)
+ShortFilter = VolFilterS and SMAFilterS and PriceFilterS
+bgcolor(ShortFilter ? color.new(color.red, 80) : na)
+//SETTING BACK TEST INPUTS
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2000, title = "From Year", minval = 1970)
+ 
+toDay = input(defval = 1, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 1, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2100, title = "To Year", minval = 1970)
+startDate = timestamp("America/New_York", fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp("America/New_York", toYear, toMonth, toDay, 00, 00)
+time_condition = time >= startDate and time <= finishDate
+//ORDER DETAILS
+Risk = (high[7] - low[7])/ 7
+Profit = Risk*1.15
+Loss = Risk*0.65
+AlertMSG = "New stategy position" + tostring(strategy.position_size)
+if (time_condition) 
+    strategy.entry("Long", strategy.long, when = LongFilter, alert_message=AlertMSG)
+    if (LongFilter)
+        LongStop = strategy.position_avg_price - Loss
+        LongProfit = strategy.position_avg_price + Profit 
+        strategy.exit("TP/SL", "Long", stop=LongStop, limit=LongProfit)
+if (time_condition)
+    strategy.entry("Short", strategy.short, when = ShortFilter, alert_message=AlertMSG)
+    if (ShortFilter)
+        ShortStop = strategy.position_avg_price + Loss
+        ShortProfit = strategy.position_avg_price - Profit 
+        strategy.exit("TP/SL", "Short", stop=ShortStop, limit=ShortProfit)
+Expand (87 lines)

@@ -1,0 +1,153 @@
+Script Name: JS-TechTrading- VWAP Momentum_Pullback Strategy
+Author: JS_TechTrading
+Description: General Description and Unique Features of this Script
+
+Introducing the VWAP Momentum-Pullback Strategy (long-only) that offers several unique features: 
+
+1.	Our script/strategy utilizes Mark Minervini's Trend-Template as a qualifier for identifying stocks and other financial securities in confirmed uptrends.
+
+NOTE: In this basic version of the script, the...
+PineScript code:
+
+Pine Script™ strategy
+JS-TechTrading: VWAP Momentum_Pullback Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+//@version=5
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © JS-TechTrading 2023
+strategy(title='JS-TechTrading: VWAP Momentum_Pullback Strategy', initial_capital=100000, default_qty_type=strategy.percent_of_equity, default_qty_value=100, pyramiding=0, currency='USD', overlay=true)
+//// Stoploss and Take Profit Parameters
+// Enable Long Strategy
+enable_long_strategy = input.bool(true, title='Activate Long-Strategy', group='SL/TP for Long-Strategy', inline='1')
+long_stoploss_value = input.float(defval=3, title='Stop-Loss (SL) %', minval=0, group='SL/TP for Long-Strategy', inline='2')
+long_stoploss_percentage = close * (long_stoploss_value / 100) / syminfo.mintick
+long_takeprofit_value = input.float(defval=7, title='Take-Profit (TP) %', minval=0, group='SL/TP for Long-Strategy', inline='2')
+long_takeprofit_percentage = close * (long_takeprofit_value / 100) / syminfo.mintick
+// Enable Short Strategy
+enable_short_strategy = input.bool(false, title='Activate Short-Strategie', group='SL/TP for Short-Strategy', inline='3')
+short_stoploss_value = input.float(defval=50, title='Stop-Loss (SL) %', minval=0, group='SL/TP for Short-Strategy', inline='4')
+short_stoploss_percentage = close * (short_stoploss_value / 100) / syminfo.mintick
+short_takeprofit_value = input.float(defval=50, title='Take-Profit (TP) %', minval=0, group='SL/TP for Short-Strategy', inline='4')
+short_takeprofit_percentage = close * (short_takeprofit_value / 100) / syminfo.mintick
+// Plot Stoploss & Take Profit Levels
+long_stoploss_price = strategy.position_avg_price * (1 - long_stoploss_value / 100)
+long_takeprofit_price = strategy.position_avg_price * (1 + long_takeprofit_value / 100)
+short_stoploss_price = strategy.position_avg_price * (1 + short_stoploss_value / 100)
+short_takeprofit_price = strategy.position_avg_price * (1 - short_takeprofit_value / 100)
+plot(enable_long_strategy and not enable_short_strategy ? long_stoploss_price : na, color=color.new(#ff0000, 0), style=plot.style_linebr, linewidth=2, title='Long SL Level')
+plot(enable_long_strategy and not enable_short_strategy ? long_takeprofit_price : na, color=color.new(#008000, 0), style=plot.style_linebr, linewidth=2, title='Long TP Level')
+plot(enable_short_strategy and not enable_long_strategy ? short_stoploss_price : na, color=color.new(#ff0000, 0), style=plot.style_linebr, linewidth=2, title='Short SL Level')
+plot(enable_short_strategy and not enable_long_strategy ? short_takeprofit_price : na, color=color.new(#008000, 0), style=plot.style_linebr, linewidth=2, title='Short TP Level')
+// Date Range
+start_date = input.int(title='Start Day', defval=1, minval=1, maxval=31, group='Time-Period for Back-Testing', inline='1')
+end_date = input.int(title='until Day', defval=1, minval=1, maxval=31, group='Time-Period for Back-Testing', inline='1')
+start_month = input.int(title='Start Month', defval=10, minval=1, maxval=12, group='Time-Period for Back-Testing', inline='2')
+end_month = input.int(title='until Month', defval=1, minval=1, maxval=12, group='Time-Period for Back-Testing', inline='2')
+start_year = input.int(title='Start Year', defval=2022, minval=1800, maxval=3000, group='Time-Period for Back-Testing', inline='3')
+end_year = input.int(title='until Year', defval=2077, minval=1800, maxval=3000, group='Time-Period for Back-Testing', inline='3')
+in_date_range = time >= timestamp(syminfo.timezone, start_year, start_month, start_date, 0, 0) and time < timestamp(syminfo.timezone, end_year, end_month, end_date, 0, 0)
+//// Indicator Inputs
+// RSI
+rsi_over_sold = input.int(defval=40, minval=1, title='Oversold Level', group='RSI')
+rsi_over_bought = input.int(defval=70, minval=1, title='Overbought Level', group='RSI')
+rsi_length = input.int(defval=14, minval=1, title='RSI Length', group='RSI')
+rsi = ta.rsi(close, rsi_length)
+// VWAP
+maSource = input(title='SMA source', defval=close,group = "VWAP")
+maInterval = input.int(title='SMA interval', minval=0, maxval=999, step=1, defval=7,group = "VWAP")
+ma = ta.sma(maSource, maInterval)
+//// Strategy
+// Creating Long and Short Strategy
+was_over_sold = ta.barssince(rsi <= rsi_over_sold) <= 10
+was_over_bought = ta.barssince(rsi >= rsi_over_bought) <= 10
+crossover_bull = ta.crossover(ma, ta.vwap)
+crossover_bear = ta.crossunder(ma, ta.vwap)
+buy_signal = was_over_sold and crossover_bull
+sell_signal = was_over_bought and crossover_bear
+// Long Strategy
+if buy_signal and in_date_range and enable_long_strategy == true
+    strategy.entry('Long', strategy.long, when=buy_signal, alert_message='Open Long Position')
+    strategy.exit('Long SL/TP', from_entry='Long', loss=long_stoploss_percentage, profit=long_takeprofit_percentage, alert_message='Your SL/TP-Limit for the Long-Strategy has been activated.')
+    strategy.close('Long', when=sell_signal, alert_message='Close Long Position')
+// Short Strategy
+if sell_signal and in_date_range and enable_short_strategy == true
+    strategy.entry('Short', strategy.short, when=sell_signal, alert_message='Open Short Position')
+    strategy.exit('Short SL/TP', from_entry='Short', loss=short_stoploss_percentage, profit=short_takeprofit_percentage, alert_message='Your SL/TP-Limit for the Short-Strategy has been activated.')
+    strategy.close('Short', when=buy_signal, alert_message='Close Short Position')
+Expand (76 lines)

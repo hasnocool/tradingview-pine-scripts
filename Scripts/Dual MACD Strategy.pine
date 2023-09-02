@@ -1,0 +1,257 @@
+Script Name: Dual MACD Strategy
+Author: Trading_Solutions_
+Description: This strategy Multi Time Frame Macd Indicator
+
+We take the first long position when we have a buy signal in Weekly Macd (Macd line crosses above Signal line). This open a trading window, showed with green background color
+  
+We close the first position when either Weekly or Daily Macd give us a sell signal ((Macd line crosses below Signal line))
+
+Enable Profit and...
+PineScript code:
+
+Pine Script™ strategy
+Dual MACD Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © maxits
+// Long Position: Weekly Macd line crosses above Signal line   
+// [Trading Window Macd Line > Signal Line] (Weekly)
+// Close Position: Daily Macd Line crosses above Daily Signal line.  
+// Re Entry Condition: Macd line crosses above Signal line only if [Trading Window MacdLine > Sgnal Line] (Weekly)
+//@version=4
+strategy("Dual MACD Strategy",
+         shorttitle="Dual Macd Tester",
+         overlay=false,
+         initial_capital=1000,
+         default_qty_value=20,
+         default_qty_type=strategy.percent_of_equity,
+         commission_value=0.1,
+         pyramiding=0)
+// Define user inputs
+i_time     = input(defval = timestamp("01 May 2018 13:30 +0000"), title = "Start Time", type = input.time) // Starting  time for Backtesting
+f_time     = input(defval = timestamp("9 Sep 2021 13:30 +0000"), title = "Finish Time", type = input.time) // Finishing time for Backtesting
+sep1          = input(false, title="------ Profit & Loss ------")
+enable_TP     = input(true, title="Enable Just a Profit Level?")
+enable_SL     = input(false, title="Enable Just a S.Loss Level?")
+enable_TS     = input(true, title=" Enable Only Trailing Stop")
+long_TP_Input = input(30.0,   title='Take Profit %',      type=input.float, minval=0)/100
+long_SL_Input = input(1.0,   title='Stop Loss %',        type=input.float, minval=0)/100
+long_TS_Input = input(5.0,   title='Trailing Stop %',    type=input.float, minval=0)/100
+cl_low_Input  = input(low,   title="Trailing Stop Source")
+long_TP       = strategy.position_avg_price * (1 + long_TP_Input)
+long_SL       = strategy.position_avg_price * (1 - long_SL_Input)
+long_TS       = cl_low_Input * (1 - long_TS_Input)
+sep2       = input(false, title="------ Macd Properties ------")
+d_res      = input(title="Short Term TimeFrame", type=input.resolution, defval="D") // Daily Time Frame
+w_res      = input(title="Long Term TimeFrame", type=input.resolution, defval="W")  // Weekly Time Frame
+src        = input(close, title="Source")                                           // Indicator Price Source
+fast_len   = input(title="Fast Length", type=input.integer, defval=12)              // Fast MA Length
+slow_len   = input(title="Slow Length", type=input.integer, defval=26)              // Slow MA Length
+sign_len   = input(title="Sign Length", type=input.integer, defval=9)               // Sign MA Length
+d_w        = input(title="Daily or Weekly?", type=input.bool, defval=true)          // Plot Daily or Weekly MACD
+// Color Plot for Macd
+col_grow_above = #26A69A
+col_grow_below = #FFCDD2
+col_fall_above = #B2DFDB
+col_fall_below = #EF5350
+// BG Color
+bg_color = color.rgb(127, 232, 34, 75)
+// Daily Macd
+[d_macdLine, d_singleLine, d_histLine] = security(syminfo.tickerid, d_res, macd(src, fast_len, slow_len, sign_len)) // Funcion Security para poder usar correcta resolución
+plot(d_w ? d_macdLine   : na, color=color.blue)
+plot(d_w ? d_singleLine : na, color=color.orange)
+plot(d_w ? d_histLine   : na, style=plot.style_columns,
+     color=(d_histLine>=0 ? (d_histLine[1] < d_histLine ? col_grow_above : col_fall_above) : 
+     (d_histLine[1] < d_histLine ? col_grow_below : col_fall_below)))
+    
+// Weekly Macd
+[w_macdLine, w_singleLine, w_histLine] = security(syminfo.tickerid, w_res, macd(src, fast_len, slow_len, sign_len)) // Funcion Security para poder usar correcta resolución
+plot(d_w ? na : w_macdLine,   color=color.blue)
+plot(d_w ? na : w_singleLine, color=color.orange)
+plot(d_w ? na : w_histLine,   style=plot.style_columns,
+     color=(w_histLine>=0 ? (w_histLine[1] < w_histLine ? col_grow_above : col_fall_above) : 
+     (w_histLine[1] < w_histLine ? col_grow_below : col_fall_below)))
+///////////////////////////////// Entry Conditions
+inTrade    = strategy.position_size != 0       // Posición abierta
+notInTrade = strategy.position_size == 0       // Posición Cerrada
+start_time = time >= i_time and time <= f_time // Inicio y Fin de BackTest
+trading_window = w_macdLine > w_singleLine   // Weekly Macd Signal enables a trading window 
+bgcolor(trading_window ? bg_color : na)
+buy_cond       = crossover (w_macdLine, w_singleLine)
+sell_cond      = crossunder(d_macdLine, d_singleLine)
+re_entry_cond  = crossover (d_macdLine, d_singleLine) and trading_window
+// Entry Exit Conditions
+trailing_stop  = 0.0        // Code for calculating Long Positions Trailing Stop Loss
+trailing_stop := if (strategy.position_size != 0)
+    stopValue = long_TS
+    max(trailing_stop[1], stopValue)
+else 
+    0
+if (buy_cond and notInTrade and start_time)
+    strategy.entry(id="First Entry", long=strategy.long, comment="First Long")
+if (sell_cond and inTrade)
+    strategy.close(id="First Entry", comment="Close First Long")
+    
+if (re_entry_cond and notInTrade and start_time)
+    strategy.entry(id="Further Entry", long=strategy.long, comment="Further Entry")
+if (sell_cond and inTrade)
+    strategy.close(id="Further Entry", comment="Close First Long")
+if enable_TP
+    if (enable_TS and not enable_SL)
+        strategy.exit("Long TP & TS FiEn", "First Entry",   limit = long_TP, stop = trailing_stop)
+        strategy.exit("Long TP & TS FuEn", "Further Entry", limit = long_TP, stop = trailing_stop)
+    else
+        if (enable_SL and not enable_TS)
+            strategy.exit("Long TP & TS FiEn", "First Entry",   limit = long_TP, stop = long_SL)
+            strategy.exit("Long TP & TS FuEn", "Further Entry", limit = long_TP, stop = long_SL)
+        else 
+            strategy.exit("Long TP & TS FiEn", "First Entry",   limit = long_TP)
+            strategy.exit("Long TP & TS FuEn", "Further Entry", limit = long_TP)
+else
+    if not enable_TP 
+        if (enable_TS and not enable_SL)
+            strategy.exit("Long TP & TS FiEn", "First Entry",   stop = trailing_stop)
+            strategy.exit("Long TP & TS FuEn", "Further Entry", stop = trailing_stop)
+        else
+            if (enable_SL and not enable_TS)
+                strategy.exit("Long TP & TS FiEn", "First Entry",   stop = long_SL)
+                strategy.exit("Long TP & TS FuEn", "Further Entry", stop = long_SL)
+plot(enable_TP ? long_TP : na, title="TP Level", color=color.green, style=plot.style_linebr, linewidth=2)
+plot(enable_SL ? long_SL : na, title="SL Level", color=color.red,   style=plot.style_linebr, linewidth=2)
+plot(enable_TS and trailing_stop ? trailing_stop : na, title="TS Level", color=color.red, style=plot.style_linebr, linewidth=2)
+Expand (135 lines)

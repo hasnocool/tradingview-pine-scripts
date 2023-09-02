@@ -1,0 +1,294 @@
+Script Name: 12-26-IT strategy
+Author: Abdul-Rahim
+Description: Base of this Strategy is crossover of 12EMA on 26EMA. 
+Also multiple other criteria has to meet for buy signal, Criterias mentioned below
+
+
+//////////////////////////////////
+
+There two entry option to select. Either one or both can be selected:
+
+1. Only 12/26 Cross over
+		a. 12/26 crossover.
+		b. RSI (14) value to be between a range (RSI is inbuilt, but lower and...
+PineScript code:
+
+Pine Script™ strategy
+12/26-IT strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © AbdulRahimShama
+//@version=5
+strategy('12/26-IT strategy', overlay=true,initial_capital = 100000, calc_on_order_fills = true, pyramiding = 10)
+Show_Only_12_26_Crossover_Entry             = input.bool(true, group = "Entry_Exit Criteria")
+Show_12_26_Crossover_and_resistance_Entry   = input.bool(false, group = "Entry_Exit Criteria")
+Show_MA_StopLoss                            = input.bool(false, group = "Entry_Exit Criteria", tooltip = "update values as per your requirement in MA section")
+Show_TSL_StopLoss                           = input.bool(false, group = "Entry_Exit Criteria")
+Show_Crossdown_StopLoss                     = input.bool(true, group = "Entry_Exit Criteria")
+////////////////////////////////////////////////
+////////////////TARGETS INPUT
+////////////////////////////////////////////////
+////////Target1
+TargetPerc1         = input.float(title="Target (%)", minval=0,defval=5, group="Target-1") / 100
+TargetPrice1        = strategy.position_avg_price * (1 + TargetPerc1)
+Target1_exit_qty    = input.int(50, group="Target-1",tooltip = "% qty to sell when Target1 is reached")
+////////Target2
+TargetPerc2         = input.float(title="Target (%)", minval=0,defval=10, group="Target-2") / 100
+TargetPrice2        = strategy.position_avg_price * (1 + TargetPerc2)
+Target2_exit_qty    = input.int(100, group="Target-2",tooltip = "% qty to sell when Target2 is reached")
+////////////////////////////////////////////////
+////////////////TRAILING STOP LOSS
+////////////////////////////////////////////////
+TSLsource           = input(low, title="TSL Source", group="Trailing StopLoss")
+longTrailPerc       = input.float(title='Trail Long Loss (%)', minval=0.0, step=0.1, defval=1, group="Trailing StopLoss") * 0.01
+TrailStopPrice = 0.0
+TrailStopPrice := if strategy.position_size > 0
+    sPIVOT_highValue = TSLsource * (1 - longTrailPerc)
+    math.max(sPIVOT_highValue, TrailStopPrice[1])
+else
+    0
+TSL                 = close < TrailStopPrice
+plot(series=strategy.position_size > 0 and Show_TSL_StopLoss ? TrailStopPrice : na, color=color.new(color.fuchsia, 0), style=plot.style_linebr, linewidth=2, title='Trailing StopLoss')
+////////////////////////////////////////////////
+////////////////Moving Averages
+////////////////////////////////////////////////
+SLmaLength          = input.int(21, group="StopLoss MA")
+SLmaSource          = input(low, group="StopLoss MA")
+ma(SLmaSource, length, type) =>
+    switch type
+        "SMA" => ta.sma(SLmaSource, SLmaLength)
+        "EMA" => ta.ema(SLmaSource, SLmaLength)
+SLmaType            = input.string("EMA", title="StopLoss MA", options=["SMA", "EMA"], group="StopLoss MA")
+SL_MA =             ma(SLmaSource, SLmaLength, SLmaType)
+plot(Show_MA_StopLoss ? SL_MA : na, "StopLoss for MA", color=color.rgb(255, 0, 0))
+EMA_12              =ta.ema(close, 12)
+EMA_26              =ta.ema(close, 26)
+EMA_21              =ta.ema(close,21)
+plot(EMA_12, title="EMA_12", color=color.rgb(0, 255, 0), offset=0, linewidth=1)
+plot(EMA_26, title="EMA_26", color=color.rgb(0, 0, 255), offset=0, linewidth=2)
+plot(Show_MA_StopLoss ? SL_MA : na, "StopLoss for MA", color=color.rgb(255, 0, 0))
+////////////////////////////////////////////////
+////////////////RESISTANCE INPUT and PLOTTING
+////////////////////////////////////////////////
+CrossOverLookbackCandles    = input.int(10, group= "RESISTANCE")
+resistanceSRC               = input(high, group= "RESISTANCE")
+resistanceLEFT              = input(10, group= "RESISTANCE")
+resistanceRIGHT             = input(10, group= "RESISTANCE")
+hih = ta.pivothigh(resistanceSRC, resistanceLEFT, resistanceRIGHT)
+top = ta.valuewhen(hih, resistanceSRC[resistanceRIGHT], 0)
+res = plot(top, color=top != top[1] ? na : color.new(#00ff00, 50), offset=-resistanceLEFT, linewidth=2, title="Resistance Line")
+EMA_12_Low = ta.lowest(EMA_12, CrossOverLookbackCandles)
+EMA_26_Low = ta.lowest(EMA_26, CrossOverLookbackCandles)
+////////////////////////////////////////////////
+////////////////RSI INPUT and PLOTTING
+////////////////////////////////////////////////
+RSI                 = ta.rsi(close, 14)
+RSILowerRange       = input.int(45, tooltip = "RSI value should be ABOVE this value for entry", group = "RSI")
+RSIUpperRange       = input.int(70, tooltip = "RSI value should be BELOW this value for entry", group = "RSI")
+////////////////////////////////////////////////
+////////////////MACD
+////////////////////////////////////////////////
+fast_length         = 12
+slow_length         = 26
+MACD_src            = close
+signal_length       = 9
+fast_ma             = ta.ema(MACD_src, fast_length)
+slow_ma             = ta.ema(MACD_src, slow_length)
+macd                = fast_ma - slow_ma
+signal              = ta.ema(macd, signal_length)
+hist                = macd - signal
+////////////////////////////////////////////////
+////////////////ENTRY CRITERIA
+////////////////////////////////////////////////
+BUYVALUE        = input(100000, tooltip = "Buy qty displayed on chart will be based on this value")
+BASEENTRY       = macd > signal and RSI > RSILowerRange and RSI < RSIUpperRange and close > EMA_21 and close > ta.sma(close, 7)
+Entry           = ta.crossover(EMA_12, EMA_26) and BASEENTRY
+Entry2          = ta.crossover(close, top) and EMA_12_Low < EMA_26_Low and EMA_12 > EMA_26 and RSI < 80
+////////////////////////////////////////////////
+////////////////BUY SELL STRATEGY
+////////////////////////////////////////////////
+if ((Entry and Show_Only_12_26_Crossover_Entry))
+    strategy.entry("buy", strategy.long, qty=BUYVALUE/close)
+if (Entry2 and Show_12_26_Crossover_and_resistance_Entry)
+    strategy.entry("buy", strategy.long, qty=BUYVALUE/close)
+strategy.exit("Tg1", "buy", limit=TargetPrice1, qty_percent = Target1_exit_qty)
+strategy.exit("Tg2", "buy", limit=TargetPrice2, qty_percent = Target2_exit_qty)
+if TSL and Show_TSL_StopLoss and close < EMA_12 
+    strategy.close_all ("sl")
+if ta.crossunder(EMA_12, EMA_26) and Show_Crossdown_StopLoss
+    strategy.close_all ("sl")
+if ta.crossunder(close, SL_MA) and Show_MA_StopLoss
+    strategy.close_all ("sl")
+bgcolor(color=((Entry and Show_Only_12_26_Crossover_Entry)) ? color.new(color.blue, 0) : na)
+Expand (171 lines)

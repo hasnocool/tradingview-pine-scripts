@@ -1,0 +1,135 @@
+Script Name: Weis BB Strategy
+Author: sharatgbhat
+Description: This is a strategy based on Weis Wave & EMA. Weis Wave Volume is used to determine the overall trend and Bollinger Band to determine the Price breaking out from resistance zones.
+PineScript code:
+
+Pine Script™ strategy
+Weis BB Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © sharatgbhat
+//@version=4
+strategy("Weis BB Strategy", overlay=false, default_qty_type = strategy.percent_of_equity, default_qty_value = 10,max_lines_count = 500, max_labels_count = 500)
+maxIdLossPcnt = input(1, "Max Intraday Loss(%)", type=input.float)
+strategy.risk.max_intraday_loss(maxIdLossPcnt, strategy.percent_of_equity)
+method = input(defval="ATR", options=["ATR", "Traditional", "Part of Price"], title="Renko Assignment Method")
+methodvalue = input(defval=14.0, type=input.float, minval=0, title="Value")
+pricesource = input(defval="Close", options=["Close", "Open / Close", "High / Low"], title="Price Source")
+useClose = pricesource == "Close"
+useOpenClose = pricesource == "Open / Close" or useClose
+useTrueRange = input(defval="Auto", options=["Always", "Auto", "Never"], title="Use True Range instead of Volume")
+isOscillating = input(defval=false, type=input.bool, title="Oscillating")
+normalize = input(defval=false, type=input.bool, title="Normalize")
+vol = useTrueRange == "Always" or useTrueRange == "Auto" and na(volume) ? tr : volume
+op = useClose ? close : open
+hi = useOpenClose ? close >= op ? close : op : high
+lo = useOpenClose ? close <= op ? close : op : low
+if method == "ATR"
+    methodvalue := atr(round(methodvalue))
+if method == "Part of Price"
+    methodvalue := close / methodvalue
+currclose = float(na)
+prevclose = nz(currclose[1])
+prevhigh = prevclose + methodvalue
+prevlow = prevclose - methodvalue
+currclose := hi > prevhigh ? hi : lo < prevlow ? lo : prevclose
+direction = int(na)
+direction := currclose > prevclose ? 1 : currclose < prevclose ? -1 : nz(direction[1])
+directionHasChanged = change(direction) != 0
+directionIsUp = direction > 0
+directionIsDown = direction < 0
+barcount = 1
+barcount := not directionHasChanged and normalize ? barcount[1] + barcount : barcount
+vol := not directionHasChanged ? vol[1] + vol : vol
+res = barcount > 1 ? vol / barcount : vol
+plot(isOscillating and directionIsDown ? -res : res, style=plot.style_columns, color=directionIsUp ? color.green : color.red, transp=75, linewidth=3, title="Wave Volume")
+length = input(14, minval=1)
+src = input(close, title="Source")
+mult = input(2, minval=0.001, maxval=50, title="StdDev")
+basis = sma(src, length)
+dev = mult * stdev(src, length)
+upper = basis + dev
+lower = basis - dev
+offset = input(0, "Offset", type = input.integer, minval = -500, maxval = 500)
+plot(basis, "Basis", color=#FF6D00, offset = offset)
+p1 = plot(upper, "Upper", color=#2962FF, offset = offset)
+p2 = plot(lower, "Lower", color=#2962FF, offset = offset)
+fill(p1, p2, title = "Background", color=color.rgb(33, 150, 243, 95))
+MomentumBull = close>upper
+MomentumBear = close<lower
+if (MomentumBull and directionIsUp)
+    strategy.entry("Buy", strategy.long)
+if (MomentumBear and directionIsDown)
+    strategy.entry("Sell", strategy.short)
+    strategy.exit("exit","Buy",when=directionIsDown,qty_percent=100,profit=20,loss=10)
+    strategy.exit("exit","Sell",when=directionIsUp,qty_percent=100,profit=20,loss=10)
+    
+Expand (68 lines)

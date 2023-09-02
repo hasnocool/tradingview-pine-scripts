@@ -1,0 +1,203 @@
+Script Name: robotrading ZZ-8 fractals
+Author: ROBO_Trading
+Description: This is another version of my ZZ type strategy. This script now uses Bill Williams' fractals.
+
+ Strategy 
+
+Step 1: Calculate Bill Williams' Fractals
+Step 2. A line is drawn from the fractal
+Step 3. Create a stop order to enter the position on the line
+
+ Trading 
+
+If the price is above the lime line, open a long position (and close a short position).
+If the price...
+PineScript code:
+
+Pine Script™ strategy
+robotrading ZZ-8 fractals
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+//@version=4
+strategy(title = "robotrading ZZ-8 fractals", shorttitle = "ZZ-8", overlay = true, default_qty_type = strategy.percent_of_equity, initial_capital = 100, default_qty_value = 100, commission_value = 0.1)
+//Settings
+needlong  = input(true, defval = true, title = "Long")
+needshort = input(false, defval = true, title = "Short")
+filterBW = input(false, title="filter Bill Williams Fractals")
+showll = input(true, title = "Show levels")
+showff = input(true, title = "Show fractals (repaint!)")
+showdd = input(true, title = "Show dots (repaint!)")
+showbg = input(false, title = "Show background")
+showlb = input(false, title = "Show drawdown")
+startTime = input(defval = timestamp("01 Jan 2000 00:00 +0000"), title = "Start Time", type = input.time, inline = "time1")
+finalTime = input(defval = timestamp("31 Dec 2099 23:59 +0000"), title = "Final Time", type = input.time, inline = "time1")
+//Variables
+loss = 0.0
+maxloss = 0.0
+equity = 0.0
+truetime = time > startTime and time < finalTime
+//Fractals
+isRegularFractal(mode) =>
+    ret = mode == 1 ? high[4] < high[3] and high[3] < high[2] and high[2] > high[1] and high[1] > high[0] : mode == -1 ? low[4] > low[3] and low[3] > low[2] and low[2] < low[1] and low[1] < low[0] : false
+isBWFractal(mode) =>
+    ret = mode == 1 ? high[4] < high[2] and high[3] <= high[2] and high[2] >= high[1] and high[2] > high[0] : mode == -1 ? low[4] > low[2] and low[3] >= low[2] and low[2] <= low[1] and low[2] < low[0] : false
+filteredtopf = filterBW ? isRegularFractal(1) : isBWFractal(1)
+filteredbotf = filterBW ? isRegularFractal(-1) : isBWFractal(-1)
+//Triangles
+plotshape(filteredtopf and showff, title='Filtered Top Fractals', style=shape.triangledown, location=location.abovebar, color= color.red, offset=-2)
+plotshape(filteredbotf and showff, title='Filtered Bottom Fractals', style=shape.triangleup, location=location.belowbar, color= color.lime, offset=-2)
+//Levels
+hh = 0.0
+ll = 0.0
+hh := filteredtopf ? high[2] : hh[1]
+ll := filteredbotf ? low[2] : ll[1]
+//Trend
+trend = 0
+trend := high >= hh[1] ? 1 : low <= ll[1] ? -1 : trend[1]
+//Lines
+hcol = showll and hh == hh[1] and close < hh ? color.lime : na
+lcol = showll and ll == ll[1] and close > ll ? color.red : na
+plot(hh, color = hcol)
+plot(ll, color = lcol)
+//Dots
+var line hline = na
+if hh != hh[1] and showdd
+    hline := line.new(bar_index - 0, hh[0], bar_index - 2, hh[0], xloc = xloc.bar_index, extend = extend.none, style = line.style_dotted, color = color.lime, width = 1)
+var line lline = na
+if ll != ll[1] and showdd
+    lline := line.new(bar_index - 0, ll[0] - syminfo.mintick, bar_index - 2, ll[0] - syminfo.mintick, xloc = xloc.bar_index, extend = extend.none, style = line.style_dotted, color = color.red, width = 1)
+    
+//Background
+bgcol = showbg == false ? na : trend == 1 ? color.lime : trend == -1 ? color.red : na
+bgcolor(bgcol, transp = 80)
+//Orders
+if hh > 0 and needlong
+    strategy.entry("Long", strategy.long, na, stop = hh, when = needlong and truetime)
+    strategy.exit("Exit Long", "Long", stop = ll, when = needshort == false)
+if ll > 0 and startTime
+    strategy.entry("Short", strategy.short, na, stop = ll, when = needshort and truetime)
+    strategy.exit("Exit Short", "Short", stop = hh, when = needlong == false)
+if time > finalTime
+    strategy.close_all()
+    strategy.cancel("Long")
+    strategy.cancel("Short")
+if showlb
+    //Drawdown
+    max = 0.0
+    max := max(strategy.equity, nz(max[1]))
+    dd = (strategy.equity / max - 1) * 100
+    min = 100.0
+    min := min(dd, nz(min[1]))
+    
+    //Max loss size
+    equity := strategy.position_size != strategy.position_size[1] ? strategy.equity : equity[1]
+    loss := equity < equity[1] ? ((equity / equity[1]) - 1) * 100 : 0
+    maxloss := min(nz(maxloss[1]), loss)
+    
+    //Label
+    min := round(min * 100) / 100
+    maxloss := round(maxloss * 100) / 100
+    labeltext = "Drawdown: " + tostring(min) + "%" + "\nMax.loss " + tostring(maxloss) + "%"
+    var label la = na
+    label.delete(la)
+    tc = min > -100 ? color.white : color.red
+    osx = timenow + round(change(time)*50)
+    osy = highest(100)
+    la := label.new(x = osx, y = osy, text = labeltext, xloc = xloc.bar_time, yloc = yloc.price, color = color.black, style = label.style_labelup, textcolor = tc)
+Expand (97 lines)

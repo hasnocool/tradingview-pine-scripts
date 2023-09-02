@@ -1,0 +1,363 @@
+Script Name: MrBS-Directional Movement Index [Trend Friend Strategy]
+Author: MrBetonBlocks
+Description: This goes with my MrBS:DMI+ indicator. I originally combined them into one, but then you cannot set alerts based on what the ADX and DMI is doing, only strategy alerts, so separate ones have more flexibility and uses.
+Indicator Version is found under "MrBS:Directional Movement Index  " ()
+
+//// THE IDEA
+
+The majority of profits made in the market come from...
+PineScript code:
+
+Pine Script™ strategy
+MrBS:Directional Movement Index [Trend Friend Strategy]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+//@version=4
+////// MrBS:DMI+ [Trend Friend Strategy] - MrBetonStonks - (13/12/2020) 
+// This to goes with my MrBS:DMI+ indicator. I originally combined them into one, but then you cannot set alerts based on what the ADX and DMI is doing, only strategy alerts, so separate ones have more flexibility and uses.
+// Indicator Versions is found under "MrBS:Directional Movement Index [Trend Friend]" (https://uk.tradingview.com/script/EmnHZno9-MrBS-Directional-Movement-Index-Trend-Friend/)
+//// INDICATOR DETAILS
+// The default values used for calculation are the Real OHLC, we can change this to Heikin Ashi in the menu.
+// The strategy enters a position when ADX crosses the threshold level, and closes the position when ADX starts to fall. I have not yet added TP and SL functions but im working on it (if anyone has ideas please message me)
+// There is an option for a crossunder of the ADX and its EMA to close positions. This is an attempt to stay into positions longer as sometimes the ADX will fall for 1 bar and then keep rising, while the overall trend is strong.
+// The downside to this is that we exit trades much later and of the profits gained are lost.
+// Due to the way strategies work, we are unable to get reliable results when running the strategy on the HA chart even if we are calculating the signals from the real OHLC values. It is best to always run strategies on standard charts.
+//// Settings
+// These are tuned for Cypto, if you have good settings for traditional markets I would be interested to know them.
+// Layout       :- ADX, Smoothing, Threshold, EMA of ADX
+// 1HR          :- 14, 6, 21.5, 16 :: 14, 4, 21.5, 16
+// 4HR          :- 14, 4, 21.5,  5 :: 14, 2, 21.5, 5 :: 12, 2, 22, 6
+// 24HR         :- 14, 4, 21.5, 5
+// Weekly       :- ???
+// TRADITIONAL  :- 14, 9, 21.5
+// If you think of any functions/alerts that would be useful, let me know in the comments or a message.
+//// THE CODE
+strategy(title="MrBS:Directional Movement Index [Trend Friend Strategy]", shorttitle="MrBS:DMI+ [TFS]", overlay=true, initial_capital=100000, currency='USD', 
+   default_qty_type=strategy.percent_of_equity, default_qty_value=5, pyramiding=5, commission_type=strategy.commission.percent, commission_value=0.04, calc_on_order_fills=false)
+//// Inputs
+//OHLC Vales
+ticker      = tickerid(syminfo.prefix, syminfo.ticker)
+realOpen    = security(ticker, timeframe.period, open,   lookahead= barmerge.lookahead_on)
+realHigh    = security(ticker, timeframe.period, high,   lookahead= barmerge.lookahead_on)
+realLow     = security(ticker, timeframe.period, low,    lookahead= barmerge.lookahead_on)
+realClose   = security(ticker, timeframe.period, close,  lookahead= barmerge.lookahead_on)
+//Heikin Ashi Values
+ha_open     = security(heikinashi(syminfo.tickerid),  timeframe.period,  open)
+ha_high     = security(heikinashi(syminfo.tickerid),  timeframe.period,  high)
+ha_low      = security(heikinashi(syminfo.tickerid),  timeframe.period,  low)
+ha_close    = security(heikinashi(syminfo.tickerid),  timeframe.period,  close)
+//Shared Inputs
+len        = input(14,    title =        "DI Length", minval=1)
+lenSig     = input(4,     title =        "ADX Smoothing", minval=1, maxval=50)
+trendThres = input(22,    title =        "Trend Threshold Level", step=0.1)
+useHA      = input(false, title =        "Use Heikin Ashi values instead of Real OHLC", type=input.bool)
+maClose    = input(true, title =        "Use ADX crossunder EMA to close positions", type=input.bool)
+//Normal ADX calculation
+up       = change(realHigh)
+down     = -change(realLow)
+plusDM   = na(up)   ? na : (up > down and up > 0 ? up : 0)
+minusDM  = na(down) ? na : (down > up and down > 0 ? down : 0)
+trur     = rma(max(realHigh - realLow, abs(realHigh - realClose[1]), abs(realLow - realClose[1])), len)
+plus     = fixnan(100 * rma(plusDM, len) / trur)
+minus    = fixnan(100 * rma(minusDM, len) / trur)
+sum      = plus + minus
+adx      = 100 * rma(abs(plus - minus) / (sum == 0 ? 1 : sum), lenSig)
+    
+//Heikin Ashi ADX calculation  
+haUp      = change(ha_high)
+haDown    = -change(ha_low)
+haPlusDM  = na(haUp)   ? na : (haUp > haDown and haUp > 0 ? haUp : 0)
+haMinusDM = na(haDown) ? na : (haDown > haUp and haDown > 0 ? haDown : 0)
+haTrur    = rma(max(ha_high - ha_low, abs(ha_high - ha_close[1]), abs(ha_low - ha_close[1])), len)
+haPlus    = fixnan(100 * rma(haPlusDM, len) / haTrur)
+haMinus   = fixnan(100 * rma(haMinusDM, len) / haTrur)
+haSum     = haPlus + haMinus
+haAdx     = 100 * rma(abs(haPlus - haMinus) / (haSum == 0 ? 1 : haSum), lenSig)
+//Calculation Value Selection
+adxSelect   = if useHA == true
+    haAdx
+else
+    adx
+minusSelect = if useHA == true
+    haMinus
+else
+    minus
+    
+plusSelect  = if useHA == true
+    haPlus
+else
+    plus
+closeSel    = if useHA == true
+    ha_close
+else
+    realClose
+//EMA Inputs
+lenEma = input(4, "EMA", input.integer, minval=2)
+ma     = ema(adxSelect, lenEma)
+//// Colours
+//hma1col = color.new(#5B92E5, 50)
+//hma2col = color.new(color.fuchsia, 50)
+green1 = color.new(#39FF14, 0)
+red1 = color.new(#E8000D, 0)
+//// Strategy
+//Moving Average Trade Filter
+useMaFilter = input(title=                 "Use MA for Entry Filtering?", type=input.bool, defval=true)
+maFilLen    = input(defval = 377, title=   "MA Period for Entry Filtering", minval=1)
+//HMA Calculation
+n2ma  = 2*wma(closeSel, round(maFilLen/2))
+nma   = wma(closeSel, maFilLen)
+diff  = n2ma - nma
+sqn   = round(sqrt(maFilLen))
+n1    = wma(diff, sqn)
+//Declaring MA Filter Options
+EMA = "EMA"
+SMA = "SMA"
+HMA = "HMA"
+maType    = input(defval="HMA", options=[HMA, EMA, SMA], title= "MA Type For Entry Filtering")
+//MA selection function
+maEFil = maType == EMA ? ema(closeSel, maFilLen) : maType == SMA ? sma(closeSel, maFilLen) : maType == HMA ? n1 : closeSel
+plot(maEFil, color=rising(maEFil, 1) ? green1 : red1, linewidth=2)
+//Applying Filter if selected (No Data error with no filter)
+maFilterCheck = if useMaFilter == true
+    maEFil
+else
+    closeSel
+    
+//ADX EMA Saftey Net 
+maPosClose = if maClose == true
+    ma
+else
+    adxSelect[1]  //EMA Cross for exits? 2 and 3 period?
+//Back Test Range
+fromYear  = input(defval= 2016, title=   "From Year")
+fromMonth = input(defval= 1, title=      "From Month", minval= 1, maxval= 12)
+fromDay   = input(defval= 1, title=      "From Day", minval= 1, maxval= 31)
+toYear    = input(defval= 9999, title=   "To Year")
+toMonth   = input(defval= 1, title=      "To Month", minval= 1, maxval= 12)
+toDay     = input(defval= 1, title=      "To Day", minval= 1, maxval= 31)
+start      = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finish     = timestamp(toYear, toMonth, toDay, 23, 59)
+//// Signals and Orders
+//Buys
+buyTrade   = if(crossover(adxSelect, trendThres) and plusSelect > minusSelect and time > start and time < finish and closeSel > maFilterCheck)
+    true
+else
+    false
+goLong     = if(adxSelect > trendThres and rising(adxSelect, 1) and plusSelect > minusSelect and time > start and time < finish and closeSel > maFilterCheck)
+    true
+else
+    false
+coverTrade = if(falling(adxSelect, 1) and adxSelect < maPosClose)
+    true
+else
+    false
+    
+//Sells
+shortTrade = if(crossover(adxSelect, trendThres) and plusSelect < minusSelect and time > start and time < finish and closeSel < maFilterCheck)
+    true
+else
+    false
+goShort    = if(adxSelect > trendThres and rising(adxSelect, 1) and plusSelect < minusSelect and time > start and time < finish and closeSel < maFilterCheck)
+    true
+else
+    false
+closeTrade = if(falling(adxSelect, 1) and adxSelect < maPosClose)
+    true
+else
+    false
+////Entries and Exits
+strategy.entry("Long",  strategy.long,  when = buyTrade   or goLong)
+strategy.entry("Short", strategy.short, when = shortTrade or goShort)
+strategy.close("Long",  when = closeTrade)
+strategy.close("Short", when = coverTrade)
+Expand (191 lines)

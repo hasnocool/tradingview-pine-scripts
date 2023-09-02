@@ -1,0 +1,246 @@
+Script Name: Daytrade strategy RSI CCI EMA 4-8
+Author: SoftKill21
+Description: This strategy is designed for daytrade charts.
+Its made from 
+
+EMA 4 / EMA 8 to check for crosses
+
+RSI levels for overbough/oversold
+
+CCI levels 
+
+
+For entry, we check first if the ema 4 crossed ema 8 
+Secondly we confirm by checking the level of RSI level
+Finally we confirm with CCI level
+
+If all of them are on the same page we enter.
+
+For exit we have a fixed...
+PineScript code:
+
+Pine Script™ strategy
+Daytrade strategy RSI CCI EMA 4/8
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © SoftKill21
+//@version=4
+strategy(title="Moving Average Exponential", shorttitle="EMA", overlay=true)
+len4 = input(4, minval=1, title="Length_MA4")
+src4 = input(close, title="Source")
+offset4 = input(title="Offset", type=input.integer, defval=0, minval=-500, maxval=500)
+out4 = ema(src4, len4)
+plot(out4, title="EMA", color=color.blue, offset=offset4)
+len8 = input(8, minval=1, title="Length_MA8")
+src8 = input(close, title="Source")
+offset8 = input(title="Offset", type=input.integer, defval=0, minval=-500, maxval=500)
+out8 = ema(src8, len8)
+plot(out8, title="EMA", color=color.blue, offset=offset8)
+//rsioma
+src = close, len = input(14, minval=1, title="Length")
+up = rma(max(change(ema(src, len)), 0), len)
+down = rma(-min(change(ema(src, len)), 0), len)
+rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+//plot(rsi, color=color.blue)
+//band1 = hline(80)
+//band0 = hline(20)
+//fill(band1, band0, color=color.purple, transp=90)
+//hline(50, color=color.gray, linestyle=plot.style_line)
+sig = ema(rsi, 21)
+//plot(sig, color=color.purple)
+//woodie
+cciTurboLength = input(title="CCI Turbo Length", type=input.integer, defval=6, minval=3, maxval=14)
+cci14Length = input(title="CCI 14 Length", type=input.integer, defval=14, minval=7, maxval=20)
+source = close
+cciTurbo = cci(source, cciTurboLength)
+cci14 = cci(source, cci14Length)
+last5IsDown = cci14[5] < 0 and cci14[4] < 0 and cci14[3] < 0 and cci14[2] < 0 and cci14[1] < 0
+last5IsUp = cci14[5] > 0 and cci14[4] > 0 and cci14[3] > 0 and cci14[2] > 0 and cci14[1] > 0
+histogramColor = last5IsUp ? color.green : last5IsDown ? color.red : cci14 < 0 ? color.green : color.red
+// Exit Condition
+// Exit Condition
+a = input(12)*10
+b = input(15)*10
+c = a*syminfo.mintick
+d = b*syminfo.mintick
+longCondition = crossover(out4, out8) and (rsi >= 65 and cci14>=0)
+shortCondition = crossunder(out4, out8) and (rsi <=35 and cci14<=0)
+long_stop_level     = float(na)
+long_profit_level1  = float(na)
+long_profit_level2  = float(na)
+long_even_level     = float(na)
+short_stop_level    = float(na)
+short_profit_level1 = float(na)
+short_profit_level2 = float(na)
+short_even_level    = float(na)
+long_stop_level     := longCondition  ? close - c : long_stop_level     [1]
+long_profit_level1  := longCondition  ? close + d : long_profit_level1  [1]
+//long_profit_level2  := longCondition  ? close + d : long_profit_level2  [1]
+//long_even_level     := longCondition  ? close + 0 : long_even_level     [1]
+short_stop_level    := shortCondition ? close + c : short_stop_level    [1]
+short_profit_level1 := shortCondition ? close - d : short_profit_level1 [1]
+//short_profit_level2 := shortCondition ? close - d : short_profit_level2 [1]
+//short_even_level    := shortCondition ? close + 0 : short_even_level    [1] 
+//ha
+// === Input ===
+//ma1_len = input(1, title="MA 01")
+//ma2_len = input(40, title="MA 02")
+// === MA 01 Filter ===
+//o=ema(open,ma1_len)
+//cc=ema(close,ma1_len)
+//h=ema(high,ma1_len)
+//l=ema(low,ma1_len)
+// === HA calculator ===
+//ha_t = heikinashi(syminfo.tickerid)
+//ha_o = security(ha_t, timeframe.period, o)
+//ha_c = security(ha_t, timeframe.period, cc)
+//ha_h = security(ha_t, timeframe.period, h)
+//ha_l = security(ha_t, timeframe.period, l)
+// === MA 02 Filter ===
+//o2=ema(ha_o, ma2_len)
+//c2=ema(ha_c, ma2_len)
+//h2=ema(ha_h, ma2_len)
+//l2=ema(ha_l, ma2_len)
+// === Color def ===
+//ha_col=o2>c2 ? color.red : color.lime
+// ===  PLOTITING===
+//plotcandle(o2, h2, l2, c2, title="HA Smoothed", color=ha_col)
+tp=input(120)
+sl=input(96)
+    
+strategy.entry("long", strategy.long, when = longCondition)
+//strategy.close("long", when = o2>c2 , comment="ha_long")
+strategy.entry("short", strategy.short , when =shortCondition )
+//strategy.close("short", when = o2<=c2 , comment = "ha_short" )
+//strategy.close("long",when=long_profit_level1 or long_stop_level  , comment="tp/sl")
+//strategy.close("short",when=short_profit_level1 or short_stop_level , comment="tp/sl")
+strategy.exit("x_long","long",profit = tp, loss = sl) //when = o2>c2)
+strategy.exit("x_short","short",profit = tp, loss = sl) //when = o2<c2)
+Expand (127 lines)

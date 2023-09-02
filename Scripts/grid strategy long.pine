@@ -1,0 +1,237 @@
+Script Name: grid strategy long
+Author: zxcvbnm3260
+Description: Design ideas for the first edition:
+Only go long, not short, choose a time period when the general trend is up. The default grid size is 1x ATR, the next one, two, and three grids will take orders, and the fifth grid will stop loss. When the empty position reaches the upper grid, the grid as a whole rises.
+
+Chinese...
+PineScript code:
+
+Pine Script™ strategy
+grid strategy long
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © zxcvbnm3260
+//@version=5
+strategy("grid strategy long", overlay=true)
+// 版本更新记录：
+// v1.0 2021/11/09 只做多、不做空，选择大趋势向上的时间段。网格大小默认为1倍ATR，往下1、2、3个网格吃单，第5个网格止损。空仓时到达往上一个网格则网格整体抬升。（Only go long, not short, choose a time period when the general trend is up. The default grid size is 1x ATR, the next one, two, and three grids will take orders, and the fifth grid will stop loss. When the empty position reaches the upper grid, the grid as a whole rises.）
+X_ATR = input.float(title='网格大小是多少倍ATR？', defval = 1)
+// 1.基础变量
+ema169 = ta.ema(close, 169)
+ema144 = ta.ema(close, 144)
+ema12 = ta.ema(close, 12)
+ema576 = ta.ema(close, 576)
+ema676 = ta.ema(close, 676)
+plot(ema169, color=color.new(color.orange, 0), linewidth=2)
+// plot(ema144, color=color.orange)
+plot(ema12,  color=color.blue)
+// plot(ema676, color=color.orange, linewidth=1)
+mtr = math.max(high - low, math.abs(close[1] - high), math.abs(close[1] - low))
+atr = ta.ema(mtr, 30)
+is_0930 = hour(time, 'GMT-4') == 9  and minute(time, 'GMT-4') == 30
+is_1500 = hour(time, 'GMT-4') == 15 and minute(time, 'GMT-4') == 00
+is_1530 = hour(time, 'GMT-4') == 15 and minute(time, 'GMT-4') == 30
+is_yangxian = close>open
+is_yinxian = close<open
+// 2.基本趋势标记
+big_trend  = ema12 >= ema169 ? 1 : 0
+big_trend2 = ema12 <= ema169 ? 1 : 0
+// 背景的变色处理：
+bgcolor(big_trend == 1 ? color.new(color.green, 90) : color.new(color.red, 90) )
+// 3.网格点位初始化
+grid_size = atr * X_ATR // 网格大小
+        
+price_entry1 = open - grid_size*1
+price_entry2 = open - grid_size*2
+price_entry3 = open - grid_size*3
+price_stop_loss = open - grid_size*5
+price_exit1 = price_entry1 + grid_size*1
+price_exit2 = price_entry2 + grid_size*1
+price_exit3 = price_entry3 + grid_size*1
+qty1 = int(1000/price_entry1)
+qty2 = int(1000/price_entry2)
+qty3 = int(1000/price_entry3)
+// 标出各种点位
+slm_lines_time(time, price_entry1, price_entry2, price_entry3, price_stop_loss, price_exit1)=>
+    time2 = time + 1000*3600*24*5
+    line.new(time, price_stop_loss, time2, price_stop_loss, color=color.red, xloc = xloc.bar_time, width=2)  // 止损位
+    line.new(time, price_entry1, time2, price_entry1, color=color.green, xloc = xloc.bar_time)  // 
+    line.new(time, price_entry2, time2, price_entry2, color=color.green, xloc = xloc.bar_time)  // 
+    line.new(time, price_entry3, time2, price_entry3, color=color.green, xloc = xloc.bar_time)  // 
+    line.new(time, price_exit1,  time2, price_exit1,  color=color.green, xloc = xloc.bar_time, width=2)  // 
+slm_lines(time, price_entry1, price_entry2, price_entry3, price_stop_loss, price_exit1)=>
+    line.new(bar_index, price_stop_loss, bar_index[5], price_stop_loss, color=color.red, xloc = xloc.bar_index, width=2)  // 止损位
+    line.new(bar_index, price_entry1, bar_index[5], price_entry1, color=color.green, xloc = xloc.bar_index)  // 
+    line.new(bar_index, price_entry2, bar_index[5], price_entry2, color=color.green, xloc = xloc.bar_index)  // 
+    line.new(bar_index, price_entry3, bar_index[5], price_entry3, color=color.green, xloc = xloc.bar_index)  // 
+    line.new(bar_index, price_exit1,  bar_index[5], price_exit1,  color=color.green, xloc = xloc.bar_index, width=2)  // 
+// 4.网格点位更新和下单
+is_entry0 = big_trend==1 and year>=2020
+var is_entry = false
+// 未进场时：
+if is_entry0 and not is_entry
+    is_entry := true
+    
+    grid_size := atr * X_ATR // 网格大小
+    
+    price_entry1 := close - grid_size*1
+    price_entry2 := close - grid_size*2
+    price_entry3 := close - grid_size*3
+    price_stop_loss := close - grid_size*5
+    
+    price_exit1 := price_entry1 + grid_size*1
+    price_exit2 := price_entry2 + grid_size*1
+    price_exit3 := price_entry3 + grid_size*1
+    
+    qty1 := int(1000/price_entry1)
+    qty2 := int(1000/price_entry2)
+    qty3 := int(1000/price_entry3)
+    
+    // slm_lines(time, price_entry1, price_entry2, price_entry3, price_stop_loss, price_exit1)
+    
+    strategy.entry("open1", strategy.long, qty1, limit = price_entry1)
+    strategy.entry("open2", strategy.long, qty2, limit = price_entry2)
+    strategy.entry("open3", strategy.long, qty3, limit = price_entry3)
+    
+    strategy.exit("close1", qty = qty1, limit = price_exit1, stop = price_stop_loss)
+    strategy.exit("close2", qty = qty2, limit = price_exit2, stop = price_stop_loss)
+    strategy.exit("close3", qty = qty3, limit = price_exit3, stop = price_stop_loss)
+// 已进场的各类情况
+// 1.止损
+if is_entry and close <= price_stop_loss
+    strategy.close_all()
+    is_entry := false
+// 2.网格抬升
+if is_entry and close >= price_exit1
+    is_entry := false
+        
+Expand (129 lines)

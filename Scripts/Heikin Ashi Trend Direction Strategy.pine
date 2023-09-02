@@ -1,0 +1,443 @@
+Script Name: Heikin Ashi Trend Direction Strategy
+Author: UnknownUnicorn36161431
+Description: Strategy based off Heikin Ashi candles and their correlation to common Japanese candlesticks . This strategy will signal a trend change when a candlestick closes above/below the opening price of a Heikin Ashi candle of the opposite kind.
+PineScript code:
+
+Pine Script™ strategy
+Heikin Ashi Trend Direction Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+//@version=5
+strategy(title = "Heikin Ashi Trend Direction Strategy", shorttitle="HA Trend Direction", overlay=true, linktoseries=true, process_orders_on_close = true, calc_on_order_fills = false, pyramiding = 0, default_qty_type = strategy.percent_of_equity, default_qty_value = 98, commission_type = strategy.commission.percent, commission_value = 0, initial_capital = 100000, max_bars_back = 4900, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)
+GROUP_GENERAL                = "General"
+GROUP_VOLUME_OPTIONS         = "Volume Pressure Options"
+GROUP_HA_CANDLES_OPTIONS     = "Heikin Ashi Candles Options"
+GROUP_TIME_LIMITED_BACKTESTS = "Time-Limit BackTests (0 = disable)"
+// GENERAL
+i_sl_percent = input.float( 0.1, title="Stop Loss (%)", minval=0, step=0.01, inline = "sl", group = GROUP_GENERAL)
+i_sl_extend_to_full_candle = input.bool( true, "Extend to Full Candle", tooltip = "When ticked, SL will be extended to the wick of the candle where the trade started. This is useful when the strategy opens a trade at the top/bottom of a candle and the next one engulfs it with its wick but still manages to close its body following the trend we are trading for.", inline = "sl", group = GROUP_GENERAL)
+i_open_trades_on_trend_candles = input.bool(false, "Open trades on trade-following candles", tooltip = "If enabled, the strategy will only open a long trade when the candle on which it would be opened closed as bullish and vice-versa.", group=GROUP_GENERAL)
+i_debug = input.bool(false, "Debug Mode", group=GROUP_GENERAL)
+//i_debug_table = input.bool(true, "Show Debug Table", group=GROUP_GENERAL)
+i_debug_labels = input.bool(true, "Show Debug Labels", group=GROUP_GENERAL)
+// VOLUME PRESSURE COMPOSITE 
+i_use_volume_pressure_composite = input.bool(false, "Trade by Volume Pressure", tooltip = "By enabling this option, trades will only be made in the direction of a detected volume-weighted average pressure trend.", group = GROUP_VOLUME_OPTIONS)
+i_close_by_volume_pressure_composite = input.bool(true, "Close by Volume Pressure", tooltip = "By enabling this option, trades will close only after the trend of volume-weighted average presure changes.", inline = "vol_close", group = GROUP_VOLUME_OPTIONS)
+i_close_by_volume_pressure_composite_only = input.bool(false, "Only", inline = "vol_close", group = GROUP_VOLUME_OPTIONS)
+i_trade_by_vpma = input.bool(false, "Trade by VPMA", inline = "vpma", tooltip = "When enabled, this strategy will utilize the Volume Pressure Composite Moving Average and will only allow opening of short trades when a candle closes above VPMA and long ones when a candle closes below VPMA.", group = GROUP_VOLUME_OPTIONS)
+i_trade_by_vpma_inverse = input.bool(false, "Inverse", inline = "vpma", group = GROUP_VOLUME_OPTIONS)
+i_p = input.int(30, "Lookback Periods", group = GROUP_VOLUME_OPTIONS )
+i_bands = input.bool(false, "Show Pressure Band", group = GROUP_VOLUME_OPTIONS)
+i_colb = input.bool(false, "Color Trend on price bars", group = GROUP_VOLUME_OPTIONS)
+// HA
+i_ha_show       = input.bool    (true, "Show Heikin Ashi Candles Overlay", group=GROUP_HA_CANDLES_OPTIONS)
+candletype      = input.string  ("Candles", "Candle Type", options=["Hollow", "Bars", "Candles"], group=GROUP_HA_CANDLES_OPTIONS, tooltip="Candle Type to be dispalyed. User will have to 'Mute' the main series bar using the 👁 symbol next to ticker id.")
+BodyBull        = input.color   ( color.new( #26a69a, 75 ), "", inline="a", group=GROUP_HA_CANDLES_OPTIONS)
+BodyBear        = input.color   ( color.new( #ef5350, 75 ), "", inline="a", group=GROUP_HA_CANDLES_OPTIONS)
+BorderBull      = input.color   ( color.new( #26a69a, 50 ), "", inline="b", group=GROUP_HA_CANDLES_OPTIONS)
+BorderBear      = input.color   ( color.new( #ef5350, 50 ), "", inline="b", group=GROUP_HA_CANDLES_OPTIONS)
+WickBull        = input.color   ( color.new( #26a69a, 50 ), "", inline="c", group=GROUP_HA_CANDLES_OPTIONS)
+WickBear        = input.color   ( color.new( #ef5350, 50 ), "", inline="c", group=GROUP_HA_CANDLES_OPTIONS)
+// TIME-LIMITED BACKTESTING
+i_use_time_limited_backtesting = input.bool( false, "Use Time-Limited Backtesting", group = GROUP_TIME_LIMITED_BACKTESTS )
+i_startDay = input.int(0, "Start Day", minval = 0, maxval = 31, group = GROUP_TIME_LIMITED_BACKTESTS)
+i_startMonth = input.int(0, "Start Month", minval = 0, maxval = 12, group = GROUP_TIME_LIMITED_BACKTESTS)
+i_startYear = input.int(0, "Start Year", minval = 0, maxval = 2100, group = GROUP_TIME_LIMITED_BACKTESTS)
+i_endDay = input.int(0, "End Day", minval = 0, maxval = 31, group = GROUP_TIME_LIMITED_BACKTESTS)
+i_endMonth = input.int(0, "End Month", minval = 0, maxval = 12, group = GROUP_TIME_LIMITED_BACKTESTS)
+i_endYear = input.int(0, "End Year", minval = 0, maxval = 2100, group = GROUP_TIME_LIMITED_BACKTESTS)
+lookback = 4899
+inDateRange = true
+var entry_price = 0.0
+var last_volume_trend = ""
+// VOLUME PRESSURE COMPOSITE
+vol = volume > 0 ? volume : 1
+// Close Conditions for Pressure Algorithms
+cl = close
+op = open
+hi = high
+lo = low
+// HA
+// Optional Mathmatical Calcualtion to avoid the security function 
+// hkClose         = (open + high + low + close) / 4
+// hkOpen          = float(na)
+// hkOpen          := na(hkOpen[1]) ? (open + close) / 2 : (nz(hkOpen[1]) + nz(hkClose[1])) / 2
+// hkHigh          = math.max(high, math.max(hkOpen, hkClose))
+// hkLow           = math.min(low,  math.min(hkOpen, hkClose))
+[hkOpen, hkHigh, hkLow, hkClose] = request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, [open, high, low, close])
+hollow          = candletype == "Hollow" 
+bars            = candletype == "Bars"
+candle          = candletype == "Candles"
+// Look if the close time of the current bar falls inside the date range
+if i_use_time_limited_backtesting and i_startDay != 0 and i_startMonth != 0 and i_startYear != 0 and i_endDay != 0 and i_endMonth != 0 and i_endYear != 0
+    inDateRange := ( time >= timestamp( syminfo.timezone, i_startYear, i_startMonth, i_startDay, 0, 0 ) ) and ( time < timestamp( syminfo.timezone, i_endYear, i_endMonth, i_endDay, 0, 0 ) )
+// ———————————————————— Functions {
+// GENERAL
+f_debug_label( txt ) =>
+    if i_debug and i_debug_labels
+        label.new(bar_index, high, txt, color = color.lime, textcolor = color.black)
+// VOLUME PRESSURE COMPOSITE
+vema(array, periods, K) =>
+    VolW = vol * array
+    VolK = K / (periods + 1)
+    VMsma = math.sum(VolW, periods) / math.sum(vol, periods)
+    VMema = 0.
+    VMema := na(VMema[1]) ? VMsma * VolK : (VolW - VMema[1]) * VolK + VMema[1]
+    VMema
+// }
+// =========================================================== //
+// =============== Volume Pressure Composite ================= //
+// =========================================================== //
+// Bull And Bear "Power-Balance" by Vadim Gimelfarb Algorithm's
+BP = cl < op ? cl[1] < op ? math.max(hi - cl[1], cl - lo) : math.max(hi - op, cl - lo) : cl > op ? cl[1] > op ? hi - lo : math.max(op - cl[1], hi - lo) : hi - cl > cl - lo ? cl[1] < op ? math.max(hi - cl[1], cl - lo) : hi - op : hi - cl < cl - lo ? cl[1] > op ? hi - lo : math.max(op - cl[1], hi - lo) : cl[1] > op ? math.max(hi - op, cl - lo) : cl[1] < op ? math.max(op - cl[1], hi - lo) : hi - lo
+SP = cl < op ? cl[1] > op ? math.max(cl[1] - op, hi - lo) : hi - lo : cl > op ? cl[1] > op ? math.max(cl[1] - lo, hi - cl) : math.max(op - lo, hi - cl) : hi - cl > cl - lo ? cl[1] > op ? math.max(cl[1] - op, hi - lo) : hi - lo : hi - cl < cl - lo ? cl[1] > op ? math.max(cl[1] - lo, hi - cl) : op - lo : cl[1] > op ? math.max(cl[1] - op, hi - lo) : cl[1] < op ? math.max(op - lo, hi - cl) : hi - lo
+TP = BP + SP
+// GENERAL CALCULATION VARIABLES FOR STUDIES
+BPV = BP / TP * vol
+SPV = SP / TP * vol
+TPV = BPV + SPV
+TH = math.max(high, close[1])
+TL = math.min(low, close[1])
+BPP = (TL + close) / 2
+SPP = (TH + close) / 2
+// Volume Pressures Weighted Averages
+bpMavg = vema(BPV * BPP, i_p, 3) / vema(TPV, i_p, 3) * 2
+spMavg = vema(SPV * SPP, i_p, 3) / vema(TPV, i_p, 3) * 2
+VPMavg = (bpMavg + spMavg) / 2
+VPMAc = bpMavg > VPMavg ? color.green : color.red
+// PLOT DIRECTIVES
+//Cloud coloring method by @ChrisMoody
+BPAbove = bpMavg >= spMavg ? 1 : na
+SPBelow = bpMavg <= spMavg ? 1 : na
+BPplotU = BPAbove ? bpMavg : na
+SPplotU = BPAbove ? spMavg : na
+BPplotD = SPBelow ? bpMavg : na
+SPplotD = SPBelow ? spMavg : na
+// Standard Line Coloring
+CondCol = bpMavg > spMavg ? color.green : color.red
+volume_pressure_trend = bpMavg > spMavg ? "bullish" : "bearish"
+if last_volume_trend == ""
+    last_volume_trend := volume_pressure_trend
+//Center Avg Line
+plot(i_bands ? na : VPMavg, color=CondCol, title='VPMA', style=plot.style_line, linewidth=2)
+//Cloud Lines Plot Statements - ***linebr to create rules for change in Shading
+p1 = plot(i_bands and BPplotU ? BPplotU : na, title='BP/SP', style=plot.style_linebr, linewidth=1, color=CondCol)
+p2 = plot(i_bands and SPplotU ? SPplotU : na, title='SP/BP', style=plot.style_linebr, linewidth=1, color=CondCol)
+p3 = plot(i_bands and BPplotD ? BPplotD : na, title='BP/SP', style=plot.style_linebr, linewidth=1, color=CondCol)
+p4 = plot(i_bands and SPplotD ? SPplotD : na, title='SP/BP', style=plot.style_linebr, linewidth=1, color=CondCol)
+//Fills that color cloud based on Trend.
+fill(p1, p2, color=color.new(color.green, 90), title='Cloud')
+fill(p3, p4, color=color.new(color.red, 90), title='Cloud')
+plot(i_bands and bpMavg ? bpMavg : na, title='BPavg', style=plot.style_line, linewidth=1, color=color.new(color.green, 0))
+plot(i_bands and spMavg ? spMavg : na, title='SPavg', style=plot.style_line, linewidth=1, color=color.new(color.red, 0))
+barcolor(i_colb ? CondCol : na)
+// ============================================ //
+// =============== HA Candles ================= //
+// ============================================ //
+plotcandle(
+  i_ha_show ? hkOpen : na, i_ha_show ? hkHigh : na, i_ha_show ? hkLow : na, i_ha_show ? hkClose : na, 
+  "Hollow Candles",
+  hollow ?      hkClose <   hkOpen  ?   BodyBear :  na :        candle ?        hkClose < hkOpen ?  BodyBear : BodyBull : na,
+  hollow or     candle ?    hkClose <    hkOpen  ?  WickBear :  WickBull :      na,
+  bordercolor = hollow or   candle ?    hkClose  <  hkOpen   ?  BorderBear :    BorderBull : na)
+plotbar(
+  i_ha_show ? hkOpen : na, i_ha_show ? hkHigh : na, i_ha_show ? hkLow : na, i_ha_show ? hkClose : na,
+  "Bars",
+  bars ? hkClose < hkOpen ? BodyBear : BodyBull : na)
+// hide bodies or candles
+barcolor( color.new(color.black, 100) )
+// ------------------------- //
+// trade management section //
+// ------------------------- //
+trend_to_bearish = ( hkClose > hkOpen and close < open and close < hkOpen )
+trend_to_bullish = ( hkClose < hkOpen and close > open and close > hkOpen )
+trend_to_bearish_prev = ( hkClose[1] > hkOpen[1] and close[1] < open[1] and close[1] < hkOpen[1] )
+trend_to_bullish_prev = ( hkClose[1] < hkOpen[1] and close[1] > open[1] and close[1] > hkOpen[1] )
+// trend is changing, we need to close any old trades here
+if ( trend_to_bearish or trend_to_bullish ) and i_close_by_volume_pressure_composite_only == false
+    if strategy.opentrades > 0
+        trade_type = strategy.opentrades.entry_id( strategy.opentrades - 1 )
+        if ( trade_type == "Buy" and trend_to_bearish ) or ( trade_type == "Sell" and trend_to_bullish )
+            strategy.close_all( trade_type + " exit (" + ( ( trade_type == "Buy" and close > entry_price ) or ( trade_type == "Sell" and close < entry_price ) ? "profit" : "loss" ) + ")" )
+            entry_price := 0.0
+// close trade by volume pressure trend change
+if i_close_by_volume_pressure_composite == true and last_volume_trend != volume_pressure_trend and strategy.opentrades > 0
+    trade_type = strategy.opentrades.entry_id( strategy.opentrades - 1 )
+    strategy.close_all( trade_type + " exit2 (" + ( ( trade_type == "Buy" and close > entry_price ) or ( trade_type == "Sell" and close < entry_price ) ? "profit" : "loss" ) + ")" )
+    entry_price := 0.0
+    last_volume_trend := volume_pressure_trend
+// trend has changed on previous candle, open a new trade here
+if trend_to_bearish_prev or trend_to_bullish_prev
+    if strategy.opentrades == 0
+        trade_type = trend_to_bullish_prev ? "Buy" : "Sell"
+        open_trade = true
+        // check if we should only open trades by the volume pressure trend
+        if i_use_volume_pressure_composite == true
+            if ( volume_pressure_trend == "bullish" and trend_to_bearish_prev ) or ( volume_pressure_trend == "bearish" and trend_to_bullish_prev )
+                open_trade := false
+        // check whether we should use WPMA to open long trades below and short ones above it
+        if i_trade_by_vpma
+            if ( ( i_trade_by_vpma_inverse == false and trade_type == "Buy" ) or ( i_trade_by_vpma_inverse == true and trade_type == "Sell" ) ) and close >= VPMavg
+                open_trade := false
+            if ( ( i_trade_by_vpma_inverse == false and trade_type == "Sell" ) or ( i_trade_by_vpma_inverse == true and trade_type == "Buy" ) ) and close <= VPMavg
+                open_trade := false
+        // do we open trades in trend only?
+        if i_open_trades_on_trend_candles and ( ( trade_type == "Buy" and close < open ) or ( trade_type == "Sell" and close > open ) )
+            open_trade := false
+        if open_trade
+            entry_price := close
+    
+            // calculate SL
+            sl = 0.0
+            if trend_to_bullish_prev
+                sl := close - ( ( i_sl_percent / 100 ) * close )
+            else
+                sl := close + ( ( i_sl_percent / 100 ) * close )
+    
+            // check whether we wanted to extend the SL to full candle's wick
+            if i_sl_extend_to_full_candle and ( ( trade_type == "Buy" and sl > low[1] ) or ( trade_type == "Sell" and sl < high[1] ) )
+                if trade_type == "Buy"
+                    sl := low[1]
+                else if trade_type == "Sell"
+                    sl := high[1]
+    
+            strategy.entry( trade_type, trend_to_bullish_prev ? strategy.long : strategy.short )
+            strategy.exit( trade_type, stop = sl, comment = trade_type + " closed by SL" )
+// Exit open market position when date range ends
+if (not inDateRange)
+    strategy.close_all()
+Expand (235 lines)

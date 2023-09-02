@@ -1,0 +1,120 @@
+Script Name: Bollinger Bands Strategy with StopLoss
+Author: ajahanbin1374
+Description: This is the default Bollinger Bands Strategy with a small change to support Stop Loss.
+The default built-int BBS does not support Stop Loss and using it may cause large losses, specially in margin trading.
+
+Added inputs:
+ 
+  Source
+  Stop Loss Percentage
+PineScript code:
+
+Pine Script™ strategy
+Bollinger Bands Strategy with StopLoss
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+//@version=5
+strategy(title="Bollinger Bands Strategy With StopLoss", overlay=false, shorttitle="BBS", pyramiding=0, currency=currency.USD, commission_type=strategy.commission.percent, commission_value=0.03, initial_capital=1000)
+source = input(close, "Source")
+length = input.int(20, minval=1)
+mult = input.float(2.0, minval=0.001, maxval=50, step=0.001)
+stopLossFactor = input.float(1, "Stop Loss Percent", maxval = 100, minval = 0, step=0.1)
+basis = ta.sma(source, length)
+dev = mult * ta.stdev(source, length)
+upper = basis + dev
+lower = basis - dev
+var bool currentIsLong = na
+var bool nextExpectedIsLong = true
+buyEntry = ta.crossover(source, lower)
+sellEntry = ta.crossunder(source, upper)
+if (buyEntry and nextExpectedIsLong == true)
+    strategy.entry("BBandLE", strategy.long, comment="BBandLE")
+    nextExpectedIsLong := false
+else
+    strategy.cancel("BBandLE")
+if (sellEntry and nextExpectedIsLong == false)
+    strategy.entry("BBandSE", strategy.short, comment="BBandSE")
+    nextExpectedIsLong := true
+else
+    strategy.cancel("BBandSE")
+strategy.close("BBandLE", close < strategy.opentrades.entry_price(0) * (1 - (stopLossFactor / 100)))
+strategy.close("BBandSE", close > strategy.opentrades.entry_price(0) * (1 + (stopLossFactor / 100)))
+plot(source, "close", color.blue)
+plot(lower, "lower", color.red)
+plot(upper, "upper", color.red)
+plot(strategy.opentrades.entry_price(0), "lastTradePrice", color.green)
+plot(strategy.opentrades.entry_price(0) * (1 - (stopLossFactor / 100)), "stopLossLow", color.black)
+plot(strategy.opentrades.entry_price(0) * (1 + (stopLossFactor / 100)), "stopLossHigh", color.black)
+plotchar(strategy.position_size > 0, "OpenLongStatus", char="-", size=size.tiny, location=location.bottom, color=color.green)
+plotchar(strategy.position_size < 0, "",char="-", size=size.tiny, location=location.bottom, color=color.red)
+Expand (71 lines)

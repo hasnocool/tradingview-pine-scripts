@@ -1,0 +1,164 @@
+Script Name: Consolidation Breakout [Indian Market Timing]
+Author: The_Bull_Chartist
+Description: OK let's get started ,
+
+A Day Trading (Intraday) Consolidation Breakout Indication Strategy that explains time condition for Indian Markets .
+The commission is also included in the strategy .
+The basic idea is ,
+
+1) Price crosses above upper band , indicated by a color change (green) is the Long condition .
+2) Price crosses below lower band , indicated by a color...
+PineScript code:
+
+Pine Script™ strategy
+Consolidation Breakout [Indian Market Timing]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+//@version=5
+strategy("Consolidation Breakout [Indian Market Timing]",overlay = true , pyramiding = 0 ,initial_capital = 50000, default_qty_value=5, currency = currency.NONE,commission_type = strategy.cash, commission_value = 30, slippage = 1 )
+// ══════════════════════════════════//
+// ————————> INPUT VALUES <————————— //
+// ══════════════════════════════════//
+LENGTH = input.int(title='LENGTH', defval = 75, minval = 10 ,maxval = 300)
+MULT = input.float(title='MULT_STDEV',defval = 3.2 , minval = 1 , maxval = 7 , step =0.1)
+//EMA1 = input.int(title='EMA1', defval = 50, minval = 10 ,maxval = 550)
+//EMA2 = input.int(title='EMA2', defval = 135, minval = 10 ,maxval = 550)
+factor_tr = input.float(title = "ATR TRAIL", defval = 10, step = 0.1)
+// ══════════════════════════════════//
+// ————————> DAY TIME LIMIT <——————— //
+// ══════════════════════════════════//
+t = time(timeframe.period, '0935-1430:1234567')
+time_condition = not na(t)
+//**********************// ════════════════════════════════//
+//**********************// ————————> ATR & PLOT <————————— //
+//**********************// ════════════════════════════════//
+//ema1 = ta.ema(close,EMA1)
+//ema2 = ta.ema(close,EMA2)
+//plot(ema1, color=color.new(color.blue, 0), style=plot.style_linebr, title='ema1')
+//plot(ema2, color=color.new(color.yellow, 0), style=plot.style_linebr, title='ema2')
+atr_tr = ta.atr(16)*factor_tr
+longStop = close - atr_tr
+shortStop = close + atr_tr
+Entry = close
+length = LENGTH
+mult = MULT
+basis = ta.sma(Entry , length)
+dev = mult * ta.stdev(Entry , length)
+upper = (basis + dev)
+lower = (basis - dev)
+buyEntry = ta.crossover(Entry , upper)
+sellEntry = ta.crossunder(Entry , lower)
+//plot(upper, color=color.new(color.red, 0), style=plot.style_linebr, title="short stop")
+//plot(lower, color=color.new(color.green, 0), style=plot.style_linebr, title="Long stop")
+plot(upper, color=close[1] > upper and close > upper ? color.green : color.red, linewidth=2)
+plot(lower, color=close[1] > lower and close > lower ? color.green : color.red, linewidth=2)
+// ══════════════════════════════════//
+// ————————> LONG POSITIONS <————————//
+// ══════════════════════════════════//
+//******barinstate.isconfirmed used to avoid repaint in real time*******
+if ( buyEntry and strategy.opentrades==0 and barstate.isconfirmed and time_condition)
+    strategy.entry(id= "Long" ,direction = strategy.long, comment = "B")
+    
+plot(longStop , color=color.new(color.blue, 0), style=plot.style_linebr, title='long Stop')
+if strategy.position_size > 0 
+    strategy.exit("long tsl", "Long" , stop = longStop , comment='S')
+// ═════════════════════════════════════//
+// ————————> SHORT POSITIONS <————————— //
+// ═════════════════════════════════════//
+if ( sellEntry and strategy.opentrades==0 and barstate.isconfirmed and time_condition)
+    strategy.entry(id = "Short" ,direction = strategy.short,  comment = "S") 
+if strategy.position_size < 0
+    strategy.exit("short tsl", "Short" , stop = shortStop ,comment='B')
+// ════════════════════════════════════════════════//
+// ————————> CLOSE ALL POSITIONS BY 3PM <————————— //
+// ════════════════════════════════════════════════//
+strategy.close_all(when = hour == 14 and minute == 57)
+    
+Expand (88 lines)

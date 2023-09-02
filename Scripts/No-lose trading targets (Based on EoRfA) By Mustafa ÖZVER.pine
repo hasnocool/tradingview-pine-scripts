@@ -1,0 +1,273 @@
+Script Name: No-lose trading targets (Based on EoRfA) By Mustafa ÖZVER
+Author: Mustafaozver
+Description: I simulated the NLTTa_EoRfA indicator with the Bitcoin-USD
+For details about the indicator, visit my profile on tradingview
+
+For Simulation, with default settings, we order
+
+When on Long setup and price on green area
+ - open a long position that closes on red area
+
+When on Short setup and price on red area
+ - open a short position that closes on green area
+
+And we...
+PineScript code:
+
+Pine Script™ strategy
+No-lose trading targets (Based on EoRfA) By Mustafa ÖZVER
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Mustafaozver
+//@version=4
+strategy("No-lose trading targets (Based on EoRfA) By Mustafa ÖZVER", "NLTT_EoRfA_STRATEGY", overlay=true)
+ref = input(hlc3)
+var line U_AREA_LINE = na
+var line D_AREA_LINE = na
+BUY__AREA = 0
+SELL_AREA = 0
+// EoRfA
+FPrice = wma((vwap + ref),3)
+len = input(13,"Length")
+limit0 = 1 // natural action
+limit1 = 1.66 // wave edge
+limit2 = 2.58 // way to infinitive
+limit3 = 2.72 // hard breakout
+limit = input(1.68)
+stdev = stdev(FPrice,len)
+ema = ema(FPrice,len)
+vEorfa = (FPrice - ema) / stdev
+BUY__SIGNAL = (vEorfa < -limit and change(vEorfa) > 0) ? 1 : 0
+SELL_SIGNAL = (vEorfa > +limit and change(vEorfa) < 0) ? 1 : 0
+U_AREA_ = min(ohlc4,hlc3,hl2,open,close)
+D_AREA_ = max(ohlc4,hlc3,hl2,open,close)
+U_AREA = U_AREA_
+D_AREA = D_AREA_
+maxLine = high
+minLine = low
+BUY__AREA := nz(BUY__SIGNAL[1],0) == 1 ? 1 : (nz(BUY__AREA[1],0) == 1 ? 1 : 0)
+SELL_AREA := nz(SELL_SIGNAL[1],0) == 1 ? 1 : (nz(SELL_AREA[1],0) == 1 ? 1 : 0)
+U_AREA := SELL_AREA == 1 ? nz(U_AREA[1],U_AREA_) : U_AREA_
+D_AREA := BUY__AREA == 1 ? nz(D_AREA[1],D_AREA_) : D_AREA_
+maxLine := SELL_AREA == 1 ? max(nz(maxLine[1],0),high) : high
+minLine := BUY__AREA == 1 ? min(nz(minLine[1],0),low) : low
+refLine = plot(ref,color=#00000000,display=display.none,offset=1)
+D_Line = plot(D_AREA,color=BUY__AREA==1?#00FF00A0:#00000000,linewidth=2,offset=2)
+U_Line = plot(U_AREA,color=SELL_AREA==1?#FF0000A0:#00000000,linewidth=2,offset=2)
+fibo_0236 = input(0.23606797749979)
+fibo_0381 = input(0.38196601125011)
+fibo_0500 = input(0.5)
+fibo_0618 = input(0.61803398874990)
+fibo_0763 = input(0.76393202250021)
+fibo_1618 = input(1.61803398874990)
+SelllineforBuying = fibo_0763 * (D_AREA - minLine) + minLine
+BuylineforSelling = fibo_0236 * (maxLine - U_AREA) + U_AREA
+//if (U_AREA < close)
+//    line.set_x2(U_AREA_LINE,bar_index)
+//if (D_AREA > close)
+//    line.set_x2(D_AREA_LINE,bar_index)
+if (U_AREA >= min(close,open) or BUY__SIGNAL == 1 or nz(BuylineforSelling[1],low) > close)
+    SELL_AREA := 0
+if (D_AREA <= max(close,open) or SELL_SIGNAL == 1 or nz(SelllineforBuying[1],high) < close)
+    BUY__AREA := 0
+if (SELL_AREA == 0 and SELL_SIGNAL == 1)
+    U_AREA_LINE := line.new(bar_index-1, U_AREA, bar_index+5, U_AREA, xloc.bar_index, extend.none, #FF0000A0, line.style_solid, 3)
+if (BUY__AREA == 0 and BUY__SIGNAL == 1)
+    D_AREA_LINE := line.new(bar_index-1, D_AREA, bar_index+5, D_AREA, xloc.bar_index, extend.none, #00FF00A0, line.style_solid, 3)
+//fill(D_Line, refLine, color=BUY__AREA==1?#00FF0020:#00000000)
+//fill(U_Line, refLine, color=SELL_AREA==1?#FF000020:#00000000)
+// draw fibonacci
+max_ = BUY__AREA == 1 ? D_AREA : (SELL_AREA == 1 ? maxLine : ref)
+min_ = SELL_AREA == 1 ? U_AREA : (BUY__AREA == 1 ? minLine : ref)
+tolerance = input(0.015)
+verify_Revision = change(max_ + min_) == 0 and max_/min_ > (tolerance+1)
+verify_Draw = (BUY__AREA == 1 or SELL_AREA == 1) and verify_Revision
+fibo_rate = (close - min_) / (max_ - min_)
+fibo_0000_line = plot(min_,color=(BUY__AREA==1 and verify_Revision)?#FFFFFF80:#00000000,linewidth=2)
+fibo_1000_line = plot(max_,color=(SELL_AREA==1 and verify_Revision)?#FFFFFF80:#00000000,linewidth=2)
+fibo_1618_line1 = plot((max_ - min_)*fibo_1618 + min_,color=(verify_Draw?#FF000050:#00000000),linewidth=2)
+fibo_1618_line2 = plot(-(max_ - min_)*fibo_1618 + min_,color=(verify_Draw?#00FF0050:#00000000),linewidth=2)
+fibo_0236_line = plot((max_ - min_)*fibo_0236 + min_,color=(verify_Draw?#FFFFFF50:#00000000),linewidth=1)
+fibo_0381_line = plot((max_ - min_)*fibo_0381 + min_,color=(verify_Draw?#00FF0080:#00000000),linewidth=1)
+fibo_0500_line = plot((max_ - min_)*fibo_0500 + min_,color=(verify_Draw?#FFFFFF50:#00000000),linewidth=1)
+fibo_0618_line = plot((max_ - min_)*fibo_0618 + min_,color=(verify_Draw?#FF000080:#00000000),linewidth=1)
+fibo_0763_line = plot((max_ - min_)*fibo_0763 + min_,color=(verify_Draw?#FFFFFF50:#00000000),linewidth=1)
+fill(fibo_0236_line, fibo_0381_line, color=verify_Draw==1?#00FF0020:#00000000)
+fill(fibo_0763_line, fibo_0618_line, color=verify_Draw==1?#FF000020:#00000000)
+//min_Line = plot(SelllineforBuying,color=BUY__AREA==1?#FF000080:#00000000,linewidth=2)
+//max_Line = plot(BuylineforSelling,color=SELL_AREA==1?#00FF0080:#00000000,linewidth=2)
+plotshape(BUY__SIGNAL == 1 and BUY__AREA == 0,style=shape.triangledown,location=location.abovebar,color=#00FF00FF,size=size.auto)
+plotshape(SELL_SIGNAL == 1 and SELL_AREA == 0,style=shape.triangleup,  location=location.belowbar,color=#FF0000FF,size=size.auto)
+// Report
+var label lbl = na
+label.delete(lbl)
+if (verify_Draw)
+    var string reports = ""
+    reports := reports + (BUY__AREA==1?"LONG":"")
+    reports := reports + (SELL_AREA==1?"SHORT":"")
+    reports := reports + " SETUP => % " + tostring(round((max_-min_)*0.5/close*10000)/100)
+    lbl := label.new(x=barstate.islast ? time : na,y=max_,text=reports,xloc=xloc.bar_time,color=#2020AA,textcolor=#FFFFFF)
+    reports := ""
+//alertcondition(condition=verify_Draw, title="Trading Setup from NLTTa_EoRfA", message="Trading setup action from NLTTa based on EoRfA")
+EXIT_PRICE = 0.0
+EXIT_PRICE := nz(EXIT_PRICE[1],0.0)
+if (BUY__AREA == 1 and verify_Draw and strategy.position_size == 0.0 and fibo_rate < fibo_0381 and fibo_rate > fibo_0236 and change(vEorfa) > 0)
+    strategy.order("LONG1",true)
+    EXIT_PRICE := (max_ - min_)*fibo_0618 + min_
+if (EXIT_PRICE < close and strategy.position_size > 0)
+    //line.new(bar_index-1, U_AREA*1.03, bar_index+1, U_AREA*0.97, xloc.bar_index, extend.none, #FFFFFF, line.style_solid, 3)
+    strategy.close("LONG1")
+    EXIT_PRICE := 0.0
+if (SELL_AREA == 1 and verify_Draw and strategy.position_size == 0.0 and fibo_rate < fibo_0763 and fibo_rate > fibo_0618 and change(vEorfa) < 0)
+    strategy.order("SHORT1",false)
+    EXIT_PRICE := (max_ - min_)*fibo_0381 + min_
+if (EXIT_PRICE > close and strategy.position_size < 0)
+    //line.new(bar_index-1, U_AREA*1.03, bar_index+1, U_AREA*0.97, xloc.bar_index, extend.none, #FFFFFF, line.style_solid, 3)
+    strategy.close("SHORT1")
+    EXIT_PRICE := 0.0
+Expand (145 lines)

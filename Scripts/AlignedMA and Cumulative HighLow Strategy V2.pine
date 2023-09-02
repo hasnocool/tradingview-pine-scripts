@@ -1,0 +1,300 @@
+Script Name: AlignedMA and Cumulative HighLow Strategy V2
+Author: Trendoscope
+Description: Based on earlier strategy published - AlignedMA and Cumulative HighLow Strategy. Adjustments are done in entry and exit criteria to make it work for shares.
+
+
+
+Modified to preserve existing entry criteria + additional MA shift condition. Exit criteria is set based on supertrend and trailing stops.
+
+Most of the parameters are already optimized.  You only need to...
+PineScript code:
+
+Pine Script™ strategy
+AlignedMA and Cumulative HighLow Strategy V2
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HeWhoMustNotBeNamed
+//@version=4
+strategy("AlignedMA and Cumulative HighLow Strategy V2", overlay=true, initial_capital = 1000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.percent, pyramiding = 1, commission_value = 0.01)
+MAType = input(title="Moving Average Type", defval="hma", options=["ema", "sma", "hma", "rma", "vwma", "wma"])
+includePartiallyAligned = input(true)
+HighLowPeriod = input(22, minval=1,step=1)
+LookbackPeriod = input(10, minval=1,step=1)
+considerYearlyHighLow = input(false)
+dirTBars = input(1)
+dirRBars = input(30)
+PMAType = input(title="Moving Average Type", defval="ema", options=["ema", "sma", "hma", "rma", "vwma", "wma"])
+PMALength = input(10, minval=2, step=10)
+shift = input(2, minval=1, step=1)
+//Use 2 for ASX stocks
+supertrendMult = input(3, minval=1, maxval=10, step=0.5)
+supertrendLength = input(22, minval=1)
+riskReward = input(2, minval=1, maxval=10, step=0.5)
+tradeDirection = input(title="Trade Direction", defval=strategy.direction.all, options=[strategy.direction.all, strategy.direction.long, strategy.direction.short])
+backtestYears = input(1, minval=1, step=1)
+f_getMovingAverage(source, MAType, length)=>
+    ma = sma(source, length)
+    if(MAType == "ema")
+        ma := ema(source,length)
+    if(MAType == "hma")
+        ma := hma(source,length)
+    if(MAType == "rma")
+        ma := rma(source,length)
+    if(MAType == "vwma")
+        ma := vwma(source,length)
+    if(MAType == "wma")
+        ma := wma(source,length)
+    ma
+    
+f_getMaAlignment(MAType, includePartiallyAligned)=>
+    ma5 = f_getMovingAverage(close,MAType,5)
+    ma10 = f_getMovingAverage(close,MAType,10)
+    ma20 = f_getMovingAverage(close,MAType,20)
+    ma30 = f_getMovingAverage(close,MAType,30)
+    ma50 = f_getMovingAverage(close,MAType,50)
+    ma100 = f_getMovingAverage(close,MAType,100)
+    ma200 = f_getMovingAverage(close,MAType,200)
+    upwardScore = 0
+    upwardScore := close > ma5? upwardScore+1:upwardScore
+    upwardScore := ma5 > ma10? upwardScore+1:upwardScore
+    upwardScore := ma10 > ma20? upwardScore+1:upwardScore
+    upwardScore := ma20 > ma30? upwardScore+1:upwardScore
+    upwardScore := ma30 > ma50? upwardScore+1:upwardScore
+    upwardScore := ma50 > ma100? upwardScore+1:upwardScore
+    upwardScore := ma100 > ma200? upwardScore+1:upwardScore
+    
+    upwards = close > ma5 and ma5 > ma10 and ma10 > ma20 and ma20 > ma30 and ma30 > ma50 and ma50 > ma100 and ma100 > ma200
+    downwards = close < ma5 and ma5 < ma10 and ma10 < ma20 and ma20 < ma30 and ma30 < ma50 and ma50 < ma100 and ma100 < ma200
+    upwards?1:downwards?-1:includePartiallyAligned ? (upwardScore > 5? 0.5: upwardScore < 2?-0.5:upwardScore>3?0.25:-0.25) : 0
+f_getHighLowValue(HighLowPeriod)=>
+    currentHigh = highest(high,HighLowPeriod) == high
+    currentLow = lowest(low,HighLowPeriod) == low
+    currentHigh?1:currentLow?-1:0
+f_getDirection(Series)=>
+    direction = Series > Series[1] ? 1 : Series < Series[1] ? -1 : 0
+    direction := direction == 0? nz(direction[1],0):direction
+    direction
+f_getDirectionT(Series, tBars, rBars)=>
+    compH = Series > 0? Series[tBars] : Series[rBars]
+    compL = Series < 0? Series[tBars] : Series[rBars]
+    direction = Series > compH ? 1 : Series < compL ? -1 : 0
+    direction := direction == 0? nz(direction[1],0):direction
+    direction
+f_getYearlyHighLowCondition(considerYearlyHighLow)=>
+    yhigh = security(syminfo.tickerid, '12M', high[1]) 
+    ylow = security(syminfo.tickerid, '12M', low[1]) 
+    yhighlast = yhigh[365]
+    ylowlast = ylow[365]
+    yhighllast = yhigh[2 * 365]
+    ylowllast = ylow[2 * 365]
+    
+    yearlyTrendUp = na(yhigh)? true : na(yhighlast)? close > yhigh : na(yhighllast)? close > max(yhigh,yhighlast) : close > max(yhigh, min(yhighlast, yhighllast))
+    yearlyHighCondition = (  (na(yhigh) or na(yhighlast) ? true : (yhigh > yhighlast) ) and ( na(yhigh) or na(yhighllast) ? true : (yhigh > yhighllast))) or yearlyTrendUp or not considerYearlyHighLow
+    yearlyTrendDown = na(ylow)? true : na(ylowlast)? close < ylow : na(ylowllast)? close < min(ylow,ylowlast) : close < min(ylow, max(ylowlast, ylowllast))
+    yearlyLowCondition = (  (na(ylow) or na(ylowlast) ? true : (ylow < ylowlast) ) and ( na(ylow) or na(ylowllast) ? true : (ylow < ylowllast))) or yearlyTrendDown or not considerYearlyHighLow
+    
+    [yearlyHighCondition,yearlyLowCondition]
+f_getOpenCloseMA(MAType, length)=>
+    openMA = f_getMovingAverage(open, MAType, length)
+    closeMA = f_getMovingAverage(close, MAType, length)
+    direction = openMA < closeMA ? 1 : -1
+    [openMA, closeMA, direction]
+inDateRange = time >= timestamp(syminfo.timezone, year(timenow) - backtestYears, 01, 01, 0, 0)
+maAlignment = f_getMaAlignment(MAType,includePartiallyAligned)
+alignedMaIndex = sum(maAlignment,LookbackPeriod)
+maAlignmentDirection=f_getDirectionT(alignedMaIndex,dirTBars, dirRBars)
+atr = atr(22)
+highLowIndex = f_getHighLowValue(HighLowPeriod)
+cumulativeHighLowIndex = sum(highLowIndex,LookbackPeriod)
+hlDirection = f_getDirectionT(cumulativeHighLowIndex,dirTBars,dirRBars)
+[yearlyHighCondition,yearlyLowCondition] = f_getYearlyHighLowCondition(considerYearlyHighLow)
+[supertrend, dir] = supertrend(supertrendMult, supertrendLength)
+[esupertrend, edir] = supertrend(supertrendMult+1, supertrendLength)
+movingAverage = f_getMovingAverage(close, PMAType, PMALength)
+secondaryBuyFilter = movingAverage > movingAverage[shift]
+secondarySellFilter = movingAverage < movingAverage[shift]
+closeBuyFilter = dir == 1
+closeSellFilter = dir == -1
+buyFilter = (maAlignmentDirection == 1 and hlDirection == 1 and yearlyHighCondition)
+sellFilter = (maAlignmentDirection == -1 and hlDirection == -1 and yearlyLowCondition)
+barColor = buyFilter?color.lime:sellFilter?color.orange:color.gray
+bandColor = secondaryBuyFilter ? color.green : secondarySellFilter ? color.red : color.gray
+compound = strategy.position_size > 0? strategy.position_avg_price + (atr* supertrendMult * riskReward) : strategy.position_size < 0 ? strategy.position_avg_price - (atr* supertrendMult * riskReward) : na
+riskFree = na(compound)?false:strategy.position_size > 0 ? supertrend > compound : strategy.position_size < 0 ? supertrend < compound : false
+trailingStop = riskFree?(dir==-1?supertrend - 2*atr : supertrend + 2*atr) :supertrend
+trailingStop := (strategy.position_size > 0 and trailingStop < trailingStop[1]) ? trailingStop[1] :  ((strategy.position_size < 0 and trailingStop > trailingStop[1])? trailingStop[1] :trailingStop)
+plot(trailingStop, title="Supertrend", color=riskFree? color.blue:dir==-1?color.green:color.red, linewidth=2)
+buyEntry = buyFilter and secondaryBuyFilter and not closeBuyFilter and low > trailingStop
+sellEntry = sellFilter and secondarySellFilter and not closeSellFilter and low < trailingStop
+Fi1 = plot(movingAverage[shift], title="MA", color=color.red, linewidth=1, transp=50)
+Fi2 = plot(movingAverage, title="Shift", color=color.green, linewidth=1, transp=50)
+fill(Fi1, Fi2, title="Band Filler", color=bandColor, transp=40)
+barcolor(barColor)
+//plot(compound, title="Compound"mzn, color=dir==-1?color.lime:color.orange, linewidth=2)
+strategy.risk.allow_entry_in(tradeDirection)
+strategy.entry("Buy", strategy.long, when=buyEntry and inDateRange and (riskFree or strategy.position_size==0), oca_name="oca_buy", oca_type=strategy.oca.none)
+strategy.exit("ExitBuy", "Buy", stop = trailingStop)
+strategy.close("Buy", when=closeBuyFilter)
+strategy.entry("Sell", strategy.short, when=sellEntry and inDateRange and (riskFree or strategy.position_size==0), oca_name="oca_sell", oca_type=strategy.oca.none)
+strategy.exit("ExitSell", "Buy", stop = trailingStop)
+strategy.close("Sell", when=closeSellFilter)
+Expand (159 lines)

@@ -1,0 +1,251 @@
+Script Name: Gold_Strategy_By_Trading_Public_School
+Author: digvijaysinhzala
+Description: Trand
+PineScript code:
+
+Pine Script™ strategy
+Gold_Strategy_By_Trading_Public_School
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+//@version=2
+strategy(title="Gold_Strategy_By_Trading_Public_School", shorttitle="Gold_Strategy_By_Trading_Public_School", overlay=true)
+//inputs
+src = close
+useCurrentRes = input(true, title="Use Current Chart Resolution?")
+resCustom = input(title="Use Different Timeframe? Uncheck Box Above", type=resolution, defval="D")
+len = input(20, title="Moving Average Length - LookBack Period")
+atype = input(1,minval=1,maxval=7,title="1=SMA, 2=EMA, 3=WMA, 4=HullMA, 5=VWMA, 6=RMA, 7=TEMA")
+cc = input(true,title="Change Color Based On Direction?")
+smoothe = input(2, minval=1, maxval=10, title="Color Smoothing - 1 = No Smoothing")
+doma2 = input(false, title="Optional 2nd Moving Average")
+len2 = input(50, title="Moving Average Length - Optional 2nd MA")
+atype2 = input(1,minval=1,maxval=7,title="1=SMA, 2=EMA, 3=WMA, 4=HullMA, 5=VWMA, 6=RMA, 7=TEMA")
+cc2 = input(true,title="Change Color Based On Direction 2nd MA?")
+warn = input(false, title="***You Can Turn On The Show Dots Parameter Below Without Plotting 2nd MA to See Crosses***")
+warn2 = input(false, title="***If Using Cross Feature W/O Plotting 2ndMA - Make Sure 2ndMA Parameters are Set Correctly***")
+sd = input(false, title="Show Dots on Cross of Both MA's")
+res = useCurrentRes ? period : resCustom
+//hull ma definition
+hullma = wma(2*wma(src, len/2)-wma(src, len), round(sqrt(len)))
+//TEMA definition
+ema1 = ema(src, len)
+ema2 = ema(ema1, len)
+ema3 = ema(ema2, len)
+tema = 3 * (ema1 - ema2) + ema3
+avg = atype == 1 ? sma(src,len) : atype == 2 ? ema(src,len) : atype == 3 ? wma(src,len) : atype == 4 ? hullma : atype == 5 ? vwma(src, len) : atype == 6 ? rma(src,len) : tema
+//2nd Ma - hull ma definition
+hullma2 = wma(2*wma(src, len2/2)-wma(src, len2), round(sqrt(len2)))
+//2nd MA TEMA definition
+sema1 = ema(src, len2)
+sema2 = ema(sema1, len2)
+sema3 = ema(sema2, len2)
+stema = 3 * (sema1 - sema2) + sema3
+avg2 = atype2 == 1 ? sma(src,len2) : atype2 == 2 ? ema(src,len2) : atype2 == 3 ? wma(src,len2) : atype2 == 4 ? hullma2 : atype2 == 5 ? vwma(src, len2) : atype2 == 6 ? rma(src,len2) : tema
+out = avg 
+out_two = avg2
+out1 = security(tickerid, res, out)
+out2 = security(tickerid, res, out_two)
+ma_up = out1 >= out1[smoothe]
+ma_down = out1 < out1[smoothe]
+col = cc ? ma_up ? lime : ma_down ? red : aqua : aqua
+col2 = cc2 ? ma_up ? lime : ma_down ? red : aqua : aqua
+circleYPosition = out2
+plot(out1, title="Multi-Timeframe Moving Avg", style=line, linewidth=4, color = col)
+plot(doma2 and out2 ? out2 : na, title="2nd Multi-TimeFrame Moving Average", style=circles, linewidth=4, color=col2)
+plot(sd and cross(out1, out2) ? circleYPosition : na,style=cross, linewidth=5, color=yellow)
+///////////// RSI
+RSIlength = input(6,title="RSI Period Length") 
+RSIoverSold = 50
+RSIoverBought = 50
+price = close
+vrsi = rsi(price, RSIlength)
+///////////// Bollinger Bands
+BBlength = input(200, minval=1,title="Bollinger Period Length")
+BBmult = 2 // input(2.0, minval=0.001, maxval=50,title="Bollinger Bands Standard Deviation")
+BBbasis = sma(price, BBlength)
+BBdev = BBmult * stdev(price, BBlength)
+BBupper = BBbasis + BBdev
+BBlower = BBbasis - BBdev
+source = close
+buyEntry = crossover(source, BBlower)
+sellEntry = crossunder(source, BBupper)
+plot(BBbasis, color=aqua,title="Bollinger Bands SMA Basis Line")
+p1 = plot(BBupper, color=silver,title="Bollinger Bands Upper Line")
+p2 = plot(BBlower, color=silver,title="Bollinger Bands Lower Line")
+fill(p1, p2)
+///////////// Colors
+switch1=input(true, title="Enable Bar Color?")
+switch2=input(true, title="Enable Background Color?")
+TrendColor = RSIoverBought and (price[1] > BBupper and price < BBupper) and BBbasis < BBbasis[1] ? red : RSIoverSold and (price[1] < BBlower and price > BBlower) and BBbasis > BBbasis[1] ? green : na
+barcolor(switch1?TrendColor:na)
+bgcolor(switch2?TrendColor:na,transp=50)
+///////////// RSI + Bollinger Bands Strategy
+if (not na(vrsi))
+    if (crossover(vrsi, RSIoverSold) and crossover(source, BBlower))
+        strategy.entry("RSI_BB_L", strategy.long, stop=BBlower, oca_type=strategy.oca.cancel, comment="RSI_BB_L")
+    else
+        strategy.cancel(id="RSI_BB_L")
+        
+    if (crossunder(vrsi, RSIoverBought) and crossunder(source, BBupper))
+        strategy.entry("RSI_BB_S", strategy.short, stop=BBupper, oca_type=strategy.oca.cancel, comment="RSI_BB_S")
+    else
+        strategy.cancel(id="RSI_BB_S")
+//plot(strategy.equity, title="equity", color=red, linewidth=2, style=areabr)
+length = input(200, minval=1)
+mult = input(3.0, minval=0.001, maxval=50)
+basis = vwma(src, length)
+dev = mult * stdev(src, length)
+upper_1= basis + (0.236*dev)
+upper_2= basis + (0.382*dev)
+upper_3= basis + (0.5*dev)
+upper_4= basis + (0.618*dev)
+upper_5= basis + (0.764*dev)
+upper_6= basis + (1*dev)
+lower_1= basis - (0.236*dev)
+lower_2= basis - (0.382*dev)
+lower_3= basis - (0.5*dev)
+lower_4= basis - (0.618*dev)
+lower_5= basis - (0.764*dev)
+lower_6= basis - (1*dev)
+plot(basis, color=fuchsia, linewidth=2)
+p3 = plot(upper_3, color=white, linewidth=1, title="0.5")
+p4 = plot(upper_4, color=white, linewidth=1, title="0.618")
+p5 = plot(upper_5, color=white, linewidth=1, title="0.764")
+p6 = plot(upper_6, color=red, linewidth=2, title="1")
+p13 = plot(lower_1, color=white, linewidth=1, title="0.236")
+p14 = plot(lower_2, color=white, linewidth=1, title="0.382")
+p15 = plot(lower_3, color=white, linewidth=1, title="0.5")
+p16 = plot(lower_4, color=white, linewidth=1, title="0.618")
+p17 = plot(lower_5, color=white, linewidth=1, title="0.764")
+p18 = plot(lower_6, color=green, linewidth=2, title="1")
+Expand (131 lines)

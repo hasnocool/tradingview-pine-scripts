@@ -1,0 +1,137 @@
+Script Name: Multi Supertrend with no-repaint HTF option strategy
+Author: ramki_simple
+Description: This is the strategy version of the multi supertrend indicator.
+The RoMDD looks good :)
+Checked in ETHUSDT 1hour with auto HTF ON.
+Have a look :)
+PineScript code:
+
+Pine Script™ strategy
+Multi Supertrend with no-repaint HTF option strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ramki_simple
+// Thanks to LonesomeTheBlue for the original code
+//@version=4
+strategy("Multi Supertrend with no-repaint HTF option strategy", overlay = true, shorttitle='Multi Supertrend')
+//auto higher time frame
+HTFAuto = timeframe.period == '1' ? '5' : 
+  timeframe.period == '3' ? '15' : 
+  timeframe.period == '5' ? '15' : 
+  timeframe.period == '15' ? '60' : 
+  timeframe.period == '30' ? '60' : 
+  timeframe.period == '45' ? '60' : 
+  timeframe.period == '60' ? '240' : 
+  timeframe.period == '120' ? '240' : 
+  timeframe.period == '180' ? '240' : 
+  timeframe.period == '240' ? 'D' : 
+  timeframe.period == 'D' ? 'W' :
+  '5W'
+HTFSelection = input(title='Select HTF Automatically for Additional Supertrend', type=input.bool, defval=false)
+HTFUserSel = input(title='Select Higher Timeframe for Additional Supertrend',type=input.resolution, defval ='')
+HTF = HTFSelection ? HTFAuto : HTFUserSel
+Mult1 = input(title='Multiplier for Default Supertrend', defval=3.0, minval = 0, maxval = 10)
+Period1 = input(title='Period for Default Supertrend', defval=10, minval = 1, maxval = 100)
+Mult2 = input(title='Multiplier for Additional Supertrend', defval=2.0, minval = 0, maxval = 10)
+Period2 = input(title='Period for Additional Supertrend', defval=14, minval = 1, maxval = 100)
+chbarcol = input(true, title = "Change Bar Color")
+[Trailings, Trend] = supertrend(Mult1, Period1)
+linecolor = Trend == -1 and Trend[1] == -1 ? color.teal :
+   Trend == 1 and Trend[1] == 1 ? color.red :
+   color.new(color.white, 100)
+plot(Trailings, color = linecolor,  linewidth = 2,title = "SuperTrend")
+f_Security(_symbol, _res, _src) => security(_symbol, _res, _src[1], lookahead = barmerge.lookahead_on)
+nonVectorSupertrend(Mult, Period) =>
+    [Trail_, Trend_] = supertrend(Mult, Period)
+    Trail_*Trend_
+[TrailingslHtf, TrendHtf] = supertrend(Mult2, Period2)
+if HTF != timeframe.period and HTF != ''
+    CompositeTrailHtf = f_Security(syminfo.tickerid, HTF,nonVectorSupertrend(Mult2, Period2) )
+    TrailingslHtf := abs(CompositeTrailHtf)
+    TrendHtf := CompositeTrailHtf > 0 ? 1 : -1
+linecolorHtf = TrendHtf == -1 and TrendHtf[1] == -1 ? color.blue :
+   TrendHtf == 1 and TrendHtf[1] == 1 ? color.maroon :
+   color.new(color.white, 100)
+plot(TrailingslHtf, color = linecolorHtf, linewidth = 3, title = "Supertrend Higher Time Frame")
+barcolor_ = Trend == -1 and TrendHtf == -1 ? color.lime :
+   Trend == 1 and TrendHtf == 1 ? color.red :
+   color.white
+barcolor(color = chbarcol ? barcolor_ : na)
+vwapfilter = input(false)
+Long = Trend == -1 and TrendHtf == -1
+Short = Trend == 1 and TrendHtf == 1
+strategy.entry("enter long", true, 1, when = Long and not Long[1] and (vwapfilter and close > vwap or not vwapfilter))
+strategy.entry("enter short", false, 1, when = Short and not Short[1] and (vwapfilter and close < vwap or not vwapfilter))
+strategy.close("enter long", when = Long[1] and not Long)
+strategy.close("enter short", when = Short[1] and not Short)
+Expand (70 lines)

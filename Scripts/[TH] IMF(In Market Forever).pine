@@ -1,0 +1,121 @@
+Script Name: [TH] IMF(In Market Forever)
+Author: dokang
+Description: If you want to be  in market forever , Set Entry/Profit/Loss in advance.
+
+This strategy is a profit and loss strategy indicating P&L Ratio on chart.
+
+You can use webhook for auto-trade using my opensource webhook server(TradingHook).
+
+
+ Manual 
+ 
+  add to chart
+  set entry price using mouse click on your chart
+  set profit price using mouse click on your chart
+ ...
+PineScript code:
+
+Pine Script™ strategy
+[TH] IMF(In Market Forever)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © dokang
+//@version=5
+password = input.string("Your Password", title="Password", confirm=true)
+strategy("[TH] IMF", initial_capital=10000, currency=currency.KRW, default_qty_type=strategy.percent_of_equity, default_qty_value=100, overlay=true, calc_on_every_tick=true)
+import dokang/TradingHook/2 as TH
+numsOfTrades = input.int(1, "Nums of trades", minval=0, step=1)
+entry_price = input.price(0, title="Entry Price", confirm=true)
+profit_price = input.price(1000000, title="Profit Price", confirm=true)
+loss_price = input.price(0, title="Loss Price", confirm=true)
+isShowPrice = input.bool(true, title="Show Price")
+if profit_price <= entry_price
+    runtime.error("Profit Price must be higher than Entry Price")
+if loss_price >= entry_price
+    runtime.error("Loss Price must be less than Entry Price")
+    
+profit_percent = 100*(profit_price/entry_price-1)
+loss_percent = 100*(loss_price/entry_price-1)
+var profit_label = label(na)
+var loss_label = label(na)
+var entry_label = label(na)
+if barstate.islastconfirmedhistory
+    var entry_line = line.new(time, entry_price, time+60, entry_price, xloc=xloc.bar_time, extend = extend.both, color = color.orange)
+    var loss_line = line.new(time, loss_price, time+60, loss_price, xloc=xloc.bar_time, extend = extend.both, color = color.red)
+    var profit_line = line.new(time, profit_price, time+60, profit_price, xloc=xloc.bar_time, extend = extend.both, color = color.green)
+if barstate.isrealtime
+    label.delete(profit_label)
+    label.delete(loss_label)
+    label.delete(entry_label)
+    str_loss_price = isShowPrice ? str.format("({0})",str.tostring(loss_price, format.mintick)) : na 
+    str_profit_price = isShowPrice ? str.format("({0})",str.tostring(profit_price, format.mintick)) : na
+    
+    entry_text = str.format("Entry {0, number,#.##} ({1})", profit_percent/math.abs(loss_percent),str.tostring(entry_price,format.mintick))
+    profit_text = str.format("Profit {0,number,#.##}% {1}", profit_percent, str_profit_price)
+    loss_text = str.format("Loss {0,number,#.##}% {1}", loss_percent, str_loss_price)
+    profit_label := label.new(bar_index, profit_price, text=profit_text, tooltip=str.tostring(profit_price, format.mintick), style=label.style_label_lower_left, color = color.green, textcolor = color.white)
+    loss_label := label.new(bar_index, loss_price, text=loss_text, tooltip = str.tostring(loss_price, format.mintick), style=label.style_label_upper_left, color = color.red, textcolor = color.white)
+    entry_label := label.new(bar_index+5, entry_price,text=entry_text,  style=label.style_label_center, color = color.orange, textcolor = color.white)
+inTrade= strategy.closedtrades < numsOfTrades 
+if barstate.isrealtime
+    if entry_price > close and inTrade 
+        strategy.entry("buy", strategy.long, stop = entry_price, alert_message = TH.buy_message(password, order_name="IMF 매수")) 
+    else if entry_price <= close and inTrade
+        strategy.entry("buy", strategy.long, limit = entry_price, alert_message = TH.buy_message(password, order_name="IMF 매수"))
+    
+strategy.exit("sell", "buy", limit = profit_price, stop = loss_price, alert_message = TH.sell_message(password, "100%", order_name="IMF 매도"))
+Expand (54 lines)

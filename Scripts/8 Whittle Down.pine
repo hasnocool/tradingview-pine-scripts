@@ -1,0 +1,153 @@
+Script Name: 8 Whittle Down
+Author: HermanBrummer
+Description: The system is designed to short on directionally negative instruments like VXX & SQQQ
+
+
+ 
+  The system only shorts, no longs
+  It enters a pilot position if the system has no trades open at the time is in the late afternoon
+  It uses a 200-day moving average as a filter and will only short if the price is below the 200 day moving average
+  The pilot position will...
+PineScript code:
+
+Pine Script™ strategy
+8 Whittle Down
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+//              @version=4
+strategy("8 Whittle Down", "8 WD", 1, initial_capital=0)
+//              DUAL ENTRIES
+//              ADDS ON MORE SHARES IF THE PILOT TRADE DOES NOT REACH PROFIT TARGET
+//              RED     LINE        == STOP LOSS LINE
+//              GREEN   LINE        == PROFIT TARGET FOR THE 1ST TRADE
+//              YELLOW  LINE        == ADD ON SHARES TO THE TRADE
+//              WHITE   LINE        == PROFIT TARGET FOR THE 1ST & SECOND TRADE COMBINED
+StopLossPerc        = input(1.15, "Total Stop Loss", step=0.01)
+T2EntTrgPerc        = input(1.05, "Enter Second trade @ what higher 5%?", step=0.01)    //  BUY STOP LIMIT ONLY WHEN ONE TRADE IS ALREADY OPEN & AIMS TO BUY DOUBLE THE OWNED SHARES AT A HIGHER ENTRY PRICE // YELLOW LINE
+T1ProfTrgPerc       = input(0.95, "First Trade Profit % Target", step=0.01)
+T2ProfTrgPerc       = input(0.90, "Second Trade Profit % Target", step=0.01)
+RiskRange           = close*(StopLossPerc)-1
+Shares              = floor(1000*1000/RiskRange) / 3                                    //  SPLITS THE RISK OVER THREE TRADES
+F1                  = close < sma(security(syminfo.tickerid, "D", close[2]), 200)       //  HIGH OF OLD DATA -- SO NO REPAINTING
+F2                  = strategy.opentrades == 0
+buyTime             = time(timeframe.period, "1429-1500")                               //  BUY AT THE END OF THE  DAY
+ 
+ 
+StopLossLine        = strategy.position_avg_price * StopLossPerc
+StopLossCol         = strategy.opentrades != 0 ? #FF0000 : na
+plot(StopLossLine,  "StopLossLine", StopLossCol, 2)
+strategy.cancel_all()                                                                   //  CANCELS ALL ORDERS: BECAUSE THE SYSTEM WILL ADD A BUY STOP LIMIT ORDER FOR ENTRY TWO
+///==============   ENTRY 1   ==============   
+if  F1 and buyTime and strategy.opentrades == 0
+    strategy.entry("S1", false, qty=Shares)
+T1Prof              = strategy.position_avg_price * T1ProfTrgPerc
+plot(T1Prof,        "1st Profit Target", strategy.opentrades == 1 ? #00FF00 : na, 2)
+strategy.exit("S1 Ex", "S1", limit=T1Prof, stop=StopLossLine )
+///==============   ENTRY 2   ==============   
+T2EntryTrg          = strategy.position_avg_price * T2EntTrgPerc // enters on higher target than 1st entry
+plot(T2EntryTrg,    "ent2EntryTrg", strategy.opentrades == 1 ? color.yellow : na, 2)
+    
+    
+if  strategy.opentrades == 1
+    strategy.order("S2", false, stop=T2EntryTrg, limit= T2EntryTrg, qty=Shares * 2)     //  BUYS MORE SHARES
+T2Prof              = strategy.position_avg_price * T2ProfTrgPerc
+    
+T2Col               = strategy.opentrades == 2 ? color.white : na
+plot(T2Prof,        "2nd Profit Target", T2Col, 2)
+    
+    
+strategy.exit("S2 Ex", "S2", limit=T2Prof, stop=StopLossLine )
+Expand (94 lines)

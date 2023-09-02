@@ -1,0 +1,167 @@
+Script Name: Combo Backtest 123 Reversal & Kaufman Moving Average Adaptive
+Author: HPotter
+Description: // This is combo strategies for get a cumulative signal. 
+//
+ First strategy
+ This System was created from the Book "How I Tripled My Money In The 
+ Futures Market" by Ulf Jensen, Page 183. This is reverse type of strategies.
+ The strategy buys at market, if close price is higher than the previous close 
+ during 2 days and the meaning of 9-days Stochastic Slow...
+PineScript code:
+
+Pine Script™ strategy
+Combo Backtest 123 Reversal & Kaufman Moving Average Adaptive
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+//@version=4
+////////////////////////////////////////////////////////////
+//  Copyright by HPotter v1.0 08/12/2020
+// This is combo strategies for get a cumulative signal. 
+//
+// First strategy
+// This System was created from the Book "How I Tripled My Money In The 
+// Futures Market" by Ulf Jensen, Page 183. This is reverse type of strategies.
+// The strategy buys at market, if close price is higher than the previous close 
+// during 2 days and the meaning of 9-days Stochastic Slow Oscillator is lower than 50. 
+// The strategy sells at market, if close price is lower than the previous close price 
+// during 2 days and the meaning of 9-days Stochastic Fast Oscillator is higher than 50.
+//
+// Second strategy
+// Everyone wants a short-term, fast trading trend that works without large
+// losses. That combination does not exist. But it is possible to have fast
+// trading trends in which one must get in or out of the market quickly, but
+// these have the distinct disadvantage of being whipsawed by market noise
+// when the market is volatile in a sideways trending market. During these
+// periods, the trader is jumping in and out of positions with no profit-making
+// trend in sight. In an attempt to overcome the problem of noise and still be
+// able to get closer to the actual change of the trend, Kaufman developed an
+// indicator that adapts to market movement. This indicator, an adaptive moving
+// average (AMA), moves very slowly when markets are moving sideways but moves
+// swiftly when the markets also move swiftly, change directions or break out of
+// a trading range.
+//
+// WARNING:
+// - For purpose educate only
+// - This script to change bars colors.
+////////////////////////////////////////////////////////////
+Reversal123(Length, KSmoothing, DLength, Level) =>
+    vFast = sma(stoch(close, high, low, Length), KSmoothing) 
+    vSlow = sma(vFast, DLength)
+    pos = 0.0
+    pos := iff(close[2] < close[1] and close > close[1] and vFast < vSlow and vFast > Level, 1,
+             iff(close[2] > close[1] and close < close[1] and vFast > vSlow and vFast < Level, -1, nz(pos[1], 0))) 
+    pos
+KAMA(Length) =>
+    pos = 0.0
+    nAMA = 0.0
+    xPrice = close
+    xvnoise = abs(xPrice - xPrice[1])
+    nfastend = 0.666
+    nslowend = 0.0645
+    reverse = input(false, title="Trade reverse")
+    nsignal = abs(xPrice - xPrice[Length])
+    nnoise = sum(xvnoise, Length)
+    nefratio = iff(nnoise != 0, nsignal / nnoise, 0)
+    nsmooth = pow(nefratio * (nfastend - nslowend) + nslowend, 2) 
+    nAMA := nz(nAMA[1]) + nsmooth * (xPrice - nz(nAMA[1]))
+    pos := iff(close[1] > nAMA, 1,
+             iff(close[1] < nAMA, -1, nz(pos[1], 0))) 
+    pos
+strategy(title="Combo Backtest 123 Reversal & Kaufman Moving Average Adaptive", shorttitle="Combo", overlay = true)
+Length = input(14, minval=1)
+KSmoothing = input(1, minval=1)
+DLength = input(3, minval=1)
+Level = input(50, minval=1)
+//-------------------------
+LengthKAMA = input(21, minval=2)
+reverse = input(false, title="Trade reverse")
+posReversal123 = Reversal123(Length, KSmoothing, DLength, Level)
+posKAMA = KAMA(LengthKAMA)
+pos = iff(posReversal123 == 1 and posKAMA == 1 , 1,
+       iff(posReversal123 == -1 and posKAMA == -1, -1, 0)) 
+possig = iff(reverse and pos == 1, -1,
+          iff(reverse and pos == -1 , 1, pos))     
+if (possig == 1) 
+    strategy.entry("Long", strategy.long)
+if (possig == -1)
+    strategy.entry("Short", strategy.short)  
+if (possig == 0) 
+    strategy.close_all()
+barcolor(possig == -1 ? #b50404: possig == 1 ? #079605 : #0536b3 )
+Expand (77 lines)

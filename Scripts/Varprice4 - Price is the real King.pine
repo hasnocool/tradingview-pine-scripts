@@ -1,0 +1,97 @@
+Script Name: Varprice4 - Price is the real King
+Author: saucius
+Description: When you use any indicators you suffer of lagging and possibile mistakes.
+In this case, higher movements of the (daily) prices (long green candle) are a signal that market is appreciating your stock. The variation of a single candle is compared to standard deviation of the stock.
+Besides normal money management (on fixed percentages), we have kept the possibily of...
+PineScript code:
+
+Pine Script™ strategy
+Varprice4 - Price is the real King
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+//@version=4
+// written by Sauciusfinance
+// Questa è un'evoluzione del sistema varprice 1; per quanto un sistema col solo segnale di ingresso (varprice3) e semplice money management sia più che utile
+// a testimonianza che nell'investimento è più importante decidere il momento di ingresso. Poi se va troppo male, si chiude in perdita (predeterminata in maniera fissa), altrimenti
+// in utile. 
+// In questo sistema abbiamo comunque mantenuto la possibilità di chiusura ante "stop loss" se le cose vanno male, ma faccio notare che il sistema funziona meglio
+// se il multiplo x-volte short / long è piuttosto alto. Parametri ottimizzati per azioni italiane
+// * ENGLISH** 
+// This is an evolution of the varprice 1 system; although a system with only input signal (varprice3) and simple money management is more than useful
+//it is more important to decide WHEN you should ENTER (than exit). Then if things go too badly, close your position at a loss (predetermined in a fixed way), otherwise
+// you are in gain. 
+//In this system, however, we have retained the possibility of closing ante "stop loss" if things go wrong, but I note that the system works better
+//if the multiple "x-times short/long" is quite high. Optimized parameters for Italian shares.
+strategy(title="Varprice4",calc_on_order_fills=true,calc_on_every_tick =false, initial_capital=12000,commission_type=strategy.commission.cash_per_order, commission_value=30,overlay = true,default_qty_type = strategy.cash, default_qty_value = 12000)
+multi1 = input(title="xtime stddev for Entry", type=input.float, defval=1.35, minval = 0.5, step = 0.05)
+// usa la deviazione standard delle ultime 20 barre (per non calcolare in maniera differente titoli più volatili)
+// the system consider the standard deviation of the last 20 bars (in order to )
+mydev = stdev(hlc3, 20)
+multi3 = input(title="multiplier short/long", type=input.float, defval=3, minval = 0.5, step = 0.1)
+percentage = multi1*mydev
+percentage2 = multi3*percentage
+//dev'essere la barra precedente altrimenti non scatta mai banalmente
+trigger_level = close[1]*(1+percentage/20)
+downtrig = close[1]*(1-percentage2/20)
+// dato che 20 è un buon correttore di 100 considerata la deviazione 
+// per chiudere short si conferma anche 
+downsideconf = close[1] < downtrig[1] and close < close [1]
+// ok after half day!
+strategy.entry("Long", true, when =  crossover(close, trigger_level), comment = "trig entry")
+strategy.close("Long", when=crossunder(close,downtrig), comment = "trig exit")
+//money management
+stop_loss=input(7, "Stop loss %", minval = 1, step = 1)
+sl = strategy.position_avg_price * (1-stop_loss/100)
+close_Stop = close < sl
+strategy.close("Long", when = close_Stop, comment = "Stop loss")
+Target_profit=input(16, "Target Profit %", minval = 1, step = 1)
+tp = strategy.position_avg_price * (1+Target_profit/100)
+close_Target = close > tp
+strategy.close("Long", when = close_Target, comment ="Target")
+plot(trigger_level, color = color.purple)
+plot(downtrig, color = color.red)
+Expand (45 lines)

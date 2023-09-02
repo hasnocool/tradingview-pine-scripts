@@ -1,0 +1,1578 @@
+Script Name: [MT] Strategy Backtest Template
+Author: VertMT
+Description: | Initial Release |  | EN | 
+
+An update of my old script, this script is designed so that it can be used as a template for all those traders who want to save time when programming their strategy and backtesting it, having functions already programmed that in normal development would take you more time to program, with this template you can simply add your favorite...
+PineScript code:
+
+Pine Script™ strategy
+[MT] Strategy Backtest Template
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+540
+541
+542
+543
+544
+545
+546
+547
+548
+549
+550
+551
+552
+553
+554
+555
+556
+557
+558
+559
+560
+561
+562
+563
+564
+565
+566
+567
+568
+569
+570
+571
+572
+573
+574
+575
+576
+577
+578
+579
+580
+581
+582
+583
+584
+585
+586
+587
+588
+589
+590
+591
+592
+593
+594
+595
+596
+597
+598
+599
+600
+601
+602
+603
+604
+605
+606
+607
+608
+609
+610
+611
+612
+613
+614
+615
+616
+617
+618
+619
+620
+621
+622
+623
+624
+625
+626
+627
+628
+629
+630
+631
+632
+633
+634
+635
+636
+637
+638
+639
+640
+641
+642
+643
+644
+645
+646
+647
+648
+649
+650
+651
+652
+653
+654
+655
+656
+657
+658
+659
+660
+661
+662
+663
+664
+665
+666
+667
+668
+669
+670
+671
+672
+673
+674
+675
+676
+677
+678
+679
+680
+681
+682
+683
+684
+685
+686
+687
+688
+689
+690
+691
+692
+693
+694
+695
+696
+697
+698
+699
+700
+701
+702
+703
+704
+705
+706
+707
+708
+709
+710
+711
+712
+713
+714
+715
+716
+717
+718
+719
+720
+721
+722
+723
+724
+725
+726
+727
+728
+729
+730
+731
+732
+733
+734
+735
+736
+737
+738
+739
+740
+741
+742
+743
+744
+745
+746
+747
+748
+749
+750
+751
+752
+753
+754
+755
+756
+757
+758
+759
+760
+761
+762
+763
+764
+765
+766
+767
+768
+769
+770
+771
+772
+773
+774
+775
+776
+777
+778
+779
+780
+781
+782
+783
+784
+785
+786
+787
+788
+789
+790
+791
+792
+793
+794
+795
+796
+797
+798
+799
+800
+801
+802
+803
+804
+805
+806
+807
+808
+809
+810
+811
+812
+813
+814
+815
+816
+817
+818
+819
+820
+821
+822
+823
+824
+825
+826
+827
+828
+829
+830
+831
+832
+833
+834
+835
+836
+837
+838
+839
+840
+841
+842
+843
+844
+845
+846
+847
+848
+849
+850
+851
+852
+853
+854
+855
+//@version=5
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+// | 
+// |   Script       |  [MT] Strategy Backtest Template
+// |   Description  |  Strategy template designed to facilitate the work and time of creating new strategies, 
+// |                   adding options by default to the strategy that would normally take you more time to develop, 
+// |                   also being able to just add new indicators following the indications mentioned inside the code or using the ones already included inside.
+// | 
+// |   Author       |  ©VertMT
+// | 
+// |   Pinescript   |  https://www.tradingview.com/pine-script-docs/en/v5/Introduction.html
+// |                   @version=5
+// | 
+// |   Revision History
+// |     Release    |  Jul 30, 2022  | Initial Release
+// |                |  https://www.tradingview.com/script/uWqKX6A2/
+// |
+// |     Update     |  Oct 12, 2022  | Update 1.1
+// | 
+// |   Reference    |  https://tradingview.com/script/wzevYXew-TEMPLATE-Code-Block-Comments/
+// | 
+// | 
+// |     ███▄ ▄███▓ ▄▄▄█████▓
+// |    ▓██▒▀█▀ ██▒ ▓  ██▒ ▓▒
+// |    ▓██    ▓██░ ▒ ▓██░ ▒░
+// |    ▒██    ▒██  ░ ▓██▓ ░ 
+// |    ▒██▒   ░██▒   ▒██▒ ░ 
+// |    ░ ▒░   ░  ░   ▒ ░░   
+// |    ░  ░      ░     ░    
+// |    ░      ░      ░      
+// | 
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+strategy("[MT] Strategy Backtest Template", overlay=true, commission_value = 0.03, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, initial_capital = 100, max_lines_count = 500, max_labels_count = 500)
+startFilter    = input.bool    (group='🟰🟰🟰🟰🟰🟰🟰ㅤ📆 Time Filter 📆ㅤ🟰🟰🟰🟰🟰🟰🟰', title="              ", defval=false, inline="Start")
+endFilter      = input.bool    (group='🟰🟰🟰🟰🟰🟰🟰ㅤ📆 Time Filter 📆ㅤ🟰🟰🟰🟰🟰🟰🟰', title="              ", defval=false, inline="End")
+startTime      = input.time    (group='🟰🟰🟰🟰🟰🟰🟰ㅤ📆 Time Filter 📆ㅤ🟰🟰🟰🟰🟰🟰🟰', title="Start Timeㅤㅤ", defval=timestamp('UTC 01 Jan 2022 00:00'),  inline="Start")
+endTime        = input.time    (group='🟰🟰🟰🟰🟰🟰🟰ㅤ📆 Time Filter 📆ㅤ🟰🟰🟰🟰🟰🟰🟰', title="End Time ㅤ ㅤ", defval=timestamp('UTC 31 Dec 2022 23:45'),  inline="End")
+session        = input.session (group='🟰🟰🟰🟰🟰🟰🟰ㅤ📆 Time Filter 📆ㅤ🟰🟰🟰🟰🟰🟰🟰', title="Time Session  ", defval='0000-0000', tooltip="00:00 - 00:00 to disable. \n\n00:00 - 00:00 para desactivar")
+zoneTime       = input.string  (group='🟰🟰🟰🟰🟰🟰🟰ㅤ📆 Time Filter 📆ㅤ🟰🟰🟰🟰🟰🟰🟰', title="UTC           ", defval="UTC", options = ["UTC-10", "UTC-8", "UTC-7", "UTC-6", "UTC-5", "UTC-4", "UTC-3", "UTC", "UTC+1", "UTC+2", "UTC+3", "UTC+4", "UTC+4:30", "UTC+5", "UTC+5:30", "UTC+6", "UTC+7", "UTC+8", "UTC+9", "UTC+9:30", "UTC+10", "UTC+11", "UTC+12", "UTC+12:45", "UTC+13"], tooltip="Match this time zone with that of your graph so that all values are displayed correctly. \n\nHaga coincidir esta zona horaria con la de su gráfico para que todos los valores se muestren correctamente.")
+mon            = input.bool    (group='🟰🟰🟰🟰🟰🟰🟰ㅤ📆 Time Filter 📆ㅤ🟰🟰🟰🟰🟰🟰🟰', title="Monㅤ         ", defval=true,  inline="Days")
+tue            = input.bool    (group='🟰🟰🟰🟰🟰🟰🟰ㅤ📆 Time Filter 📆ㅤ🟰🟰🟰🟰🟰🟰🟰', title="Tueㅤ         ", defval=true,  inline="Days")
+wed            = input.bool    (group='🟰🟰🟰🟰🟰🟰🟰ㅤ📆 Time Filter 📆ㅤ🟰🟰🟰🟰🟰🟰🟰', title="Wedㅤ         ", defval=true,  inline="Days")
+thu            = input.bool    (group='🟰🟰🟰🟰🟰🟰🟰ㅤ📆 Time Filter 📆ㅤ🟰🟰🟰🟰🟰🟰🟰', title="Thuㅤ         ", defval=true,  inline="Days")
+fri            = input.bool    (group='🟰🟰🟰🟰🟰🟰🟰ㅤ📆 Time Filter 📆ㅤ🟰🟰🟰🟰🟰🟰🟰', title="Friㅤ         ", defval=true,  inline="Days")
+sat            = input.bool    (group='🟰🟰🟰🟰🟰🟰🟰ㅤ📆 Time Filter 📆ㅤ🟰🟰🟰🟰🟰🟰🟰', title="Satㅤ         ", defval=true,  inline="Days")
+sun            = input.bool    (group='🟰🟰🟰🟰🟰🟰🟰ㅤ📆 Time Filter 📆ㅤ🟰🟰🟰🟰🟰🟰🟰', title="Sunㅤ         ", defval=true,  inline="Days")
+movingAverage  = input.bool    (group='🟰🟰🟰🟰🟰🟰🟰ㅤ🔰 Strategy 🔰ㅤ🟰🟰🟰🟰🟰🟰🟰', title="Moving Averagesㅤ ㅤ ㅤ ", defval=false,    inline="MA")
+useAsMA        = input.string  (group='🟰🟰🟰🟰🟰🟰🟰ㅤ🔰 Strategy 🔰ㅤ🟰🟰🟰🟰🟰🟰🟰', title="Use as:                 ", defval="Entry",  options=["Entry", "Filter"], inline="MA")
+superTrend     = input.bool    (group='🟰🟰🟰🟰🟰🟰🟰ㅤ🔰 Strategy 🔰ㅤ🟰🟰🟰🟰🟰🟰🟰', title="Supertrendㅤㅤㅤㅤㅤㅤ  ", defval=false,    inline="SuperTrend")
+useAsSTrend    = input.string  (group='🟰🟰🟰🟰🟰🟰🟰ㅤ🔰 Strategy 🔰ㅤ🟰🟰🟰🟰🟰🟰🟰', title="Use as:                 ", defval="Entry",  options=["Entry", "Filter"], inline="SuperTrend")
+RSI            = input.bool    (group='🟰🟰🟰🟰🟰🟰🟰ㅤ🔰 Strategy 🔰ㅤ🟰🟰🟰🟰🟰🟰🟰', title="RSIㅤㅤㅤㅤㅤㅤㅤ ㅤ ㅤ ", defval=false,    inline="RSI")
+useAsRSI       = input.string  (group='🟰🟰🟰🟰🟰🟰🟰ㅤ🔰 Strategy 🔰ㅤ🟰🟰🟰🟰🟰🟰🟰', title="Use as:                 ", defval="Entry",  options=["Entry", "Filter"], inline="RSI")
+stochasticRSI  = input.bool    (group='🟰🟰🟰🟰🟰🟰🟰ㅤ🔰 Strategy 🔰ㅤ🟰🟰🟰🟰🟰🟰🟰', title="Stochastic RSI ㅤㅤㅤ ㅤ", defval=false,    inline="SRSI")
+useAsSRSI      = input.string  (group='🟰🟰🟰🟰🟰🟰🟰ㅤ🔰 Strategy 🔰ㅤ🟰🟰🟰🟰🟰🟰🟰', title="Use as:                 ", defval="Entry",  options=["Entry", "Filter"], inline="SRSI")
+ADX            = input.bool    (group='🟰🟰🟰🟰🟰🟰🟰ㅤ🔰 Strategy 🔰ㅤ🟰🟰🟰🟰🟰🟰🟰', title="ADX and DIㅤㅤㅤㅤㅤㅤ  ", defval=false,    inline="ADX")
+useAsADX       = input.string  (group='🟰🟰🟰🟰🟰🟰🟰ㅤ🔰 Strategy 🔰ㅤ🟰🟰🟰🟰🟰🟰🟰', title="Use as:                 ", defval="Entry",  options=["Entry", "Filter"], inline="ADX")
+SAR            = input.bool    (group='🟰🟰🟰🟰🟰🟰🟰ㅤ🔰 Strategy 🔰ㅤ🟰🟰🟰🟰🟰🟰🟰', title="Parabolic Sarㅤㅤㅤㅤㅤ ", defval=false,    inline="Sar")
+useAsSar       = input.string  (group='🟰🟰🟰🟰🟰🟰🟰ㅤ🔰 Strategy 🔰ㅤ🟰🟰🟰🟰🟰🟰🟰', title="Use as:                 ", defval="Entry",  options=["Entry", "Filter"], inline="Sar")
+closeNewEntry  = input.bool    (group='🟰🟰🟰🟰🟰🟰🟰ㅤ🔰 Strategy 🔰ㅤ🟰🟰🟰🟰🟰🟰🟰', title="Close on New Entry      ", defval=true,     tooltip="When it is active and a new alert is fired, the current position is closed to open a new one, otherwise, the operations only close when reach sl/tp \n\nCuando está activa y una nueva alerta es disparada se cierra la posicion actual para abrir una nueva, en caso contrario las operaciones solo se cierran al tocar sl/tp")
+useLeverage    = input.bool    (group='🟰🟰🟰🟰🟰🟰ㅤ💼 Risk Management 💼ㅤ🟰🟰🟰🟰🟰🟰', title="Leverageㅤㅤㅤㅤㅤ", defval=false, inline="Leverage")
+leverage       = input.int     (group='🟰🟰🟰🟰🟰🟰ㅤ💼 Risk Management 💼ㅤ🟰🟰🟰🟰🟰🟰', title="                  ", defval=1,     inline="Leverage", minval=1, maxval=100, tooltip="By activating leverage, orders will use 100% of available equity. \n\nAl activar el apalancamiento, las órdenes utilizarán el 100% del capital disponible.")
+ma1Status      = input.bool    (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="ㅤEnable MA 1?ㅤ", defval=false,     inline="MA1 x")
+ma1Color       = input.color   (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="                ", defval=#004173, inline="MA1 x", tooltip="Buy / Compra  \nClose > MA 1 \n\nSell / Venta  \nClose < MA 1")
+ma1Type        = input.string  (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="Type            ", defval="SMA",     inline="MA1 y", options=["SMA", "EMA", "WMA", "VWMA", "ALMA", "SMMA", "LSMA", "HMA", "DEMA", "KAMA", "TEMA", "ZLEMA", "VIDYA", "JMA", "T3", "TRIMA"])
+ma1Source      = input.source  (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="Source          ", defval=close,     inline="MA1 y")
+ma1Length      = input.int     (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="Length          ", defval=10,        inline="MA1 y", minval=1)
+ma2Status      = input.bool    (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="ㅤEnable MA 2?ㅤ", defval=false,     inline="MA2 x")
+ma2Color       = input.color   (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="                ", defval=#0979b0, inline="MA2 x", tooltip="Buy / Compra  \nClose > MA 1 > MA 2 \n\nSell / Venta  \nClose < MA 1 < MA 2")
+ma2Type        = input.string  (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="Type            ", defval="SMA",     inline="MA2 y", options=["SMA", "EMA", "WMA", "VWMA", "ALMA", "SMMA", "LSMA", "HMA", "DEMA", "KAMA", "TEMA", "ZLEMA", "VIDYA", "JMA", "T3", "TRIMA"])
+ma2Source      = input.source  (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="Source          ", defval=close,     inline="MA2 y")
+ma2Length      = input.int     (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="Length          ", defval=10,        inline="MA2 y", minval=1)
+ma3Status      = input.bool    (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="ㅤEnable MA 3?ㅤ", defval=false,     inline="MA3 x")
+ma3Color       = input.color   (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="                ", defval=#0cb7f2, inline="MA3 x", tooltip="Buy / Compra  \nClose > MA 1 > MA 2 > MA 3 \n\nSell / Venta  \nClose < MA 1 < MA 2 < MA 3")
+ma3Type        = input.string  (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="Type            ", defval="SMA",     inline="MA3 y", options=["SMA", "EMA", "WMA", "VWMA", "ALMA", "SMMA", "LSMA", "HMA", "DEMA", "KAMA", "TEMA", "ZLEMA", "VIDYA", "JMA", "T3", "TRIMA"])
+ma3Source      = input.source  (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="Source          ", defval=close,     inline="MA3 y")
+ma3Length      = input.int     (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="Length          ", defval=10,        inline="MA3 y", minval=1)
+ma4Status      = input.bool    (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="ㅤEnable MA 4?ㅤ", defval=false,     inline="MA4 x")
+ma4Color       = input.color   (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="                ", defval=#7cdaf9, inline="MA4 x", tooltip="Buy / Compra  \nClose > MA 1 > MA 2 > MA 3 > MA 4 \n\nSell / Venta  \nClose < MA 1 < MA 2 < MA 3 < MA 4")
+ma4Type        = input.string  (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="Type            ", defval="SMA",     inline="MA4 y", options=["SMA", "EMA", "WMA", "VWMA", "ALMA", "SMMA", "LSMA", "HMA", "DEMA", "KAMA", "TEMA", "ZLEMA", "VIDYA", "JMA", "T3", "TRIMA"])
+ma4Source      = input.source  (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="Source          ", defval=close,     inline="MA4 y")
+ma4Length      = input.int     (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="Length          ", defval=10,        inline="MA4 y", minval=1)
+ma5Status      = input.bool    (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="ㅤEnable MA 5?ㅤ", defval=false,     inline="MA5 x")
+ma5Color       = input.color   (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="                ", defval=#b6ffff, inline="MA5 x", tooltip="Buy / Compra  \nClose > MA 1 > MA 2 > MA 3 > MA 4 > MA 5 \n\nSell / Venta  \nClose < MA 1 < MA 2 < MA 3 < MA 4 < MA 5")
+ma5Type        = input.string  (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="Type            ", defval="SMA",     inline="MA5 y", options=["SMA", "EMA", "WMA", "VWMA", "ALMA", "SMMA", "LSMA", "HMA", "DEMA", "KAMA", "TEMA", "ZLEMA", "VIDYA", "JMA", "T3", "TRIMA"])
+ma5Source      = input.source  (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="Source          ", defval=close,     inline="MA5 y")
+ma5Length      = input.int     (group="🟰🟰🟰🟰🟰🟰ㅤ 🔘 Moving Averages 🔘ㅤ🟰🟰🟰🟰🟰🟰", title="Length          ", defval=10,        inline="MA5 y", minval=1)
+stPeriods      = input.int     (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🔘 Supertrend 🔘ㅤ🟰🟰🟰🟰🟰🟰🟰", title="ATR Period        ", defval=10)
+stSource       = input.source  (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🔘 Supertrend 🔘ㅤ🟰🟰🟰🟰🟰🟰🟰", title="Source            ", defval=hl2)
+stMultiplier   = input.float   (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🔘 Supertrend 🔘ㅤ🟰🟰🟰🟰🟰🟰🟰", title="ATR Multiplier    ", defval=3)
+stChangeATR    = input.bool    (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🔘 Supertrend 🔘ㅤ🟰🟰🟰🟰🟰🟰🟰", title="Change ATR?       ", defval=false)
+hknSrcST       = input.bool    (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🔘 Supertrend 🔘ㅤ🟰🟰🟰🟰🟰🟰🟰", title="Use Heikin Source?", defval=false, tooltip="The Japanese candlestick data source will be replaced by heikin ashi candlesticks simulating the results of a heikin ashi chart. \n\nLa fuente de datos de velas japonesas será reemplazada por velas heikin ashi simulando los resultados de un gráfico heikin ashi.")
+rsiSource      = input.source  (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ🔘 RSI 🔘ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="Source            ", defval=close) 
+rsiLength      = input.int     (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ🔘 RSI 🔘ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="Length            ", defval=14, minval=1)
+rsiUpper       = input.int     (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ🔘 RSI 🔘ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="Upper Band        ", defval=80, minval=1, maxval=100)
+rsiLower       = input.int     (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ🔘 RSI 🔘ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="Lower Band        ", defval=20, minval=1, maxval=100)
+hknrsi         = input.bool    (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ🔘 RSI 🔘ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="Use Heikin Source?", defval=false, tooltip="The Japanese candlestick data source will be replaced by heikin ashi candlesticks simulating the results of a heikin ashi chart. \n\nLa fuente de datos de velas japonesas será reemplazada por velas heikin ashi simulando los resultados de un gráfico heikin ashi.") 
+smoothK        = input.int     (group="🟰🟰🟰🟰🟰🟰ㅤ🔘 Stochastic RSI 🔘ㅤ🟰🟰🟰🟰🟰🟰",  title="K             ", defval=3,  minval=1)
+smoothD        = input.int     (group="🟰🟰🟰🟰🟰🟰ㅤ🔘 Stochastic RSI 🔘ㅤ🟰🟰🟰🟰🟰🟰",  title="D             ", defval=3,  minval=1)
+srsiLength     = input.int     (group="🟰🟰🟰🟰🟰🟰ㅤ🔘 Stochastic RSI 🔘ㅤ🟰🟰🟰🟰🟰🟰",  title="RSI Length    ", defval=14, minval=1)
+stochLength    = input.int     (group="🟰🟰🟰🟰🟰🟰ㅤ🔘 Stochastic RSI 🔘ㅤ🟰🟰🟰🟰🟰🟰",  title="Stoch Length  ", defval=14, minval=1)
+srsiSrc        = input.source  (group="🟰🟰🟰🟰🟰🟰ㅤ🔘 Stochastic RSI 🔘ㅤ🟰🟰🟰🟰🟰🟰",  title="RSI Source    ", defval=close)
+srsiCond       = input.bool    (group="🟰🟰🟰🟰🟰🟰ㅤ🔘 Stochastic RSI 🔘ㅤ🟰🟰🟰🟰🟰🟰",  title="Restrict Alert", defval=true)
+sUpperBand     = input.int     (group="🟰🟰🟰🟰🟰🟰ㅤ🔘 Stochastic RSI 🔘ㅤ🟰🟰🟰🟰🟰🟰",  title="ㅤㅤUpper Band", defval=80, minval=1, maxval=100)
+sLowerBand     = input.int     (group="🟰🟰🟰🟰🟰🟰ㅤ🔘 Stochastic RSI 🔘ㅤ🟰🟰🟰🟰🟰🟰",  title="ㅤㅤLower Band", defval=20, minval=1, maxval=100)
+adxLength      = input.int     (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🔘 ADX and DI 🔘ㅤ🟰🟰🟰🟰🟰🟰🟰", title="Length             ", defval=14, minval=1)
+adxThreshold   = input.int     (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🔘 ADX and DI 🔘ㅤ🟰🟰🟰🟰🟰🟰🟰", title="Threshold          ", defval=18, minval=1)
+adxType        = input.string  (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🔘 ADX and DI 🔘ㅤ🟰🟰🟰🟰🟰🟰🟰", title="Type Entry / Filter", defval="DI+ and DI-", options = ["DI+ and DI-", "ADX and Threshold [Only Filter]", "ADX and DI"])
+sarStart       = input.float   (group="🟰🟰🟰🟰🟰🟰ㅤ🔘 Parabolic Sar 🔘ㅤ🟰🟰🟰🟰🟰🟰",   title="Start    ", defval=2, minval=0, maxval=10) * 0.01
+sarIncrement   = input.float   (group="🟰🟰🟰🟰🟰🟰ㅤ🔘 Parabolic Sar 🔘ㅤ🟰🟰🟰🟰🟰🟰",   title="Increment", defval=2, minval=0, maxval=10) * 0.01
+sarMaximum     = input.float   (group="🟰🟰🟰🟰🟰🟰ㅤ🔘 Parabolic Sar 🔘ㅤ🟰🟰🟰🟰🟰🟰",   title="Maximum  ", defval=2, minval=0, maxval=10) * 0.10
+SL             = input.bool    (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🔴 Stop Loss 🔴ㅤ🟰🟰🟰🟰🟰🟰🟰",  title="Use Stop Loss       ", defval=false)
+optionSL       = input.string  (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🔴 Stop Loss 🔴ㅤ🟰🟰🟰🟰🟰🟰🟰",  title="Type of Stop        ", defval="Fixed %", options = ["Fixed %", "Fixed $", "ATR", "Last High/Low", "Custom"])
+fixedPSL       = input.float   (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🔴 Stop Loss 🔴ㅤ🟰🟰🟰🟰🟰🟰🟰",  title="ㅤㅤFixed %         ", defval=1,         minval = 0) / 100
+fixedESL       = input.float   (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🔴 Stop Loss 🔴ㅤ🟰🟰🟰🟰🟰🟰🟰",  title="ㅤㅤFixed $         ", defval=100,       minval = 0)
+atrLStop       = input.int     (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🔴 Stop Loss 🔴ㅤ🟰🟰🟰🟰🟰🟰🟰",  title="ㅤㅤATR Lenghtㅤ ㅤ ", defval=14,        minval = 1, inline="ATR Stop")
+atrMStop       = input.float   (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🔴 Stop Loss 🔴ㅤ🟰🟰🟰🟰🟰🟰🟰",  title="ㅤATR Multiplier    ", defval=1,         minval = 0, inline="ATR Stop")
+leftBHL        = input.int     (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🔴 Stop Loss 🔴ㅤ🟰🟰🟰🟰🟰🟰🟰",  title="ㅤㅤLast H/L Left ㅤ", defval=5,         minval = 1, inline="H/L")
+rightBHL       = input.int     (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🔴 Stop Loss 🔴ㅤ🟰🟰🟰🟰🟰🟰🟰",  title="ㅤLast H/L Right    ", defval=5,         minval = 1, inline="H/L")
+customSL       = input.string  (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🔴 Stop Loss 🔴ㅤ🟰🟰🟰🟰🟰🟰🟰",  title="ㅤㅤCustom          ", defval="Custom",  options = ["Custom"])
+trailSL        = input.bool    (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🔴 Stop Loss 🔴ㅤ🟰🟰🟰🟰🟰🟰🟰",  title="Trailng Stop Loss   ", defval=false,     tooltip="The maximum stop loss price will decrease as the closing price moves further away from the entry price. \n\nEl precio maximo de stop loss ira disminuyendo mientras el precio de cierre se aleje mas del precio de entrada")
+TP             = input.bool    (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🟢 Take Profit 🟢ㅤ🟰🟰🟰🟰🟰🟰🟰", title="Use Take Profit   ", defval=false)
+optionTP       = input.string  (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🟢 Take Profit 🟢ㅤ🟰🟰🟰🟰🟰🟰🟰", title="Type of Stop      ", defval="Fixed %", options = ["Fixed %", "Fixed $", "Ratio 1:#", "ATR", "Custom"])
+fixedPTP       = input.float   (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🟢 Take Profit 🟢ㅤ🟰🟰🟰🟰🟰🟰🟰", title="ㅤㅤFixed %       ", defval=1,         minval = 0) / 100
+fixedETP       = input.float   (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🟢 Take Profit 🟢ㅤ🟰🟰🟰🟰🟰🟰🟰", title="ㅤㅤFixed $       ", defval=100,       minval = 0)
+ratioTP        = input.float   (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🟢 Take Profit 🟢ㅤ🟰🟰🟰🟰🟰🟰🟰", title="ㅤㅤRatio 1:      ", defval=1,         minval = 0)
+atrLTake       = input.int     (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🟢 Take Profit 🟢ㅤ🟰🟰🟰🟰🟰🟰🟰", title="ㅤㅤATR Lenghtㅤㅤ", defval=14,        minval = 2, inline="ATR Take")
+atrMTake       = input.float   (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🟢 Take Profit 🟢ㅤ🟰🟰🟰🟰🟰🟰🟰", title="ㅤATR Multiplier  ", defval=1,         minval = 0, inline="ATR Take")
+customTP       = input.string  (group="🟰🟰🟰🟰🟰🟰🟰ㅤ🟢 Take Profit 🟢ㅤ🟰🟰🟰🟰🟰🟰🟰", title="ㅤㅤCustom        ", defval="Custom",  options = ["Custom"]) 
+plotDashboard  = input.bool    (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="Plot Dashboard          ", defval=true)
+maxProfit      = input.float   (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="Profit ㅤ ㅤ🟢 if > to:", defval=0.1, inline="Profit")
+minProfit      = input.float   (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="ㅤ🔴 if < to:          ", defval=0,   inline="Profit")
+maxWinRate     = input.float   (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="Win Rateㅤ🟢 if > to:  ", defval=75,  inline="Winrate", minval = 0, maxval=100)
+minWinRate     = input.float   (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="ㅤ🔴 if < to:          ", defval=50,  inline="Winrate", minval = 0, maxval=100)
+maxPFactor     = input.float   (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="P. Factorㅤ🟢 if > to: ", defval=2,   inline="PFactor", minval=0)
+minPFactor     = input.float   (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="ㅤ🔴 if < to:          ", defval=1,   inline="PFactor", minval=0)
+plotMA         = input.bool    (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="                        ", inline="Plot MA",   defval=true)
+colorMA        = input.color   (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="MA Signals ㅤ ㅤㅤㅤ    ", inline="Plot MA",   defval=color.blue)
+plotST         = input.bool    (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="                        ", inline="Plot ST",   defval=true)
+colorST        = input.color   (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="SuperTrend Signalsㅤ    ", inline="Plot ST",   defval=color.green)
+plotRSI        = input.bool    (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="                        ", inline="Plot RSI",  defval=true)
+colorRSI       = input.color   (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="RSI ㅤ ㅤ ㅤㅤㅤㅤㅤ    ", inline="Plot RSI",  defval=color.purple)
+plotSRSI       = input.bool    (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="                        ", inline="Plot SRSI", defval=true)
+colorSRSI      = input.color   (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="Stochastic RSIㅤㅤㅤ    ", inline="Plot SRSI", defval=color.orange)
+plotADX        = input.bool    (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="                        ", inline="Plot ADX",  defval=true)
+colorADXB      = input.color   (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="ADX and DI ㅤㅤㅤㅤ     ", inline="Plot ADX",  defval=color.blue)
+colorADXS      = input.color   (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="                        ", inline="Plot ADX",  defval=color.yellow)
+plotSAR        = input.bool    (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="                        ", inline="Plot SAR",  defval=true)
+colorSarB      = input.color   (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="Parabolic Sar ㅤㅤㅤ    ", inline="Plot SAR",  defval=color.green)
+colorSarS      = input.color   (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="                        ", inline="Plot SAR",  defval=color.red)
+plotTrades     = input.bool    (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="Plot Trades             ", defval=true)
+colorTP        = input.color   (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="ㅤㅤTake Profit         ", defval=color.green)
+colorSL        = input.color   (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="ㅤㅤStop Loss           ", defval=color.red)
+colorTSL       = input.color   (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="ㅤㅤTrailing Stop       ", defval=color.orange)
+plotATRPV      = input.bool    (group="🟰🟰🟰🟰🟰🟰🟰🟰ㅤ📊 Plots 📊ㅤ🟰🟰🟰🟰🟰🟰🟰🟰", title="Plot ATR / Pivot Points ", defval=true)
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+// |  ———————————————————————————————————————————— 📆 Time Filter 📆 ———————————————————————————————————————————
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+// |
+// |                   In this section you can configure the strategy so that it only runs between 
+// |                           time periods, being also able to adjust to any time zone.
+// |
+// |                En este apartado se puede configurar la estrategia para que solo se ejecute entre
+// |                 periodos de tiempo, siendo capaz tambien de ajustarse a cualquier zona horaria.
+// |
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+tradeDateIsAllowed() =>
+    start = startFilter ? time >= startTime : true
+    end   = endFilter   ? time <= endTime   : true
+    
+    ses   = time == time("S", session, zoneTime) ? true : false
+    monF  = ( dayofweek(time, zoneTime) == dayofweek.monday    ) and mon ? true : false
+    tueF  = ( dayofweek(time, zoneTime) == dayofweek.tuesday   ) and tue ? true : false
+    wedF  = ( dayofweek(time, zoneTime) == dayofweek.wednesday ) and wed ? true : false
+    thuF  = ( dayofweek(time, zoneTime) == dayofweek.thursday  ) and thu ? true : false
+    friF  = ( dayofweek(time, zoneTime) == dayofweek.friday    ) and fri ? true : false
+    satF  = ( dayofweek(time, zoneTime) == dayofweek.saturday  ) and sat ? true : false
+    sunF  = ( dayofweek(time, zoneTime) == dayofweek.sunday    ) and sun ? true : false
+    
+    dayF   = monF or tueF or wedF or thuF or friF or satF or sunF ? true : false
+    filter = start ? end ? ses ? dayF ? true : false : false : false : false
+    
+dateRange = tradeDateIsAllowed()
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+// |  ———————————————————————————————————————————— 🔰 Strategy 🔰 ——————————————————————————————————————————————
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+// |
+// |                         Here are located the options that you can use in this strategy. 
+// |                          
+// |                  Aqui se encuentran ubicados las opciones que puedes utilizar en esta estrategia.
+// |
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰 Heikin Ashi Entry 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+// |   Reference    |  https://tradingview.com/script/U1QGgSOw-Heikin-Ashi-Source-Function-HTF/
+heikin(src)  => 
+    Close  = ohlc4
+    Open   = float(na)
+    Open  := na(Open[1]) ? (open + close) / 2 : (nz(Open[1]) + nz(Close[1])) / 2
+    High   = math.max(high, math.max(Open, Close))
+    Low    = math.min(low,  math.min(Open, Close))
+    HL2    = math.avg(High, Low) 
+    HLC3   = math.avg(High, Low, Close) 
+    OHLC4  = math.avg(Open, High, Low, Close)
+    HLCC4  = math.avg(High, Low, Close, Close)
+    Price  = src == 'close' ? Close : src == 'open' ? Open : src == 'high' ? High : src == 'low' ? Low : src == 'hl2' ? HL2 : src == 'hlc3' ? HLC3 : src == 'ohlc4' ? OHLC4 : HLCC4
+    Source = math.round(Price / syminfo.mintick) * syminfo.mintick
+// Use this function to replace the source of your indicators between Japanese candlesticks and heikin ashi candlesticks.
+// ⬇⬇⬇
+h(source, previousCandle, heikinCondition) =>
+    price = source == open ? (heikinCondition ? heikin('open')[previousCandle] : open[previousCandle]) : source == high ? (heikinCondition ? heikin('high')[previousCandle] : high[previousCandle]) : source == low ? (heikinCondition ? heikin('low')[previousCandle] : low[previousCandle]) : source == close ? (heikinCondition ? heikin('close')[previousCandle] : close[previousCandle]) : source == hl2 ? (heikinCondition ? heikin('hl2')[previousCandle] : hl2[previousCandle]) : source == hlc3 ? (heikinCondition ? heikin('hlc3')[previousCandle] : hlc3[previousCandle]) : source == ohlc4 ? (heikinCondition ? heikin('ohlc4')[previousCandle] : ohlc4[previousCandle]) : source == hlcc4 ? (heikinCondition ? heikin('hlcc4')[previousCandle] : hlcc4[previousCandle]) : close[previousCandle]
+// h(source) -> Enter in this space the font you want to convert to a heikin ashi source (open, low, close, high, etc.) (only source values)
+// h(previousCandle) -> Enter if you want to display the value of a previous candlestick source, instead set 0 as default (close[1], open[2]) (only int values)
+// h(heikinCondition) -> Create a boolean variable and insert its value here so you can turn it on and off when you do not need certain parts or indicators to be calculated based on heikin ashi (only bool values)
+// When activated on the indicator, entries will be based on Heikin Ashi candles but executed at Japanese candles prices. 
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰 Moving Averages 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+// |   Reference    |  https://www.tradingview.com/script/3Zi8Wytp/
+movingAverage(maType, source, length) =>
+    ma = 0.0
+    if maType == "SMA" // Simple
+        ma := ta.sma(source, length)
+    
+    if maType == "EMA" // Exponential
+        ma := ta.ema(source, length)
+    
+    if maType == "WMA" // Weighted
+        ma := ta.wma(source, length)
+    
+    if maType == "VWMA" // Volume Weighted
+        ma := ta.vwma(source, length)
+        
+    if maType == "ALMA" // Arnaud Legoux
+        ma := ta.alma(source, length, 0.85, 6)
+    
+    if maType == "SMMA" // Smoothed
+        ma := ta.rma(source, length)
+    
+    if maType == "LSMA" // Least Squares
+        ma := ta.linreg(source, length, 0)
+    
+    if maType == "HMA" // Hull MA
+        ma := ta.hma(source, length)
+    
+    if maType == "DEMA" // Double EMA
+        ma := 2 * ta.ema(source, length) - ta.ema(ta.ema(source, length), length)
+    
+    if maType == "KAMA" // Kaufman Adaptive
+        volatility = math.sum(math.abs(ta.change(source)), length)
+        efficiency_ratio = volatility != 0 ? (math.abs(ta.change(source, length))) / volatility : 0
+        kama = 0.0
+        kama := nz(kama[1]) + (math.pow(efficiency_ratio * ((2/3) - (2/31)) + (2/31), 2)) * (source - nz(kama[1]))
+        ma := kama
+    
+    if maType == "TEMA" // Triple EMA
+        ma := 3 * ((ta.ema(source, length)) - ta.ema((ta.ema(source, length)), length)) + ta.ema(ta.ema((ta.ema(source, length)), length), length)
+    
+    if maType == "ZLEMA" // Zero Lag
+        ma := ta.ema((source + (source - source[(length - 1) / 2])), length)
+    
+    if maType == "VIDYA" // Variable Index Dynamic Average
+        upSum  = math.sum(math.max(ta.change(source), 0), length)
+        dwnSum = math.sum(-math.min(ta.change(source), 0), length)
+        out = (upSum - dwnSum) / (upSum + dwnSum)
+        vidya = 0.0
+        vidya := source * (2 / (length + 1)) * (math.abs(out)) + nz(vidya[1]) * (1 - (2 / (length + 1)) * (math.abs(out)))
+        ma := vidya
+    
+    if maType == "JMA" // Jurik Moving Average
+        beta = 0.45 * (length - 1) / ( 0.45 * (length - 1) + 2)
+        maa1 = 0.0, det0 = 0.0, maa2 = 0.0, det1 = 0.0, jma = 0.0
+        maa1 := (1 - (math.pow(beta, 2))) * source + (math.pow(beta, 2)) * nz(maa1[1])
+        det0 := (source - maa1) * (1 - beta) + beta * nz(det0[1])
+        maa2 := maa1 + 2 * det0
+        det1 := (maa2 - nz(jma[1])) * math.pow(1 - (math.pow(beta, 2)), 2) + math.pow((math.pow(beta, 2)), 2) * nz(det1[1])
+        jma  := nz(jma[1]) + det1
+        ma := jma
+    
+    if maType == "T3" // Tillson
+        t3ema1 = ta.ema(source, length)
+        t3ema2 = ta.ema(t3ema1, length)
+        t3ema3 = ta.ema(t3ema2, length)
+        t3ema4 = ta.ema(t3ema3, length)
+        t3ema5 = ta.ema(t3ema4, length)
+        t3ema6 = ta.ema(t3ema5, length)
+        ma := (-0.343 * t3ema6) + (2.499 * t3ema5) + (-6.069 * t3ema4) + (4.913 * t3ema3)
+    
+    if maType == "TRIMA" // Triangular
+        ma := ta.sma(ta.sma(source, math.round((length + 1) / 2)), math.round((length + 1) / 2))
+        
+    resultMA = ma
+MA1 = movingAverage(ma1Type, ma1Source, ma1Length)
+MA2 = movingAverage(ma2Type, ma2Source, ma2Length)
+MA3 = movingAverage(ma3Type, ma3Source, ma3Length)
+MA4 = movingAverage(ma4Type, ma4Source, ma4Length)
+MA5 = movingAverage(ma5Type, ma5Source, ma5Length)
+plot(MA1, "Moving Average 1", color = ma1Status ? ma1Color : na)
+plot(MA2, "Moving Average 2", color = ma2Status ? ma2Color : na)
+plot(MA3, "Moving Average 3", color = ma3Status ? ma3Color : na)
+plot(MA4, "Moving Average 4", color = ma4Status ? ma4Color : na)
+plot(MA5, "Moving Average 5", color = ma5Status ? ma5Color : na)
+varip maBuy = false
+varip maSell= false
+if ma1Status
+    if ma1Status and ma2Status    
+        if ma1Status and ma2Status and ma3Status
+            if ma1Status and ma2Status and ma3Status and ma4Status
+                if ma1Status and ma2Status and ma3Status and ma4Status and ma5Status
+                    if close > MA1 and MA1 > MA2 and MA2 > MA3 and MA3 > MA4 and MA4 > MA5
+                        maBuy  := true
+                        maSell := false
+                    else if close < MA1 and MA1 < MA2 and MA2 < MA3 and MA3 < MA4 and MA4 < MA5
+                        maBuy  := false
+                        maSell := true
+                    else
+                        maBuy  := false
+                        maSell := false
+                else if close > MA1 and MA1 > MA2 and MA2 > MA3 and MA3 > MA4
+                    maBuy  := true
+                    maSell := false
+                else if close < MA1 and MA1 < MA2 and MA2 < MA3 and MA3 < MA4
+                    maBuy  := false
+                    maSell := true
+                else
+                    maBuy  := false
+                    maSell := false
+            else if close > MA1 and MA1 > MA2 and MA2 > MA3
+                maBuy  := true
+                maSell := false
+            else if close < MA1 and MA1 < MA2 and MA2 < MA3
+                maBuy  := false
+                maSell := true
+            else
+                maBuy  := false
+                maSell := false
+        else if close > MA1 and MA1 > MA2
+            maBuy  := true
+            maSell := false
+        else if close < MA1 and MA1 < MA2
+            maBuy  := false
+            maSell := true
+        else
+            maBuy  := false
+            maSell := false
+    else if close > MA1
+        maBuy  := true
+        maSell := false
+    else if close < MA1
+        maBuy  := false
+        maSell := true
+    else
+        maBuy  := false
+        maSell := false
+maBuyAlert  = maBuy  and not maBuy[1]
+maSellAlert = maSell and not maSell[1]
+Moving_Average_BUY  = movingAverage ? useAsMA   == "Entry" ? maBuyAlert   ? true : false : useAsMA == "Filter" ? maBuy  ? true : false : true : true //🟢
+Moving_Average_SELL = movingAverage ? useAsMA   == "Entry" ? maSellAlert  ? true : false : useAsMA == "Filter" ? maSell ? true : false : true : true //🔴
+plotshape(maBuyAlert  and plotMA and movingAverage,  title="Moving Average Buy",  text="MA", textcolor=color.white, style=shape.labelup,   color=colorMA, size=size.tiny, location=location.belowbar)
+plotshape(maSellAlert and plotMA and movingAverage, title="Moving Average Sell", text="MA", textcolor=color.white, style=shape.labeldown, color=colorMA, size=size.tiny, location=location.abovebar)
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰 SuperTrend 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+// |   Reference    |  https://www.tradingview.com/script/r6dAP7yi/
+sttr   = math.max((h(high, 0, hknSrcST)) - (h(low, 0, hknSrcST)), math.abs((h(high, 0, hknSrcST)) - (h(close, 1, hknSrcST))), math.abs((h(low, 0, hknSrcST)) - (h(close, 1, hknSrcST))))
+statr2 = ta.sma(sttr, stPeriods)                                                        
+statr  = stChangeATR ? statr2 : ta.rma(sttr, stPeriods)                                   
+stup   = (h(stSource, 0, hknSrcST)) - stMultiplier * statr
+stup1  = nz(stup[1], stup)                                                                
+stup   := (h(close, 1, hknSrcST)) > stup1 ? math.max(stup, stup1) : stup                                     
+stdn   = (h(stSource, 0, hknSrcST)) + stMultiplier * statr                                                
+stdn1  = nz(stdn[1], stdn)
+stdn   := (h(close, 1, hknSrcST)) < stdn1 ? math.min(stdn, stdn1) : stdn
+hknCloseST = h(close, 0, hknSrcST)
+sttrend = 1
+sttrend := nz(sttrend[1], sttrend)
+sttrend := sttrend == -1 and hknCloseST > stdn1 ? 1 : sttrend == 1 and hknCloseST < stup1 ? -1 : sttrend
+superTrendBuy = sttrend == 1
+superTrendSell = sttrend == -1
+superTrendBuyAlert  = superTrendBuy  and not superTrendBuy[1]  
+superTrendSellAlert = superTrendSell and not superTrendSell[1] 
+SuperTrend_BUY  = superTrend ? useAsSTrend == "Entry" ? superTrendBuyAlert  ? true : false : useAsSTrend == "Filter" ? superTrendBuy  ? true : false : true : true //🟢
+SuperTrend_SELL = superTrend ? useAsSTrend == "Entry" ? superTrendSellAlert ? true : false : useAsSTrend == "Filter" ? superTrendSell ? true : false : true : true //🔴
+plotshape(superTrendBuyAlert  and plotST and superTrend, title='Supertrend', text="SuperT", textcolor=color.white, style=shape.labelup,   color=colorST, size=size.tiny, location=location.belowbar)
+plotshape(superTrendSellAlert and plotST and superTrend, title='Supertrend', text="SuperT", textcolor=color.white, style=shape.labeldown, color=colorST, size=size.tiny, location=location.abovebar)
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰 RSI 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+// |   Reference    |  Tradingview Function
+rsi = ta.rsi(h(rsiSource, 0, hknrsi), rsiLength)
+rsiBuy  = rsi < rsiLower
+rsiSell = rsi > rsiUpper
+rsiBuyAlert  = (rsi > rsiLower) and rsiBuy[1]
+rsiSellAlert = (rsi < rsiUpper) and rsiSell[1]
+RSI_Buy  = RSI ? useAsRSI == "Entry" ? rsiBuyAlert  ? true : false : useAsRSI == "Filter" ? rsiBuy  ? true : false : true : true //🟢
+RSI_Sell = RSI ? useAsRSI == "Entry" ? rsiSellAlert ? true : false : useAsRSI == "Filter" ? rsiSell ? true : false : true : true //🔴
+plotshape(rsiBuyAlert  and plotRSI and RSI,  title="RSI Buy",  text="RSI", textcolor=color.white, style=shape.labelup,   color=colorRSI, size=size.tiny, location=location.belowbar)
+plotshape(rsiSellAlert and plotRSI and RSI, title="RSI Sell", text="RSI", textcolor=color.white, style=shape.labeldown, color=colorRSI, size=size.tiny, location=location.abovebar)
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰 Stochastic RSI 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+// |   Reference    |  Tradingview Scripts
+srsi1 = ta.rsi(srsiSrc, srsiLength)
+k = ta.sma(ta.stoch(srsi1, srsi1, srsi1, stochLength), smoothK)
+d = ta.sma(k, smoothD)
+srsiBuy =  ((k < sLowerBand) and (d < sUpperBand))
+srsiSell = ((k > sLowerBand) and (d > sUpperBand))
+srsiBuyAlert  = ta.crossover(k, d)  and ( srsiCond ? k > sLowerBand ? false : true : true )
+srsiSellAlert = ta.crossunder(k, d) and ( srsiCond ? k < sUpperBand ? false : true : true )
+Stochastic_RSI_BUY  = stochasticRSI ? useAsSRSI == "Entry" ? srsiBuyAlert  ? true : false : useAsSRSI == "Filter" ? srsiBuy  ? true : false : true : true //🟢
+Stochastic_RSI_SELL = stochasticRSI ? useAsSRSI == "Entry" ? srsiSellAlert ? true : false : useAsSRSI == "Filter" ? srsiSell ? true : false : true : true //🔴
+plotshape(srsiBuyAlert  and plotSRSI and stochasticRSI,  title="Stochastic RSI Buy",  text="S RSI", textcolor=color.white, style=shape.labelup,   color=colorSRSI, size=size.tiny, location=location.belowbar)
+plotshape(srsiSellAlert and plotSRSI and stochasticRSI, title="Stochastic RSI Sell", text="S RSI", textcolor=color.white, style=shape.labeldown, color=colorSRSI, size=size.tiny, location=location.abovebar)
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰 ADX and DI 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+// |   Reference    |  https://www.tradingview.com/script/8rUK5VuJ-Multi-Timeframe-ADX-and-DI-w-Alerts/
+adxTrueRange = math.max(math.max(high-low, math.abs(high-nz(close[1]))), math.abs(low-nz(close[1])))
+DirectionalMovementPlus = high-nz(high[1]) > nz(low[1])-low ? math.max(high-nz(high[1]), 0): 0
+DirectionalMovementMinus = nz(low[1])-low > high-nz(high[1]) ? math.max(nz(low[1])-low, 0): 0
+SmoothedTrueRange = 0.0
+SmoothedTrueRange := nz(SmoothedTrueRange[1]) - (nz(SmoothedTrueRange[1])/adxLength) + adxTrueRange
+SmoothedDirectionalMovementPlus = 0.0
+SmoothedDirectionalMovementMinus = 0.0
+SmoothedDirectionalMovementPlus := nz(SmoothedDirectionalMovementPlus[1]) - (nz(SmoothedDirectionalMovementPlus[1])/adxLength) + DirectionalMovementPlus
+SmoothedDirectionalMovementMinus := nz(SmoothedDirectionalMovementMinus[1]) - (nz(SmoothedDirectionalMovementMinus[1])/adxLength) + DirectionalMovementMinus
+DIPlus = SmoothedDirectionalMovementPlus / SmoothedTrueRange * 100
+DIMinus = SmoothedDirectionalMovementMinus / SmoothedTrueRange * 100
+DX = math.abs(DIPlus-DIMinus) / (DIPlus+DIMinus)*100
+adx = ta.sma(DX, adxLength)
+DIBuy  = DIPlus > DIMinus
+DISell = DIPlus < DIMinus
+DIBuyAlert  = DIBuy and not DIBuy[1]
+DISellAlert = DISell and not DISell[1]
+adxEntryBuy  = adxType == "DI+ and DI-"? DIBuyAlert  : adxType == "ADX and Threshold [Only Filter]" ? false : adxType == "ADX and DI" ? (DIBuyAlert  and (adx > adxThreshold)) : false 
+adxEntrySell = adxType == "DI+ and DI-"? DISellAlert : adxType == "ADX and Threshold [Only Filter]" ? false : adxType == "ADX and DI" ? (DISellAlert and (adx > adxThreshold)) : false
+adxFilterBuy  = adxType == "DI+ and DI-"? DIBuy  : adxType == "ADX and Threshold [Only Filter]" ? (adx > adxThreshold) : adxType == "ADX and DI" ? (DIBuy  and (adx > adxThreshold)) : false 
+adxFilterSell = adxType == "DI+ and DI-"? DISell : adxType == "ADX and Threshold [Only Filter]" ? (adx > adxThreshold) : adxType == "ADX and DI" ? (DISell and (adx > adxThreshold)) : false
+ADX_BUY  = ADX ? useAsADX == "Entry" ? adxEntryBuy  ? true : false : useAsADX == "Filter" ? adxFilterBuy  ? true : false : true : true //🟢
+ADX_SELL = ADX ? useAsADX == "Entry" ? adxEntrySell ? true : false : useAsADX == "Filter" ? adxFilterSell ? true : false : true : true //🔴
+barcolor(ADX and plotADX and adxFilterBuy ? colorADXB : ADX and  plotADX and adxFilterSell ? colorADXS : na)
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰 Parabolic SAR 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+// |   Reference    |  https://www.tradingview.com/script/X2mAbFxu-CM-Parabolic-SAR/
+sarUp   = ta.sar(sarStart, sarIncrement, sarMaximum)
+sarDown = ta.sar(sarStart, sarIncrement, sarMaximum)
+sarBuy  = close >= sarDown
+sarSell = close <= sarUp
+sarBuyAlert = sarBuy and not sarBuy[1]
+sarSellAlert = sarSell and not sarSell[1]
+SAR_BUY  = SAR ? useAsSar == "Entry" ? sarBuyAlert  ? true : false : useAsSar == "Filter" ? sarBuy  ? true : false : true : true //🟢
+SAR_SELL = SAR ? useAsSar == "Entry" ? sarSellAlert ? true : false : useAsSar == "Filter" ? sarSell ? true : false : true : true //🔴
+plot(SAR and plotSAR and sarBuy  ? sarUp : na,   title="Sar Buy",  style=plot.style_cross, color=colorSarB)
+plot(SAR and plotSAR and sarSell ? sarDown : na, title="Sar Sell", style=plot.style_cross, color=colorSarS)
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+// |  ————————————————————————————————————————————— 🔰 Entries 🔰 ——————————————————————————————————————————————
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+// |
+// |                     In this section, the inputs and outputs of the strategy are created.
+// |                 Various options for stop loss and take profit are already pre-programmed to
+// |                         protect the investment from unexpected market movements.
+// |
+// |                      En este apartado se crean las entradas y salidas de la estrategia.
+// |                Diversas opciones para stop loss y take profit se encuentran ya pre-programadas 
+// |                     para asi proteger la inversion de movimientos innesperados del mercado 
+// |
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+Indicators_Active = not movingAverage and not superTrend and not RSI and not stochasticRSI and not ADX and not SAR ? false : true
+// | 🟢 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰 🟢
+BUY  = Moving_Average_BUY  and SuperTrend_BUY  and RSI_Buy  and Stochastic_RSI_BUY  and ADX_BUY  and SAR_BUY  and Indicators_Active
+SELL = Moving_Average_SELL and SuperTrend_SELL and RSI_Sell and Stochastic_RSI_SELL and ADX_SELL and SAR_SELL and Indicators_Active
+// | 🔴 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰 🔴
+inOperationB = strategy.position_size >  0 ? true : false
+inOperationS = strategy.position_size <  0 ? true : false
+inOperation  = strategy.position_size != 0 ? true : false
+varip float stopLossB   = 0
+varip float stopLossS   = 0
+varip float takeProfitB = 0
+varip float takeProfitS = 0
+varip float entryPriceB = 0
+varip float entryPriceS = 0
+varip float trailingB = 0
+varip float trailingS = 0
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰 ATR 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+atrSHigh = ta.rma(ta.tr(true), atrLStop) * atrMStop + high
+atrSLow  = low - ta.rma(ta.tr(true), atrLStop) * atrMStop
+plot(plotATRPV and SL and (optionSL == "ATR") ? atrSHigh : na, title='ATR Sell Stop Loss', color=color.red, style=plot.style_stepline)
+plot(plotATRPV and SL and (optionSL == "ATR") ? atrSLow  : na, title='ATR Buy Stop Loss',  color=color.green, style=plot.style_stepline)
+atrTHigh = ta.rma(ta.tr(true), atrLTake) * atrMTake + high
+atrTLow  = low - ta.rma(ta.tr(true), atrLTake) * atrMTake
+plot(plotATRPV and TP and (optionSL == "ATR") ? atrTHigh : na, title='ATR Sell Stop Loss', color=color.red, style=plot.style_stepline)
+plot(plotATRPV and TP and (optionSL == "ATR") ? atrTLow  : na, title='ATR Buy Stop Loss',  color=color.green, style=plot.style_stepline)
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰 PIVOT 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+varip float highestHigh = 0
+varip float lowestLow = 0
+taLowest = ta.lowestbars(leftBHL + rightBHL + 1)
+taHighest = ta.highestbars(leftBHL + rightBHL + 1)
+lowest  = not na(high[leftBHL + rightBHL + 1]) ? (taHighest == -leftBHL ? high[leftBHL] : na) : na
+highest = not na( low[leftBHL + rightBHL + 1]) ? (taLowest  == -leftBHL ?  low[leftBHL] : na) : na
+highestHigh := ta.valuewhen(lowest, high[leftBHL], 0)
+lowestLow   := ta.valuewhen(highest, low[leftBHL], 0)
+plotshape(plotATRPV and SL and (optionSL == "Last High/Low") ? highest : na, title="Last Low",  color=color.red,  style=shape.diamond, location=location.belowbar, size=size.tiny, offset=-leftBHL)
+plotshape(plotATRPV and SL and (optionSL == "Last High/Low") ? lowest  : na, title="Last High", color=color.green, style=shape.diamond, location=location.abovebar, size=size.tiny, offset=-leftBHL)
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰 Stop Loss 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+calculateSL() =>
+    stopResult = 0.0
+    stop = 0.0
+            
+    if optionSL == "Fixed %"       and BUY  
+        stop := entryPriceB - ( entryPriceB * fixedPSL)
+    
+    if optionSL == "Fixed %"       and SELL  
+        stop := entryPriceS + ( entryPriceS * fixedPSL)
+    
+    if optionSL == "Fixed $"       and BUY   
+        stop := entryPriceB - fixedESL
+    
+    if optionSL == "Fixed $"       and SELL  
+        stop := entryPriceS + fixedESL
+    
+    if optionSL == "Last High/Low" and BUY   
+        stop := lowestLow  
+    
+    if optionSL == "Last High/Low" and SELL  
+        stop := highestHigh
+    
+    if optionSL == "ATR"           and BUY   
+        stop := atrSLow 
+    
+    if optionSL == "ATR"           and SELL  
+        stop := atrSHigh
+    
+    if optionSL == "Custom"        and BUY   
+        stop := entryPriceB - ( entryPriceB * fixedPSL)
+    
+    if optionSL == "Custom"        and SELL  
+        stop := entryPriceS + ( entryPriceS * fixedPSL)
+    
+    stopResult := stop
+    
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰 Take Profit 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+calculateTP() =>
+    takeResult = 0.0
+    take = 0.0
+            
+    if optionTP == "Fixed %"       and BUY 
+        take := entryPriceB + ( entryPriceB * fixedPTP)
+        
+    if optionTP == "Fixed %"       and SELL
+        take := entryPriceS - ( entryPriceS * fixedPTP)
+        
+    if optionTP == "Fixed $"       and BUY 
+        take := entryPriceB + fixedETP
+        
+    if optionTP == "Fixed $"       and SELL
+        take := entryPriceS - fixedETP
+        
+    if optionTP == "Ratio 1:#"     and BUY 
+        take := entryPriceB + ( trailingB * ratioTP )
+        
+    if optionTP == "Ratio 1:#"     and SELL
+        take := entryPriceS - ( trailingS * ratioTP )
+        
+    if optionTP == "ATR"           and BUY   
+        take := atrTHigh
+    
+    if optionTP == "ATR"           and SELL  
+        take := atrTLow
+        
+    if optionTP == "Custom"        and BUY
+        take := entryPriceB + ( entryPriceB * fixedPTP)
+        
+    if optionTP == "Custom"        and SELL
+        take := entryPriceS - ( entryPriceS * fixedPTP)
+        
+    takeResult := take
+// | 🟢 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰 🟢 BUY 🟢 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰 🟢
+if inOperationB and trailSL and not BUY
+    stopLossBNew = close - trailingB
+    stopLossB := stopLossBNew > stopLossB ? stopLossBNew : stopLossB[1]
+    strategy.exit("Buy Exit", "Buy", stop=stopLossB, limit=takeProfitB)
+if dateRange and BUY and (((inOperation and closeNewEntry) or not inOperation)) and not inOperationB
+    entryPriceB := close
+    stopLossB   := SL ? calculateSL() : na
+    trailingB   := close - stopLossB
+    takeProfitB := TP ? calculateTP() : na
+    if useLeverage
+        strategy.entry("Buy", strategy.long, limit=entryPriceB, qty=math.min(math.max(.000001, ( strategy.equity / close ) * leverage), 1000000000))
+    else
+        strategy.entry("Buy", strategy.long, limit=entryPriceB)
+    strategy.exit("Buy Exit", "Buy", stop=stopLossB, limit=takeProfitB)
+if BUY and inOperationB and not closeNewEntry
+    strategy.cancel("Buy")
+// | 🔴 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰 🔴 SELL 🔴 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰 🔴
+if inOperationS and trailSL and not SELL
+    stopLossSNew = close + trailingS
+    stopLossS := stopLossSNew < stopLossS ? stopLossSNew : stopLossS[1]
+    strategy.exit("Sell Exit", "Sell", stop=stopLossS, limit=takeProfitS)
+if dateRange and SELL and (((inOperation and closeNewEntry) or not inOperation)) and not inOperationS
+    entryPriceS := close
+    stopLossS   := SL ? calculateSL() : na
+    trailingS   := stopLossS - close
+    takeProfitS := TP ? calculateTP() : na
+    if useLeverage
+        strategy.entry("Sell", strategy.short, limit=entryPriceS, qty=math.min(math.max(.000001, ( strategy.equity / close ) * leverage), 1000000000))
+    else
+        strategy.entry("Sell", strategy.short, limit=entryPriceS)
+    strategy.exit("Sell Exit", "Sell", stop=stopLossS, limit=takeProfitS)
+if SELL and inOperationS and not closeNewEntry
+    strategy.cancel("Sell")
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+// |  —————————————————————————————————————————————— 📊 Plots 📊 ———————————————————————————————————————————————
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+// |
+// |                      The data collected during the backtest will be displayed on screen 
+// |                      within a dashboard and various drawings to visualize the operations.
+// |
+// |                   Los datos recopilados durante el backtest seran mostrados en pantalla dentro 
+// |                          de un panel y varios dibujos para visualizar las operaciones 
+// |
+// | 🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰🟰
+bgcolor(dateRange ? na : color.new(color.white, 80))
+MTLabel(ftimestamp, etimestamp, statusProfit, statusWinRate, statusPFactor, maxWinRow, maxLossRow) =>
+    timefr = timeframe.isminutes ? 'min' : ''
+    string _text = '         🔰MT Backtester🔰' + '\n'
+    _text += '➖➖➖➖➖➖➖➖➖➖' + '\n'
+    _text += '' + '\n'
+    _text += ' Ticker:' + '\n'
+    _text += '     ' + syminfo.ticker + '  ' + timeframe.period + timefr
+    _text += '' + '\n\n'
+    _text += ' Since:' + '\n'
+    _text += str.format("    {0,date,long}  ", ftimestamp) + str.format("{0,time,HH:mm}", ftimestamp) + '\n'
+    _text += ' To:' + '\n'
+    _text += str.format("    {0,date,long}  ", etimestamp) + str.format("{0,time,HH:mm}", etimestamp) + '\n'
+    _text += '' + '\n'
+    _text += '➖➖➖➖➖➖➖➖➖➖' + '\n'
+    _text += '' + '\n'
+    _text += ' #️⃣Trades:  ' + str.tostring(strategy.closedtrades, '##.##') + '\n'
+    _text += '' + '\n'
+    _text += ' Profit:' + '\n'
+    _text += '     ' + str.tostring(statusProfit)  + str.tostring(( strategy.netprofit / strategy.initial_capital ) * 100, '##.##') + '% \n'
+    _text += ' Win Rate:' + '\n'
+    _text += '     ' + str.tostring(statusWinRate) + str.tostring(( strategy.wintrades / strategy.closedtrades )    * 100, '##.##') + '% \n'
+    _text += ' Profit Factor:' + '\n'
+    _text += '     ' + str.tostring(statusPFactor) + str.tostring(( strategy.grossprofit / strategy.grossloss ),           '##.###') + '\n'
+    _text += '' + '\n'
+    _text += ' Win Trades:   '  + str.tostring(strategy.wintrades, '######') + '\n'
+    _text += ' Loss Trades:   ' + str.tostring(strategy.losstrades, '######') + '\n'
+    _text += '' + '\n'
+    _text += ' Avg Win:  '  + str.tostring((( strategy.grossprofit / strategy.wintrades ) * 100 ) / strategy.initial_capital, '##.##') + '%\n'
+    _text += ' Avg Loss:  ' + str.tostring((( strategy.grossloss / strategy.losstrades ) * 100 ) / strategy.initial_capital, '##.##') + '%\n'
+    _text += '' + '\n'
+    _text += ' Max Win in a Row:  '  + str.tostring(maxWinRow, '######')  + '\n'
+    _text += ' Max Loss in a Row:  ' + str.tostring(maxLossRow, '######')  + '\n'
+    _text += '' + '\n'
+    _text += '➖➖➖➖➖➖➖➖➖➖' + '\n'
+ftimestamp = startFilter ? timestamp(year(startTime, zoneTime), month(startTime, zoneTime), dayofmonth(startTime, zoneTime), hour(startTime, zoneTime), minute(startTime, zoneTime), second(startTime, zoneTime)) : timestamp(year(ta.valuewhen(barstate.isfirst, time, 0), zoneTime),  month(ta.valuewhen(barstate.isfirst, time, 0), zoneTime),  dayofmonth(ta.valuewhen(barstate.isfirst, time, 0), zoneTime),  hour(ta.valuewhen(barstate.isfirst, time, 0), zoneTime),  minute(ta.valuewhen(barstate.isfirst, time, 0), zoneTime))
+etimestamp = endFilter   ? timestamp(year(endTime, zoneTime),   month(endTime, zoneTime),   dayofmonth(endTime, zoneTime),   hour(endTime, zoneTime),   minute(endTime, zoneTime),   second(endTime, zoneTime)) : timestamp(year(timenow, zoneTime), month(timenow, zoneTime), dayofmonth(timenow, zoneTime), hour(timenow, zoneTime), minute(timenow, zoneTime))
+statusProfit  = (( strategy.netprofit / strategy.initial_capital ) * 100) + 0.001 >= maxProfit  ? "🟢 " : (( strategy.netprofit / strategy.initial_capital ) * 100) - 0.001 <= minProfit  ? "🔴 " : "🟡 "
+statusWinRate = (( strategy.wintrades / strategy.closedtrades )    * 100) + 0.001 >= maxWinRate ? "🟢 " : (( strategy.wintrades / strategy.closedtrades )    * 100) - 0.001 <= minWinRate ? "🔴 " : "🟡 "
+statusPFactor = ( strategy.grossprofit / strategy.grossloss )             + 0.001 >= maxPFactor ? "🟢 " : ( strategy.grossprofit / strategy.grossloss )             - 0.001 <= minPFactor ? "🔴 " : "🟡 "
+varip int winRow     = 0
+varip int lossRow    = 0
+varip int maxWinRow  = 0
+varip int maxLossRow = 0
+if (strategy.wintrades  > strategy.wintrades[1]) and (strategy.losstrades == strategy.losstrades[1]) and (strategy.eventrades == strategy.eventrades[1])
+    lossRow := 0
+    winRow := winRow + 1
+    if winRow > maxWinRow
+        maxWinRow := winRow
+        
+if (strategy.wintrades == strategy.wintrades[1]) and (strategy.losstrades  > strategy.losstrades[1]) and (strategy.eventrades == strategy.eventrades[1])
+    winRow := 0
+    lossRow := lossRow + 1
+    if lossRow > maxLossRow
+        maxLossRow := lossRow
+label la = na
+label.delete(la[1])
+la := plotDashboard ? label.new(x=bar_index + 5, y=close, text=MTLabel(ftimestamp, etimestamp, statusProfit, statusWinRate, statusPFactor, maxWinRow, maxLossRow), color=color.new(color.black, 50), style=label.style_label_left, textcolor=color.white, size=size.normal, textalign=text.align_left) : na
+var line entryB = na
+var line entryS = na
+var line stopB  = na
+var line stopS  = na
+var line trailB = na
+var line trailS = na
+var line takeB  = na
+var line takeS  = na
+if (strategy.wintrades  > strategy.wintrades[1]) and (strategy.losstrades == strategy.losstrades[1]) and (strategy.eventrades == strategy.eventrades[1]) and (not inOperationB and inOperationB[1]) and plotTrades
+    label.new(x=bar_index[1], y=entryPriceB[1], text="Win",  style=label.style_label_left, color=color.green, textcolor=color.white, size=size.small)
+if (strategy.wintrades == strategy.wintrades[1]) and (strategy.losstrades  > strategy.losstrades[1]) and (strategy.eventrades == strategy.eventrades[1]) and (not inOperationB and inOperationB[1]) and plotTrades
+    label.new(x=bar_index[1], y=entryPriceB[1], text="Loss", style=label.style_label_left, color=color.red,   textcolor=color.white, size=size.small)
+    
+if (inOperationB and not inOperationB[1]) and plotTrades
+    entryB := line.new(x1=bar_index[1], y1=entryPriceB[1], x2=bar_index + 1, y2=entryPriceB, style=line.style_solid, width=3, color= color.gray)
+    stopB  := line.new(x1=bar_index[1], y1=stopLossB[1],   x2=bar_index + 1, y2=stopLossB,   style=line.style_solid, width=3, color= trailSL ? colorTSL : colorSL)
+    trailB := line.new(x1=bar_index[1], y1=stopLossB[1],   x2=bar_index + 1, y2=stopLossB,   style=line.style_solid, width=3, color= colorSL)
+    takeB  := line.new(x1=bar_index[1], y1=takeProfitB[1], x2=bar_index + 1, y2=takeProfitB, style=line.style_solid, width=3, color= colorTP)
+    linefill.new(line1=entryB, line2=trailB, color=color.new(colorSL, 80))
+    linefill.new(line1=entryB, line2=takeB,  color=color.new(colorTP, 80))
+    
+if (inOperationB and not (inOperationB and not inOperationB[1])) and plotTrades
+    line.set_x2(id=entryB,  x=bar_index)
+    line.set_y1(id=stopB,   y=stopLossB)
+    line.set_xy2(id=stopB,  x=bar_index, y=stopLossB)
+    line.set_xy2(id=trailB, x=bar_index, y=line.get_y1(trailB))
+    line.set_x2(id=takeB,   x=bar_index)
+if (strategy.wintrades  > strategy.wintrades[1]) and (strategy.losstrades == strategy.losstrades[1]) and (strategy.eventrades == strategy.eventrades[1]) and (not inOperationS and inOperationS[1]) and plotTrades
+    label.new(x=bar_index[1], y=entryPriceS[1], text="Win",  style=label.style_label_left, color=color.green, textcolor=color.white, size=size.small)
+if (strategy.wintrades == strategy.wintrades[1]) and (strategy.losstrades  > strategy.losstrades[1]) and (strategy.eventrades == strategy.eventrades[1]) and (not inOperationS and inOperationS[1]) and plotTrades
+    label.new(x=bar_index[1], y=entryPriceS[1], text="Loss", style=label.style_label_left, color=color.red,   textcolor=color.white, size=size.small)
+    
+if (inOperationS and not inOperationS[1]) and plotTrades
+    entryS := line.new(x1=bar_index[1], y1=entryPriceS[1], x2=bar_index + 1, y2=entryPriceS, style=line.style_solid, width=3, color= color.gray)
+    stopS  := line.new(x1=bar_index[1], y1=stopLossS[1],   x2=bar_index + 1, y2=stopLossS,   style=line.style_solid, width=3, color= trailSL ? colorTSL : colorSL)
+    trailS := line.new(x1=bar_index[1], y1=stopLossS[1],   x2=bar_index + 1, y2=stopLossS,   style=line.style_solid, width=3, color=colorSL)
+    takeS  := line.new(x1=bar_index[1], y1=takeProfitS[1], x2=bar_index + 1, y2=takeProfitS, style=line.style_solid, width=3, color= colorTP)
+    linefill.new(line1=entryS, line2=trailS, color=color.new(colorSL, 80))
+    linefill.new(line1=entryS, line2=takeS,  color=color.new(colorTP, 80))
+    
+if (inOperationS and not (inOperationS and not inOperationS[1])) and plotTrades
+    line.set_x2(id=entryS,  x=bar_index)
+    line.set_y1(id=stopS,   y=stopLossS)
+    line.set_xy2(id=stopS,  x=bar_index, y=stopLossS)
+    line.set_xy2(id=trailS, x=bar_index, y=line.get_y1(trailS))
+    line.set_x2(id=takeS,   x=bar_index)
+Expand (855 lines)

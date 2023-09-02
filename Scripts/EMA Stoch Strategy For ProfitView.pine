@@ -1,0 +1,222 @@
+Script Name: EMA Stoch Strategy For ProfitView
+Author: treigen
+Description: This strategy will enter positions when the set stochastic conditions are met, and uses the moving average to filter the direction of the trades (long/short). The background is used to illustrate the strength of the stochastic values.
+
+The following is a step by step guide in order to automate the trading of the strategy with ProfitView:
+ 
+ In the indicator...
+PineScript code:
+
+Pine Script™ strategy
+EMA Stoch Strategy For ProfitView
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//@version=5
+strategy(title="EMA Stoch Strategy For ProfitView", overlay=true, calc_on_every_tick=true, process_orders_on_close=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent, commission_value=0.1, initial_capital=1000)
+// Take profit & stop loss
+TakeProfitPercent = input.float(defval = 0.0, title="Take Profit (%) [0 = Disabled]",minval = 0, step=.25,group='TP / SL')
+StopLossPercent = input.float(defval = 0.0, title="Stop Loss (%) [0 = Disabled]",minval = 0, step=.25,group='TP / SL')
+// Stoch
+lenghtStoch = input.int(14, "Stochastic Length", minval=1,group='Stochastic')
+smoothK = input.int(1, title="K Smoothing", minval=1,group='Stochastic')
+periodD = input.int(3, title="D Smoothing", minval=1,group='Stochastic')
+lenghtRSI= input.int(0, "RSI Length [0 = Disabled]", tooltip="If enabled, use Stoch Rsi. If disabled, use plain Stoch", minval=0, inline="rsi",group='Stochastic') 
+src = input(close, title="", inline="rsi",group='Stochastic')
+rsi1 = lenghtRSI > 0 ? ta.rsi(src, lenghtRSI) : na
+k = lenghtRSI > 0 ? ta.sma(ta.stoch(rsi1, rsi1, rsi1, lenghtStoch), smoothK) : ta.sma(ta.stoch(close, high, low, lenghtStoch), smoothK)
+d = ta.sma(k, periodD)
+plot(k, title="K", color=color.new(#2962FF, 100))
+plot(d, title="D", color=color.new(#FF6D00, 100))
+bgcolor(color=color.from_gradient(k, 0, 100, color.new(#2962FF, 100), color.new(#2962FF, 90)), title="K BG")
+bgcolor(color=color.from_gradient(d, 0, 100, color.new(#FF6D00, 100), color.new(#FF6D00, 90)), title="D BG")
+// EMA
+len1= input(200,title='Length EMA ',group='EMA', inline="ema")
+src1= input(close,title='',group='EMA', inline="ema")
+ema1= ta.ema(src1,len1)
+plot(ema1,title='EMA',color= color.blue ,linewidth=2)
+// Signals
+LongVal= input(20,title='Stoch below/cross this value for Long signals',group='Signal Options')
+scegliLong= input.string('Stoch Below Value', options= ['Stoch Below Value' , 'K&D Cross Below Value' , 'Stoch CrossUp the Value'] , title='Long Signal Type')
+long1=  scegliLong == 'Stoch Below Value' ?  k < LongVal and d < LongVal and close > ema1 : na
+long2=  scegliLong == 'K&D Cross Below Value' ? ta.cross(k,d) and k < LongVal and d < LongVal and close > ema1 : na
+long3=  scegliLong == 'Stoch CrossUp the Value' ? ta.crossover(k,LongVal) and close > ema1 : na
+shortVal= input(80,title='Stoch above/cross this value for Short signals',group='Signal Options')
+scegliShort= input.string('Stoch Above Value', options= ['Stoch Above Value' , 'K&D Cross Above Value' , 'Stoch CrossDown the Value'] , title='Short Signal Type' )
+short1= scegliShort == 'Stoch Above Value' ? k > shortVal and d > shortVal and close < ema1 : na
+short2= scegliShort == 'K&D Cross Above Value' ?  ta.cross(k,d) and k > shortVal and d > shortVal and close < ema1 : na
+short3= scegliShort == 'Stoch CrossDown the Value' ?  ta.crossunder(k,shortVal) and close < ema1 : na
+i_startTime = input.time(defval = timestamp("01 Jan 2014 00:00 +0000"), title = "Backtesting Start Time", inline="timestart", group='Backtesting')
+i_endTime = input.time(defval = timestamp("01 Jan 2100 23:59 +0000"), title = "Backtesting End Time", inline="timeend", group='Backtesting')
+timeCond = (time > i_startTime) and (time < i_endTime)
+pv_ex = input.string("deribit-testnet", title="Exchange", group='PV Settings')
+pv_sym = input.string("btc-perpetual", title="Symbol", group='PV Settings')
+pv_acc = input.string("", title="Account", group='PV Settings')
+pv_alert_long = input.string("", title="PV Alert Name Longs", group='PV Settings')
+pv_alert_short = input.string("", title="PV Alert Name Shorts", group='PV Settings')
+pv_alert_cancel = input.string("", title="PV Alert Name TP/SL", group='PV Settings')
+pv_lev = input.float(0.0, title="Leverage", minval=0.0, step=0.1, tooltip="Optional parameter for PV use. Does not affect backtest. Add leverage=_mylev to your PV order entry line if you want to specify it", group='PV Settings')
+profit_abs = (close * (TakeProfitPercent / 100))
+stop_abs = (close * (StopLossPercent / 100))
+ProfitTarget = TakeProfitPercent > 0 ? profit_abs / syminfo.mintick : na
+LossTarget = StopLossPercent > 0 ? stop_abs / syminfo.mintick : na
+// Position entry and alerts
+var entryprice = 0.0
+var profitprice = 0.0
+var stopprice = 0.0
+var is_long = false
+var is_short = false
+is_tpsl_hit = (is_long and ((TakeProfitPercent > 0 and high > profitprice[1]) or (StopLossPercent > 0 and low < stopprice[1]))) or (is_short and ((TakeProfitPercent > 0 and low < profitprice[1]) or (StopLossPercent > 0 and high > stopprice[1])))
+exsym = pv_ex == "" ? "" : "ex=" + pv_ex + ","
+exsym := pv_sym == "" ? exsym : exsym + "sym=" + pv_sym + ","
+if timeCond and not is_tpsl_hit and barstate.isconfirmed
+    if ((long1 or long2 or long3) and not is_long)
+        strategy.entry("Long", strategy.long)
+        strategy.exit("Exit Long (TP/SL)", from_entry = "Long" , profit = ProfitTarget, loss = LossTarget)
+        entryprice := close
+        profitprice := entryprice+profit_abs
+        stopprice := entryprice-stop_abs
+        is_long := true
+        is_short := false
+        
+        tpsl_str = TakeProfitPercent > 0 ? ",mytp=" + str.tostring(profitprice) : ""
+        tpsl_str := StopLossPercent > 0 ? tpsl_str + ",mysl=" + str.tostring(stopprice) : tpsl_str
+        alert(pv_alert_long + "(" + exsym + "acc=" + pv_acc + tpsl_str + ",mylev=" + str.tostring(pv_lev) + ")", alert.freq_once_per_bar_close)
+    
+    if ((short1 or short2 or short3) and not is_short)
+        strategy.entry("Short", strategy.short)
+        strategy.exit("Exit Short (TP/SL)", from_entry = "Short", profit = ProfitTarget, loss = LossTarget)
+        entryprice := close
+        profitprice := entryprice-profit_abs
+        stopprice := entryprice+stop_abs
+        is_long := false
+        is_short := true
+        
+        tpsl_str = TakeProfitPercent > 0 ? ",mytp=" + str.tostring(profitprice) : ""
+        tpsl_str := StopLossPercent > 0 ? tpsl_str + ",mysl=" + str.tostring(stopprice) : tpsl_str
+        alert(pv_alert_short + "(" + exsym + "acc=" + pv_acc + tpsl_str + ",mylev=" + str.tostring(pv_lev) + ")", alert.freq_once_per_bar_close)
+    
+if (is_tpsl_hit)
+    alert(pv_alert_cancel + "(" + exsym + "acc=" + pv_acc + ")", alert.freq_once_per_bar)
+    is_long := false
+    is_short := false
+plot(entryprice, title="Entry Price", color=strategy.opentrades > 0 ? color.gray : color.new(color.gray, 100))
+plot(profitprice, title="Profit Price", color=strategy.opentrades > 0 and TakeProfitPercent > 0 ? color.green : color.new(color.green, 100))
+plot(stopprice, title="Stop Price", color=strategy.opentrades > 0 and StopLossPercent > 0? color.red : color.new(color.red, 100))
+Expand (117 lines)

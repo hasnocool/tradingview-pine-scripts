@@ -1,0 +1,86 @@
+Script Name: Bollinger Band Breakout Positional Strategy- BN -15M
+Author: ramstox
+Description: This strategy consists of following criteria: 
+
+Buy: 
+1. Candle should have RSI is above 60 and Close above Bollinger band upper limit
+2. Exit When candle is closed below 20MA 
+Sell: 
+1. Candle should have RSI is above 40 and Close below Bollinger band lower limit
+2. Exit When candle is closed above 20MA 
+
+
+Checkout results.
+PineScript code:
+
+Pine Script™ strategy
+Bollinger Band Breakout Positional Strategy- BN -15M
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+//@version=4
+strategy(title="Bollinger Band Breakout", shorttitle = "BB-Stoxguru",default_qty_type = strategy.percent_of_equity,default_qty_value = 100, overlay=true)
+source = close
+start = timestamp (2007, 1,1,0,0) 
+end = timestamp (2021,11,05,0,0)
+stop_level = (high[1]-low[1])
+profit_level = (high[1]-low[1])
+length = input(20, minval=1, title = "Period") //Length of the Bollinger Band 
+mult = input(2, minval=0.001, maxval=50, title = "Standard Deviation") 
+basis = sma(source, length)
+dev = mult * stdev(source, length)
+upper = basis + dev
+lower = basis - dev
+band=upper-lower
+stop_loss=low-atr(14)
+if time >= start 
+// and time < end
+    strategy.entry("Long", strategy.long, when = crossover(source, upper) and rsi(close,14)>=60 and rsi(close,14)<=70)
+    // strategy.entry("Long", strategy.long, when = crossover(source, upper) and rsi(close,14)>60 and band<200)
+    // strategy.exit("SL", "Long", stop=stop_loss)
+    strategy.close(id="Long", when=crossunder(close, basis))
+    strategy.entry("Short", strategy.short, when = crossunder(source, lower) and rsi(close,14)<=40 and rsi(close,14)>=35)
+    strategy.close(id="Short", when=crossover(close, basis))
+    // strategy.entry("Short", strategy.short, when = crossunder(source, lower) and rsi(close,14)<40 and band<200)
+    // plot(upper-lower, color=color.purple,title= "DIFF",style=plot.style_linebr)
+plot(basis, color=color.red,title= "SMA")
+p1 = plot(upper, color=color.blue,title= "UB")
+p2 = plot(lower, color=color.blue,title= "LB")
+// fill(p1, p2)
+BW = ((upper - lower)) / basis * 100
+plot(BW, title="Bollinger bandwidth", color=color.red)
+Expand (36 lines)

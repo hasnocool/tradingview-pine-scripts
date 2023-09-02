@@ -1,0 +1,131 @@
+Script Name: VWAP Trend Follower
+Author: TradingMentalist
+Description: This strategy opens a position if the last price is above or below both VWAP and EMA200.
+PineScript code:
+
+Pine Script™ strategy
+VWAP Trend Follower
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+//26m Binance BTCUSDTPERP
+//@version=4
+strategy("VWAP Trend Follower", initial_capital=100, overlay=true, commission_type=strategy.commission.percent, commission_value=0.04, default_qty_type = strategy.percent_of_equity, default_qty_value = 90, currency = currency.USD )
+/// INITIALISE STRATEGY ///
+price=close[1]
+vprice=vwap(price)
+trend=ema(price, 200)
+/// RISK MANAGEMENT ///
+long_tp_inp = input(3.5, title='Long Take Profit %',step=0.1)/100
+long_sl_inp = input(1.4, title='Long Stop Loss %',step=0.1)/100
+short_tp_inp = input(2.5, title='Short Take Profit %',step=0.1)/100
+short_sl_inp = input(0.9, title='Short Stop Loss %',step=0.1)/100
+long_take_level = strategy.position_avg_price * (1 + long_tp_inp)
+long_stop_level = strategy.position_avg_price * (1 - long_sl_inp)
+short_take_level = strategy.position_avg_price * (1 - short_tp_inp)
+short_stop_level = strategy.position_avg_price * (1 + short_sl_inp)
+//long_trailing = input(5, title='Trailing Stop Long',step=0.1) / 100
+//short_trailing = input(5, title='Trailing Stop short',step=0.1) / 100
+/// STRATEGY CONDITIONS ///
+aLong= price > trend and price > vprice
+entry_long = aLong and aLong[2] and aLong[1]
+aShort= price < trend and price < vprice 
+entry_short = aShort and aShort[2] and aShort[1]
+//exit_long = 
+//exit_short =
+//entry_price_long=valuewhen(entry_long,close,0)
+//entry_price_short=valuewhen(entry_short,close,0)
+/// PLOTTING ///
+plot(vprice,                color=#5875E1, linewidth=2)
+plot(trend,                 color=#D965E1, linewidth=1)
+plotshape(series=aLong,     color=#71E181,style=shape.labelup)
+plotshape(series=aShort,    color=#E18BA5,style=shape.labeldown)
+//plot(long_take_level,     color=#00E676, linewidth=2)
+//plot(long_stop_level,     color=#FF5252, linewidth=1)
+//plot(short_take_level,    color=#4CAF50, linewidth=2)
+//plot(short_stop_level,    color=#FF5252, linewidth=1)
+/// PERIOD ///
+testStartYear   = input(2019, "Backtest Start Year")
+testStartMonth  = input(1, "Backtest Start Month")
+testStartDay    = input(1, "Backtest Start Day")
+testPeriodStart = timestamp(testStartYear,testStartMonth,testStartDay,0,0)
+testStopYear    = input(2020, "Backtest Stop Year")
+testStopMonth   = input(12, "Backtest Stop Month")
+testStopDay     = input(31, "Backtest Stop Day")
+testPeriodStop  = timestamp(testStopYear,testStopMonth,testStopDay,0,0)
+testPeriod() =>
+    time >= testPeriodStart and time <= testPeriodStop ? true : false
+//// STRATEGY EXECUTION ////
+if testPeriod()
+    if strategy.position_size == 0 or strategy.position_size > 0
+        strategy.entry(id="Long", long=true, when=entry_long, comment="Long")
+        strategy.exit("Take Profit/ Stop Loss","Long", limit=long_take_level, stop=long_stop_level,comment="Exit Long")//,trail_points=entry_price_long * long_trailing / syminfo.mintick, trail_offset=entry_price_long * long_trailing / syminfo.mintick)
+//        strategy.close(id="Long", when=exit_long, comment = "Exit Long")
+    if strategy.position_size == 0 or strategy.position_size < 0
+        strategy.entry(id="Short", long=false, when=entry_short, comment = "Short")
+        strategy.exit("Take Profit/ Stop Loss","Short", limit=short_take_level , stop=short_stop_level,comment = "Exit Short")//, trail_points=entry_price_short * short_trailing / syminfo.mintick, trail_offset=entry_price_short * short_trailing / syminfo.mintick)
+//        strategy.close(id="Short", when=exit_short, comment = "Exit Short")
+Expand (65 lines)

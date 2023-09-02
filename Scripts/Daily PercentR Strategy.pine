@@ -1,0 +1,80 @@
+Script Name: Daily PercentR Strategy
+Author: zweiprozent
+Description: The PercentR strategy from Larry Williams is highly profitable on the daily nasdaq chart
+
+Buy at the open if PercentR Indicator is above –87 and below –20 
+Exit at the end of the day.
+PineScript code:
+
+Pine Script™ strategy
+Daily PercentR Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © zweiprozent original strategy by larry williams
+strategy("Daily PercentR Strategy", overlay=false)
+D_High = security(syminfo.tickerid, 'D', high[1])
+D_Low = security(syminfo.tickerid, 'D', low[1])
+D_Close = security(syminfo.tickerid, 'D', close[1])
+D_Open = security(syminfo.tickerid, 'D', open[1])
+LowMarker = input(-87,"Low Marker",input.integer)
+HighMarker =  input(-20,"High Marker",input.integer)
+length = input(title="Length", type=input.integer, defval=3)
+src = input(close, "Source", type = input.source)
+_pr(length) =>
+    max = highest(length)
+    min = lowest(length)
+    100 * (src - max) / (max - min)
+percentR = _pr(length)
+obPlot = hline(LowMarker, title="Upper Band", color=#606060)
+hline(-50, title="Middle Level", linestyle=hline.style_dotted, color=#606060)
+osPlot = hline(HighMarker, title="Lower Band", color=#606060)
+fill(obPlot, osPlot, title="Background", color=color.new(#9915ff, 90))
+plot(percentR, title="%R", color=#3A6CA8, transp=0)
+// Go Long - if percentR is not overbought/sold
+ordersize=floor(strategy.equity/close) 
+if percentR<HighMarker and percentR>LowMarker and time>timestamp(2021,0,0,0,0)
+    strategy.entry("Long", strategy.long,comment="Long")
+//exit at end of session
+if low[0]<high[0]
+    strategy.close("Long", comment="exit")
+    
+Expand (38 lines)

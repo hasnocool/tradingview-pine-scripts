@@ -1,0 +1,455 @@
+Script Name: LowFinder_PyraMider_V2
+Author: A3Sh
+Description: This strategy is a result of an exploration to experiment with other ways to detect lows / dips in the price movement, to try out alternative ways to exit and stop positions and a dive into risk management. It uses a combination of different indicators to detect and filter the potential lows and opens multiple positions to spread the risk and opportunities for...
+PineScript code:
+
+Pine Script™ strategy
+LowFinder_PyraMider_V2
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © A3Sh
+//@version=5
+// Strategy that finds potential lows in the price action and spreads the risk by entering multiple positions at these lows.
+// The low is detected based on the difference between MTF RSI and EMA based RSI, Moving Average and MTF Stochastic indicators.
+// The size of each next position that is entered is multiplied by the sequential number of the position.
+// Each separate position can exit when a specified take profit is triggered and re-open when detecting a new potential low.
+// All positions are closed when the price action crosses over the dynamic blue stop level line.
+// Additionally a take profit / trailing stop and a stop loss can be activated to lower the risk.
+// This strategy combines open-source code developed by fellow Tradingview community members: 
+// The Lowfinder code is developed by RafaelZioni
+// https://www.tradingview.com/script/GzKq2RVl-Low-finder/
+// Both the MTF RSI code and the MTF Stochastic code are adapted from the MTFindicators libary written by Peter_O
+// https://www.tradingview.com/script/UUVWSpXR-MTFindicators/
+// The Stop Level calculation is inspired by the syminfo-mintick tutorial on Kodify.net
+// https://kodify.net/tradingview/info/syminfo-mintick/
+strategy("LowFinder_PyraMider", 
+         overlay=true, pyramiding=99, 
+         initial_capital=10000, 
+         default_qty_type=strategy.percent_of_equity, 
+         default_qty_value=10,
+         commission_type=strategy.commission.percent, 
+         commission_value=0.06,
+         slippage=1
+         )
+// Backtest Window
+start_time   = input.time(defval=timestamp("01 April 2021 20:00"), group = "Backtest Window", title="Start Time")
+end_time     = input.time(defval=timestamp("01 Aug 2030 20:00"),   group = "Backtest Window", title="End Time")
+window() => time >= start_time and time <= end_time
+// Inputs
+prec            = input.int    (4,           group = 'Strtaegy Properties',    title = 'Precision', minval = 0, maxval = 16, tooltip = "Specifies the number of digits after the floating point of the script's displayed values.")
+portfolio_size  = input.float  (100,         group = 'Risk - Portfolio',       title = 'Portfolio %', step=1.0) / 100
+leverage        = input.int    (1,           group = 'Risk - Portfolio',       title = 'Leverage', minval = 1)
+q_mode          = input.string ('multiply',  group = 'Risk - Order Size',      title = 'Order Size Mode', options = ['base', 'multiply'], tooltip = 'Base mode: the base quantiy for each sequential order. Multiply mode: each quantity is multiplied by order number')
+q_mode_m        = input.int    (1,           group = 'Risk - Order Size',      title = 'Order Size Divider (Multiply Mode)',  tooltip = 'Divide Multiply by this number to lower the sequential order sizes')
+fixed_q         = input.bool   (false,       group = 'Risk - Order Size',      title = 'Fixed Order Size',     inline = '01', tooltip = 'Use with caution! Overrides all Risk calculations')
+amount_q        = input.float  (1,           group = 'Risk - Order Size',      title = '. . Base Currency:',   inline = '01')
+sl_on           = input.bool   (false,       group = 'Risk - Stop Loss',       title = 'StopLoss of',          inline = '03')
+stopLoss        = input.float  (1.5,         group = 'Risk - Stop Loss',       title = '',   step=0.1,         inline = '03') / 100
+sl_mode         = input.string ('equity',    group = 'Risk - Stop Loss',       title = '% of',  options = ['avg_price', 'equity'], inline = '03')
+stop_len        = input.int    (100,         group = 'Risk - Stop Level',      title = 'Stop Level Length', tooltip = 'Lookback most recent highest high')
+stop_deviation  = input.float  (0.3,         group = 'Risk - Stop Level',      title = 'Deviatation % above Stop Level', step=0.1) / 100
+cond2_toggle    = input.bool   (true ,       group = 'Risk - Take Profit',     title = 'Take Profit/Trailing Stop', inline = '04')
+tp_all          = input.float  (1.0,         group = 'Risk - Take Profit',     title = '..........%', step=0.1,     inline = '04') / 100
+tp_on           = input.bool   (true,        group = 'Risk - Take Profit',     title = 'Exit Crossover Take Profit and .....', inline = '02')
+exit_mode       = input.string ('stoplevel', group = 'Risk - Take Profit',     title = '',   options = ['close', 'stoplevel'], inline = '02')
+takeProfit      = input.float  (10.0,        group = 'Risk - Take Profit',     title = 'Take Profit % per Order', tooltip = 'Each separate order exits when hit', step=0.1)
+posCount        = input.int    (12,          group = 'Pyramiding Settings',    title = 'Max Number of Orders')
+next_entry      = input.float  (0.2,         group = 'Pyramiding Settings',    title = 'Next Order % below Avg. Price', step=0.1)
+oa_lookback     = input.int    (0,           group = 'Pyramiding Settings',    title = 'Next Order after X candles', tooltip = 'Prevents opening too much orders in a Row')
+len_rsi         = input.int    (5,           group = 'MTF LowFinder Settings', title = 'Lookback of RSI')
+mtf_rsi         = input.int    (1,           group = 'MTF LowFinder Settings', title = 'Higher TimeFrame Multiplier RSI',  tooltip='Multiplies the current timeframe by specified value')
+ma_length       = input.int    (26,          group = 'MTF LowFinder Settings', title = 'MA Length / Sensitivity')
+new_entry       = input.float  (0.1,         group = 'MTF LowFinder Settings', title = 'First Order % below Low',step=0.1, tooltip = 'Open % lower then the found low')/100
+ma_signal       = input.int    (100,         group = 'Moving Average Filter',  title = 'Moving Average Length')
+periodK         = input.int    (14,          group = 'MTF Stochastic Filter',  title = 'K',      minval=1)
+periodD         = input.int    (3,           group = 'MTF Stochastic Filter',  title = 'D',      minval=1)
+smoothK         = input.int    (3,           group = 'MTF Stochastic Filter',  title = 'Smooth', minval=1)
+lower           = input.int    (30,          group = 'MTF Stochastic Filter',  title = 'MTF Stoch Filter (above gets filtered)')
+mtf_stoch       = input.int    (10,          group = 'MTF Stochastic Filter',  title = 'Higher TimeFrame Multiplier', tooltip='Multiplies the current timeframe by specified value')
+avg_on          = input.bool   (true,        group = 'Plots',                  title = 'Plot Average Price')
+plot_ma         = input.bool   (false,       group = 'Plots',                  title = 'Plot Moving Average')
+plot_ts         = input.bool   (false,       group = 'Plots',                  title = 'Plot Trailing Stop Level')
+// variables //
+var entry_price     = 0.0    // The entry price of the first entry
+var iq              = 0.0    // Inititial order quantity before risk calculation
+var nq              = 0.0    // Updated new quantity after the loop
+var oq              = 0.0    // Old quantity at the beginning or the loop
+var q               = 0.0    // Final calculated quantity used as base order size
+var int order_after = 0      // Candle counter. Prevent opening too much orders in a row
+// Order size calaculations // 
+// Order size based on max amount of pyramiding orders or fixed by user input ///
+// Order size calculation based on 'base' mode or ' multiply' mode //
+if fixed_q
+    q := amount_q
+else if q_mode == 'multiply'
+    iq := (math.abs(strategy.equity * portfolio_size  / posCount) / open) * leverage
+    oq := iq
+    for i = 0 to posCount
+        nq := oq + (iq * ( i/ q_mode_m + 1))
+        oq := nq 
+    q := (iq  * posCount /  oq) * iq
+else
+    q := (math.abs(strategy.equity * portfolio_size  / posCount) / open) * leverage
+// Function to calcaulate final order size based on order size modes and round the result with 1 decimal //
+quantity_mode(index,string q_mode) =>
+    q_mode == 'base' ? math.round(q,prec) : q_mode == 'multiply' ? math.round(q * (index/q_mode_m  + 1),prec) : na
+// LowFinder Calculations //
+// MTF RSI by Peter_O //
+rsi_mtf(float source, simple int mtf,simple int len) =>
+    change_mtf=source-source[mtf]
+    up_mtf = ta.rma(math.max(change_mtf, 0), len*mtf)
+    down_mtf = ta.rma(-math.min(change_mtf, 0), len*mtf)
+    rsi_mtf = down_mtf == 0 ? 100 : up_mtf == 0 ? 0 : 100 - (100 / (1 + up_mtf / down_mtf))
+// Lowfinder by RafaelZioni //
+vrsi = rsi_mtf(close,mtf_rsi,len_rsi)
+pp=ta.ema(vrsi,ma_length)
+dd=(vrsi-pp)*5
+cc=(vrsi+dd+pp)/2
+lows=ta.crossover(cc,0) 
+// MTF Stoch Calcualation // MTF Stoch adapted from  Peter_O //
+stoch_mtfK(source, mtf, len) =>
+    k = ta.sma(ta.stoch(source, high, low, periodK * mtf), smoothK * mtf)
+    
+stoch_mtfD(source, mtf, len) =>
+    k = ta.sma(ta.stoch(source, high, low, periodK * mtf), smoothK * mtf)
+    d = ta.sma(k, periodD * mtf)
+    
+mtfK = stoch_mtfK(close, mtf_stoch, periodK)
+mtfD = stoch_mtfD(close, mtf_stoch, periodK)
+// Open next position % below average position price //
+below_avg = close < (strategy.position_avg_price * (1 - (next_entry / 100)))
+// Moving Average Filter //
+moving_average_signal = ta.sma(close, ma_signal)
+plot (plot_ma ? moving_average_signal : na, title = 'Moving Average', color = color.rgb(154, 255, 72))
+// Buy Signal //
+buy_signal = lows and close < moving_average_signal and mtfK < lower
+// First Entry % Below lows //
+if buy_signal
+    entry_price := close * (1 - new_entry)
+// Plot Average Price of Position//
+plot (avg_on  ? strategy.position_avg_price : na, title = 'Average Price', style = plot.style_linebr, color = color.new(color.white,0), linewidth = 1)
+// Take profit per Open Order //
+take_profit_price = close * takeProfit / 100 / syminfo.mintick
+// Calculate different Stop Level conditions to exit All //
+// Stop Level Caculation //
+stop_long1_level = ta.highest (high, stop_len)[1]  * (1 + stop_deviation)
+stop_long2_level = ta.highest (high, stop_len)[2]  * (1 + stop_deviation)
+stop_long3_level = ta.highest (high, stop_len)[3]  * (1 + stop_deviation)
+stop_long4_level = ta.highest (high, stop_len)[1]  * (1 - 0.008) 
+// Stop triggers //
+stop_long1 = ta.crossover(close,stop_long1_level)
+stop_long2 = ta.crossover(close,stop_long2_level)
+stop_long4 = ta.crossunder(close,stop_long4_level)
+// Exit Conditions, cond 1 only Stop Level, cond2 Trailing Stop option //
+exit_condition_1 = close < strategy.position_avg_price ? stop_long1 : close > strategy.position_avg_price ? stop_long2 : na
+exit_condition_2 = close < strategy.position_avg_price * (1 + tp_all) ? stop_long2 : 
+                   close > strategy.position_avg_price * (1 + tp_all) ? stop_long4 :
+                   close < strategy.position_avg_price ? stop_long1 : na
+// Switch between conditions //
+exit_conditions = cond2_toggle ? exit_condition_2 : exit_condition_1
+// Exit when take profit //
+ex_m = exit_mode == 'close' ? close : stop_long2_level
+tp_exit = ta.crossover(ex_m, strategy.position_avg_price * (1 + tp_all)) and close > strategy.position_avg_price * 1.002
+// Plot stoplevel, take profit level //
+plot_stop_level    = strategy.position_size > 0 ? stop_long2_level : na
+plot_trailing_stop = cond2_toggle and plot_ts and strategy.position_size > 0 and stop_long4_level > strategy.position_avg_price * (1 + tp_all) ? stop_long4_level : na
+plot(plot_stop_level,    title = 'Stop Level',    style=plot.style_linebr, color = color.new(#41e3ff, 0), linewidth = 1)
+plot(plot_trailing_stop, title = 'Trailing Stop', style=plot.style_linebr, color = color.new(#4cfca4, 0), linewidth = 1)
+plot_tp_level = cond2_toggle and strategy.position_size > 0 ? strategy.position_avg_price * (1 + tp_all) : na
+plot(plot_tp_level, title = 'Take Profit Level', style=plot.style_linebr, color = color.new(#ff41df, 0), linewidth = 1)
+// Calculate Stop Loss based on equity and average price //
+loss_equity = ((strategy.position_size * strategy.position_avg_price) - (strategy.equity * stopLoss)) / strategy.position_size
+loss_avg_price = strategy.position_avg_price * (1 - stopLoss)
+stop_loss = sl_mode == 'avg_price' ? loss_avg_price : loss_equity
+plot(strategy.position_size > 0  and sl_on ? stop_loss : na, title = 'Stop Loss', color=color.new(color.red,0),style=plot.style_linebr, linewidth = 1)
+// Counter to prevent opening too much orders in a row. //
+if strategy.position_size > 0 
+    order_after := order_after + 1
+// Enter first position //
+if ta.crossunder(close,entry_price) and window() and strategy.position_size == 0
+    strategy.entry('L_1', strategy.long, qty = math.round(q,prec), comment = '+' + str.tostring(math.round(q,prec)))
+// Enter Next Pyramiding Orders //
+if buy_signal and window() and strategy.position_size > 0 and below_avg
+    for i = 1 to strategy.opentrades
+        entry_comment = '+' + str.tostring((quantity_mode(i,q_mode))) // Comment with variable //
+        if strategy.opentrades == i and i < posCount and order_after > oa_lookback
+            entry_price := close
+            entry_id = 'L_' + str.tostring(i + 1) 
+            strategy.entry(id = entry_id, direction=strategy.long, limit=entry_price, qty= quantity_mode(i,q_mode), comment = entry_comment)
+            order_after := 0 // Reset counter to prevent opening to much orders in a row.
+// Exit per Order //
+if strategy.opentrades > 0 and window() 
+    for i = 0 to strategy.opentrades 
+        exit_comment = '-' + str.tostring(strategy.opentrades.size(i))
+        exit_from = 'L_' + str.tostring(i + 1)
+        exit_id = 'Exit_' + str.tostring(i + 1)
+        strategy.exit(id= exit_id, from_entry= exit_from, profit = take_profit_price, comment = exit_comment)
+            
+// Exit All //
+if exit_conditions or (tp_exit and tp_on and cond2_toggle) and window()
+    strategy.close_all('Exit All')
+    entry_price := 0
+if ta.crossunder(close,stop_loss)  and sl_on and window()
+    strategy.close_all('StopLoss')
+    entry_price := 0
+    
+Expand (259 lines)

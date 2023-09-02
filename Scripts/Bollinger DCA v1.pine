@@ -1,0 +1,99 @@
+Script Name: Bollinger DCA v1
+Author: TsangYouJun
+Description: Simple "benchmark" strategy for ETFs, Stocks and Crypto! Super-easy to implement for beginners, a BTD (buy-the-dip) strategy means that you buy a fixed amount of an ETF / Stock / Crypto every time it falls. For instance, to BTD the S&P 500 ( SPY ), you could purchase $500 USD each time the price falls. Assuming the macro-economic conditions of the underlying...
+PineScript code:
+
+Pine Script™ strategy
+Bollinger DCA v1
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+//@version=4
+strategy("Bollinger DCA v1", overlay=false)
+//user inputs
+contribution = input(title="Contribution (USD)",type=input.integer,minval=1,maxval=1000000,step=1,defval=500,confirm=false)
+length = input(title="Bollinger (Period)", defval=20, step=1, minval=1)
+mult = input(title="Deviations (Float)", defval=2.0, step=0.001, minval=0.001, maxval=50)
+rsi_period = input(title="RSI (Period)", defval=14, step=1, minval=1)
+//compute bollinger bands
+source = close
+basis = sma(source, length)
+dev = mult * stdev(source, length)
+upper = basis + dev
+lower = basis - dev
+//compute moving averages
+ma50 = sma(close,50)
+ma100 = sma(close,100)
+ma150 = sma(close,150)
+ma200 = sma(close,200)
+//up_trend = ma50 > ma100 and ma100 > ma150 and ma150 > ma200
+//dn_trend = ma50 < ma100 and ma100 < ma150 and ma150 < ma200
+//compute rsi
+strength = rsi(close, rsi_period)
+//plot indicators
+//p1 = plot(upper, color=color.gray)
+//p2 = plot(lower, color=color.gray)
+//fill(p1, p2)
+//p3 = plot(ma50, color=color.red)
+//p4 = plot(ma100, color=color.blue)
+//p5 = plot(ma150, color=color.green)
+//p6 = plot(ma200, color=color.orange)
+//units to buy
+units = contribution / close
+//long signal
+if (close < lower and strength < 50)
+    strategy.order("Long", strategy.long, units)
+//close long signal
+//if (close > upper and strength > 50 and strategy.position_size > 0)
+    //strategy.order("Close Long", strategy.short, units)
+    
+//plot strategy equity
+plot(strategy.openprofit, color=color.blue, linewidth=2, title="Open Profit")
+Expand (49 lines)

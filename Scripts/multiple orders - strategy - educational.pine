@@ -1,0 +1,369 @@
+Script Name: multiple orders - strategy - educational
+Author: fikira
+Description: Hi,
+
+Here is a 'template', using array's, for multiple orders and different SL/TP levels per trade (This is an example with max 5 open trades)
+
+The 'switch' makes sure that the first available position will be used,
+for example, when 'L1' is closed in the past, and a buy condition is triggered, position 'L1' will be filled, 
+should it be that 'L1', 'L2', 'L3' are...
+PineScript code:
+
+Pine Script™ strategy
+multiple orders - strategy - educational
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+//@version=5
+strategy(title="multiple orders", shorttitle="multis", overlay=true, 
+     initial_capital=1000, default_qty_value=20, default_qty_type=strategy.percent_of_equity, 
+     pyramiding=5, process_orders_on_close=true, close_entries_rule='ANY')
+showHodl       = input.bool(false, title='show HODL start and price')
+showTable      = input.bool(true , title='show trade data table'    )
+var hodl       = 0.
+var firstClose = 0.
+var firstCoin  = 0.
+var trades     = 5
+var isFirst    = 0
+// ———————[ array's ]———————
+// {
+var array  = array.from(0 , 0 , 0 , 0 , 0 )
+var SLline = array.from(0., 0., 0., 0., 0.)
+var TPline = array.from(0., 0., 0., 0., 0.)
+// }
+// ———————[ condition ]———————
+// {
+cond = close > open and close > math.max(close[2], open[2]) and low[1] < low[2] and high[1] < high[2] // low < low[1] and low[1] < low[2] 
+// }
+// ———————[ entry and array set ]———————
+// {
+if cond 
+    switch
+        array.get(array, 0) == 0 =>
+            SL = low  * 0.8
+            TP = high * 1.2
+            strategy.entry('L1', strategy.long)
+            array.set(SLline, 0, SL)
+            array.set(TPline, 0, TP)
+            array.set(array , 0,  1) 
+            if isFirst == 0
+                isFirst := 1
+        array.get(array, 1) == 0 =>
+            SL = low  * 0.8
+            TP = high * 1.2
+            strategy.entry('L2', strategy.long)
+            array.set(SLline, 1, SL)
+            array.set(TPline, 1, TP)
+            array.set(array , 1,  1) 
+        array.get(array, 2) == 0 =>
+            SL = low  * 0.8
+            TP = high * 1.2
+            strategy.entry('L3', strategy.long)
+            array.set(SLline, 2, SL)
+            array.set(TPline, 2, TP)
+            array.set(array , 2,  1) 
+        array.get(array, 3) == 0 =>
+            SL = low  * 0.8
+            TP = high * 1.2
+            strategy.entry('L4', strategy.long)
+            array.set(SLline, 3, SL)
+            array.set(TPline, 3, TP)
+            array.set(array , 3,  1) 
+        array.get(array, 4) == 0 =>
+            SL = low  * 0.8
+            TP = high * 1.2
+            strategy.entry('L5', strategy.long)
+            array.set(SLline, 4, SL)
+            array.set(TPline, 4, TP)
+            array.set(array , 4,  1)  
+// }
+// ———————[ exit ]———————
+// {
+strategy.exit('xL1', from_entry = 'L1', limit = array.get(TPline, 0), stop = array.get(SLline, 0), when=array.get(array , 0) == 1)
+strategy.exit('xL2', from_entry = 'L2', limit = array.get(TPline, 1), stop = array.get(SLline, 1), when=array.get(array , 1) == 1)
+strategy.exit('xL3', from_entry = 'L3', limit = array.get(TPline, 2), stop = array.get(SLline, 2), when=array.get(array , 2) == 1)
+strategy.exit('xL4', from_entry = 'L4', limit = array.get(TPline, 3), stop = array.get(SLline, 3), when=array.get(array , 3) == 1)
+strategy.exit('xL5', from_entry = 'L5', limit = array.get(TPline, 4), stop = array.get(SLline, 4), when=array.get(array , 4) == 1)
+// }
+// ———————[ reset array values ]———————
+// {
+if array.get (array , 0) == 1 and high > array.get(TPline, 0) or low < array.get(SLline, 0)   
+    array.set(array , 0   , 0)
+if array.get (array , 1) == 1 and high > array.get(TPline, 1) or low < array.get(SLline, 1)   
+    array.set(array , 1   , 0)
+if array.get (array , 2) == 1 and high > array.get(TPline, 2) or low < array.get(SLline, 2)   
+    array.set(array , 2   , 0)
+if array.get (array , 3) == 1 and high > array.get(TPline, 3) or low < array.get(SLline, 3)   
+    array.set(array , 3   , 0)
+if array.get (array , 4) == 1 and high > array.get(TPline, 4) or low < array.get(SLline, 4)   
+    array.set(array , 4   , 0)  
+// }
+// ———————[ plot ]———————
+// {
+plot(array.get (array , 0) == 1 ? array.get(TPline, 0) : na, color=color.new(color.blue  , 50), style=plot.style_linebr)
+plot(array.get (array , 0) == 1 ? array.get(SLline, 0) : na, color=color.new(color.blue  , 50), style=plot.style_linebr)
+plot(array.get (array , 1) == 1 ? array.get(TPline, 1) : na, color=color.new(color.yellow, 50), style=plot.style_linebr)
+plot(array.get (array , 1) == 1 ? array.get(SLline, 1) : na, color=color.new(color.yellow, 50), style=plot.style_linebr)
+plot(array.get (array , 2) == 1 ? array.get(TPline, 2) : na, color=color.new(color.white , 50), style=plot.style_linebr)
+plot(array.get (array , 2) == 1 ? array.get(SLline, 2) : na, color=color.new(color.white , 50), style=plot.style_linebr)
+plot(array.get (array , 3) == 1 ? array.get(TPline, 3) : na, color=color.new(color.lime  , 50), style=plot.style_linebr)
+plot(array.get (array , 3) == 1 ? array.get(SLline, 3) : na, color=color.new(color.lime  , 50), style=plot.style_linebr)
+plot(array.get (array , 4) == 1 ? array.get(TPline, 4) : na, color=color.new(color.red   , 50), style=plot.style_linebr)
+plot(array.get (array , 4) == 1 ? array.get(SLline, 4) : na, color=color.new(color.red   , 50), style=plot.style_linebr)
+//
+plot(showHodl and firstClose > 0 ? firstClose : na)
+// }
+// ———————[ Table ]———————
+// {
+if isFirst == 1 and isFirst[1] == 0 
+    if showHodl
+        line.new(bar_index, low, bar_index, high, extend=extend.both)
+    firstClose := close
+    firstCoin  := strategy.initial_capital / firstClose
+if barstate.islastconfirmedhistory and showTable
+    initialcap   = strategy.initial_capital
+    hodl        := math.round((firstCoin * close)  , 2)
+    Currenteq    = math.round(strategy.equity      , 2) // (strategy.initial_capital + strategy.netprofit + strategy.openprofit).
+    closedtrades = strategy.closedtrades
+    opentrades   = strategy.opentrades
+    grossprofit  = math.round(strategy.grossprofit , 2)
+    grossloss    = math.round(strategy.grossloss   , 2)
+    netprofit    = math.round(strategy.netprofit   , 2)
+    openprofit   = math.round(strategy.openprofit  , 2)
+    max_drawdown = math.round(strategy.max_drawdown, 2)
+    wintrades    = strategy.wintrades
+    losstrades   = strategy.losstrades
+    eventrades   = strategy.eventrades
+    PF           = math.round(      grossprofit/grossloss   , 3)
+    avgTrade     = math.round(      netprofit  /closedtrades, 2)
+    prcProf      = math.round(100/(closedtrades/wintrades)  , 2)
+    //
+    var table    = table.new(position = position.top_right, columns = 4, rows =20, bgcolor = color.new(color.yellow, 100), border_width = 1)
+    colEq = Currenteq   >  initialcap  ? color.lime   :  Currenteq < initialcap ? #FF0000   : color.white
+    coBaH = hodl        >  initialcap  ? color.lime   :  hodl      < initialcap ? #FF0000   : color.white
+    coAVG = avgTrade    >  0           ? color.lime   :  avgTrade  < 0          ? #FF0000   : color.white
+    bgCEq = Currenteq   >= hodl        ? color.lime   : color.silver
+    bgBaH = Currenteq   >= hodl        ? color.silver : color.lime
+    colGP = grossprofit > 0            ? color.lime   : color.blue
+    colGL = grossloss   > 0            ? #FF0000      : color.blue
+    colNP = netprofit   > 0            ? color.lime   : netprofit  < 0          ? #FF0000   : color.blue
+    colOP = openprofit  > 0            ? color.lime   : color.blue
+    //
+    table.cell(table_id = table, column = 0, row = 1, text = 'initial capital: '       , text_color = color.new(color.white , 10), bgcolor=color.new(color.silver, 90))
+    table.cell(table_id = table, column = 0, row = 2, text = 'current equity: '        , text_color = color.new(color.white , 10), bgcolor=color.new(bgCEq       , 90))
+    table.cell(table_id = table, column = 0, row = 3, text = 'Buy and hold: '          , text_color = color.new(color.white , 10), bgcolor=color.new(bgBaH       , 90))
+    table.cell(table_id = table, column = 0, row = 4, text = 'max drawdown: '          , text_color = color.new(color.red   , 10), bgcolor=color.new(color.blue  , 90))
+    table.cell(table_id = table, column = 0, row = 5, text = 'gross profit: '          , text_color = color.new(color.blue  , 10), bgcolor=color.new(color.silver, 90))
+    table.cell(table_id = table, column = 0, row = 6, text = 'gross loss: '            , text_color = color.new(color.blue  , 10), bgcolor=color.new(color.silver, 90))
+    table.cell(table_id = table, column = 0, row = 7, text = 'net profit: '            , text_color = color.new(color.blue  , 10), bgcolor=color.new(color.silver, 90))
+    table.cell(table_id = table, column = 0, row = 8, text = 'open profit: '           , text_color = color.new(color.blue  , 10), bgcolor=color.new(color.silver, 90))
+    //
+    table.cell(table_id = table, column = 1, row = 1, text = str.tostring(initialcap)  , text_color = color.new(color.white , 10), bgcolor=color.new(color.silver, 90))
+    table.cell(table_id = table, column = 1, row = 2, text = str.tostring(Currenteq)   , text_color = color.new(colEq       , 10), bgcolor=color.new(bgCEq       , 90))
+    table.cell(table_id = table, column = 1, row = 3, text = str.tostring(hodl)        , text_color = color.new(coBaH       , 10), bgcolor=color.new(bgBaH       , 90))
+    table.cell(table_id = table, column = 1, row = 4, text = str.tostring(max_drawdown), text_color = color.new(color.red   , 10), bgcolor=color.new(color.blue  , 90))
+    table.cell(table_id = table, column = 1, row = 5, text = str.tostring(grossprofit) , text_color = color.new(colGP       , 10), bgcolor=color.new(color.silver, 90))
+    table.cell(table_id = table, column = 1, row = 6, text = str.tostring(grossloss)   , text_color = color.new(colGL       , 10), bgcolor=color.new(color.silver, 90))
+    table.cell(table_id = table, column = 1, row = 7, text = str.tostring(netprofit)   , text_color = color.new(colNP       , 10), bgcolor=color.new(color.silver, 90))
+    table.cell(table_id = table, column = 1, row = 8, text = str.tostring(openprofit)  , text_color = color.new(colOP       , 10), bgcolor=color.new(color.silver, 90))
+    //
+    table.cell(table_id = table, column = 2, row = 1, text = 'Profit Factor: '         , text_color = color.new(color.white , 10), bgcolor=color.new(color.silver, 90))
+    table.cell(table_id = table, column = 2, row = 2, text = '% Profitable: '          , text_color = color.new(color.white , 10), bgcolor=color.new(color.silver, 90))
+    table.cell(table_id = table, column = 2, row = 3, text = 'avg Trade: '             , text_color = color.new(color.white , 10), bgcolor=color.new(color.silver, 90))
+    table.cell(table_id = table, column = 2, row = 4, text = 'closed trades: '         , text_color = color.new(color.white , 10), bgcolor=color.new(color.blue  , 90))
+    table.cell(table_id = table, column = 2, row = 5, text = 'win trades: '            , text_color = color.new(color.white , 10), bgcolor=color.new(color.blue  , 90))
+    table.cell(table_id = table, column = 2, row = 6, text = 'loss trades: '           , text_color = color.new(color.white , 10), bgcolor=color.new(color.blue  , 90))
+    table.cell(table_id = table, column = 2, row = 7, text = 'even trades: '           , text_color = color.new(color.white , 10), bgcolor=color.new(color.blue  , 90))
+    table.cell(table_id = table, column = 2, row = 8, text = 'open trades: '           , text_color = color.new(color.white , 10), bgcolor=color.new(color.blue  , 90))
+    //
+    table.cell(table_id = table, column = 3, row = 1, text = str.tostring(PF)          , text_color = color.new(color.white , 10), bgcolor=color.new(color.silver, 90))
+    table.cell(table_id = table, column = 3, row = 2, text = str.tostring(prcProf)     , text_color = color.new(color.white , 10), bgcolor=color.new(color.silver, 90))
+    table.cell(table_id = table, column = 3, row = 3, text = str.tostring(avgTrade)    , text_color = color.new(coAVG       , 10), bgcolor=color.new(color.silver, 90))
+    table.cell(table_id = table, column = 3, row = 4, text = str.tostring(closedtrades), text_color = color.new(color.yellow, 10), bgcolor=color.new(color.blue  , 90))
+    table.cell(table_id = table, column = 3, row = 5, text = str.tostring(wintrades)   , text_color = color.new(color.lime  , 10), bgcolor=color.new(color.blue  , 90))
+    table.cell(table_id = table, column = 3, row = 6, text = str.tostring(losstrades)  , text_color = color.new(#FF0000     , 10), bgcolor=color.new(color.blue  , 90))
+    table.cell(table_id = table, column = 3, row = 7, text = str.tostring(eventrades)  , text_color = color.new(color.yellow, 10), bgcolor=color.new(color.blue  , 90))
+    table.cell(table_id = table, column = 3, row = 8, text = str.tostring(opentrades)  , text_color = color.new(color.yellow, 10), bgcolor=color.new(color.blue  , 90))
+    //
+// }    
+Expand (182 lines)

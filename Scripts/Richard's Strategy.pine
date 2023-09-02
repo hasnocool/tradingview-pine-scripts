@@ -1,0 +1,119 @@
+Script Name: Richard's Strategy
+Author: Deepak8369
+Description: Strategy/Indicator based on Richard Dennis turtle trading technique
+PineScript code:
+
+Pine Script™ strategy
+Richard's Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © melodyera0822
+//@version=4
+strategy("Richard Strategy", overlay=true)
+// User input
+variable_for_stoploss = input(4,title="stop loss var")
+lenght = input(20,title="lenght")
+// high_low
+_20_day_highest = highest(nz(close[1]), lenght)
+_20_day_lowest = lowest(nz(close[1]), lenght)
+_10_day_low = lowest(nz(close[1]), lenght/2)
+_10_day_high = highest(nz(close[1]), lenght/2)
+//indicators
+atr20 = atr(20)
+ema_atr20 = ema(atr20,20)
+//vars
+var traded = "false"
+var buy_sell = "none"
+var buyExit = false
+var sellExit = false
+var stoploss = 0
+buyCon = close > _20_day_highest and traded == "false"
+plotshape(buyCon,style = shape.triangleup,location = location.belowbar, color = color.green )
+if (buyCon)
+    strategy.entry("long", strategy.long, when = buyCon)
+    traded := "true"
+    buy_sell := "buy"
+    stoploss := round(close - variable_for_stoploss * ema_atr20)
+    
+sellCon = close < _20_day_lowest and  traded == "false"
+plotshape(sellCon,style = shape.triangledown, color = color.red )
+if (sellCon)
+    strategy.entry("short", strategy.short)
+    traded := "true"
+    buy_sell := "sell"
+    stoploss := round(close - variable_for_stoploss * ema_atr20)
+if traded == "true"
+    if buy_sell == "buy" and ((close<stoploss)or(close<_10_day_low))
+        strategy.close("long")
+        buyExit := true
+        traded := "false"
+        
+    if buy_sell == "sell" and ((close>stoploss)or(close>_10_day_high))
+        strategy.close("short")
+        sellExit := true
+        traded := "false"
+        
+plotshape(buyExit,style = shape.triangleup,location = location.belowbar, color = color.yellow )
+buyExit := false
+plotshape(sellExit,style = shape.triangledown, color = color.yellow )
+sellExit := false
+Expand (59 lines)

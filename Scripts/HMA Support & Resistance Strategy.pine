@@ -1,0 +1,65 @@
+Script Name: HMA Support & Resistance Strategy
+Author: UnknownUnicorn36161431
+Description: The Hull Moving Average indicator can in some cases be used to outline support and resistance levels. It doesn't work for every asset out there but there are some that have enjoyed this in the past 6 months, such as the OCEAN cryptocurrency on the chart above.
+
+This is a strategy to utilize this method, so you can test the assets you trade, including using...
+PineScript code:
+
+Pine Script™ strategy
+HMA Support & Resistance Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+// @version=5
+strategy("HMA Support & Resistance Strategy", shorttitle="HMA Strategy", overlay=true, process_orders_on_close = true, calc_on_order_fills = true, pyramiding = 0, default_qty_type = strategy.percent_of_equity, default_qty_value = 75, commission_type = strategy.commission.percent, commission_value = 0.04, initial_capital = 100)
+i_use_time_limited_backtesting = input.bool( false, "Use Time-Limited Backtesting", group = "Time-Limit BackTests (0 = disable)" )
+startDay = input.int(0, "Start Day", minval = 0, maxval = 31, group = "Time-Limit BackTests (0 = disable)")
+startMonth = input.int(0, "Start Month", minval = 0, maxval = 12, group = "Time-Limit BackTests (0 = disable)")
+startYear = input.int(0, "Start Year", minval = 0, maxval = 2100, group = "Time-Limit BackTests (0 = disable)")
+endDay = input.int(0, "End Day", minval = 0, maxval = 31, group = "Time-Limit BackTests (0 = disable)")
+endMonth = input.int(0, "End Month", minval = 0, maxval = 12, group = "Time-Limit BackTests (0 = disable)")
+endYear = input.int(0, "End Year", minval = 0, maxval = 2100, group = "Time-Limit BackTests (0 = disable)")
+hma_length = input.int(2, "Hull Moving Average Length", minval = 2, group = "HMA Options")
+hma_show = input.bool( true, "Show HMA on Chart", group = "HMA Options" )
+inDateRange = true
+// Look if the close time of the current bar falls inside the date range
+if i_use_time_limited_backtesting and startDay != 0 and startMonth != 0 and startYear != 0 and endDay != 0 and endMonth != 0 and endYear != 0
+    inDateRange := ( time >= timestamp( syminfo.timezone, startYear, startMonth, startDay, 0, 0 ) ) and ( time < timestamp( syminfo.timezone, endYear, endMonth, endDay, 0, 0 ) )
+hma = ta.hma( close, hma_length )
+plot( hma_show ? hma : na, "HMA", color.orange )
+strategy.entry( "Sell", strategy.short, when = ta.crossunder( close, hma ) and inDateRange )
+strategy.entry( "Buy", strategy.long, when = ta.crossover( close, hma ) and inDateRange )
+// Exit open market position when date range ends
+if (not inDateRange)
+    strategy.close_all()
+Expand (32 lines)

@@ -1,0 +1,110 @@
+Script Name: Cycles Strategy
+Author: FXEngineering
+Description: This is back-testable strategy is a modified version of the Stochastic strategy. It is meant to accompany the modified Stochastic indicator: "Cycles". 
+
+Modifications to the Stochastic strategy include;
+
+1. Programmable settings for the Stochastic Periods (%K, %D and Smooth %K).
+2. Programmable settings for the MACD Periods (Fast, Slow, Smoothing)
+3. Programmable...
+PineScript code:
+
+Pine Script™ strategy
+Cycles Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+//@version=4
+strategy("Cycles Strategy", overlay=true)
+// Getting inputs
+StopTgt = input(20, minval=1, title="Stop Loss $")
+ProfTgt = input(100, minval=1, title="Profit Target $")
+longOnly = input(false, title="Long or Short Only")
+useTrend = input(false, title="Use Trend Filter")
+useMACD = input(false, title="Use MACD Filter")
+useSignal = input(false, title="Use Signal Fltr")
+useHHLL = input(false, title="Use High/Low Fltr")
+useK =  input(false, title="Use %K Threshold Fltr")
+useD =  input(false, title="Use %D Threshold Fltr")
+useForce = input(false, title="Use Force Filter")
+useOBOS = input(false, title="Use OverBought/OverSold Filter")
+//Filter backtest month and year
+startMonth = input(10, minval=1, maxval=12, title="Month")
+startYear = input(2020, minval=2000, maxval=2100, title="Year")
+//Filter funtion inputs
+periodA = input(20, minval=1, title="Period SMA")
+periodK = input(5, minval=1, title="Period %K")
+smoothD = input(3, minval=1, title="Smooth %D")
+smoothK = input(3, minval=1, title="Smooth %K")
+threshold_k = input(30, minval=-50, maxval=50, title="Threshold %K (-50 is disabled)")
+threshold_d = input(-5, minval=-50, maxval=50, title="Threshold %D (-50 is disabled)")
+fast_length = input(title="Period Fast", type=input.integer, defval=5)
+slow_length = input(title="Period Slow", type=input.integer, defval=20)
+signal_length = input(title="Signal Smoothing", type=input.integer, minval = 1, maxval = 50, defval = 30)
+//Calculations
+ma = sma(close, periodA)
+k = sma(stoch(close, high, low, periodK), smoothK) - 50
+d = sma(k, smoothD)
+macd = ema(close,fast_length) - ema(close,slow_length)
+signal = ema(macd,signal_length)
+hist = macd - signal
+force = (d - d[1])
+if (not na(k) and not na(d) and longOnly and month>=startMonth and year>=startYear)
+    if(((k > k[2] and k[3] >= k[2]) or not useK) and (d > d[1] or not useD) and  (ma > ma[1] or not useTrend) and (not useMACD or (macd > macd[1] and macd[2] >= macd[1] and hist > 0)) and (not useSignal or signal > signal[1]) and (not useForce or force > force[1]) and (not useHHLL or high > high[1]) and (not useOBOS or (k[1] <= -threshold_k or not useK) and (d <= threshold_d or not useD))) 
+    strategy.order("CyclesLE", strategy.long, when=strategy.position_size == 0, comment="CyclesLE")
+if (not na(k) and not na(d) and not longOnly and month>=startMonth and year>=startYear)
+    if(((k < k[2] and k[3] <= k[2]) or not useK) and (d < d[1] or not useD) and  (ma < ma[1] or not useTrend) and (not useMACD or (macd < macd[1] and macd[2] <= macd[1] and hist < 0)) and (not useSignal or signal < signal[1]) and (not useForce or force < force[1]) and (not useHHLL or low < low[1]) and (not useOBOS or (k[1] >= threshold_k or not useK) and (d >= -threshold_d or not useD))) 
+    strategy.order("CyclesSE", strategy.short, when=strategy.position_size == 0, comment="CyclesSE")
+strategy.exit("bracket", loss=StopTgt, profit=ProfTgt, when=strategy.position_size > 0)
+strategy.exit("bracket", loss=StopTgt, profit=ProfTgt, when=strategy.position_size < 0)
+//plot(strategy.equity, title="equity", color=color.red, linewidth=2, style=plot.style_areabr)
+Expand (51 lines)

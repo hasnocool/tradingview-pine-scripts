@@ -1,0 +1,206 @@
+Script Name: Yesterday's High v.17.07
+Author: tumiza999
+Description: Yesterday’s High Breakout it is a trading system based on the analysis of yesterday's highs, it works in trend-following mode therefore it opens a long position at the breakout of yesterday's highs even if they occur several times in one day.
+
+There are several methods for exiting a trade, each with its own unique strategy. The first method involves setting...
+PineScript code:
+
+Pine Script™ strategy
+Yesterday's High v.17.07
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// Author: © tumiza 999 
+// © TheSocialCryptoClub
+//@version=5
+strategy("Yesterday's High v.17.07", overlay=true, pyramiding = 1,
+         initial_capital=10000, 
+         default_qty_type=strategy.percent_of_equity, default_qty_value=10,
+         slippage=1, backtest_fill_limits_assumption=1, use_bar_magnifier=true,
+         commission_type=strategy.commission.percent, commission_value=0.075
+         )
+// -----------------------------------------------------------------------------
+// ROC Filter
+// -----------------------------------------------------------------------------
+// f_security function by LucF for PineCoders available here: https://www.tradingview.com/script/cyPWY96u-How-to-avoid-repainting-when-using-security-PineCoders-FAQ/
+f_security(_sym, _res, _src, _rep) => request.security(_sym, _res, _src[not _rep and barstate.isrealtime ? 1 : 0])[_rep or barstate.isrealtime ? 0 : 1]
+high_daily = f_security(syminfo.tickerid, "D", high, false)
+roc_enable = input.bool(false, "", group="ROC Filter from CloseD", inline="roc")
+roc_threshold = input.float(1, "Treshold", step=0.5, group="ROC Filter from CloseD", inline="roc")
+closed = f_security(syminfo.tickerid,"1D",close, false)
+roc_filter= roc_enable ? (close-closed)/closed*100  > roc_threshold  : true
+// -----------------------------------------------------------------------------
+// Trigger Point 
+// -----------------------------------------------------------------------------
+open_session = ta.change(time('D'))
+price_session = ta.valuewhen(open_session, open, 0)
+tf_session = timeframe.multiplier <= 60
+bgcolor(open_session and tf_session ?color.new(color.blue,80):na, title = "Session")
+first_bar = 0
+if open_session
+    first_bar := bar_index
+var max_today = 0.0
+var min_today = 0.0
+var high_daily1 = 0.0
+var low_daily1 = 0.0
+var today_open = 0.0
+if first_bar
+    high_daily1 := max_today
+    low_daily1 := min_today
+    today_open := open
+    max_today := high
+    min_today := low
+if high >= max_today
+    max_today := high
+if low < min_today
+    min_today := low
+same_day  = today_open == today_open[1]
+plot( timeframe.multiplier <= 240 and same_day ? high_daily1 : na, color= color.yellow , style=plot.style_linebr, linewidth=1, title='High line')
+plot( timeframe.multiplier <= 240 and same_day ? low_daily1 : na, color= #E8000D , style=plot.style_linebr, linewidth=1, title='Low line')
+// -----------------------------------------------------------------------------
+// Strategy settings 
+// -----------------------------------------------------------------------------
+Gap = input.float(1,"Gap%", step=0.5, tooltip="Gap di entrata su entry_price -n anticipa entrata, con +n posticipa entrata", group = "Entry")
+Gap2 = (high_daily1 * Gap)/100
+sl  = input.float(3, "Stop-loss", step= 0.5,  group = "Entry")
+tp  = input.float(9, "Take-profit", step= 0.5, group = "Entry")
+stop_loss_price = strategy.position_avg_price * (1-sl/100)
+take_price = strategy.position_avg_price * (1+tp/100)
+sl_trl = input.float(2, "Trailing-stop", step = 0.5, tooltip = "Attiva trailing stop dopo che ha raggiunto...",group = "Trailing Stop Settings")//group = "Trailing Stop Settings")
+Atrl= input.float(1, "Offset Trailing", step=0.5,tooltip = "Distanza dal prezzo", group = "Trailing Stop Settings")
+stop_trl_price_cond = sl_trl * high/syminfo.mintick/100
+stop_trl_price_offset_cond = Atrl * high/syminfo.mintick/100
+stop_tick = sl * high/syminfo.mintick/100
+profit_tick = tp * high/syminfo.mintick/100
+mess_buy = "buy"
+mess_sell = "sell"
+// -----------------------------------------------------------------------------
+// Entry - Exit - Close
+// -----------------------------------------------------------------------------
+if close < high_daily1 and roc_filter
+    strategy.entry("Entry", strategy.long, stop = high_daily1 + (Gap2), alert_message = mess_buy)
+ts_n  = input.bool(true, "Trailing-stop", tooltip = "Attiva o disattiva trailing-stop", group = "Trailing Stop Settings")
+close_ema = input.bool(false, "Close EMA", tooltip = "Attiva o disattiva chiusura su EMA", group = "Trailing Stop Settings")
+len1 = input.int(10, "EMA length", step=1, group = "Trailing Stop Settings")
+ma1 = ta.ema(close, len1)
+plot(ma1, title='EMA', color=color.new(color.yellow, 0))
+if ts_n == true
+    strategy.exit("Trailing-Stop","Entry",loss= stop_tick, stop= stop_loss_price, limit= take_price, trail_points = stop_trl_price_cond, trail_offset = stop_trl_price_offset_cond, comment_loss="Stop-Loss!!",comment_profit ="CASH!!", comment_trailing = "TRL-Stop!!", alert_message = mess_sell)
+else
+    strategy.exit("TP-SL", "Entry",loss= stop_tick, stop=stop_loss_price, limit= take_price, comment_loss= "Stop-loss!!!", comment_profit = "CASH!!", alert_message = mess_sell)
+if close_ema == true and ta.crossunder(close,ma1)
+    strategy.close("Entry",comment = "Close" , alert_message = mess_sell)
+Expand (114 lines)

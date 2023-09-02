@@ -1,0 +1,98 @@
+Script Name: TEMA-DEMA-HMA Strategy
+Author: Tuned_Official
+Description: The TEMA/DEMA/HMA strategy is a basic trend follower looking for when the TEMA crosses above the DEMA as a buy signal and the opposite for the sell. 
+
+The HMA is used as a longer more Dynamic MA to confirm the wider trend to filter out bad trades. 
+
+This is a basic idea that can be expanded on using different indicator types to either add signals or filter out...
+PineScript code:
+
+Pine Script™ strategy
+TEMA/DEMA/HMA Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © tuned-com
+//@version=4
+strategy("TEMA/DEMA/HMA", overlay=true, pyramiding=0, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=1000000, commission_type=strategy.commission.percent, commission_value=0.1)
+Tlength = input(8, title="TEMA Length", minval=1)
+Dlength = input(43, title="DEMA Length", minval=1)
+Hlength = input(52, title="Hull Length", minval=1)
+Rlength = input(2, title="Hull Trend Test Length", minval=1)
+//TEMA//
+ema1 = ema(close, Tlength)
+ema2 = ema(ema1, Tlength)
+ema3 = ema(ema2, Tlength)
+tema = 3 * (ema1 - ema2) + ema3
+//DEMA//
+e1 = ema(close, Dlength)
+e2 = ema(e1, Dlength)
+dema = 2 * e1 - e2
+//HMA//
+hma = wma(2 * wma(close, Hlength / 2) - wma(close, Hlength), round(sqrt(Hlength)))
+up = crossunder(dema, tema) and rising(hma, Rlength)
+down = crossover(dema, tema) and falling(hma, Rlength)
+downc = crossunder(dema, tema)
+upc = crossover(dema, tema)
+plot(dema, color=color.green, linewidth=2)
+plot(tema, color=color.aqua, linewidth=2)
+plot(hma, color=rising(hma, Rlength) ? color.green : na, linewidth=2, transp=0)
+plot(hma, color=falling(hma, Rlength) ? color.red : na, linewidth=2, transp=0)
+bgcolor(rising(hma, Rlength) ? color.green : na, transp=70)
+bgcolor(falling(hma, Rlength) ? color.red : na, transp=70)
+plotarrow(tema - dema, colorup=color.green, colordown=color.red, transp=70)
+if up
+    strategy.entry("Long Entry", strategy.long)
+if down
+    strategy.entry("Short Entry", strategy.short)
+Expand (51 lines)

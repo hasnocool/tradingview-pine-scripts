@@ -1,0 +1,72 @@
+Script Name: Linear trend
+Author: TradingAmmo
+Description: Simple way how to use Linear Regression for trading.
+
+What we use:
+• Linear Regression
+• EMA 200 as a trend filter
+
+Logic:
+Firstly we make two different linear regression movings as oscillator. For this we need to subtract slow moving from fast moving, so we get the single moving around zero. This is the green/red line which appears on the chart.
+The trade open...
+PineScript code:
+
+Pine Script™ strategy
+Linear trend
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © TradingAmmo
+//@version=4
+strategy("Linear trend", overlay=false, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent, commission_value=0.075, currency='USD')
+startP = timestamp(input(2017, "Start Year"), input(12, "Month"), input(17, "Day"), 0, 0)
+end   = timestamp(input(9999, "End Year"),   input(1, "Month"),   input(1, "Day"),   0, 0)
+_testPeriod() =>
+    iff(time >= startP and time <= end, true, false)
+src = close
+len1 = input(defval=13, minval=1, title="Fast LR")
+len2 = input(defval=55, minval=1, title="Slow LR")
+lag1 = input(0, title="Lag for fast")
+lag2 = input(0, title="Lag for slow")
+threshold  = input(0,step=0.5, title="Threshold")
+fast_lr = linreg(src, len1, lag1)
+slow_lr = linreg(src, len2, lag2)
+lr = fast_lr - slow_lr
+plot_fast = plot(lr, color = lr > 0 ? color.green : color.red)
+plot(threshold, color=color.purple)
+long_condition = crossover(lr, threshold) and close > ema(close, 200) and _testPeriod()
+strategy.entry('BUY', strategy.long, when=long_condition) 
+short_condition = crossunder(lr, threshold) 
+strategy.close('BUY', when=short_condition) 
+Expand (32 lines)

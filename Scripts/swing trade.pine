@@ -1,0 +1,166 @@
+Script Name: swing trade
+Author: vinay182
+Description: THIS strategy is based on the 
+franklin ochao swing trade book
+
+confirmed bullish - when ever stock closed above R2 (more bullish)
+when ever stock closed between R1 AND R2 (moderatly bullish or consolidation phase with respect to previous trend)
+entry1 for more bullish trend is buy at every dips means when ever price low below pivot when it open above the pivot...
+PineScript code:
+
+Pine Script™ strategy
+swing trade
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+//@version=2
+strategy(title="swing trade", shorttitle="vinay_swing", overlay=true)
+pf = input(false,title="Show Filtered Pivots")
+sd = input(true, title="Show Daily Pivots?")
+//moving average
+len = input(50, minval=1, title="Length")
+src = input(close, title="Source")
+out = ema(src, len)
+//RSI INPUT
+length = input( 7 )
+overSold = input( 20 )
+overBought = input( 80 )
+price = close
+vrsi = rsi(price, length)
+// Classic Pivot
+pivot = (high + low + close ) / 3.0
+// Filter Cr
+bull= pivot > (pivot + pivot[1]) / 2 + .0025
+bear= pivot < (pivot + pivot[1]) / 2 - .0025
+// Classic Pivots
+r1 = pf and bear ? pivot + (pivot - low) : pf and bull ? pivot + (high - low) : pivot + (pivot - low)
+s1 = pf and bull ? pivot - (high - pivot) : pf and bear ? pivot - (high - low) : pivot - (high - pivot)
+r2 = pf ? na : pivot + (high - low)
+s2 = pf ? na : pivot - (high - low)
+BC = (high + low) / 2.0
+TC = (pivot - BC) + pivot
+//Pivot Average Calculation
+smaP = sma(pivot, 3)
+//Daily Pivots 
+dtime_pivot = security(tickerid, 'D', pivot[1])
+dtime_pivotAvg = security(tickerid, 'D', smaP[1])
+dtime_r1 = security(tickerid, 'D', r1[1]) 
+dtime_s1 = security(tickerid, 'D', s1[1]) 
+dtime_r2 = security(tickerid, 'D', r2[1]) 
+dtime_s2 = security(tickerid, 'D', s2[1])
+dtime_BC = security(tickerid, 'D', BC[1])
+dtime_TC = security(tickerid, 'D', TC[1])
+offs_daily = 0
+plot(sd and dtime_pivot ? dtime_pivot : na, title="Daily Pivot",style=circles, color=fuchsia,linewidth=1) 
+plot(sd and dtime_r1 ? dtime_r1 : na, title="Daily R1",style=circles, color=#DC143C,linewidth=1) 
+plot(sd and dtime_s1 ? dtime_s1 : na, title="Daily S1",style=circles, color=lime,linewidth=1) 
+plot(sd and dtime_r2 ? dtime_r2 : na, title="Daily R2",style=circles, color=maroon,linewidth=1) 
+plot(sd and dtime_s2 ? dtime_s2 : na, title="Daily S2",style=circles, color=#228B22,linewidth=1)
+plot(sd and dtime_BC ? dtime_BC : na, title="Daily BC",style=circles, color=black,linewidth=1)
+plot(sd and dtime_TC ? dtime_TC : na, title="Daily TC",style=circles, color=black,linewidth=1)
+bull1=  (close > dtime_r2)
+bull2= (low < dtime_pivot) or (low < dtime_s1) 
+bull3= dtime_pivot > dtime_pivot[1]
+bullishenglufing=bull2 and bull3
+bullishenglufing1=bull1 and (close > out) and (crossover(vrsi, overBought))
+longCondition = bull1[1] and ((low < dtime_TC) or (low < dtime_BC) or (low < dtime_s1))
+bear1=  (close < dtime_s2)
+bear2= (high > dtime_pivot) or (high < dtime_r1) 
+bear3= dtime_pivot < dtime_pivot[1]
+bearishenglufing=bear2 and bear3
+bearishenglufing1=bear1 and (close < out) and (crossunder(vrsi, overSold))
+shortCondition = bear1[1] and ((high > dtime_BC) or (high > dtime_TC) or (high > dtime_r1))
+plotshape(bullishenglufing, style = shape.triangleup, location = location.belowbar, color = green, size = size.tiny)
+plotshape(bearishenglufing, style = shape.triangledown, location = location.abovebar, color = red, size = size.tiny)
+if (longCondition)
+    strategy.entry("My Long Entry Id", strategy.long)
+if (shortCondition)
+    strategy.entry("My Short Entry Id", strategy.short)
+    
+backgroundColour = ((close > dtime_r2) ? lime : silver)
+backgroundColour1 = ((close < dtime_s2)  ? maroon : silver)
+bgcolor(color=backgroundColour, transp=85)
+bgcolor(color=backgroundColour1, transp=85)
+Expand (84 lines)

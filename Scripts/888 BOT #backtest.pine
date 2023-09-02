@@ -1,0 +1,1105 @@
+Script Name: 888 BOT #backtest
+Author: UnknownUnicorn2151907
+Description: █ 888 BOT #backtest (open source)
+
+This is an Expert Advisor 'EA' or Automated trading script for ‘longs’ and ‘shorts’, which uses only a Take Profit or, in the worst case, a Stop Loss to close the trade.
+It's a much improved version of the previous ‘Repanocha’. It doesn`t use 'Trailing Stop' or 'security()' functions (although using a security function doesn`t...
+PineScript code:
+
+Pine Script™ strategy
+888 BOT #backtest
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+540
+541
+542
+543
+544
+545
+546
+547
+548
+549
+550
+551
+552
+553
+554
+555
+556
+557
+558
+559
+560
+561
+562
+563
+564
+565
+566
+567
+568
+569
+570
+571
+572
+573
+574
+575
+576
+577
+578
+579
+580
+581
+582
+583
+584
+585
+586
+587
+588
+589
+590
+591
+592
+593
+594
+595
+596
+597
+598
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Xaviz
+//@version=4
+strategy(title = "888 BOT #backtest", shorttitle = "888💹", overlay = true, initial_capital = 10000, pyramiding = 10, currency = "USD",
+   default_qty_type = strategy.percent_of_equity, default_qty_value = 0, commission_value = 0.04)
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ———————————————————— Inputs
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ————— Source input
+src                 = input(hlc3,       title = "  SOURCE",                             type = input.source)
+// ————— JMA inputs
+Act_JMA             = input(true,       title = "JURIK MOVING AVERAGE",                 type = input.bool)
+JMA_length          = input(30,         title = "  JMA LENGTH",                         type = input.integer,   minval = 0)
+phase               = input(40,         title = "  JMA PHASE",                          type = input.integer,   minval = 0)
+power               = input(2.5,        title = "  JMA POWER",                          type = input.float,     minval = 0,     step = 0.5)
+// ————— Range Filter inputs
+Act_RF              = input(true,       title = "RANGE FILTER",                         type = input.bool)
+per                 = input(20,         title = "  SAMPLING PERIOD",                    type = input.integer,   minval = 1)
+mult                = input(1.7,        title = "  RANGE MULTIPLIER",                   type = input.float,     minval = 0.1,   step = 0.1)
+// ————— ADX inputs
+Act_ADX             = input(true,       title = "AVERAGE DIRECTIONAL INDEX",            type = input.bool)
+ADX_options         = input("CLASSIC",  title = "  ADX OPTION",                                                                                 options = ["CLASSIC", "MASANAKAMURA"])
+ADX_len             = input(22,         title = "  ADX LENGTH",                         type = input.integer,   minval = 1)
+th                  = input(20,         title = "  ADX THRESHOLD",                      type = input.float,     minval = 0,     step = 0.5)
+// ————— SAR inputs
+Act_SAR             = input(true,       title = "PARABOLIC SAR",                        type = input.bool)
+Sst                 = input (0.25,      title = "  SAR STAR",                           type = input.float,     minval = 0.01,  step = 0.01)
+Sinc                = input (0.25,      title = "  SAR INC",                            type = input.float,     minval = 0.01,  step = 0.01)
+Smax                = input (0.13,      title = "  SAR MAX",                            type = input.float,     minval = 0.01,  step = 0.01)
+// ————— RSI with volume inputs
+Act_RSI             = input(true,       title = "RSI VOLUME WEIGHTED",                  type = input.bool)
+RSI_len             = input(34,         title = "  RSI LENGHT",                         type = input.integer,   minval = 1)
+RSI_obos            = input(45,         title = "  RSI CENTER LINE",                    type = input.integer,   minval = 1)
+// ————— MACD / MAC-Z inputs
+Act_MACD            = input(true,       title = "MA CONVERGENCE/DIVERGENCE",            type = input.bool)
+MACD_options        = input("MAC-Z",    title = "  MACD OPTION",                                                                                options = ["MACD", "MAC-Z"])
+fastLength          = input(45,         title = "  MACD FAST MA LENGTH",                type = input.integer,   minval = 1)
+slowLength          = input(47,         title = "  MACD SLOW MA LENGTH",                type = input.integer,   minval = 1)
+signalLength        = input(13,         title = "  MACD SIGNAL LENGTH",                 type = input.integer,   minval = 1)
+lengthz             = input(9,          title = "  Z-VWAP LENGTH",                      type = input.integer,   minval = 1)
+lengthStdev         = input(14,         title = "  STDEV LENGTH",                       type = input.integer,   minval = 1)
+// ————— Volume inputs for entries condition and for calculate quantities later
+Act_Vol             = input(true,       title = "VOLUME CONDITION",                     type = input.bool)
+volume_f            = input(1.4,        title = "  VOLUME FACTOR",                      type = input.float,     minval = 0,     step = 0.1)
+sma_length          = input(61,         title = "  SMA VOLUME LENGTH",                  type = input.integer,   minval = 1)
+// ————— First take profit input
+tp_long0            = input(1.7,        title = "  TAKE PROFIT LONG %",                 type = input.float,     minval = 0,     step = 0.1) 
+tp_short0           = input(1.8,        title = "  TAKE PROFIT SHORT %",                type = input.float,     minval = 0,     step = 0.1) 
+// ————— Stop Loss input
+Act_sl              = input(true,       title = "ACTIVATE STOP LOSS 🧻",                type = input.bool)
+SL_options          = input("NORMAL",   title = "  STOP LOSS OPTION",                                                                           options = ["NORMAL", "ATR", "BOTH"])
+sl0                 = input(3.7,        title = "  STOP LOSS %",                        type = input.float,     minval = 0,     step = 0.1)
+// ————— ATR Inputs
+atrPeriod           = input(13,         title = "  ATR SL PERIOD",                      type = input.integer,   minval = 0)
+multiplierPeriod    = input(7.0,        title = "  ATR SL MULTIPLIER",                  type = input.float,     minval = 0,     step = 0.1)
+// ————— Risk input
+Risk                = input(3.5,        title = "  % RISK ALLOWED",                     type = input.float,     minval = 0,     step = 0.5)
+// ————— Confirmed Stop loss
+Act_Conf_SL         = input(false,      title = "STOP LOSS CONFIRMED",                  type = input.bool)
+// ————— Bollinger Bands inputs
+Act_BB              = input(true,       title = "ACTIVATE BOLLINGER BANDS RE-ENTRY 🚀", type = input.bool)
+BB_length           = input(20,         title = "  BB LENGTH",                          type = input.integer,   minval = 1)
+BB_mult             = input(1.9,        title = "  BB MULTIPLIER",                      type = input.float,     minval = 0.001, step = 0.1)
+bbBetterPrice       = input(0.5,        title = "  % MINIMUM BETTER PRICE",             type = input.float,     minval = 0.1,   step = 0.1)
+Act_divide          = input(false,      title = "ACTIVATE DIVIDE TP",                   type = input.bool)
+// ————— Backtest input
+Act_BT              = input(true,       title = "BACKTEST 💹",                          type = input.bool)
+backtest_time       = input(180,        title = "  BACKTEST DAYS",                      type = input.integer,   minval = 1)*24*60*60*1000
+entry_Type          = input("% EQUITY", title = "  ENTRY TYPE",                                                                                 options = ["CONTRACTS","CASH","% EQUITY"])
+et_Factor           = (entry_Type == "CONTRACTS") ? 1 : (entry_Type == "% EQUITY") ? (100/(strategy.equity/close)) : close
+quanTity            = input(8.0,        title = "  QUANTITY (LEVERAGE 1X)",             type = input.float,     minval = 0,     step = 0.5) / et_Factor
+Max_Lev             = input(8,          title = "  MAXIMUM LEVERAGE",                   type = input.integer,   minval = 1,     maxval = 8)   
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ———————————————————— Variables
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ————— Long/Short
+var bool    longCond                    = na,   var bool    shortCond                   = na
+var int     CondIni_long                = 0,    var int     CondIni_short               = 0
+var bool    _Final_longCondition        = na,   var bool    _Final_shortCondition       = na
+var float   last_open_longCondition     = na,   var float   last_open_shortCondition    = na
+var float   last_dynamic_Leverage_long  = na,   var float   last_dynamic_Leverage_short = na
+var int     last_longCondition          = na,   var int     last_shortCondition         = na
+var int     last_Final_longCondition    = na,   var int     last_Final_shortCondition   = na
+var int     nLongs                      = na,   var int     nShorts                     = na
+// ————— Take profit
+var bool    long_tp                     = na,   var bool    short_tp                    = na
+var int     last_long_tp                = na,   var int     last_short_tp               = na
+var bool    Final_Long_tp               = na,   var bool    Final_Short_tp              = na
+// ————— Stop Loss
+var int     CondIni_long_sl             = 0,    var int     CondIni_short_sl            = 0
+var bool    Final_Long_sl0              = na,   var bool    Final_Short_sl0             = na
+var bool    Final_Long_sl               = na,   var bool    Final_Short_sl              = na
+var int     last_long_sl                = na,   var int     last_short_sl               = na
+// ————— Indicators
+var bool    JMA_longCond                = na,   var bool    JMA_shortCond               = na
+var bool    RF_longCond                 = na,   var bool    RF_shortCond                = na
+var bool    ADX_longCond                = na,   var bool    ADX_shortCond               = na
+var bool    SAR_longCond                = na,   var bool    SAR_shortCond               = na
+var bool    RSI_longCond                = na,   var bool    RSI_shortCond               = na
+var bool    MACD_longCond               = na,   var bool    MACD_shortCond              = na
+var bool    VOL_longCond                = na,   var bool    VOL_shortCond               = na
+var bool    JMA_XlongCond               = na,   var bool    JMA_XshortCond              = na
+var bool    RF_XlongCond                = na,   var bool    RF_XshortCond               = na
+var bool    ADX_XlongCond               = na,   var bool    ADX_XshortCond              = na
+var bool    SAR_XlongCond               = na,   var bool    SAR_XshortCond              = na
+var int     CondIni_long_BB             = 0,    var int     CondIni_short_BB            = 0
+var bool    Final_long_BB               = na,   var bool    Final_short_BB              = na
+var int     last_long_BB                = na,   var int     last_short_BB               = na
+// ————— Average Price
+var float   sum_long                    = 0.0,  var float   sum_short                   = 0.0
+var float   Position_Price              = 0.0
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ———————————————————— Jurik Moving Average
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ————— JMA calculation
+JMA(_JMA_length, _phase, _power, _src) =>
+    phaseRatio      = _phase < -100 ? 0.5 : _phase > 100 ? 2.5 : _phase / 100 + 1.5
+    beta            = 0.45 * (_JMA_length - 1) / (0.45 * (_JMA_length - 1) + 2)
+    alpha           = pow(beta, _power)
+    jma             = 0.0
+    e0              = 0.0
+    e0              := (1 - alpha) * _src + alpha * nz(e0[1])
+    e1              = 0.0
+    e1              := (_src - e0) * (1 - beta) + beta * nz(e1[1])
+    e2              = 0.0
+    e2              := (e0 + phaseRatio * e1 - nz(jma[1])) * pow(1 - alpha, 2) + pow(alpha, 2) * nz(e2[1])
+    jma             := e2 + nz(jma[1])
+    
+// ————— Defining JMA trend
+JMA_Rising          = JMA(JMA_length, phase, power, src) > JMA(JMA_length, phase, power, src)[1]
+JMA_Falling         = JMA(JMA_length, phase, power, src) < JMA(JMA_length, phase, power, src)[1]
+// ————— JMA Plotting
+JMA_color           = JMA_Rising ? color.lime : JMA_Falling ? #e91e63 : color.orange
+plot(Act_JMA ? JMA(JMA_length, phase, power, src) : na, color=JMA_color, linewidth = 2, title= "JMA")
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ———————————————————— Range Filter
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ————— Range Filter calculation
+Range_filter(_src, _per, _mult) =>
+    float _upward   = 0.0
+    float _downward = 0.0
+    wper            = (_per*2) - 1
+    avrng           = ema(abs(_src - _src[1]), _per)
+    _smoothrng      = ema(avrng, wper) * _mult
+    _filt           = _src
+    _filt           := _src  > nz(_filt[1]) ? ((_src-_smoothrng) < nz(_filt[1]) ? nz(_filt[1]) : (_src-_smoothrng)) : ((_src+_smoothrng) > nz(_filt[1]) ? nz(_filt[1]) : (_src+_smoothrng))
+    _upward         := _filt > _filt[1]     ? nz(_upward[1])   + 1 : _filt < _filt[1] ? 0 : nz(_upward[1])
+    _downward       := _filt < _filt[1]     ? nz(_downward[1]) + 1 : _filt > _filt[1] ? 0 : nz(_downward[1])
+    [_smoothrng,_filt,_upward,_downward]
+    
+// ————— Defining variables for include in future conditions
+[smoothrng, filt, upward, downward] = Range_filter(src, per, mult)
+// ————— Defining high and low bands
+hband               = filt + smoothrng
+lband               = filt - smoothrng
+// ————— Range Filter Plotting
+filtcolor           = upward > 0 ? color.lime : downward > 0 ? color.red : color.orange
+filtplot            = plot(Act_RF ? filt  : na, color = filtcolor,  linewidth = 1,                  title = "RF")
+hbandplot           = plot(Act_RF ? hband : na, color = filtcolor,                  transp = 50,    title = "RF High Target")
+lbandplot           = plot(Act_RF ? lband : na, color = filtcolor,                  transp = 50,    title = "RF Low Target")
+fill(hbandplot, lbandplot,                      color = filtcolor,                                  title = "RF Target Range")
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ———————————————————— ADX
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ————— Classic ADX calculating
+calcADX(_len) =>
+    up              = change(high)
+    down            = -change(low)
+    plusDM          = na(up)   ? na : (up > down and up > 0   ? up   : 0)
+    minusDM         = na(down) ? na : (down > up and down > 0 ? down : 0)
+    truerange       = rma(tr, _len)
+    _plus           = fixnan(100 * rma(plusDM, _len)  / truerange)
+    _minus          = fixnan(100 * rma(minusDM, _len) / truerange)
+    sum             = _plus + _minus
+    _adx            = 100 * rma(abs(_plus - _minus) / (sum == 0 ? 1 : sum), _len)
+    [_plus,_minus,_adx]
+// ————— Masanakamura ADX calculating
+calcADX_Masanakamura(_len) =>
+    SmoothedTrueRange                   = 0.0
+    SmoothedDirectionalMovementPlus     = 0.0
+    SmoothedDirectionalMovementMinus    = 0.0
+    TrueRange                           = max(max(high - low, abs(high - nz(close[1]))), abs(low - nz(close[1])))
+    DirectionalMovementPlus             = high - nz(high[1]) > nz(low[1]) - low ? max(high - nz(high[1]), 0) : 0
+    DirectionalMovementMinus            = nz(low[1]) - low > high - nz(high[1]) ? max(nz(low[1]) - low, 0)   : 0
+    SmoothedTrueRange                   := nz(SmoothedTrueRange[1]) - (nz(SmoothedTrueRange[1]) /_len) + TrueRange
+    SmoothedDirectionalMovementPlus     := nz(SmoothedDirectionalMovementPlus[1])  - (nz(SmoothedDirectionalMovementPlus[1])  / _len) + DirectionalMovementPlus
+    SmoothedDirectionalMovementMinus    := nz(SmoothedDirectionalMovementMinus[1]) - (nz(SmoothedDirectionalMovementMinus[1]) / _len) + DirectionalMovementMinus
+    DIP                                 = SmoothedDirectionalMovementPlus  / SmoothedTrueRange * 100
+    DIM                                 = SmoothedDirectionalMovementMinus / SmoothedTrueRange * 100
+    DX                                  = abs(DIP-DIM) / (DIP+DIM)*100
+    adx                                 = sma(DX, _len)
+    [DIP,DIM,adx]
+ // ————— Defining variables for include in future conditions   
+[DIPlusC,DIMinusC,ADXC] = calcADX(ADX_len) 
+[DIPlusM,DIMinusM,ADXM] = calcADX_Masanakamura(ADX_len)
+DIPlus                  = ADX_options == "CLASSIC" ? DIPlusC    : DIPlusM
+DIMinus                 = ADX_options == "CLASSIC" ? DIMinusC   : DIMinusM
+ADX                     = ADX_options == "CLASSIC" ? ADXC       : ADXM
+// ————— Plotting ADX bar colors
+ADX_color = DIPlus > DIMinus and ADX > th ? color.green : DIPlus < DIMinus and ADX > th ? color.red : color.orange
+barcolor(color = Act_ADX ? ADX_color : na, title = "ADX")
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ———————————————————— SAR
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ————— SAR calculation from TV
+SAR = sar(Sst, Sinc, Smax)
+// ————— SAR Plotting
+plot(Act_SAR ? SAR : na, color = ADX_color, style = plot.style_circles, title = "SAR") 
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ———————————————————— RSI with Volume
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ————— RSI with volume calculation
+WiMA(_src, W_length) => 
+    var float MA_s  = 0.0
+    MA_s            :=(_src + nz(MA_s[1] * (W_length-1)))/W_length
+    MA_s
+RSI_Volume(fv, _length) =>  
+    up              = iff(fv > fv[1], abs(fv - fv[1]) * volume, 0)
+    dn              = iff(fv < fv[1], abs(fv - fv[1]) * volume, 0)
+    upt             = WiMA(up,_length)
+    dnt             = WiMA(dn,_length)
+    100 * (upt / (upt + dnt))
+// ————— Defining variable for include in conditions
+RSI_V               = RSI_Volume(src, RSI_len)
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ———————————————————— MACD
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ————— MAC-Z calculation
+calc_zvwap(pds) =>
+    mean            = sum(volume * close, pds) / sum(volume, pds)
+    vwapsd          = sqrt(sma(pow(close - mean, 2), pds))
+    (close - mean ) / vwapsd
+zscore              = calc_zvwap(lengthz)
+fastMA              = sma(src, fastLength)
+slowMA              = sma(src, slowLength)
+macd                = fastMA - slowMA
+macz                = zscore + macd / stdev(src, lengthStdev)
+signal              = sma(macz, signalLength)
+histmacz            = macz - signal
+// ————— MACD calculation
+[_,_,histmacd]      = macd(src,  fastLength, slowLength, signalLength)
+hist                = MACD_options == "MACD" ? histmacd : histmacz
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ———————————————————— Strategy
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ————— All indicators with long conditions and enable/disable option
+JMA_longCond        := (Act_JMA     ? (JMA_Rising)                                  : VOL_longCond) 
+RF_longCond         := (Act_RF      ? (high > hband and upward > 0)                 : JMA_longCond)
+ADX_longCond        := (Act_ADX     ? (DIPlus > DIMinus and ADX > th)               : RF_longCond)
+SAR_longCond        := (Act_SAR     ? (SAR < close)                                 : ADX_longCond)
+RSI_longCond        := (Act_RSI     ? (RSI_V > RSI_obos)                            : SAR_longCond)
+MACD_longCond       := (Act_MACD    ? (hist > 0)                                    : RSI_longCond)
+VOL_longCond        := (Act_Vol     ? (volume > sma(volume,sma_length) * volume_f)  : MACD_longCond)
+// ————— All indicators with short conditions and enable/disable option
+JMA_shortCond       := (Act_JMA     ? (JMA_Falling)                                 : VOL_shortCond) 
+RF_shortCond        := (Act_RF      ? (low < lband and downward > 0)                : JMA_shortCond)
+ADX_shortCond       := (Act_ADX     ? (DIPlus < DIMinus and ADX > th)               : RF_shortCond)
+SAR_shortCond       := (Act_SAR     ? (SAR > close)                                 : ADX_shortCond)
+RSI_shortCond       := (Act_RSI     ? (RSI_V < RSI_obos)                            : SAR_shortCond)
+MACD_shortCond      := (Act_MACD    ? (hist < 0)                                    : RSI_shortCond)
+VOL_shortCond       := (Act_Vol     ? (volume > sma(volume,sma_length) * volume_f)  : MACD_shortCond)
+// ————— Defining long/short condition from indicators + volume
+longCond            := JMA_longCond  and RF_longCond  and ADX_longCond  and SAR_longCond  and RSI_longCond  and MACD_longCond  and VOL_longCond
+shortCond           := JMA_shortCond and RF_shortCond and ADX_shortCond and SAR_shortCond and RSI_shortCond and MACD_shortCond and VOL_shortCond
+// ————— Avoiding confirmed long/short simultaneity
+CondIni_long        := longCond[1] ? 1 : shortCond[1] ? -1 : nz(CondIni_long[1])
+CondIni_short       := longCond[1] ? 1 : shortCond[1] ? -1 : nz(CondIni_short[1])
+// ————— Confirmed long/short conditions
+longCondition       = (longCond[1]  and nz(CondIni_long[1])  == -1)
+shortCondition      = (shortCond[1] and nz(CondIni_short[1]) == 1)
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ———————————————————— Position Price
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ————— Last opened long/short price on unconfirmed/confirmed conditions
+last_open_longCondition     := longCondition  or Final_long_BB[1]  ? close[1] : nz(last_open_longCondition[1])
+last_open_shortCondition    := shortCondition or Final_short_BB[1] ? close[1] : nz(last_open_shortCondition[1])
+// ————— Check if your last position was a confirmed long or a short
+last_longCondition          := longCondition  or Final_long_BB[1]  ? time : nz(last_longCondition[1])
+last_shortCondition         := shortCondition or Final_short_BB[1] ? time : nz(last_shortCondition[1])
+in_longCondition            = last_longCondition  > last_shortCondition
+in_shortCondition           = last_shortCondition > last_longCondition
+// ————— Check if your last position was a confirmed final long or short without BB
+last_Final_longCondition    := longCondition  ? time : nz(last_Final_longCondition[1])
+last_Final_shortCondition   := shortCondition ? time : nz(last_Final_shortCondition[1])
+// ————— Counting long & short iterations
+nLongs                      := nz(nLongs[1])
+nShorts                     := nz(nShorts[1])
+// ————— Longs Counter
+if longCondition or Final_long_BB
+    nLongs                  := nLongs + 1
+    nShorts                 := 0
+    sum_long                := nz(last_open_longCondition) + nz(sum_long[1])
+    sum_short               := 0.0
+    
+// ————— Shorts Counter
+if shortCondition or Final_short_BB
+    nLongs                  := 0
+    nShorts                 := nShorts + 1
+    sum_short               := nz(last_open_shortCondition) + nz(sum_short[1])
+    sum_long                := 0.0
+// ————— Calculating and Plotting the price average
+Position_Price              := nz(Position_Price[1])
+Position_Price              := longCondition or Final_long_BB ? sum_long/nLongs : shortCondition or Final_short_BB ? sum_short/nShorts : na
+plot((nLongs > 1) or (nShorts > 1) ? Position_Price : na, title = "Average Price", color = in_longCondition ? color.aqua : color.orange, linewidth = 2, style = plot.style_cross)
+    
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ———————————————————— Take Profit
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ————— Take Profit divided by n entries
+tp_long             = (Act_divide and (nLongs  > 1) ? tp_long0  / nLongs  : tp_long0)  / 100
+tp_short            = (Act_divide and (nShorts > 1) ? tp_short0 / nShorts : tp_short0) / 100
+// ————— First TP Conditions
+long_tp             := high > (fixnan(Position_Price) * (1 + tp_long))  and in_longCondition
+short_tp            := low  < (fixnan(Position_Price) * (1 - tp_short)) and in_shortCondition
+// ————— Get the time of the last tp close
+last_long_tp        := long_tp  ? time : nz(last_long_tp[1])
+last_short_tp       := short_tp ? time : nz(last_short_tp[1])
+// ————— Final Take profit condition (never after the stop loss)
+Final_Long_tp       := (long_tp  and last_longCondition  > nz(last_long_tp[1])  and last_longCondition  > nz(last_long_sl[1]))
+Final_Short_tp      := (short_tp and last_shortCondition > nz(last_short_tp[1]) and last_shortCondition > nz(last_short_sl[1]))
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ———————————————————— Stop Loss
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ————— Stop Loss ATR calculation
+ATR_SL_Long         = low  - atr(atrPeriod) * multiplierPeriod
+ATR_SL_Short        = high + atr(atrPeriod) * multiplierPeriod
+longStopPrev        = nz(ATR_SL_Long[1], ATR_SL_Long)
+shortStopPrev       = nz(ATR_SL_Short[1], ATR_SL_Short)
+ATR_SL_Long         := close[1] > longStopPrev  ? max(ATR_SL_Long, longStopPrev)   : ATR_SL_Long
+ATR_SL_Short        := close[1] < shortStopPrev ? min(ATR_SL_Short, shortStopPrev) : ATR_SL_Short
+// ————— Calculating Sl according Risk and Initial Capital
+sl = in_longCondition ?      
+     min(sl0, (((Risk / (100 / (strategy.equity / close)))*100) / (quanTity * max(1, last_dynamic_Leverage_long)  * max(1, nLongs)))) : 
+     min(sl0, (((Risk / (100 / (strategy.equity / close)))*100) / (quanTity * max(1, last_dynamic_Leverage_short) * max(1, nShorts))))
+      
+// ————— Stop Loss long conditions
+Normal_long_sl      = Act_Conf_SL ?  ((SL_options == "NORMAL") ? ((Act_sl and in_longCondition  and close <= ((1 - (sl / 100)) * (fixnan(Position_Price))))) : na) :
+                                     ((SL_options == "NORMAL") ? ((Act_sl and in_longCondition  and low   <= ((1 - (sl / 100)) * (fixnan(Position_Price))))) : na)
+ATR_long_sl         = Act_Conf_SL ?  ((SL_options == "ATR") ?    ((Act_sl and in_longCondition  and close <= (ATR_SL_Long))) : na) :
+                                     ((SL_options == "ATR") ?    ((Act_sl and in_longCondition  and low   <= (ATR_SL_Long))) : na)
+Both_long_sl        = Act_Conf_SL ?  ((SL_options == "BOTH") ?   ((Act_sl and in_longCondition  and close <= ((1 - (sl / 100)) * (fixnan(Position_Price)))) or 
+                                                                 ((Act_sl and in_longCondition  and close <= (ATR_SL_Long)))) : na) :
+                                     ((SL_options == "BOTH") ?   ((Act_sl and in_longCondition  and low   <= ((1 - (sl / 100)) * (fixnan(Position_Price)))) or 
+                                                                 ((Act_sl and in_longCondition  and low   <= (ATR_SL_Long)))) : na)
+// ————— Stop Loss short conditions
+Normal_short_sl     = Act_Conf_SL ?  ((SL_options == "NORMAL") ? ((Act_sl and in_shortCondition and close >= ((1 + (sl / 100)) * (fixnan(Position_Price))))) : na) :
+                                     ((SL_options == "NORMAL") ? ((Act_sl and in_shortCondition and high  >= ((1 + (sl / 100)) * (fixnan(Position_Price))))) : na)
+ATR_short_sl        = Act_Conf_SL ?  ((SL_options == "ATR") ?    ((Act_sl and in_shortCondition and close >= (ATR_SL_Short))) : na) :
+                                     ((SL_options == "ATR") ?    ((Act_sl and in_shortCondition and high  >= (ATR_SL_Short))) : na)
+Both_short_sl       = Act_Conf_SL ?  ((SL_options == "BOTH") ?   ((Act_sl and in_shortCondition and close >= ((1 + (sl/100)) * (fixnan(Position_Price)))) or 
+                                                                 ((Act_sl and in_shortCondition and close >= (ATR_SL_Short)))) : na) :
+                                     ((SL_options == "BOTH") ?   ((Act_sl and in_shortCondition and high  >= ((1 + (sl/100)) * (fixnan(Position_Price)))) or 
+                                                                 ((Act_sl and in_shortCondition and high  >= (ATR_SL_Short)))) : na)
+// ————— Get the time of the last sl close
+last_long_sl        := Normal_long_sl  or ATR_long_sl  or Both_long_sl  ? time : nz(last_long_sl[1])
+last_short_sl       := Normal_short_sl or ATR_short_sl or Both_short_sl ? time : nz(last_short_sl[1])
+// ————— Final Stop Loss condition
+Final_Long_sl       := (Normal_long_sl  or ATR_long_sl  or Both_long_sl)  and last_longCondition  > nz(last_long_sl[1])  and last_longCondition  > nz(last_long_tp[1])  and not Final_Long_tp
+Final_Short_sl      := (Normal_short_sl or ATR_short_sl or Both_short_sl) and last_shortCondition > nz(last_short_sl[1]) and last_shortCondition > nz(last_short_tp[1]) and not Final_Short_tp
+//Plottin ATR SL
+plot(Act_sl and (SL_options != "NORMAL") ? in_longCondition ? ATR_SL_Long[1] : ATR_SL_Short[1] : na, title = "ATR SL", color = color.purple)
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ————————————————————  Bollinger Bands Re-entry
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+BB_basis            = sma(src, BB_length)
+BB_dev              = BB_mult  * stdev(src, BB_length)
+BB_upper            = BB_basis + BB_dev
+BB_lower            = BB_basis - BB_dev
+u_BB                = plot(Act_BB ? BB_upper : na,  title = "Upper Bollinger Band",      color = #009688, linewidth = 2)
+l_BB                = plot(Act_BB ? BB_lower : na,  title = "Lower Bollinger Band",      color = #f06292, linewidth = 2)
+fill(u_BB, l_BB,                                    title = "Bollinger Band Background", color = in_longCondition ? #009688 : #f06292, transp = 95)
+// ————— Initial Bollinger Bands conditions
+BB_long             = Act_BB and in_longCondition  and not (DIPlus < DIMinus and ADX > th) and (close <= BB_lower) and (close < last_open_longCondition  * (1 - (bbBetterPrice / 100)))
+BB_short            = Act_BB and in_shortCondition and not (DIPlus > DIMinus and ADX > th) and (close >= BB_upper) and (close > last_open_shortCondition * (1 + (bbBetterPrice / 100)))
+// ————— Get the time of the last BB close
+last_long_BB        := BB_long  ? time : nz(last_long_BB[1])
+last_short_BB       := BB_short ? time : nz(last_short_BB[1])
+// ————— Final Bollinger Bands condition for long
+Final_long_BB       := BB_long and last_Final_longCondition > nz(last_long_BB[1]) and 
+                       last_longCondition > nz(last_long_tp[1]) and 
+                       last_longCondition > nz(last_long_sl[1]) and not Final_Long_sl
+// ————— Final Bollinger Bands condition for short                 
+Final_short_BB      := BB_short and last_Final_shortCondition > nz(last_short_BB[1]) and 
+                       last_shortCondition > nz(last_short_tp[1]) and 
+                       last_shortCondition > nz(last_short_sl[1]) and not Final_Short_sl
+// ————— Final confirmed Re-entries on long & short conditions
+Final_Long_BB = Final_long_BB[1]
+Final_Short_BB = Final_short_BB[1]
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ————————————————————  Signal Plotting
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ————— TP Long Levels
+tplLevel            = (in_longCondition and 
+                      (last_longCondition > nz(last_long_tp[1])) and 
+                      (last_longCondition > nz(last_long_sl[1])) and not Final_Long_sl[1]) ? 
+                      (nLongs > 1) ? 
+                      (fixnan(Position_Price) * (1 + tp_long)) : (last_open_longCondition * (1 + tp_long)) : na
+plot(tplLevel,            title = "Long TP Level",       style = plot.style_circles,                                   color = color.lime,  linewidth = 2)
+tpsLevel            = (in_shortCondition and 
+                      (last_shortCondition > nz(last_short_tp[1])) and 
+                      (last_shortCondition > nz(last_short_sl[1])) and not Final_Short_sl[1]) ? 
+                      (nShorts > 1) ? 
+                      (fixnan(Position_Price) * (1 - tp_short)) : (last_open_shortCondition * (1 - tp_short)) : na
+plot(tpsLevel,            title = "Short TP Level",      style = plot.style_circles,                                   color = color.red,   linewidth = 2)
+// ————— Weekend
+W_color             = (dayofweek == dayofweek.sunday or dayofweek == dayofweek.saturday) ? color.white : na
+bgcolor(W_color,          title = "Weekend",    transp = 95)
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ————————————————————  Re-entry Conditions
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ————— Re-entry on long after tp, sl or Xlong
+if Final_Long_tp or Final_Long_sl
+    CondIni_long    := -1
+    sum_long        := 0.0
+    nLongs          := na
+    
+// ————— Re-entry on short after tp, sl or Xshort
+if Final_Short_tp or Final_Short_sl
+    CondIni_short   := 1
+    sum_short       := 0.0
+    nShorts         := na
+    
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ————————————————————  Backtest
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ————— Defining new final unconfirmed long conditions
+_longCondition      = (longCond and not in_longCondition) or 
+                      (longCond and Final_Long_tp) or 
+                      (longCond and Final_Long_sl) or
+                      (longCond and not longCondition and (last_long_tp >= nz(last_longCondition))) or 
+                      (longCond and not longCondition and (last_long_sl >= nz(last_longCondition)))
+   
+// ————— Defining new final unconfirmed short conditions
+_shortCondition     = (shortCond and not in_shortCondition) or 
+                      (shortCond and Final_Short_tp) or 
+                      (shortCond and Final_Short_sl) or 
+                      (shortCond and not shortCondition and (last_short_tp >= nz(last_shortCondition))) or 
+                      (shortCond and not shortCondition and (last_short_sl >= nz(last_shortCondition)))
+// ————— Test period declaration
+testPeriod = time >= timenow - backtest_time
+// ————— Volume Factor for determine quantities
+Volume_Factor_Leverage      = min(Max_Lev, max(1, round(volume / sma(volume, sma_length))))
+last_dynamic_Leverage_long  := _longCondition ? Volume_Factor_Leverage  : nz(last_dynamic_Leverage_long[1])
+last_dynamic_Leverage_short := _shortCondition ? Volume_Factor_Leverage : nz(last_dynamic_Leverage_short[1])
+// ————— Entering long positions
+if (_longCondition)
+    strategy.entry("long", strategy.long, qty = Volume_Factor_Leverage * quanTity, when = Act_BT and testPeriod)
+if (Final_long_BB)
+    strategy.entry("long", strategy.long, qty = last_dynamic_Leverage_long * quanTity, when = Act_BT and testPeriod)
+   
+// ————— Entering short positions
+if (_shortCondition) 
+    strategy.entry("short", strategy.short, qty = Volume_Factor_Leverage * quanTity, when = Act_BT and testPeriod)
+if (Final_short_BB) 
+    strategy.entry("short", strategy.short, qty = last_dynamic_Leverage_short * quanTity, when = Act_BT and testPeriod)
+// ————— Closing positions with first long TP
+strategy.exit("Tpl", "long", 
+   profit   = (abs((last_open_longCondition  * (1 + tp_long)) - last_open_longCondition) / syminfo.mintick), 
+   limit    = nLongs >= 1 ? strategy.position_avg_price * (1 + tp_long) : na,
+   loss     = Act_Conf_SL == false ? 
+             (iff(Act_sl and (SL_options == "NORMAL"), (abs((last_open_longCondition*(1-(sl/100)))-last_open_longCondition)/syminfo.mintick), 
+             iff(Act_sl  and (SL_options == "ATR"), (abs(ATR_SL_Long-last_open_longCondition)/syminfo.mintick), 
+             iff(Act_sl  and (SL_options == "BOTH") and ((abs((last_open_longCondition*(1-(sl/100)))-last_open_longCondition)/syminfo.mintick) < 
+             (abs(ATR_SL_Long-last_open_longCondition)/syminfo.mintick)), (abs((last_open_longCondition*(1-(sl/100)))-last_open_longCondition)/syminfo.mintick),
+             iff(Act_sl  and (SL_options == "BOTH") and ((abs((last_open_longCondition*(1-(sl/100)))-last_open_longCondition)/syminfo.mintick) > 
+             (abs(ATR_SL_Long-last_open_longCondition)/syminfo.mintick)), (abs(ATR_SL_Long-last_open_longCondition)/syminfo.mintick), na))))) : na,
+   stop     = Act_Conf_SL == false and nLongs >= 1 ? 
+             (iff(Act_sl and (SL_options == "NORMAL"), ((1-(sl/100))*strategy.position_avg_price),
+             iff(Act_sl  and (SL_options == "ATR"), ATR_SL_Long, 
+             iff(Act_sl  and (SL_options == "BOTH") and (((1-(sl/100))*strategy.position_avg_price) > ATR_SL_Long), ((1-(sl/100))*strategy.position_avg_price), 
+             iff(Act_sl  and (SL_options == "BOTH") and (((1-(sl/100))*strategy.position_avg_price) < ATR_SL_Long), ATR_SL_Long, na))))) : na)
+// Canceling long exit orders to avoid simultaneity with re-entry
+strategy.cancel("Tpl", when = Final_long_BB)
+// ————— Closing positions with first short TP
+strategy.exit("Tps", "short",
+   profit   = (abs((last_open_shortCondition * (1 - tp_short)) - last_open_shortCondition) / syminfo.mintick), 
+   limit    = nShorts >= 1 ? strategy.position_avg_price*(1-(tp_short)) : na,
+   loss     = Act_Conf_SL == false ? 
+             (iff(Act_sl and (SL_options == "NORMAL"), (abs((last_open_shortCondition*(1+(sl/100)))-last_open_shortCondition)/syminfo.mintick), 
+             iff(Act_sl  and (SL_options == "ATR"), (abs(ATR_SL_Short-last_open_shortCondition)/syminfo.mintick), 
+             iff(Act_sl  and (SL_options == "BOTH") and ((abs((last_open_shortCondition*(1+(sl/100)))-last_open_shortCondition)/syminfo.mintick) < 
+             (abs(ATR_SL_Short-last_open_shortCondition)/syminfo.mintick)), (abs((last_open_shortCondition*(1+(sl/100)))-last_open_shortCondition)/syminfo.mintick),
+             iff(Act_sl  and (SL_options == "BOTH") and ((abs((last_open_shortCondition*(1+(sl/100)))-last_open_shortCondition)/syminfo.mintick) > 
+             (abs(ATR_SL_Short-last_open_shortCondition)/syminfo.mintick)), (abs(ATR_SL_Short-last_open_shortCondition)/syminfo.mintick), na))))) : na,
+   stop     = Act_Conf_SL == false and nShorts >= 1 ? 
+             (iff(Act_sl and (SL_options == "NORMAL"), ((1+(sl/100))*strategy.position_avg_price),
+             iff(Act_sl  and (SL_options == "ATR"), ATR_SL_Short, 
+             iff(Act_sl  and (SL_options == "BOTH") and (((1+(sl/100))*strategy.position_avg_price) < ATR_SL_Short), ((1+(sl/100))*strategy.position_avg_price),
+             iff(Act_sl  and (SL_options == "BOTH") and (((1+(sl/100))*strategy.position_avg_price) > ATR_SL_Short), ATR_SL_Short, na))))) : na)
+// Canceling short exit orders to avoid simultaneity with re-entry
+strategy.cancel("Tps", when = Final_short_BB)
+// ————— Closing all positions with Xlong/Xshort
+strategy.close_all(when = (Final_Long_sl and Act_Conf_SL) or (Final_Short_sl and Act_Conf_SL))
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+// ————————————————————  by Xaviz
+Expand (598 lines)

@@ -1,0 +1,111 @@
+Script Name: DUAL RSI
+Author: HermanBrummer
+Description: This system uses two RSI's with different settings
+  Fast RSI Lenght is 16, buys when RSI price is oversold @ 91 or lower, and sells when RSI price is overbought at 70
+  Slow RSI Lenght is 31, buys when RSI price is oversold @ 91 or lower, and sells when RSI price is overbought at 68
+ 
+
+ 
+  Pyramiding is set to 2 since each system should be able to trade in the...
+PineScript code:
+
+Pine Script™ strategy
+DUAL RSI
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+//  @version=4
+//  © HermanBrummer
+//  This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+strategy("DUAL RSI", "RSI", 1, pyramiding=2)
+///     USES TWO RSI'S BOTH OF THEM CAN TRADE IN THE SAME DIRECTION AT THE SAME TIME -- ONE SLOW RSI, AND ONE FAST RSI
+///     BOTH RSI'S HAVE DIFFERENT LENGHTS ONE IS FAST AND HAS A SETTTING OF 16 ONE IS SLOW AND HAS A SETTING OF 31
+///     BOTH RSI'S HAVE DIFERENT EXIT PARAMETERS
+///     PYRAMIDING ALLOWS THE SYSTEM TO BUY ONE DO ONE SLOW RSI AND ONE FAST RSI BUY ON THE SAME DAY
+///     FASTRSI     EXITS AT 70 RSI LEVEL
+///     SLOW RSI    EXITS AT 68 RSI LEVEL
+FastRSILen      = input( 16 )
+SlowRSILen      = input( 31 )
+overSold        = input( 91 )
+FastRsi         = rsi(ohlc4, FastRSILen)
+SlowRsi         = rsi(ohlc4, SlowRSILen)
+aboveMaFilter   = close > sma(close, 200)
+StopLossLine    = strategy.position_avg_price * .90
+plot(StopLossLine, "StopLossLine", #ff0000)
+// plot(FastRsi, "FastRsi", color.yellow, 2)
+// plot(SlowRsi, "SlowRsi", color.purple, 2)
+FastBuy         = FastRsi < overSold and aboveMaFilter //and strategy.position_size != 1
+SlowBuy         = SlowRsi < overSold and aboveMaFilter //and strategy.position_size != 1
+//     FAST_BUY
+strategy.entry("Fast Enter", true, when=FastBuy)
+    
+if  FastRsi > 70    /// SELLS IF RSI == 75
+    strategy.close("Fast Enter", comment="Fast Exit")
+    
+strategy.exit("Stop Loss", "Fast Enter", stop=StopLossLine)       
+// // ///     SLOW_BUY
+strategy.entry("Slow Enter", true, when=SlowBuy)
+    
+strategy.exit("Stop Loss", "Slow Enter", stop=StopLossLine)       
+if  SlowRsi > 68    /// SELLS IF RSI == 68
+    strategy.close("Slow Enter", comment="Slow Exit")
+Expand (61 lines)

@@ -1,0 +1,174 @@
+Script Name: Doji swing strategy
+Author: SoftKill21
+Description: This is a simple strategy based on Doji star candlestick
+
+This strategy is suited for big time frames, like 4h -1Day and so on.
+
+
+
+It places two orders: long at doji star high or previous candle high and short at doji star low or previous candle low.
+It can also be applied volume average, in order to filter between trades .
+This strategy works very well with high...
+PineScript code:
+
+Pine Script™ strategy
+Doji swing strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+//@version=4
+//This is a simple strategy based on Doji star candlestick
+//It places two orders: long at doji star high or previous candle high and short at doji star low or previous candle low.
+//This strategy works very well with high time frames like Weekly TF because it eliminates the noise in doji formation.
+//
+strategy("Doji strategy ", overlay=true, calc_on_every_tick=true, pyramiding=0, default_qty_type=strategy.percent_of_equity, default_qty_value=1)
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2000, title = "From Year", minval = 1970)
+ //monday and session 
+// To Date Inputs
+toDay = input(defval = 31, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 12, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2020, title = "To Year", minval = 1970)
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate 
+//INPUTS
+//MinDistance=input(100,'Minimum distance in ticks')
+Use_SL_TP = input(true, 'Use stop loss and take profit?')
+TP = input(200, 'Take Profit in ticks')
+SL = input(200, 'Stop Loss in tiks')
+Doji = input(0.05, minval=0.01, title="Doji size", step=0.01)
+LongCandleRatio = input(0.7, 'Long candle ratio', step=0.1, maxval=1)
+UseVolumeFilter = input(false, 'Use Volume as filter (reccomended on lower TFs)')
+VolumeMA = input(24, 'Moving Average of Volume e.g. TF 1h - MA suggested is 24', step=1)
+//VARIABILI
+body = close - open
+range = high - low
+abody = abs(body)
+ratio = abody / range
+longcandle = ratio > LongCandleRatio
+//Doji
+data = abs(open - close) <= (high - low) * Doji
+plotchar(data, title="Doji", text='Doji', color=color.black)
+longDist = longcandle[1] and range[1] > range ? high : max(high, high[1])
+shortDist = longcandle[1] and range[1] > range ? low : min(low, low[1])
+dojilow = data == 1 ? low : na
+dojihigh = data == 1 ? high : na
+ema_1 = ema(volume, VolumeMA)
+goStar = data == 1 and time_cond ? UseVolumeFilter == false ? true : volume > ema_1 ? true : false : 
+   false
+//////////////////////////////////////////////////////////////////
+//STRATEGY
+//MONEY MANAGEMENT--------------------------------------------------------------
+balance = strategy.netprofit + strategy.initial_capital //current balance
+floating = strategy.openprofit          //floating profit/loss
+risk = input(0.1,type=input.float,title="Risk %")/100           //risk % per trade
+    //Calculate the size of the next trade
+temp01 = balance * risk     //Risk in USD
+temp02 = temp01/SL        //Risk in lots
+temp03 = temp02*100000      //Convert to contracts
+size = temp03 - temp03%1000 //Normalize to 1000s (Trade size)
+if(size < 1000)
+    size := 1000           //Set min. lot size
+    
+    
+if(strategy.opentrades==0)
+    strategy.order("long", true,size, stop=longDist, oca_type=strategy.oca.cancel, oca_name="Dojy Entry", when=goStar)
+    strategy.order("short", false,size, stop=shortDist, oca_type=strategy.oca.cancel, oca_name="Dojy Entry", when=goStar)
+    
+    strategy.exit("exit buy", "long", loss=SL, profit=TP, when=Use_SL_TP)
+    strategy.exit("exit sell", "short", loss=SL, profit=TP, when=Use_SL_TP)
+strategy.close("long")
+strategy.close('short')
+strategy.close("long", when=not Use_SL_TP and close < dojilow)
+strategy.exit("exit buy", "long", profit=TP, when=not Use_SL_TP)
+strategy.close("short", when=not Use_SL_TP and close > dojihigh)
+strategy.exit("exit sell", "short", profit=TP, when=not Use_SL_TP)
+Expand (88 lines)

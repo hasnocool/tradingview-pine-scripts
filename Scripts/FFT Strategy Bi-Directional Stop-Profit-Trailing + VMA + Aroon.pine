@@ -1,0 +1,867 @@
+Script Name: FFT Strategy Bi-Directional Stop-Profit-Trailing + VMA + Aroon
+Author: Gentleman-Goat
+Description: This strategy uses the  Fast Fourier Transform  inspired from the source code of  @tbiktag  for the Fast Fourier Transform &  @lazybear  for the VMA filter.
+
+If you are not familiar with the  Fast Fourier transform  it is a variation of the Discrete Fourier Transform.   Veritasium  on youtube has a great video on it with a follow up recommendation from...
+PineScript code:
+
+Pine Script™ strategy
+FFT Strategy Bi-Directional Stop/Profit/Trailing + VMA + Aroon
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Gentleman-Goat
+// credit to tbiktag for FFT
+// credit to lazybear for VMA
+// House Rules: This code borrows from the user tbiktag's source code (many thanks for making it open source!) and what I did was modify it slightly and turned it into a strategy.  His notes regarding it are below.  I also borrowed and revised lazybears variable moving average (thank you as well!)
+// tbiktag --notes below regarding usage
+// This tool computes the one-dimensional N-point discrete Fourier Transform 
+// (DFT) with the efficient Fast Fourier Transform (FFT) algorithm.
+// 
+// The tool uses FFT to decompose the input time series into its 
+// periodic constituents and seasonalities, in other words, its frequency 
+// components. 
+//
+// Subsequently it allows reconstructing the time-domain data while using 
+// only the frequency components within a user-defined range (band-pass filtering). 
+// Thereby, this tool can reveal the cyclical characteristics of the studied market,
+// and also remove high-frequency noise from the time series.
+// -- end tbiktag notes
+//@version=5
+strategy(title="FFT Strategy",shorttitle = "FFT Strat", overlay=false,max_lines_count=500,max_labels_count = 500,max_bars_back=5000,initial_capital = 1000,default_qty_type = strategy.percent_of_equity,default_qty_value = 100,calc_on_every_tick = false,process_orders_on_close=true)
+import tbiktag/FFTLibrary/1 as fft
+//-- FFT --
+src = input.source(title='Source', defval=ohlc4, group='Fourier Input', inline='linei1')
+N = input.int(title='Length', defval=128, options=[8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096], group='Fourier Input', tooltip='Source and number of elements in the input dataset', inline='linei1')
+ispp = input.bool(title='Standardize Input Dataset', defval=true, group='Fourier Input', tooltip='Subtracts the mean of the data set from each element and normalizes the result ' + 'by the standard deviation')
+freqdomain = input.bool(title='Show Frequency-Domain Power Spectrum', defval=false, group='Fourier Output', tooltip='Plots the frequency spectrum of the squared magnitudes ' + 'of the Fourier coefficients (which are a measure of spectral power). ' + 'Zero frequency is omitted.')
+istable = input.bool(title='Dominant Cycles, Rows:', defval=false, group='Fourier Output', inline='lineo1')
+ntabfreqs = input.int(title='', defval=5, minval=1, group='Fourier Output', inline='lineo1', tooltip='Shows the table with the info about N most significant freqeuncy components. \n' + '-1st column: component number (N) \n' + '-2nd column: period of the component (in the units of input data resolution)  \n' + '-3d column:  relative power (normalized to the maximum power)')
+//timedomain = input.bool(title='Show Inverse Fourier Transform (Filtered)', defval=false, group='Fourier Output', tooltip='Reconstructs and plots the dataset in the time domain, blocking ' + 'frequency components outside of the cutoff frequencies defined below.')
+ismoving = input.bool(title='Apply FFT Filter in a Moving Window', defval=true, group='Fourier Output', tooltip='Applies the filter for each bar within ' + 'the time range defined below.')
+islowthrs = input.bool(title='', defval=true, group='Filtered Fourier Components', inline='linef1')
+N_first = input.int(title='Lowest Allowed N', defval=1, minval=0, group='Filtered Fourier Components', tooltip='The number of the lowest frequency component allowed to pass. ' + 'Frequency components above it will be blocked.', inline='linef1')
+ishghthrs = input.bool(title='', defval=true, group='Filtered Fourier Components', inline='linef2')
+N_last = input.int(title='Highest Allowed N ', defval=12, minval=0, group='Filtered Fourier Components', tooltip='The number of the highest frequency component allowed to pass. ' + 'Frequency components above it will be blocked.', inline='linef2')
+fixedstart = input.bool(title='', group='Fourier Filtering Time Range', inline='linebac1', defval=false)
+filter_start = input.time(title='', inline='linebac1', group='Fourier Filtering Time Range', defval=timestamp('01 Jan 2020 13:30 +0000'), tooltip='If deactivated, filtering stars from the first available bar.')
+fixedend = input.bool(title='', group='Fourier Filtering Time Range', inline='linebac2', defval=false)
+filter_end = input.time(title='', inline='linebac2', group='Fourier Filtering Time Range', defval=timestamp('30 Dec 2080 23:30 +0000'), tooltip='If deactivated, filtering ends at the last available bar.')
+//-- VMA Filter --
+use_vma_filter = input.bool(defval=true,title="Use VMA Filter",group="VMA Filter")
+vma_src        = input.source(defval=close,title="VMA Src",group="VMA Filter")
+vma_length     = input.int(defval=65,title="VMA Length",group="VMA Filter")
+vma_timeframe  = input.timeframe(defval="240",title="VMA Time Frame",group="VMA Filter")
+allow_vma_filter_long = input.string(defval="Green or Blue",options=["Green","Blue","Red","Green or Blue","Blue or Red","Red or Green"],title="Allow Long When",group="VMA Filter")
+allow_vma_filter_short = input.string(defval="Blue",options=["Green","Blue","Red","Green or Blue","Blue or Red","Red or Green"],title="Allow Short When",group="VMA Filter")
+use_vma_filter_stop_loss = input.bool(defval=false,title="Use VMA Filter Stop Loss",group="VMA Filter Stop Loss")
+cancel_long_when_vma_filter = input.string(defval="Red",options=["Green","Blue","Red","Green or Blue","Blue or Red","Red or Green"],title="Cancel Long When",group="VMA Filter Stop Loss")
+cancel_short_when_vma_filter = input.string(defval="Green",options=["Green","Blue","Red","Green or Blue","Blue or Red","Red or Green"],title="Cancel Short When",group="VMA Filter Stop Loss")
+//-- Aroon Filter --
+use_aroon_filter_long   = input.bool(defval=true,title="Use Aroon Filter Long",group="Aroon Filter")
+use_aroon_filter_short  = input.bool(defval=true,title="Use Aroon Filter Short",group="Aroon Filter")
+aroon_length_long       = input.int(defval=13,title="Length Long", minval=1,group="Aroon Filter")
+aroon_length_short      = input.int(defval=13,title="Length Short", minval=1,group="Aroon Filter")
+aroon_upper_long_req    = input.float(defval=1,title="Green (Upper) Line Below % (Long)", minval=0,maxval=100,group="Aroon Filter",inline='aroon_l1')
+aroon_lower_long_req    = input.float(defval=99,title="Red (Lower) Line Above % (Long)", minval=0,maxval=100,group="Aroon Filter",inline='aroon_l1')
+aroon_upper_short_req   = input.float(defval=99,title="Green (Upper) Line Above % (Short)", minval=0,maxval=100,group="Aroon Filter",inline='aroon_l2')
+aroon_lower_short_req   = input.float(defval=1,title="Red (Lower) Line Below % (Short)", minval=0,maxval=100,group="Aroon Filter",inline='aroon_l2')
+aroon_upper_long = 100 * (ta.highestbars(high, aroon_length_long+1) + aroon_length_long)/aroon_length_long
+aroon_lower_long = 100 * (ta.lowestbars(low, aroon_length_long+1) + aroon_length_long)/aroon_length_long
+aroon_upper_short = 100 * (ta.highestbars(high, aroon_length_short+1) + aroon_length_short)/aroon_length_short
+aroon_lower_short = 100 * (ta.lowestbars(low, aroon_length_short+1) + aroon_length_short)/aroon_length_short
+aroonLongCross = false
+if(aroon_upper_long < aroon_upper_long_req and aroon_lower_long > aroon_lower_long_req and strategy.position_size>0)
+    aroonLongCross := true
+aroonShortCross = false
+if(aroon_upper_short > aroon_upper_short_req and aroon_lower_short < aroon_lower_short_req and strategy.position_size<0)
+    aroonShortCross := true
+plot(aroon_upper_long*0.05 - 2.5, "Aroon Up Long", color=color.rgb(0,255,0,70), linewidth = 1,display=(use_aroon_filter_long ? display.all : display.none))
+plot(aroon_lower_long*0.05 - 2.5, "Aroon Down Long", color=color.rgb(255,0,0,70), linewidth = 1,display=(use_aroon_filter_long ? display.all : display.none))
+plot(aroon_upper_long*0.05 - 2.5, "Aroon Up Short", color=color.rgb(0,255,0,70), linewidth = 1,display=(use_aroon_filter_short ? display.all : display.none))
+plot(aroon_lower_long*0.05 - 2.5, "Aroon Down Short", color=color.rgb(255,0,0,70), linewidth = 1,display=(use_aroon_filter_short ? display.all : display.none))
+//Arroon Points
+//long
+aroon_high_boundary_long = 5 * (0+aroon_upper_long_req*0.01) - 2.5
+aroon_low_boundary_long = 5 * (0+aroon_lower_long_req*0.01) - 2.5
+h1_arroon_long_upper = hline(aroon_high_boundary_long,color=color.green,display=(use_aroon_filter_long ? display.all : display.none))
+h2_arroon_long_lower = hline(aroon_low_boundary_long,color=color.red,display=(use_aroon_filter_long ? display.all : display.none))
+//short
+aroon_high_boundary_short = 5 * (0+aroon_upper_short_req*0.01) - 2.5
+aroon_low_boundary_short = 5 * (0+aroon_lower_short_req*0.01) - 2.5
+h1_arroon_short_upper = hline(aroon_high_boundary_short,color=color.green,display=(use_aroon_filter_short ? display.all : display.none))
+h2_arroon_short_lower = hline(aroon_low_boundary_short,color=color.red,display=(use_aroon_filter_short ? display.all : display.none))
+// -- Strategy Specific --
+allow_long  = input.bool(defval=true,title="Long",group="Allow Entry")
+allow_short = input.bool(defval=true,title="Short",group="Allow Entry")
+use_stop_loss_long                      = input.bool(defval=true,title="Use Long",group="Stop Loss")
+stop_loss_long_percentage               = input.float(defval=7.5,title="Long %",group="Stop Loss") * .01
+use_stop_loss_short                     = input.bool(defval=true,title="Use Short",group="Stop Loss")
+stop_loss_short_percentage              = input.float(defval=8.0,title="Short %",group="Stop Loss") * .01
+use_trailing_stop_loss_long             = input.bool(defval=false,title="Use Long",group="Trailing Stop Loss")
+trailing_stop_loss_long_percentage      = input.float(defval=2.0,title="Long %",group="Trailing Stop Loss") * .01
+use_trailing_stop_loss_short            = input.bool(defval=false,title="Use Short",group="Trailing Stop Loss")
+trailing_stop_loss_short_percentage     = input.float(defval=2.0,title="Short %",group="Trailing Stop Loss") * .01
+use_take_profit_long                    = input.bool(defval=true,title="Use Long",group="Take Profit")
+take_profit_long_percentage             = input.float(defval=105,title="Long %",group="Take Profit") * .01
+use_take_profit_short                   = input.bool(defval=true,title="Use Short",group="Take Profit")
+take_profit_short_percentage            = input.float(defval=50,title="Short %",group="Take Profit") * .01
+use_trailing_take_profit_long                       = input.bool(defval=false,title="Use Long",group="Trailing Take Profit")
+trailing_take_profit_long_min_profit_percentage     = input.float(defval=10,title="Activation Minimum Profit Long %",group="Trailing Take Profit") * .01
+trailing_take_profit_long_percentage                = input.float(defval=2.0,title="Trailing Stop Long %",group="Trailing Take Profit") * .01
+use_trailing_take_profit_short                      = input.bool(defval=false,title="Use Short",group="Trailing Take Profit")
+trailing_take_profit_short_min_profit_percentage    = input.float(defval=10,title="Activation Minimum Profit Short %",group="Trailing Take Profit") * .01
+trailing_take_profit_short_percentage               = input.float(defval=2.0,title="Trailing Stop Short %",group="Trailing Take Profit") * .01
+//
+//
+// --- Initialiation ---
+bool    isinrange = (fixedstart ? time >= filter_start : true) and (fixedend ? time <= filter_end : true)
+var line[] tLines = array.new_line(N-1)
+var line[] fLines = array.new_line(N/2-2)
+//
+// Look back and see how many datapoints are available
+int m    = int(math.log(N)/math.log(2)) // approximate log2
+int newM = 0
+for j = 1 to m
+    if na(src[math.pow(2, j)])
+        break
+    newM := j
+// Use fewer datapoints, if there is not enough
+m := newM
+N := int(math.pow(2, newM))
+//
+//
+// -- Collect the data and apply FFT---
+float[] dat_re = array.new_float(na)
+float[] dat_im = array.new_float(na)
+if  N > 1 and (isinrange and ismoving or barstate.islast)
+    for i = 0 to N - 1
+        array.push(dat_re, src[i])
+        array.push(dat_im, 0.0)
+    if ispp
+        dat_re := array.standardize(dat_re)
+        dat_re
+    // forward FFT
+    fft.fft(dat_re, dat_im, "Forward")
+//
+//
+// Collect Fourier amplitudes squared (powers)
+float[] power = array.new_float(na)
+if barstate.islast and N > 1
+    for i = 0 to N-1
+        array.push(power,math.pow(array.get(dat_re,i),2) + math.pow(array.get(dat_im,i),2))
+    array.set(power,0,0.0) // make sure that the 0th component doesn't affect the power spectrum
+//
+//
+// -- Apply inverse FFT using selected frequency components --
+float[] dat_re_filt = array.new_float(N)
+float[] dat_im_filt = array.new_float(N)
+N_first := islowthrs ? math.min(math.min(N_first, N_last), N / 2) : 0
+N_last  := ishghthrs ? math.min(N_last, N / 2) : N / 2
+// Apply the bandpass filter
+if N > 1 and (isinrange and ismoving or barstate.islast)
+    array.fill(dat_re_filt, 0.0)
+    array.fill(dat_im_filt, 0.0)
+    for i = N_first to N_last by 1
+        array.set(dat_re_filt, i, array.get(dat_re, i))
+        array.set(dat_im_filt, i, array.get(dat_im, i))
+        if i != 0
+            array.set(dat_re_filt, N - i, array.get(dat_re, N - i))
+            array.set(dat_im_filt, N - i, array.get(dat_im, N - i))
+    //inverse FFT
+    fft.fft(dat_re_filt, dat_im_filt, "Inverse")
+//
+// Apply the filter to real-time data
+float src_filtered = ismoving and isinrange ? array.get(dat_re_filt, 0) : na
+//
+//
+// --- Plotting --- 
+// Time-domain subplot
+// if (barstate.islast) and timedomain and N > 1
+//     for i = 1 to N - 1
+//         float y_plt1 = array.get(dat_re_filt, i)
+//         float y_plt2 = array.get(dat_re_filt, i - 1)
+//         array.push(tLines, line.new(bar_index[i], y_plt1, bar_index[i - 1], y_plt2, width=2, color=#DE3163))
+//         line.delete(array.shift(tLines))
+// 
+// Frequency-domain subplot
+if (barstate.islast) and freqdomain and N > 1
+    float y_zero  = array.max(dat_re_filt)
+    float y_scale = (array.max(dat_re_filt) - array.min(dat_re_filt)) / array.max(power)
+    line yax = line.new(bar_index, y_zero, bar_index[int(N / 2) + 5], y_zero, style=line.style_arrow_right, color=color.silver)
+    label ylb = label.new(bar_index[int(N / 2) + 6], y_zero, text='f', style=label.style_none, textcolor=color.silver)
+    line.delete( yax[1])
+    label.delete(ylb[1])
+    for i = 0 to int(N / 2)-2
+        isinwindow = i >= N_first and i <= N_last
+        float y_plt = array.get(power, i)
+        array.push(fLines, line.new(bar_index[i], y_zero, bar_index[i], y_plt * y_scale + y_zero, width=3, color=isinwindow ? #DE3163 : #AED6F1) )
+        line.delete(array.shift(fLines))
+//
+//
+// --- Table ---
+var table panel = table.new(position.top_right, 3, ntabfreqs + 1)
+if (barstate.islast) and istable and N > 1
+    ntabfreqs := math.min(ntabfreqs, N / 2)
+    // Table header
+    table.cell(panel, 0, 0, 'N', bgcolor=#AED6F1, text_size=size.small)
+    table.cell(panel, 1, 0, 'Cycle Period', bgcolor=#AED6F1, text_size=size.small)
+    table.cell(panel, 2, 0, 'Rel. Power', bgcolor=#AED6F1, text_size=size.small)
+    // drop zero frequency from power array and sort it
+    power_sorted = array.copy(power)
+    array.remove(power_sorted, 0)
+    array.sort(power_sorted, order.descending)
+    //
+    for i = 0 to ntabfreqs - 1 by 1
+        // Period in left column
+        id = array.indexof(power, array.get(power_sorted, 2 * i))
+        table.cell(panel, 0, i + 1, str.format("{0,number,#}",id), bgcolor=#DFEEF7, text_size=size.small)
+        table.cell(panel, 1, i + 1, str.format("{0,number,#.#}",float(N) / float(id)), text_color=color.black, bgcolor=#DFEEF7, text_size=size.small)
+        table.cell(panel, 2, i + 1, str.format("{0,number,#.####}", array.get(power_sorted, 2 * i) / array.get(power_sorted, 0)), text_color=color.black, bgcolor=#DFEEF7, text_size=size.small)
+//
+//VMA (credit to LazyBear) ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+makevma(src,l) =>
+    k = 1.0/l
+    pdm = math.max((src - src[1]), 0)
+    mdm = math.max((src[1] - src), 0)
+    pdmS = 0.0
+    pdmS := ((1 - k)*nz(pdmS[1]) + k*pdm)
+    mdmS = 0.0
+    mdmS := ((1 - k)*nz(mdmS[1]) + k*mdm)
+    s = pdmS + mdmS
+    pdi = pdmS/s
+    mdi = mdmS/s
+    pdiS = 0.0
+    pdiS := ((1 - k)*nz(pdiS[1]) + k*pdi)
+    mdiS = 0.0
+    mdiS := ((1 - k)*nz(mdiS[1]) + k*mdi)
+    d = math.abs(pdiS - mdiS)
+    s1 = pdiS + mdiS
+    iS = 0.0
+    iS := ((1 - k)*nz(iS[1]) + k*d/s1)
+    hhv = ta.highest(iS, l)
+    llv = ta.lowest(iS, l)
+    d1 = hhv - llv
+    vI = (iS - llv)/d1
+    vma = 0.0
+    vma := (1 - k*vI)*nz(vma[1]) + k*vI*src
+    vmaC=(vma > vma[1]) ? color.green : (vma<vma[1]) ? color.red : (vma==vma[1]) ? color.blue : color.black
+    [vma,vmaC]
+[vma,vmaC] = makevma(vma_src,vma_length)
+vma_val     = request.security(syminfo.tickerid, vma_timeframe=="Same as chart" ? timeframe.period : vma_timeframe,vma[1], barmerge.gaps_off, barmerge.lookahead_on)
+vmaC_val   = request.security(syminfo.tickerid, vma_timeframe=="Same as chart" ? timeframe.period : vma_timeframe,vmaC[1], barmerge.gaps_off, barmerge.lookahead_on)
+met_vma_filter_rules(direction,vma_color) =>
+    met_filter_rules = false
+    //["Green","Blue","Red","Green or Blue","Blue or Red","Red or Green"]
+    if(direction=="long")
+        if(allow_vma_filter_long=="Green" and vma_color==color.green)
+            met_filter_rules := true
+        if(allow_vma_filter_long=="Red" and vma_color==color.red)
+            met_filter_rules := true
+        if(allow_vma_filter_long=="Blue" and vma_color==color.blue)
+            met_filter_rules := true
+        if(allow_vma_filter_long=="Green or Blue" and (vma_color==color.green or vma_color==color.blue))
+            met_filter_rules := true
+        if(allow_vma_filter_long=="Blue or Red" and (vma_color==color.blue or vma_color==color.red))
+            met_filter_rules := true
+        if(allow_vma_filter_long=="Red or Green" and (vma_color==color.red or vma_color==color.green))
+            met_filter_rules := true
+    if(direction=="short")
+        if(allow_vma_filter_short=="Green" and vma_color==color.green)
+            met_filter_rules := true
+        if(allow_vma_filter_short=="Red" and vma_color==color.red)
+            met_filter_rules := true
+        if(allow_vma_filter_short=="Blue" and vma_color==color.blue)
+            met_filter_rules := true
+        if(allow_vma_filter_short=="Green or Blue" and (vma_color==color.green or vma_color==color.blue))
+            met_filter_rules := true
+        if(allow_vma_filter_short=="Blue or Red" and (vma_color==color.blue or vma_color==color.red))
+            met_filter_rules := true
+        if(allow_vma_filter_short=="Red or Green" and (vma_color==color.red or vma_color==color.green))
+            met_filter_rules := true
+    met_filter_rules
+met_vma_cancel_rules(direction,vma_color) =>
+    met_cancel_rules = false
+    //["Green","Blue","Red","Green or Blue","Blue or Red","Red or Green"]
+    if(direction=="long")
+        if(cancel_long_when_vma_filter=="Green" and vma_color==color.green)
+            met_cancel_rules := true
+        if(cancel_long_when_vma_filter=="Red" and vma_color==color.red)
+            met_cancel_rules := true
+        if(cancel_long_when_vma_filter=="Blue" and vma_color==color.blue)
+            met_cancel_rules := true
+        if(cancel_long_when_vma_filter=="Green or Blue" and (vma_color==color.green or vma_color==color.blue))
+            met_cancel_rules := true
+        if(cancel_long_when_vma_filter=="Blue or Red" and (vma_color==color.blue or vma_color==color.red))
+            met_cancel_rules := true
+        if(cancel_long_when_vma_filter=="Red or Green" and (vma_color==color.red or vma_color==color.green))
+            met_cancel_rules := true
+    if(direction=="short")
+        if(cancel_short_when_vma_filter=="Green" and vma_color==color.green)
+            met_cancel_rules := true
+        if(cancel_short_when_vma_filter=="Red" and vma_color==color.red)
+            met_cancel_rules := true
+        if(cancel_short_when_vma_filter=="Blue" and vma_color==color.blue)
+            met_cancel_rules := true
+        if(cancel_short_when_vma_filter=="Green or Blue" and (vma_color==color.green or vma_color==color.blue))
+            met_cancel_rules := true
+        if(cancel_short_when_vma_filter=="Blue or Red" and (vma_color==color.blue or vma_color==color.red))
+            met_cancel_rules := true
+        if(cancel_short_when_vma_filter=="Red or Green" and (vma_color==color.red or vma_color==color.green))
+            met_cancel_rules := true
+    met_cancel_rules
+//Plots & Boundaries
+plot(src_filtered, color=(use_vma_filter ? vmaC_val : color.orange), title='filtered', linewidth=3)
+plot(aroonLongCross ? src_filtered : na,color=color.green,style=plot.style_cross,linewidth=4,display=(use_aroon_filter_long ? display.all : display.none))
+plot(aroonShortCross ? src_filtered : na,color=color.red,style=plot.style_cross,linewidth=4,display=(use_aroon_filter_short ? display.all : display.none))
+hline(0)
+//Actual Strategy Entries
+if(src_filtered>0 and src_filtered[1]<=0)
+    //If any the filter fails for any reason then no entry is allowed
+    passed_vma_filter = true
+    if(use_vma_filter)
+        passed_vma_filter := met_vma_filter_rules("long",vmaC_val)
+    
+    if(passed_vma_filter) //If it's disabled it assumes it passed by defaulting to true
+        if(allow_long==true)
+            strategy.entry("long",strategy.long)
+        else
+            strategy.close("short")
+if(src_filtered<0 and src_filtered[1]>=0)
+    //If any the filter fails for any reason then no entry is allowed
+    passed_vma_filter = true
+    if(use_vma_filter)
+        passed_vma_filter := met_vma_filter_rules("short",vmaC_val)
+    if(passed_vma_filter)
+        if(allow_short==true)
+            strategy.entry("short",strategy.short)
+        else
+            strategy.close("long")
+//VMA Stop Loss
+passed_vma_cancel_long = false
+passed_vma_cancel_short = false
+if(use_vma_filter_stop_loss)
+    if(allow_long==true and strategy.position_size>0)
+        passed_vma_cancel_long := met_vma_cancel_rules("long",vmaC_val)
+        if(passed_vma_cancel_long==true)
+            strategy.close("long",comment="vma cancel")
+    if(allow_short==true and strategy.position_size<0)
+        passed_vma_cancel_short := met_vma_cancel_rules("short",vmaC_val)
+        if(passed_vma_cancel_short==true)
+            strategy.close("short",comment="vma cancel")
+//Aroon Stop Loss
+if(allow_long==true and strategy.position_size>0 and aroonLongCross and use_aroon_filter_long)
+    strategy.close("long",comment="aroon long stop loss")
+if(allow_short==true and strategy.position_size<0 and aroonShortCross and use_aroon_filter_short)
+    strategy.close("short",comment="aroon short stop loss")
+//Stop Loss, Take Profit, Trailing Stop Loss & Trailing Take Profit
+stop_loss_value_long    = strategy.position_avg_price*(1 - stop_loss_long_percentage)
+take_profit_value_long  = strategy.position_avg_price*(1 + take_profit_long_percentage)
+stop_loss_value_short   = strategy.position_avg_price*(1 + stop_loss_short_percentage)
+take_profit_value_short = strategy.position_avg_price*(1 - take_profit_short_percentage)
+// Determine trail stop loss prices
+longStopPrice = 0.0
+longStopPrice := if (strategy.position_size > 0)
+    stopValue = close * (1 - trailing_stop_loss_long_percentage)
+    math.max(stopValue, longStopPrice[1])
+else
+    0
+// Determine trailing short price
+shortStopPrice = 0.0
+shortStopPrice := if (strategy.position_size < 0)
+    stopValue = close * (1 + trailing_stop_loss_short_percentage)
+    math.min(stopValue, shortStopPrice[1])
+else
+    999999
+// Determine trailing take profit long price
+longTPStopPrice = 0.0
+var longTPActive = false //To keep track of once the stop loss becomes active
+if(close>(strategy.opentrades.entry_price(0) * (1+trailing_take_profit_long_min_profit_percentage)))
+    longTPActive := true
+longTPStopPrice := if (strategy.position_size >0)
+    stopValue = close * (1 - trailing_take_profit_long_percentage)
+    math.max(stopValue, longTPStopPrice[1])
+else
+    0
+// Determine trailing take profit short price
+shortTPStopPrice = 0.0
+var shortTPActive = false //To keep track of once the stop loss becomes active
+if(close<(strategy.opentrades.entry_price(0) * (1-trailing_take_profit_short_min_profit_percentage)))
+    shortTPActive := true
+shortTPStopPrice := if (strategy.position_size < 0)
+    stopValue = close * (1 + trailing_take_profit_short_percentage)
+    math.min(stopValue, shortTPStopPrice[1])
+else
+    999999
+//plot(longStopPrice,color=color.orange)
+//plot(shortStopPrice,color=color.teal)
+if(use_trailing_stop_loss_long and close<=longStopPrice and close>strategy.opentrades.entry_price(0))
+    strategy.close("long",comment="Trailing Stop Loss Long")
+if(use_trailing_stop_loss_short and close>=shortStopPrice and close<strategy.opentrades.entry_price(0))
+    strategy.close("short",comment="Trailing Stop Loss Short")
+// Only when the trailing take profit becomes activated at its profit target will the trailing stop losses be allowed to trigger and therefore close below
+if(use_trailing_take_profit_long and close<=longTPStopPrice and longTPActive==true)
+    strategy.close("long",comment="Trailing Take Profit Stop Loss Long")
+if(use_trailing_take_profit_short and close>=shortTPStopPrice and shortTPActive==true)
+    strategy.close("short",comment="Trailing Take Profit Stop Loss Short")
+//Stop Loss, Take Profit & Trailing Stop Loss
+if(strategy.position_size>0) //Creates exit condition once long order is detected
+    strategy.exit(id="TP/SL Long",from_entry="long", limit=use_take_profit_long ? take_profit_value_long : na, stop=use_stop_loss_long ? stop_loss_value_long : na,comment_loss = "Stop Loss Long",comment_profit = "Take Profit Long",comment_trailing = "Trailing Stop Loss Long")
+if(strategy.position_size<0) //Creates exit condition once short order is detected
+    strategy.exit(id="TP/SL Short",from_entry="short", limit=use_take_profit_short ? take_profit_value_short : na, stop=use_stop_loss_short ? stop_loss_value_short : na,comment_loss = "Stop Loss Short",comment_profit = "Take Profit Short",comment_trailing = "Trailing Stop Loss Short")
+//Reset variables when any order is closed, exited or flipped direction
+if(strategy.opentrades == 0 or (strategy.position_size != strategy.position_size[1]))
+    longTPActive := false
+    shortTPActive := false
+Expand (452 lines)

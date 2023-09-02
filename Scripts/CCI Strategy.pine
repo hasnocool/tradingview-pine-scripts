@@ -1,0 +1,236 @@
+Script Name: CCI Strategy
+Author: REV0LUTI0N
+Description: This CCI strategy will allow you to enter a long or short off a CCI zero line cross or control entries and exits from custom upper and lower band lengths. You can set a custom upper band which it will buy when it crosses up and then a custom upper band exit which it will sell when it crosses down. For a short you can set a custom lower band which it will short...
+PineScript code:
+
+Pine Script™ strategy
+CCI Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © REV0LUTI0N
+//@version=4
+strategy(title="CCI Strategy", overlay=true, initial_capital = 10000, default_qty_value = 10000, default_qty_type = strategy.cash)
+//CCI Code
+length = input(20, minval=1, title="CCI Length")
+src = input(close, title="Source")
+ma = sma(src, length)
+cci = (src - ma) / (0.015 * dev(src, length))
+// Strategy Backtesting
+startDate  = input(timestamp("2021-10-01T00:00:00"), type = input.time, title='Backtesting Start Date')
+finishDate = input(timestamp("9999-12-31T00:00:00"), type = input.time, title='Backtesting End Date')
+time_cond  = time >= startDate and time <= finishDate
+//Time Restriction Settings
+startendtime = input("", title='Time Frame To Enter Trades')
+enableclose = input(false, title='Enable Close Trade At End Of Time Frame')
+timetobuy = (time(timeframe.period, startendtime))
+timetoclose = na(time(timeframe.period, startendtime))
+//Strategy Settings
+//Strategy Settings - Enable Check Boxes
+enableentry = input(true, title="Enter First Trade ASAP")
+enableconfirmation = input(false, title="Wait For Cross To Enter First Trade")
+enablezero =input(true, title="Use CCI Simple Cross Line For Entries & Exits")
+enablebands = input(false, title="Use Upper & Lower Bands For Entries & Exits")
+//Strategy Settings - Band Sources
+ccisource = input(0, title="CCI Simple Cross")
+upperbandsource =input(100, title="CCI Enter Long Band")
+upperbandexitsource =input(100, title="CCI Exit Long Band")
+lowerbandsource =input(-100, title="CCI Enter Short Band")
+lowerbandexitsource =input(-100, title="CCI Exit Short Band")
+//Strategy Settings - Crosses
+simplecrossup = crossover(cci, ccisource)
+simplecrossdown = crossunder(cci, ccisource)
+uppercrossup = crossover(cci, upperbandsource)
+lowercrossdown = crossunder(cci, lowerbandsource)
+uppercrossdown = crossunder(cci, upperbandexitsource)
+lowercrossup = crossover(cci, lowerbandexitsource)
+upperstop = crossunder(cci, upperbandsource)
+lowerstop = crossover(cci, lowerbandsource)
+// Stop Loss & Take Profit % Based
+enablesl = input(false, title='Enable Stop Loss')
+enabletp = input(false, title='Enable Take Profit')
+stopTick = input(5.0, title='Stop Loss %', type=input.float, step=0.1) / 100
+takeTick = input(10.0, title='Take Profit %', type=input.float, step=0.1) / 100
+longStop = strategy.position_avg_price * (1 - stopTick)
+shortStop = strategy.position_avg_price * (1 + stopTick)
+shortTake = strategy.position_avg_price * (1 - takeTick)
+longTake = strategy.position_avg_price * (1 + takeTick)
+plot(strategy.position_size > 0 and enablesl ? longStop : na, style=plot.style_linebr, color=color.red, linewidth=1, title="Long Fixed SL")
+plot(strategy.position_size < 0 and enablesl ? shortStop : na, style=plot.style_linebr, color=color.red, linewidth=1, title="Short Fixed SL")
+plot(strategy.position_size > 0 and enabletp ? longTake : na, style=plot.style_linebr, color=color.green, linewidth=1, title="Long Take Profit")
+plot(strategy.position_size < 0 and enabletp ? shortTake : na, style=plot.style_linebr, color=color.green, linewidth=1, title="Short Take Profit")
+// Alert messages
+message_enterlong  = input("", title="Long Entry message")
+message_entershort = input("", title="Short Entry message")
+message_closelong = input("", title="Close Long message")
+message_closeshort = input("", title="Close Short message")
+    
+//Strategy Execution
+//Strategy Execution - Simple Line Cross
+if (cci > ccisource and enablezero and enableentry and time_cond and timetobuy)
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+if (cci < ccisource and enablezero and enableentry and time_cond and timetobuy)
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+if (simplecrossup and enablezero and enableconfirmation and time_cond and timetobuy)
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+if (simplecrossdown and enablezero and enableconfirmation and time_cond and timetobuy)
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+//Strategy Execution - Upper and Lower Band Entry
+if (uppercrossup and enablebands and time_cond and timetobuy)
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+if (lowercrossdown and enablebands and time_cond and timetobuy)
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+//Strategy Execution - Upper and Lower Band Exit
+if strategy.position_size > 0 and uppercrossdown and enablebands and time_cond and timetobuy
+    strategy.close_all(alert_message = message_closelong)
+if strategy.position_size < 0 and lowercrossup and enablebands and time_cond and timetobuy
+    strategy.close_all(alert_message = message_closeshort)
+//Strategy Execution - Upper and Lower Band Stops
+if strategy.position_size > 0 and upperstop and enablebands and time_cond and timetobuy
+    strategy.close_all(alert_message = message_closelong)
+if strategy.position_size < 0 and lowerstop and enablebands and time_cond and timetobuy
+    strategy.close_all(alert_message = message_closeshort)
+//Strategy Execution - Close Trade At End Of Time Frame    
+if strategy.position_size > 0 and timetoclose and enableclose and time_cond
+    strategy.close_all(alert_message = message_closelong)
+if strategy.position_size < 0 and timetoclose and enableclose and time_cond
+    strategy.close_all(alert_message = message_closeshort)
+//Strategy Execution - Stop Loss and Take Profit
+if strategy.position_size > 0 and enablesl and time_cond
+    strategy.exit(id="Close Long", stop=longStop, limit=longTake, alert_message = message_closelong)
+if strategy.position_size < 0 and enablesl and time_cond
+    strategy.exit(id="Close Short", stop=shortStop, limit=shortTake, alert_message = message_closeshort)
+    
+if strategy.position_size > 0 and enabletp and time_cond
+    strategy.exit(id="Close Long", stop=longStop, limit=longTake, alert_message = message_closelong)
+if strategy.position_size < 0 and enabletp and time_cond
+    strategy.exit(id="Close Short", stop=shortStop, limit=shortTake, alert_message = message_closeshort)
+Expand (129 lines)

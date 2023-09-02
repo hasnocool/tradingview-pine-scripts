@@ -1,0 +1,166 @@
+Script Name: Pyramiding BTC 5 min no security
+Author: RafaelZioni
+Description: Since some say that the script with the security is repaint and the results too preety
+i decided to run the same script without it. still the best is when security set to 1 min but without the difference not so much.
+it just to show the concept of the strategy that based on linear regression cross hull as buy signal
+and the the take profit target. so maybe now its...
+PineScript code:
+
+Pine Script™ strategy
+Pyramiding BTC 5 min no security
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+//@version=4
+strategy(title='Pyramiding BTC 5 min no security', overlay=true, pyramiding=7, initial_capital=10000, default_qty_type=strategy.percent_of_equity, default_qty_value=20, commission_type=strategy.commission.percent, commission_value=0.075)
+//
+fastLength = input(250, title="Fast filter length ", minval=1)
+slowLength = input(500,title="Slow filter length",  minval=1)
+source=close
+v1=ema(source,fastLength)
+v2=ema(source,slowLength)
+//
+//Backtest dates
+fromMonth = input(defval=1, title="From Month")
+fromDay = input(defval=10, title="From Day")
+fromYear = input(defval=2020, title="From Year")
+thruMonth = input(defval=1, title="Thru Month")
+thruDay = input(defval=1, title="Thru Day")
+thruYear = input(defval=2112, title="Thru Year")
+showDate = input(defval=true, title="Show Date Range")
+start = timestamp(fromYear, fromMonth, fromDay, 00, 00)  // backtest start window
+finish = timestamp(thruYear, thruMonth, thruDay, 23, 59)  // backtest finish window
+window() =>  // create function "within window of time"
+    time >= start and time <= finish ? true : false
+//
+length = input(50, title = "Period", type = input.integer)
+hma(_src, _length)=>
+    wma((2 * wma(_src, _length / 2)) - wma(_src, _length), round(sqrt(_length)))
+    
+hma3(_src, _length)=>
+    p = length/2
+    wma(wma(close,p/3)*3 - wma(close,p/2) - wma(close,p),p)
+b =hma3(close[1], length)
+//plot(a,color=color.gray)
+//plot(b,color=color.yellow)
+close_price = close[0]
+len = input(25)
+linear_reg = linreg(close_price, len, 0)
+filter=input(true)
+buy=crossover(linear_reg, b)
+longsignal = (v1 > v2 or filter == false ) and buy and window()
+//set take profit
+ProfitTarget_Percent = input(3)
+Profit_Ticks = close * (ProfitTarget_Percent / 100) / syminfo.mintick
+//set take profit
+LossTarget_Percent = input(10)
+Loss_Ticks = close * (LossTarget_Percent / 100) / syminfo.mintick
+//Order Placing
+strategy.entry("Entry 1", strategy.long, when=strategy.opentrades == 0 and longsignal)
+strategy.entry("Entry 2", strategy.long, when=strategy.opentrades == 1 and longsignal)
+strategy.entry("Entry 3", strategy.long, when=strategy.opentrades == 2 and longsignal)
+strategy.entry("Entry 4", strategy.long, when=strategy.opentrades == 3 and longsignal)
+strategy.entry("Entry 5", strategy.long, when=strategy.opentrades == 4 and longsignal)
+strategy.entry("Entry 6", strategy.long, when=strategy.opentrades == 5 and longsignal)
+strategy.entry("Entry 7", strategy.long, when=strategy.opentrades == 6 and longsignal)
+if strategy.position_size > 0
+    strategy.exit(id="Exit 1", from_entry="Entry 1", profit=Profit_Ticks, loss=Loss_Ticks)
+    strategy.exit(id="Exit 2", from_entry="Entry 2", profit=Profit_Ticks, loss=Loss_Ticks)
+    strategy.exit(id="Exit 3", from_entry="Entry 3", profit=Profit_Ticks, loss=Loss_Ticks)
+    strategy.exit(id="Exit 4", from_entry="Entry 4", profit=Profit_Ticks, loss=Loss_Ticks)
+    strategy.exit(id="Exit 5", from_entry="Entry 5", profit=Profit_Ticks, loss=Loss_Ticks)
+    strategy.exit(id="Exit 6", from_entry="Entry 6", profit=Profit_Ticks, loss=Loss_Ticks)
+    strategy.exit(id="Exit 7", from_entry="Entry 7", profit=Profit_Ticks, loss=Loss_Ticks)
+Expand (94 lines)

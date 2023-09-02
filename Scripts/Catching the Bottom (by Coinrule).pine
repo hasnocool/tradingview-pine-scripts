@@ -1,0 +1,103 @@
+Script Name: Catching the Bottom (by Coinrule)
+Author: Coinrule
+Description: This script utilises the RSI and EMA indicators to enter and close the trade.
+
+The relative strength index (RSI) is a momentum indicator used in technical analysis. RSI measures the speed and magnitude of a security's recent price changes to evaluate overvalued or undervalued conditions in the price of that security. The RSI is displayed as an oscillator (a line...
+PineScript code:
+
+Pine Script™ strategy
+Catching the Bottom (by Coinrule)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Coinrule
+//@version=5
+strategy("V3 - Catching the Bottom",
+         overlay=true,
+         initial_capital=1000,
+         process_orders_on_close=true,
+         default_qty_type=strategy.percent_of_equity,
+         default_qty_value=30,
+         commission_type=strategy.commission.percent,
+         commission_value=0.1)
+showDate = input(defval=true, title='Show Date Range')
+timePeriod = time >= timestamp(syminfo.timezone, 2022, 4, 1, 0, 0)
+notInTrade = strategy.position_size <= 0
+//==================================Buy Conditions============================================
+//RSI
+length = input(14)
+vrsi = ta.rsi(close, length)
+buyCondition1 = vrsi < 40
+//RSI decrease
+decrease = 3
+buyCondition2 = (vrsi < vrsi[1] - decrease)
+//sellCondition1 = request.security(syminfo.tickerid, "15", buyCondition2)
+//EMAs 
+fastEMA = ta.sma(close, 50)
+slowEMA = ta.sma(close, 100)
+buyCondition3 = ta.crossunder(fastEMA, slowEMA)
+//buyCondition2 = request.security(syminfo.tickerid, "15", buyCondition3)
+if(buyCondition1 and buyCondition2 and buyCondition3 and timePeriod)
+    strategy.entry(id='Long', direction = strategy.long)
+//==================================Sell Conditions============================================
+sellCondition1 = vrsi > 65
+EMA9 = ta.sma(close, 9)
+EMA50 = ta.sma(close, 50)
+sellCondition2 = ta.crossover(EMA9, EMA50)
+if(sellCondition1 and sellCondition2 and timePeriod)
+    strategy.close(id='Long')
+//Best on: ETH 5mins (7.59%), BNB 5mins (5.42%), MATIC 30mins (15.61%), XRP 45mins (10.14%) ---> EMA
+//Best on: MATIC 2h (16.09%), XRP 15m (5.25%), SOL 15m (4.28%), AVAX 5m (3.19%)
+Expand (53 lines)

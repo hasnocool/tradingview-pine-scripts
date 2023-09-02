@@ -1,0 +1,436 @@
+Script Name: Risk Reward Calculator [lovealgotrading]
+Author: lovealgotrading
+Description: OVERVIEW: 
+ 
+This Risk Reward Calculator strategy can help you maximize your RR value with help of algorithmic trading.
+
+ 
+ INDICATOR: 
+ 
+I wanted to setup my trades more easier with this indicator, I didn't want to calculate everytime before orders, with help this indicator we can calculate R:R value, avarage price, stoploss price,  take-profit price, order...
+PineScript code:
+
+Pine Script™ strategy
+Risk Reward Calculator [lovealgotrading]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Baby_whale_to_moon
+// I want to say thank you to © EvoCrypto
+//@version=5
+strategy('Risk Reward Calculator', shorttitle='R:R', overlay=true, max_bars_back = 2000, pyramiding = 4, initial_capital = 5000, commission_value = 0.1 ,slippage = 1)
+//INPUTS -----------------------------------------------------------------------
+startDate  = input.time(defval=timestamp('1 apr 2023 13:30 +0000'), title='Start_Date', group = " ######### ⏳  STRATEGY WORK TIME ⏳###########" )
+endDate = input.time(defval=timestamp('20 oct  2030 13:30 +0000'), title='End_Date', group = " ######### ⏳  STRATEGY WORK TIME ⏳###########" )
+inDateRange  = time > startDate  and time < endDate
+take_profit_level = input.float(0, step=0.1, minval=0, title='Take Profit Price', group = " ######### ⚠️  STRATEGY RISK SETTINGS ⚠️#########")
+Stop_Level = input.float(0, minval=0, step=0.1, title='Stop Loss Price', group = " ######### ⚠️  STRATEGY RISK SETTINGS ⚠️#########")
+Risk_Amount = input.float(100, minval=0, step=0.1, title='Risk Amount In Dollar', group = " ######### ⚠️  STRATEGY RISK SETTINGS ⚠️#########")
+Alert = input.bool(true,title = "Sum of transactions weight must be 100%", group = " ######### ⭐️ STRATEGY ENTRY SETTINGS  ⭐️########")
+Price_1_val = input.float(0, step=0.1, minval=0, title='Entry Price One', group = " ######### ⭐️ STRATEGY ENTRY SETTINGS  ⭐️########")
+Weight_1 = input.string('NaN', ' ⚖️ Weight', options=['NaN', '90 %', '80 %', '• 75 %', '70 %', '60 %', '• 50 %', '40 %', '30 %', '• 25 %', '20 %', '10 %'], group = " ######### ⭐️ STRATEGY ENTRY SETTINGS  ⭐️########")
+Price_2_val = input.float(0, step=0.1, minval=0, title='Entry Price Two', group = " ######### ⭐️ STRATEGY ENTRY SETTINGS  ⭐️########")
+Weight_2 = input.string('NaN', ' ⚖️ Weight', options=['NaN', '90 %', '80 %', '• 75 %', '70 %', '60 %', '• 50 %', '40 %', '30 %', '• 25 %', '20 %', '10 %'], group = " ######### ⭐️ STRATEGY ENTRY SETTINGS  ⭐️########")
+Price_3_val = input.float(0, step=0.1, minval=0, title='Entry Price Three', group = " ######### ⭐️ STRATEGY ENTRY SETTINGS  ⭐️########")
+Weight_3 = input.string('NaN', ' ⚖️ Weight', options=['NaN', '90 %', '80 %', '• 75 %', '70 %', '60 %', '• 50 %', '40 %', '30 %', '• 25 %', '20 %', '10 %'], group = " ######### ⭐️ STRATEGY ENTRY SETTINGS  ⭐️########")
+Price_4_val = input.float(0, step=0.1, minval=0, title='Entry Price Four', group = " ######### ⭐️ STRATEGY ENTRY SETTINGS  ⭐️########")
+Weight_4 = input.string('NaN', ' ⚖️ Weight', options=['NaN', '90 %', '80 %', '• 75 %', '70 %', '60 %', '• 50 %', '40 %', '30 %', '• 25 %', '20 %', '10 %'], group = " ######### ⭐️ STRATEGY ENTRY SETTINGS  ⭐️########")
+Alert_message_miss = input.bool(true,title = "DON'T FORGET PASTE YOUR WEBHOOK URL WHEN YOU SET ALERT", group = "############ 🤖 ALGO TRADE ALERTS 🤖 ############")
+Long_message = input("",title = "Long Entry Code", group = "############ 🤖 ALGO TRADE ALERTS 🤖 ############")
+Long_Exit_message = input("",title = "Long Stop-Take Profit Code", group = "############ 🤖 ALGO TRADE ALERTS 🤖 ############")
+Short_message = input("",title = "Short Entry Code", group = "############ 🤖 ALGO TRADE ALERTS 🤖 ############")
+Short_Exit_message = input("",title = "Short Stop-Take Profit Code", group = "############ 🤖 ALGO TRADE ALERTS 🤖 ############")
+Alert_message = input("{{strategy.order.alert_message}}",title = "Code When Set Alert", group = "############ 🤖 ALGO TRADE ALERTS 🤖 ############")
+show_label = input.bool(title='  Show Labels',defval=true, group = " ############ 🏁  LABEL SETTINGS  🏁 ############")
+Visual = input.string('All Timeframes', 'Calculator Visual', options=['All Timeframes', 'Intraday Only', 'Daily/Weekly/Monthly Only'], group = " ############ 🏁  LABEL SETTINGS  🏁 ############")
+Label_Size = input.string(size.small, 'Label Size', options=[size.tiny, size.small, size.normal, size.large, size.huge], group = " ############ 🏁  LABEL SETTINGS  🏁 ############")
+Show_Real_Distance = input(true, title='Real-Time Distance In Label', group = " ############ 🏁  LABEL SETTINGS  🏁 ############")
+Show_Stop_Distance = input(true, title='Stop Loss Distance In Label', group = " ############ 🏁  LABEL SETTINGS  🏁 ############")
+Show_Order_Amount = input(true, title='Dollar Order Amount In Label', group = " ############ 🏁  LABEL SETTINGS  🏁 ############")
+Show_Price = input(true, title='Show Price Inputs In Label', group = " ############ 🏁  LABEL SETTINGS  🏁 ############")
+Use_One_Label = input(false, title='Show All Text In One Label', group = " ############ 🏁  LABEL SETTINGS  🏁 ############")
+//bgcolor(show_label and inDateRange ? color.rgb(175, 246, 255, 90) : na , title = "STRATEGY WORK TIME BG" )
+//TIMEFRAME --------------------------------------------------------------------
+Timeframe = timeframe.isintraday and Visual == 'Intraday Only' or timeframe.isdwm and Visual == 'Daily/Weekly/Monthly Only' or Visual == 'All Timeframes'
+//QUALIFIERS -------------------------------------------------------------------
+take_profit_level_True = Timeframe ? take_profit_level != 0 : na
+Stop_True = Timeframe ? Stop_Level != 0 : na
+Price_1_val_True = Timeframe ? Price_1_val != 0 : na
+Price_2_val_True = Timeframe ? Price_1_val != 0 and Price_2_val != 0 : na
+Price_3_val_True = Timeframe ? Price_1_val != 0 and Price_2_val != 0 and Price_3_val != 0 : na
+Price_4_val_True = Timeframe ? Price_1_val != 0 and Price_2_val != 0 and Price_3_val != 0 and Price_4_val != 0 : na
+Avg_Price_True = Timeframe ? Price_2_val_True or Price_3_val_True : na
+quantity(dolar) =>
+    if close > 5000 
+        math.round(dolar / close, 3)
+    else if close < 5000 and close > 200
+        math.round(dolar / close, 2)
+    else if close < 200 and close > 50
+        math.round(dolar / close, 1)
+    else if close < 50
+        math.round(dolar / close, 0)
+//PRICE 1 ----------------------------------------------------------------------
+Weight_One_Options = Weight_1 == 'NaN' ? 1 : Weight_1 == '90 %' ? 0.90 : Weight_1 == '80 %' ? 0.80 : Weight_1 == '• 75 %' ? 0.75 : Weight_1 == '70 %' ? 0.70 : Weight_1 == '60 %' ? 0.60 : Weight_1 == '• 50 %' ? 0.50 : Weight_1 == '40 %' ? 0.40 : Weight_1 == '30 %' ? 0.30 : Weight_1 == '• 25 %' ? 0.25 : Weight_1 == '20 %' ? 0.20 : Weight_1 == '10 %' ? 0.10 : na
+Weight_One = Price_1_val * Weight_One_Options
+Real_Price_1_val_Distance = Price_1_val_True and close > Price_1_val ? (close - Price_1_val) / close * 100 : Price_1_val_True and close < Price_1_val ? (Price_1_val - close) / close * 100 : na
+//PRICE 2 ----------------------------------------------------------------------
+Weight_Two_Options = Weight_2 == 'NaN' ? 1 : Weight_2 == '90 %' ? 0.90 : Weight_2 == '80 %' ? 0.80 : Weight_2 == '• 75 %' ? 0.75 : Weight_2 == '70 %' ? 0.70 : Weight_2 == '60 %' ? 0.60 : Weight_2 == '• 50 %' ? 0.50 : Weight_2 == '40 %' ? 0.40 : Weight_2 == '30 %' ? 0.30 : Weight_2 == '• 25 %' ? 0.25 : Weight_2 == '20 %' ? 0.20 : Weight_2 == '10 %' ? 0.10 : na
+Weight_Two = Price_2_val * Weight_Two_Options
+Real_Price_2_val_Distance = Price_2_val_True and close > Price_2_val ? (close - Price_2_val) / close * 100 : Price_2_val_True and close < Price_2_val ? (Price_2_val - close) / close * 100 : na
+//PRICE 3 ----------------------------------------------------------------------
+Weight_Three_Options = Weight_3 == 'NaN' ? 1 : Weight_3 == '90 %' ? 0.90 : Weight_3 == '80 %' ? 0.80 : Weight_3 == '• 75 %' ? 0.75 : Weight_3 == '70 %' ? 0.70 : Weight_3 == '60 %' ? 0.60 : Weight_3 == '• 50 %' ? 0.50 : Weight_3 == '40 %' ? 0.40 : Weight_3 == '30 %' ? 0.30 : Weight_3 == '• 25 %' ? 0.25 : Weight_3 == '20 %' ? 0.20 : Weight_3 == '10 %' ? 0.10 : na
+Weight_Three = Price_3_val * Weight_Three_Options
+Real_Price_3_val_Distance = Price_3_val_True and close > Price_3_val ? (close - Price_3_val) / close * 100 : Price_3_val_True and close < Price_3_val ? (Price_3_val - close) / close * 100 : na
+//PRICE 4 ----------------------------------------------------------------------
+Weight_Four_Options = Weight_4 == 'NaN' ? 1 : Weight_4 == '90 %' ? 0.90 : Weight_4 == '80 %' ? 0.80 : Weight_4 == '• 75 %' ? 0.75 : Weight_4 == '70 %' ? 0.70 : Weight_4 == '60 %' ? 0.60 : Weight_4 == '• 50 %' ? 0.50 : Weight_4 == '40 %' ? 0.40 : Weight_4 == '30 %' ? 0.30 : Weight_4 == '• 25 %' ? 0.25 : Weight_4 == '20 %' ? 0.20 : Weight_4 == '10 %' ? 0.10 : na
+Weight_Four = Price_4_val * Weight_Four_Options
+Real_Price_4_val_Distance = Price_4_val_True and close > Price_4_val ? (close - Price_4_val) / close * 100 : Price_4_val_True and close < Price_4_val ? (Price_4_val - close) / close * 100 : na
+//AVERAGE PRICE ----------------------------------------------------------------
+Avg_2_True = Weight_1 == 'NaN' and Weight_2 == 'NaN'
+Avg_3_True = Weight_1 == 'NaN' and Weight_2 == 'NaN' and Weight_3 == 'NaN'
+Avg_4_True = Weight_1 == 'NaN' and Weight_2 == 'NaN' and Weight_3 == 'NaN' and Weight_4 == 'NaN'
+Avg_Price = Price_2_val_True and Avg_2_True and Price_3_val == 0 and Price_4_val == 0 ? math.avg(Price_1_val, Price_2_val) : Price_3_val_True and Avg_3_True ? math.avg(Price_1_val, Price_2_val, Price_3_val) : Price_4_val_True and Avg_4_True ? math.avg(Price_1_val, Price_2_val, Price_3_val, Price_4_val) : Weight_One + Weight_Two + Weight_Three + Weight_Four
+Real_Avg_Price_Distance = Avg_Price_True and close > Avg_Price ? (close - Avg_Price) / close * 100 : Avg_Price_True and close < Avg_Price ? (Avg_Price - close) / close * 100 : na
+//POSITION SETTINGS ------------------------------------------------------------
+Real_Stop_Distance = Stop_True and close > Stop_Level ? (close - Stop_Level) / close * 100 : Stop_True and close < Stop_Level ? (Stop_Level - close) / close * 100 : na
+Stop_Distance = Avg_Price != 0 and Stop_True and Avg_Price > Stop_Level ? (Avg_Price - Stop_Level) / Avg_Price * 100 : Avg_Price != 0 and Stop_True and Avg_Price < Stop_Level ? (Stop_Level - Avg_Price) / Avg_Price * 100 : Real_Stop_Distance
+Real_TP_Distance = take_profit_level_True and close > take_profit_level ? (close - take_profit_level) / close * 100 : take_profit_level_True and close < take_profit_level ? (take_profit_level - close) / close * 100 : na
+TP_Distance = Avg_Price != 0 and take_profit_level_True and Avg_Price > take_profit_level ? (Avg_Price - take_profit_level) / Avg_Price * 100 : Avg_Price != 0 and take_profit_level_True and Avg_Price < take_profit_level ? (take_profit_level - Avg_Price) / Avg_Price * 100 : Real_TP_Distance
+Position_Size = Risk_Amount / Stop_Distance * 100
+Order_One = Weight_1 != 'NaN' ? Position_Size * Weight_One_Options : Weight_1 == 'NaN' and Price_2_val == 0 and Price_3_val == 0 ? Position_Size : Weight_1 == 'NaN' and Price_2_val_True and Price_3_val == 0 ? Position_Size / 2 : Weight_1 == 'NaN' and Price_3_val_True ? Position_Size / 3 : Weight_1 == 'NaN' and Price_4_val_True ? Position_Size / 4 : na
+Order_Two = Weight_2 != 'NaN' ? Position_Size * Weight_Two_Options : Weight_2 == 'NaN' and Price_2_val_True and Price_3_val == 0 ? Position_Size / 2 : Weight_2 == 'NaN' and Price_3_val_True ? Position_Size / 3 : Weight_2 == 'NaN' and Price_4_val_True ? Position_Size / 4 : na
+Order_Three = Weight_3 != 'NaN' ? Position_Size * Weight_Three_Options : Weight_3 == 'NaN' and Price_3_val_True ? Position_Size / 3 : Weight_3 == 'NaN' and Price_4_val_True ? Position_Size / 4 : na
+Order_Four = Weight_4 != 'NaN' ? Position_Size * Weight_Four_Options : Weight_4 == 'NaN' and Price_4_val_True ? Position_Size / 4 : na
+//LABEL LOCATIONS --------------------------------------------------------------
+Stop_Location = timenow + math.round(ta.change(time) * (Price_3_val_True ? 115 : Price_2_val_True ? 95 : Price_1_val_True ? 75 : 55))
+Price_1_val_Location = timenow + math.round(ta.change(time) * 15 )
+Price_2_val_Location = timenow + math.round(ta.change(time) * 35)
+Price_3_val_Location = timenow + math.round(ta.change(time) * 55)
+Price_4_val_Location = timenow + math.round(ta.change(time) * 75)
+Avg_Price_Location = timenow + math.round(ta.change(time) * (Price_3_val_True ? 115 : Price_2_val_True ? 95 : Price_1_val_True ? 75 : 55))
+One_Label_Location = timenow + math.round(ta.change(time) * 50)
+take_profit_level_Location = timenow + math.round(ta.change(time) * (Price_3_val_True ? 115 : Price_2_val_True ? 95 : Price_1_val_True ? 75 : 55))
+//COLORS -----------------------------------------------------------------------
+Stop_Color = #b71c1c
+Price_Color = #0011ff
+Label_Color = #2db3fb
+Text_Color = #000000
+//Take Profit PLOT ---------------------------------------------------------------
+Take_Profit_Line = take_profit_level_True ? line.new(x1=startDate, y1=take_profit_level, x2=endDate, y2=take_profit_level, style=line.style_dashed, xloc = xloc.bar_time, width=2, color=color.lime) : na
+line.delete(Take_Profit_Line[1])
+plot(take_profit_level_True ? take_profit_level : na, title='Take Profit', color=color.new(color.lime, 100))
+Take_Profit_Label = Use_One_Label ? na : Avg_Price != 0 and take_profit_level_True and Avg_Price < take_profit_level or Avg_Price == 0 and take_profit_level_True and close < take_profit_level and show_label and show_label ? label.new(x=take_profit_level_Location, y=take_profit_level, xloc=xloc.bar_time, yloc=yloc.price, style=label.style_label_up, color=color.lime, textcolor=Text_Color, size=Label_Size, text='TP Long' + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_TP_Distance, '0.00') + ' %' : na) + (Show_Stop_Distance ? '\n' + 'TakeProfit → ' + str.tostring(TP_Distance, '0.00') + ' %' + '\n' + 'Win $ → ' + str.tostring(Position_Size * TP_Distance / 100, '#') + ' $' : na) + (Show_Order_Amount ? '\n' + 'Position → ' + str.tostring(Position_Size, '#') + ' $' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(take_profit_level) : na)) : Avg_Price != 0 and take_profit_level_True and Avg_Price > take_profit_level or Avg_Price == 0 and take_profit_level_True and close > take_profit_level and show_label ? label.new(x=take_profit_level_Location, y=take_profit_level, xloc=xloc.bar_time, yloc=yloc.price, style=label.style_label_down, color=color.lime, textcolor=Text_Color, size=Label_Size, text='TP Short' + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_TP_Distance, '0.00') + ' %' : na) + (Show_Stop_Distance ? '\n' + 'TakeProfit → ' + str.tostring(TP_Distance, '0.00') + ' %' + '\n' + 'Win $ → ' + str.tostring(Position_Size * TP_Distance / 100, '#') + ' $' : na) + (Show_Order_Amount ? '\n' + 'Position → ' + str.tostring(Position_Size, '#') + ' $' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(Stop_Level) : na)) : na
+label.delete(Take_Profit_Label[1])
+//STOP LOSS PLOT ---------------------------------------------------------------
+Stop_Line = Stop_True ? line.new(x1=startDate, y1=Stop_Level, x2=endDate, y2=Stop_Level, style=line.style_dashed,xloc = xloc.bar_time, width=2, color=Stop_Color) : na
+line.delete(Stop_Line[1])
+plot(Stop_True ? Stop_Level : na, title='Stop Loss', color=color.new(Stop_Color, 100))
+Stop_Label = Use_One_Label ? na : Avg_Price != 0 and Stop_True and Avg_Price > Stop_Level or Avg_Price == 0 and Stop_True and close > Stop_Level and show_label ? label.new(x=Stop_Location, y=Stop_Level, xloc=xloc.bar_time, yloc=yloc.price, style=label.style_label_up, color=color.red, textcolor=Text_Color, size=Label_Size, text='Stop LONG' + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_Stop_Distance, '0.00') + ' %' : na) + (Show_Stop_Distance ? '\n' + 'StopLoss → ' + str.tostring(Stop_Distance, '0.00') + ' %' + '\n' + 'Loss $ → ' + str.tostring(Position_Size * Stop_Distance / 100, '#') + ' $' : na) + (Show_Order_Amount ? '\n' + 'Position → ' + str.tostring(Position_Size, '#') + ' $' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(Stop_Level) : na)) : Avg_Price != 0 and Stop_True and Avg_Price < Stop_Level or Avg_Price == 0 and Stop_True and close < Stop_Level and show_label ? label.new(x=Stop_Location, y=Stop_Level, xloc=xloc.bar_time, yloc=yloc.price, style=label.style_label_down, color=color.red, textcolor=Text_Color, size=Label_Size, text='Stop SHORT' + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_Stop_Distance, '0.00') + ' %' : na) + (Show_Stop_Distance ? '\n' + 'StopLoss → ' + str.tostring(Stop_Distance, '0.00') + ' %' + '\n' + 'Loss $ → ' + str.tostring(Position_Size * Stop_Distance / 100, '#') + ' $' : na) + (Show_Order_Amount ? '\n' + 'Position → ' + str.tostring(Position_Size, '#') + ' $' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(Stop_Level) : na)) : na
+label.delete(Stop_Label[1])
+//PRICE 1 PLOT -----------------------------------------------------------------
+Price_1_val_Line = Price_1_val_True ? line.new(x1=startDate, y1=Price_1_val, x2=endDate, y2=Price_1_val,xloc = xloc.bar_time, color=Price_Color) : na
+line.delete(Price_1_val_Line[1])
+plot(Price_1_val_True ? Price_1_val : na, title='Price One', color=color.new(Price_Color, 100))
+Price_1_val_Label = Use_One_Label ? na : Price_1_val_True and close > Price_1_val and Stop_Level == 0 or Price_1_val_True and Stop_True and Stop_Level < Avg_Price and show_label ? label.new(x=Price_1_val_Location, y=Price_1_val, xloc=xloc.bar_time, yloc=yloc.price, style=label.style_label_up, color=Label_Color, textcolor=Text_Color, size=Label_Size, text='(1) ' + (true ? 'Buy → ' + str.tostring(Order_One, '# $') + '\n' + 'Open Position → ' + str.tostring(Weight_1) : na) + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_Price_1_val_Distance, '0.00') + ' %' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(Price_1_val) : na)) : Price_1_val_True and close < Price_1_val and Stop_Level == 0 or Price_1_val_True and Stop_True and Stop_Level > Avg_Price and show_label ? label.new(x=Price_1_val_Location, y=Price_1_val, xloc=xloc.bar_time, yloc=yloc.price, style=label.style_label_down, color=Label_Color, textcolor=Text_Color, size=Label_Size, text='(1) ' + (true ? 'Sell → ' + str.tostring(Order_One, '# $') + '\n' + 'Open Position → ' + str.tostring(Weight_1) : na) + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_Price_1_val_Distance, '0.00') + ' %' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(Price_1_val) : na)) : na
+label.delete(Price_1_val_Label[1])
+//PRICE 2 PLOT -----------------------------------------------------------------
+Price_2_val_Line = Price_2_val_True ? line.new(x1=startDate, y1=Price_2_val, x2=endDate, y2=Price_2_val,xloc = xloc.bar_time, color=Price_Color) : na
+line.delete(Price_2_val_Line[1])
+plot(Price_2_val_True ? Price_2_val : na, title='Price Two', color=color.new(Price_Color, 100))
+Price_2_val_Label = Use_One_Label ? na : Price_2_val_True and close > Price_2_val and Stop_Level == 0 or Price_2_val_True and Stop_True and Stop_Level < Avg_Price and show_label ? label.new(x=Price_2_val_Location, y=Price_2_val, xloc=xloc.bar_time, yloc=yloc.price, style=label.style_label_up, color=Label_Color, textcolor=Text_Color, size=Label_Size, text='(2) ' + (true ? 'Buy → ' + str.tostring(Order_Two, '# $') + '\n' + 'Open Position → ' + str.tostring(Weight_2) : na) + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_Price_2_val_Distance, '0.00') + ' %' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(Price_2_val) : na)) : Price_2_val_True and close < Price_2_val and Stop_Level == 0 or Price_2_val_True and Stop_True and Stop_Level > Avg_Price and show_label ? label.new(x=Price_2_val_Location, y=Price_2_val, xloc=xloc.bar_time, yloc=yloc.price, style=label.style_label_down, color=Label_Color, textcolor=Text_Color, size=Label_Size, text='(2) ' + (true ? 'Sell → ' + str.tostring(Order_Two, '# $') + '\n' + 'Open Position → ' + str.tostring(Weight_2) : na) + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_Price_2_val_Distance, '0.00') + ' %' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(Price_2_val) : na)) : na
+label.delete(Price_2_val_Label[1])
+//PRICE 3 PLOT -----------------------------------------------------------------
+Price_3_val_Line = Price_3_val_True ? line.new(x1=startDate, y1=Price_3_val, x2=endDate, y2=Price_3_val,xloc = xloc.bar_time, color=Price_Color) : na
+line.delete(Price_3_val_Line[1])
+plot(Price_3_val_True ? Price_3_val : na, title='Price Three', color=color.new(Price_Color, 100))
+Price_3_val_Label = Use_One_Label ? na : Price_3_val_True and close > Price_3_val and Stop_Level == 0 or Price_3_val_True and Stop_True and Stop_Level < Avg_Price and show_label ? label.new(x=Price_3_val_Location, y=Price_3_val, xloc=xloc.bar_time, yloc=yloc.price, style=label.style_label_up, color=Label_Color, textcolor=Text_Color, size=Label_Size, text='(3) ' + (true ? 'Buy → ' + str.tostring(Order_Three, '# $') + '\n' + 'Open Position → ' + str.tostring(Weight_3) : na) + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_Price_3_val_Distance, '0.00') + ' %' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(Price_3_val) : na)) : Price_3_val_True and close < Price_3_val and Stop_Level == 0 or Price_3_val_True and Stop_True and Stop_Level > Avg_Price and show_label ? label.new(x=Price_3_val_Location, y=Price_3_val, xloc=xloc.bar_time, yloc=yloc.price, style=label.style_label_down, color=Label_Color, textcolor=Text_Color, size=Label_Size, text='(3) ' + (true ? 'Sell → ' + str.tostring(Order_Three, '# $') + '\n' + 'Open Position → ' + str.tostring(Weight_3) : na) + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_Price_3_val_Distance, '0.00') + ' %' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(Price_3_val) : na)) : na
+label.delete(Price_3_val_Label[1])
+//PRICE 4 PLOT -----------------------------------------------------------------
+Price_4_val_Line = Price_4_val_True ? line.new(x1=startDate, y1=Price_4_val, x2=endDate, y2=Price_4_val,xloc = xloc.bar_time, color=Price_Color) : na
+line.delete(Price_4_val_Line[1])
+plot(Price_4_val_True ? Price_4_val : na, title='Price Four', color=color.new(Price_Color, 100))
+Price_4_val_Label = Use_One_Label ? na : Price_4_val_True and close > Price_4_val and Stop_Level == 0 or Price_4_val_True and Stop_True and Stop_Level < Avg_Price and show_label ? label.new(x=Price_4_val_Location, y=Price_4_val, xloc=xloc.bar_time, yloc=yloc.price, style=label.style_label_up, color=Label_Color, textcolor=Text_Color, size=Label_Size, text='(4) ' + (true ? 'Buy → ' + str.tostring(Order_Four, '# $') + '\n' + 'Open Position → ' + str.tostring(Weight_4) : na) + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_Price_4_val_Distance, '0.00') + ' %' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(Price_4_val) : na)) : Price_4_val_True and close < Price_4_val and Stop_Level == 0 or Price_4_val_True and Stop_True and Stop_Level > Avg_Price and show_label ? label.new(x=Price_4_val_Location, y=Price_4_val, xloc=xloc.bar_time, yloc=yloc.price, style=label.style_label_down, color=Label_Color, textcolor=Text_Color, size=Label_Size, text='(4) ' + (true ? 'Sell → ' + str.tostring(Order_Four, '# $') + '\n' + 'Open Position → ' + str.tostring(Weight_4) : na) + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_Price_4_val_Distance, '0.00') + ' %' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(Price_4_val) : na)) : na
+label.delete(Price_4_val_Label[1])
+//AVERAGE PRICE PLOT -----------------------------------------------------------
+Avg_Price_Line = Avg_Price_True ? line.new(x1=startDate, y1=Avg_Price, x2=endDate, y2=Avg_Price, style=line.style_dashed,xloc = xloc.bar_time, color=color.yellow) : na
+line.delete(Avg_Price_Line[1])
+plot(Avg_Price_True ? Avg_Price : na, title='Average Price', color=color.new(color.yellow, 100))
+Avg_Price_Label = Use_One_Label ? na : Avg_Price_True and close > Avg_Price and show_label ? label.new(x=Avg_Price_Location, y=Avg_Price, xloc=xloc.bar_time, yloc=yloc.price, style=label.style_label_up, color=color.yellow, textcolor=Text_Color, size=Label_Size, text='AVR Price → ' + str.tostring(Avg_Price)  + '\n' + ' R:R → ' + str.tostring(TP_Distance / Stop_Distance, '0.00') + '\n' + 'All Position → ' + str.tostring(Position_Size, '#') + ' $') : Avg_Price_True and close < Avg_Price and show_label ? label.new(x=Avg_Price_Location, y=Avg_Price, xloc=xloc.bar_time, yloc=yloc.price, style=label.style_label_down, color=color.yellow, textcolor=Text_Color, size=Label_Size, text='AVR Price → ' + str.tostring(Avg_Price)  + '\n' + ' R:R → ' + str.tostring(TP_Distance / Stop_Distance, '0.00') + '\n' + 'All Position → ' + str.tostring(Position_Size, '#') + ' $') : na
+label.delete(Avg_Price_Label[1])
+//ONE LABEL --------------------------------------------------------------------
+One_Label = Use_One_Label and Avg_Price != 0 and Stop_True and Avg_Price > Stop_Level or Use_One_Label and Avg_Price == 0 and Stop_True and close > Stop_Level or Use_One_Label and Stop_Level == 0 and Avg_Price_True and close > Avg_Price and show_label ? label.new(x=One_Label_Location, y=close, xloc=xloc.bar_time, yloc=yloc.price, style=label.style_label_up, color=Label_Color, textcolor=Text_Color, size=Label_Size, text='TP Long' + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_TP_Distance, '0.00') + ' %' : na) + (Show_Stop_Distance ? '\n' + 'TakeProfit → ' + str.tostring(TP_Distance, '0.00') + ' %' + '\n' + 'Win $ → ' + str.tostring(Position_Size * TP_Distance / 100, '#') + ' $' : na) + (Show_Order_Amount ? '\n' + 'Position → ' + str.tostring(Position_Size, '#') + ' $' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(take_profit_level) : na) +  '\n\n\n' +'R:R → ' + str.tostring(TP_Distance / Stop_Distance, '0.00') + '\n' + 'All Position → ' + str.tostring(Position_Size, '#') + ' $' + '\n\n'+(Price_1_val_True ? 'Price 1' + '\n———————' + (Show_Order_Amount ? '\n' + 'Order → ' + str.tostring(Order_One, '# $') : na) + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_Price_1_val_Distance, '0.00') + ' %' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(Price_1_val) : na) : na) + (Price_2_val_True ? '\n\n Price 2' + '\n———————' + (Show_Order_Amount ? '\n' + 'Order → ' + str.tostring(Order_Two, '# $') : na) + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_Price_2_val_Distance, '0.00') + ' %' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(Price_2_val) : na) : na) + (Price_3_val_True ? '\n\n Price 3' + '\n———————' + (Show_Order_Amount ? '\n' + 'Order → ' + str.tostring(Order_Three, '# $') : na) + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_Price_3_val_Distance, '0.00') + ' %' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(Price_3_val) : na) : na) + (Avg_Price_True ? '\n\n Average Price' + '\n———————' + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_Avg_Price_Distance, '0.00') + ' %' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(Avg_Price) : na) : na) + (Stop_True ? '\n\n Stop Loss' + '\n———————' + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_Stop_Distance, '0.00') + ' %' : na) + (Show_Stop_Distance ? '\n' + 'StopLoss → ' + str.tostring(Stop_Distance, '0.00') + ' %' : na) + (Show_Order_Amount ? '\n' + 'Position → ' + str.tostring(Position_Size, '#') + ' $' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(Stop_Level) : na) : na)) : Use_One_Label and Avg_Price != 0 and Stop_True and Avg_Price < Stop_Level or Use_One_Label and Avg_Price == 0 and Stop_True and close < Stop_Level or Use_One_Label and Stop_Level == 0 and Avg_Price_True and close < Avg_Price and show_label ? label.new(x=One_Label_Location, y=close, xloc=xloc.bar_time, yloc=yloc.price, style=label.style_label_down, color=Label_Color, textcolor=Text_Color, size=Label_Size, text='TP Short' + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_TP_Distance, '0.00') + ' %' : na) + (Show_Stop_Distance ? '\n' + 'TakeProfit → ' + str.tostring(TP_Distance, '0.00') + ' %' + '\n' + 'Win $ → ' + str.tostring(Position_Size * TP_Distance / 100, '#') + ' $' : na) + (Show_Order_Amount ? '\n' + 'Position → ' + str.tostring(Position_Size, '#') + ' $' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(take_profit_level) : na) +  '\n\n' + (Stop_True ? 'Stop Loss' + '\n———————' + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_Stop_Distance, '0.00') + ' %' : na) + (Show_Stop_Distance ? '\n' + 'StopLoss → ' + str.tostring(Stop_Distance, '0.00') + ' %' : na) + (Show_Order_Amount ? '\n' + 'Position → ' + str.tostring(Position_Size, '#') + ' $' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(Stop_Level) : na) : na) + (Avg_Price_True ? '\n\n Average Price' + '\n———————' + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_Avg_Price_Distance, '0.00') + ' %' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(Avg_Price) : na) : na) + (Price_3_val_True ? '\n\n Price 3' + '\n———————' + (Show_Order_Amount ? '\n' + 'Order → ' + str.tostring(Order_Three, '# $') : na) + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_Price_3_val_Distance, '0.00') + ' %' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(Price_3_val) : na) : na) + (Price_2_val_True ? '\n\n Price 2' + '\n———————' + (Show_Order_Amount ? '\n' + 'Order → ' + str.tostring(Order_Two, '# $') : na) + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_Price_2_val_Distance, '0.00') + ' %' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(Price_2_val) : na) : na)  + (Price_1_val_True ? '\n\n Price 1' + '\n———————' + (Show_Order_Amount ? '\n' + 'Order → ' + str.tostring(Order_One, '# $') : na) + (Show_Real_Distance ? '\n' + 'Distance → ' + str.tostring(Real_Price_1_val_Distance, '0.00') + ' %' : na) + (Show_Price ? '\n' + 'Price → ' + str.tostring(Price_1_val) : na) + '\n\n\n' +'R:R → ' + str.tostring(TP_Distance / Stop_Distance, '0.00') + '\n' + 'All Position → ' + str.tostring(Position_Size, '#') + ' $'  : na)) : na
+label.delete(One_Label[1])
+// Strategy entries LONG
+if strategy.opentrades == 0 and inDateRange  and Avg_Price < take_profit_level  and Weight_1 != 'NaN' and Price_1_val_True and close[1] > Price_1_val
+    strategy.entry('Long_Open', strategy.long, qty= quantity(Order_One), limit = Price_1_val, alert_message = Long_message)
+if strategy.opentrades == 1 and inDateRange and Avg_Price < take_profit_level and Weight_2 != 'NaN' and Price_2_val_True and  close[1] > Price_2_val
+    strategy.entry('Long_Open', strategy.long, qty= quantity(Order_Two), limit = Price_2_val, alert_message = Long_message)
+if strategy.opentrades == 2 and inDateRange and Avg_Price < take_profit_level and Weight_3 != 'NaN' and Price_3_val_True and close[1] > Price_3_val
+    strategy.entry('Long_Open', strategy.long, qty= quantity(Order_Three), limit = Price_3_val, alert_message = Long_message)
+if strategy.opentrades == 3 and inDateRange and Avg_Price < take_profit_level and Weight_4 != 'NaN' and Price_4_val_True and close[1] > Price_4_val
+    strategy.entry('Long_Open', strategy.long, qty= quantity(Order_Four), limit = Price_4_val, alert_message = Long_message)
+// Strategy entries SHORT
+if strategy.opentrades == 0 and inDateRange  and Avg_Price > take_profit_level  and Weight_1 != 'NaN' and Price_1_val_True and close[1] < Price_1_val
+    strategy.entry('Short_Open', strategy.short, qty= quantity(Order_One), limit = Price_1_val, alert_message = Short_message)
+if strategy.opentrades == 1 and inDateRange and Avg_Price > take_profit_level and Weight_2 != 'NaN' and Price_2_val_True and  close[1] < Price_2_val
+    strategy.entry('Short_Open', strategy.short, qty= quantity(Order_Two), limit = Price_2_val, alert_message = Short_message)
+if strategy.opentrades == 2 and inDateRange and Avg_Price > take_profit_level and Weight_3 != 'NaN' and Price_3_val_True and close[1] < Price_3_val
+    strategy.entry('Short_Open', strategy.short, qty= quantity(Order_Three), limit = Price_3_val, alert_message = Short_message)
+if strategy.opentrades == 3 and inDateRange and Avg_Price > take_profit_level and Weight_4 != 'NaN' and Price_4_val_True and close[1] < Price_4_val
+    strategy.entry('Short_Open', strategy.short, qty= quantity(Order_Four), limit = Price_4_val, alert_message = Short_message)
+if strategy.opentrades > 0 and inDateRange and strategy.position_size > 0 
+    strategy.exit('Long__Close',from_entry = "Long_Open", stop=Stop_Level, limit = take_profit_level , qty_percent=100, alert_message =Long_Exit_message)
+if strategy.opentrades > 0 and inDateRange and strategy.position_size < 0 
+    strategy.exit('Short__Close',from_entry = "Short_Open", stop=Stop_Level, limit = take_profit_level , qty_percent=100, alert_message =Short_Exit_message)
+Expand (252 lines)

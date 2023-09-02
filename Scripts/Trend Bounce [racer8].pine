@@ -1,0 +1,96 @@
+Script Name: Trend Bounce [racer8]
+Author: racer8
+Description: I discovered this mechanical trading system titled "This Algo Strategy Has Only 3 rules and 62% Win Rate". 
+
+I coded the trading system on Tradingview...and now I am introducing it to you guys.
+I modified the system so that it has both buy & sell signals.
+I've tested it repeatedly in different markets on TV including stocks, currency pairs, bitcoin, and...
+PineScript code:
+
+Pine Script™ strategy
+Trend Bounce [racer8]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © racer8
+//@version=4
+// This Algo Strategy Has Only 3 rules and 62% Win Rate (Youtube) 
+strategy("Trend Bounce", overlay=true)
+nn = input(7,"Channel Length")
+hi = highest(high,nn)
+lo = lowest(low,nn)
+n2 = input(200,"Ma Length")
+ma = sma(close,n2)
+if close>ma and close<lo[1]
+    strategy.entry("Buy",strategy.long)
+if close>hi[1]
+    strategy.close("Buy") 
+    
+if close<ma and close>hi[1]
+    strategy.entry("Sell",strategy.short)
+if close<lo[1]
+    strategy.close("Sell")
+plot(hi,"high",color=color.aqua)
+plot(lo,"low",color=color.aqua)
+plot(ma,"sma",color=color.yellow)       
+//-----------------------------------------Stop Loss------------------------------------------------------
+atr = sma(tr,10)[1]
+bought = strategy.position_size[0] > strategy.position_size[1]
+sold = strategy.position_size[0] < strategy.position_size[1]
+slm = input(2.0,"ATR Stop Loss",minval=0)
+StopPrice_Long  = strategy.position_avg_price - slm*atr              // determines stop loss's price 
+StopPrice_Short  = strategy.position_avg_price + slm*atr              // determines stop loss's price 
+FixedStopPrice_Long = valuewhen(bought,StopPrice_Long,0)                  // stores original StopPrice  
+FixedStopPrice_Short = valuewhen(sold,StopPrice_Short,0)                  // stores original StopPrice  
+plot(FixedStopPrice_Long,"ATR Stop Loss Long",color=color.blue,linewidth=1,style=plot.style_cross)
+plot(FixedStopPrice_Short,"ATR Stop Loss Short",color=color.red,linewidth=1,style=plot.style_cross)
+if strategy.position_size > 0
+    strategy.exit(id="Stop", stop=FixedStopPrice_Long)    // commands stop loss order to exit!
+if strategy.position_size < 0
+    strategy.exit(id="Stop", stop=FixedStopPrice_Short)    // commands stop loss order to exit!
+Expand (46 lines)

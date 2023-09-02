@@ -1,0 +1,117 @@
+Script Name: 9-22 5 MIN 15 MIN BANKNIFTY
+Author: ashokkumarsand
+Description: 9:22 5 MIN 15 MIN BANKNIFTY Strategy with Additional Filters
+ 
+
+The 9:22 5 MIN 15 MIN BANKNIFTY Strategy with Additional Filters is a trend-following strategy designed for trading the BANKNIFTY instrument on a 5-minute chart. It aims to capture potential price movements by generating buy and sell signals based on moving average crossovers, breakout confirmations,...
+PineScript code:
+
+Pine Script™ strategy
+9:22 5 MIN 15 MIN BANKNIFTY
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+//@version=5
+strategy("9:22 5 MIN 15 MIN BANKNIFTY", overlay=true)
+fastLength = input(9, title="Fast MA Length")
+slowLength = input(22, title="Slow MA Length")
+atrLength = input(14, title="ATR Length")
+atrFilter = input(0.5, title="ATR Filter")
+trailingStop = input(1.5, title="Trailing Stop Percentage")
+pullbackThreshold = input(0.5, title="Pullback Threshold")
+minCandleBody = input(0.5, title="Minimum Candle Body Percentage")
+breakoutConfirmation = input(true, title="Use Breakout Confirmation")
+price = close
+mafast = ta.sma(price, fastLength)
+maslow = ta.sma(price, slowLength)
+atrValue = ta.atr(atrLength)
+long_entry = ta.crossover(mafast, maslow) and atrValue > atrFilter
+short_entry = ta.crossunder(mafast, maslow) and atrValue > atrFilter
+// Pullback Filter
+pullbackLong = ta.crossover(price, mafast) and ta.change(price) <= -pullbackThreshold
+pullbackShort = ta.crossunder(price, mafast) and ta.change(price) >= pullbackThreshold
+// Include pullback condition only if a valid entry signal is present
+long_entry := long_entry and (pullbackLong or not ta.crossover(price, mafast))
+short_entry := short_entry and (pullbackShort or not ta.crossunder(price, mafast))
+// Filter based on candle body size
+validLongEntry = long_entry and ta.change(price) > 0 and ta.change(price) >= minCandleBody
+validShortEntry = short_entry and ta.change(price) < 0 and ta.change(price) <= -minCandleBody
+// Breakout confirmation filter
+breakoutLong = breakoutConfirmation ? (close > ta.highest(high, fastLength)[1]) : true
+breakoutShort = breakoutConfirmation ? (close < ta.lowest(low, fastLength)[1]) : true
+long_entry := validLongEntry and breakoutLong
+short_entry := validShortEntry and breakoutShort
+if (long_entry)
+    strategy.entry("Long", strategy.long)
+    strategy.close("Short")
+    alert("Long trade iniated")
+    
+if (short_entry)
+    strategy.entry("Short", strategy.short)
+    strategy.close("Long")
+    alert("Short trade initated")
+// Trailing Stop-Loss
+long_stop = strategy.position_avg_price * (1 - trailingStop / 100)
+short_stop = strategy.position_avg_price * (1 + trailingStop / 100)
+strategy.exit("Exit Long", "Long", stop = long_stop)
+strategy.exit("Exit Short", "Short", stop = short_stop)
+plot(mafast, color=color.green, linewidth=2, title="Fast MA")
+plot(maslow, color=color.red, linewidth=2, title="Slow MA")
+Expand (59 lines)

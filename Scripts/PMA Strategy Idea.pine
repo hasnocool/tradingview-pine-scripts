@@ -1,0 +1,121 @@
+Script Name: PMA Strategy Idea
+Author: QuantCT
+Description: This strategy idea uses three EMAs on HLC/3 data, know as PMA(Pivot Moving Average). This strategy is very useful in trending instruments on 1W and 1D timeframes. This is the implementation used in QuantCT app. The study version of this idea is published in public library as  ACD PMA .
+
+You can set operation mode to be Long/Short or long-only.
+You also can set a...
+PineScript code:
+
+Pine Script™ strategy
+PMA Strategy Idea
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © QuantCT
+//@version=4
+strategy("PMA Strategy Idea",
+         shorttitle="PMA", 
+         overlay=true,
+         pyramiding=0,     
+         default_qty_type=strategy.percent_of_equity, 
+         default_qty_value=100, 
+         initial_capital=1000,           
+         commission_type=strategy.commission.percent, 
+         commission_value=0.075)
+         
+// ____ Inputs
+ema1_period = input(title="EMA1 Period", defval=10)
+ema2_period = input(title="EMA2 Period", defval=20)
+ema3_period = input(title="EMA3 Period", defval=30)
+long_only = input(title="Long Only", defval=false)
+slp = input(title="Stop-loss (%)", minval=1.0, maxval=25.0, defval=5.0)
+use_sl = input(title="Use Stop-Loss", defval=false)
+// ____ Logic
+ema1 = ema(hlc3, ema1_period)
+ema2 = ema(hlc3, ema2_period)
+ema3 = ema(hlc3, ema3_period)
+    
+enter_long = (rising(ema1, 1) and rising(ema2, 1) and rising(ema3, 1))
+exit_long = not enter_long
+enter_short = (falling(ema1, 1) and falling(ema2, 1) and falling(ema3, 1))
+exit_short = not enter_short
+strategy.entry("Long", strategy.long, when=enter_long)
+strategy.close("Long", when=exit_long) 
+if (not long_only)
+    strategy.entry("Short", strategy.short, when=enter_short)
+    strategy.close("Short", when=exit_short) 
+// ____ SL
+sl_long = strategy.position_avg_price * (1- (slp/100))
+sl_short = strategy.position_avg_price * (1 + (slp/100))
+if (use_sl)
+    strategy.exit(id="SL", from_entry="Long", stop=sl_long)
+    strategy.exit(id="SL", from_entry="Short", stop=sl_short)
+// ____ Plots
+colors = 
+ enter_long ? #27D600 :
+ enter_short ? #E30202 :
+ color.orange
+ema1_plot = plot(ema1, color=colors)
+ema2_plot = plot(ema2, color=colors)
+ema3_plot = plot(ema3, color=colors)
+fill(ema1_plot, ema3_plot, color=colors, transp=50)
+Expand (60 lines)

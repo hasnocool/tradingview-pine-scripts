@@ -1,0 +1,139 @@
+Script Name: RIBBON + EMA CROSS - BY HB
+Author: HB_2209
+Description: This is the only indicator if you want to know about the strategy of this indicator message me on instagram.
+My Instagram Id > @_.bharat._
+Thank you...!
+PineScript code:
+
+Pine Script™ strategy
+RIBBON + EMA CROSS - BY HB
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+//@version=4
+strategy("RIBBON + EMA CROSS - BY HB", overlay=true, pyramiding=1, default_qty_type= strategy.percent_of_equity, default_qty_value = 100, calc_on_order_fills=false, slippage=0,commission_type=strategy.commission.percent,commission_value=0)
+strat_dir_input = input(title="Strategy Direction", defval="all", options=["long", "short", "all"])
+// strat_dir_value = strat_dir_input == "long" ? strategy.direction.long : strat_dir_input == "short" ? strategy.direction.short : strategy.direction.all
+// strategy.risk.allow_entry_in(strat_dir_value)
+//////////////////////////////////////////////////////////////////////
+//INPUT
+s9ema = ema(close, 9)
+s15ema = ema(close, 15)
+s20ema = ema(close, 20)
+s50ema = ema(close, 50)
+plot(s9ema, title="Ema 9", color = color.black, linewidth = 1, transp=0)
+plot(s15ema, title="Ema 15", color = color.blue, linewidth = 1, transp=0)
+plot(s20ema, title="Ema 20", color = color.orange, linewidth = 2, transp=0)
+plot(s50ema, title="Ema 50", color = color.red, linewidth = 2, transp=0)
+longCond = crossover(s9ema, s15ema) and (s15ema > s20ema) and (s20ema > s50ema)
+shortCond = crossunder(s9ema, s15ema) and (s15ema < s20ema) and (s20ema < s50ema)
+plotshape(series=longCond, title="Long", style=shape.triangleup, location=location.belowbar, color=color.green, text="LONG", size=size.small)
+plotshape(series=shortCond, title="Short", style=shape.triangledown, location=location.abovebar, color=color.red, text="SHORT", size=size.small)
+src = input(close, title="Source")
+modeSwitch = input("Hma", title="Hull Variation", options=["Hma", "Thma", "Ehma"])
+length = input(60, title="Length(180-200 for floating S/R , 55 for swing entry)")
+switchColor = input(true, "Color Hull according to trend?")
+candleCol = input(false,title="Color candles based on Hull's Trend?")
+visualSwitch  = input(true, title="Show as a Band?")
+thicknesSwitch = input(2, title="Line Thickness")
+transpSwitch = input(40, title="Band Transparency",step=5)
+//FUNCTIONS
+//HMA
+HMA(_src, _length) =>  wma(2 * wma(_src, _length / 2) - wma(_src, _length), round(sqrt(_length)))
+//EHMA    
+EHMA(_src, _length) =>  ema(2 * ema(_src, _length / 2) - ema(_src, _length), round(sqrt(_length)))
+//THMA    
+THMA(_src, _length) =>  wma(wma(_src,_length / 3) * 3 - wma(_src, _length / 2) - wma(_src, _length), _length)
+    
+//SWITCH
+Mode(modeSwitch, src, len) =>
+      modeSwitch == "Hma"  ? HMA(src, len) :
+      modeSwitch == "Ehma" ? EHMA(src, len) : 
+      modeSwitch == "Thma" ? THMA(src, len/2) : na
+      
+//OUT
+HULL = Mode(modeSwitch, src, length)
+MHULL = HULL[0]
+SHULL = HULL[2]
+//COLOR
+hullColor = switchColor ? (HULL > HULL[2] ? #1bdd1b : #f31a1a) : #2251fb
+//PLOT
+///< Frame
+Fi1 = plot(MHULL, title="MHULL", color=hullColor, linewidth=thicknesSwitch, transp=100)
+Fi2 = plot(visualSwitch ? SHULL : na, title="SHULL", color=hullColor, linewidth=thicknesSwitch, transp=100)
+///< Ending Filler
+fill(Fi1, Fi2, title="Band Filler", color=hullColor, transp=5)
+///BARCOLOR
+barcolor(color = candleCol ? (switchColor ? hullColor : na) : na)
+if HULL[0] > HULL[1]
+    strategy.entry("BUY", strategy.long)
+if HULL[0] < HULL[1]
+    strategy.entry("SELL", strategy.short)
+Expand (69 lines)

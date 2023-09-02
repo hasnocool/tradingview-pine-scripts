@@ -1,0 +1,245 @@
+Script Name: Breakout Trend Follower V2
+Author: millerrh
+Description: This is a variation on my other Breakout Trend Follower script.  In the other script, you can use a moving average to act as a filter for your trades (i.e. if the price is below the moving average, it won't go long).  After making the tool that detects trends on higher timeframes, I wanted to see if that might be a better filter than a moving average.
+So this...
+PineScript code:
+
+Pine Script™ strategy
+Breakout Trend Follower V2
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+//@version=4
+// Revision:        1
+// Author:          @millerrh
+// Strategy:  Enter long when recent swing high breaks out, using recent swing low as stop level.  Move stops up as higher lows print to act
+// as trailing stops.  Ride trend as long as it is there and the higher lows aren't breached.  
+// The difference between this one and the previous Breakout Trend Follower is that this one uses higher timeframe higher highs/higher lows as a filter instead 
+// of an arbitrary Moving Average.  I wanted to test out whether waiting for longer term actual trend changes produced better stats than just the moving average.
+// Conditions/Variables 
+//    1. Manually configure which dates to back test
+//    2. Can add a filter to only take setups that are above (or below for shorts) user-defined larger timeframe trends (helps avoid trading counter trend) 
+// === CALL STRATEGY/STUDY, PROGRAMATICALLY ENTER STRATEGY PARAMETERS HERE SO YOU DON'T HAVE TO CHANGE THEM EVERY TIME YOU RUN A TEST ===
+// (STRATEGY ONLY) - Comment out srategy() when in a study() 
+strategy("Breakout Trend Follower V2", overlay=true, initial_capital=10000, currency='USD', 
+   default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent, commission_value=0.1)
+// (STUDY ONLY) - Comment out study() when in a strategy() 
+//study("Breakout Trend Follower V2", overlay=true)
+// === BACKTEST RANGE ===
+Start = input(defval = timestamp("01 Jan 2019 06:00 +0000"), title = "Backtest Start Date", type = input.time, group = "Backtest Range")
+Finish = input(defval = timestamp("01 Jan 2100 00:00 +0000"), title = "Backtest End Date", type = input.time, group = "Backtest Range")
+// == USER INPUTS ==
+tableLocation = input(defval="Top", options=["Top", "Bottom"], title = "Info Table Location", group = "Display",
+  tooltip = "Place information table on the top of the pane or the bottom of the pane.")
+lookback = input(defval = 3, title = "Pivot Lookback Period", group = "Pivot Points",
+  tooltip = "Looks for pivot points within this number of bars both left and right.")
+showPivotPoints = input(title = "Show Historical Pivot Points?", type = input.bool, defval = false, group = "Pivot Points",
+  tooltip = "Toggle this on to see the historical pivot points that were used.  Change the Lookback Period to adjust the frequency of these points.
+  The pivot points are only shown for the current chart timeframe - to see the Daily pivot pionts, use the Daily timeframe, etc.")
+trendFilter = input(defval="1st Timeframe", options=["1st Timeframe", "Both Timeframes", "None"], title = "Use HTF Trend for Filtering?", group = "Higher Timeframe Levels",
+  tooltip = "Signals will be ignored when price is not aligned with the higher timeframe trend(s).  The intent is to keep you out of bear periods and only buying when 
+  price is showing strength and you are trading with the trend.")
+twoSet = input(defval="D", title="1st High Timeframe", type=input.resolution, group = "Higher Timeframe Levels",
+  tooltip = "Allows you to set two different time frames for looking at the trend.")
+threeSet = input(defval="W", title="2nd High Timeframe", type=input.resolution, group = "Higher Timeframe Levels")
+showMTFLevels = input(title = "Show Multiple Timeframe S/R Levels?", type = input.bool, defval = true, group = "Higher Timeframe Levels",
+  tooltip = "Displays the pivot highs and lows of higher timeframes to use as support/resistance levels. When these levels break, the trend
+  will change on these higher timeframes.")
+currentColorS = input(color.new(color.orange,50), title = "Current Timeframe    Support", type = input.color, group = "Higher Timeframe Levels", inline = "MTF1")
+currentColorR = input(color.new(color.blue,50), title = " Resistance", type = input.color, group = "Higher Timeframe Levels", inline = "MTF1")
+oneColorS = input(color.new(color.yellow,50), title = "1st High Timeframe   Support", type = input.color, group = "Higher Timeframe Levels", inline = "MTF2")
+oneColorR = input(color.new(color.yellow,50), title = " Resistance", type = input.color, group = "Higher Timeframe Levels", inline = "MTF2")
+twoColorS = input(color.new(color.white,50), title = "2nd High Timeframe    Support", type = input.color, group = "Higher Timeframe Levels", inline = "MTF3")
+twoColorR = input(color.new(color.white,50), title = " Resistance", type = input.color, group = "Higher Timeframe Levels", inline = "MTF3")
+//  == DEFINE FUNCTIONS FOR USE IN MULTIPLE TIMEFRAMES (USING A TUPLE TO AVOID SO MANY SECURITY CALLS) ==  
+f_getHTF() =>
+    ph = pivothigh(high, lookback, lookback)
+    pl = pivotlow(low, lookback, lookback)
+    highLevel = valuewhen(ph, high[lookback], 0)
+    lowLevel = valuewhen(pl, low[lookback], 0)
+    barsSinceHigh = barssince(ph) + lookback
+    barsSinceLow = barssince(pl) + lookback
+    timeSinceHigh = time[barsSinceHigh]
+    timeSinceLow = time[barsSinceLow]
+    [ph, pl, highLevel, lowLevel, barsSinceHigh, barsSinceLow, timeSinceHigh, timeSinceLow]
+    
+[ph_01, pl_01, hL_01, lL_01, bsSH_01, bsSL_01, tSH_01, tSL_01] = security(syminfo.tickerid, "", f_getHTF())
+[ph_02, pl_02, hL_02, lL_02, bsSH_02, bsSL_02, tSH_02, tSL_02] = security(syminfo.tickerid, twoSet, f_getHTF())
+[ph_03, pl_03, hL_03, lL_03, bsSH_03, bsSL_03, tSH_03, tSL_03] = security(syminfo.tickerid, threeSet, f_getHTF())
+// Plot historical pivot points for debugging and configuring the lookback period.
+plot(showPivotPoints ? ph_01 : na, style=plot.style_cross, linewidth=3, color=color.new(color.yellow,50), offset=-lookback)
+plot(showPivotPoints ? pl_01 : na, style=plot.style_cross, linewidth=3, color=color.new(color.yellow,50), offset=-lookback)
+// == PLOT SUPPORT/RESISTANCE LINES ON THE HIGHER TIMEFRAMES ==
+// Use a function to define the lines
+f_line(x1, y1, y2, _color) =>
+    var line id = na
+    line.delete(id)
+    id := line.new(x1, y1, time, y2, xloc.bar_time, extend.right, _color)
+// 1st Timeframe
+highLine1 = showMTFLevels ? f_line(tSH_01, hL_01, hL_01, currentColorR) : na
+lowLine1 = showMTFLevels ? f_line(tSL_01, lL_01, lL_01, currentColorS) : na 
+// 2nd Timeframe
+highLine2 = showMTFLevels ? f_line(tSH_02, hL_02, hL_02, oneColorR) : na
+lowLine2 = showMTFLevels ? f_line(tSL_02, lL_02, lL_02, oneColorS) : na
+// 3rd Timeframe
+highLine3 = showMTFLevels ? f_line(tSH_03, hL_03, hL_03, twoColorR) : na
+lowLine3 = showMTFLevels ? f_line(tSL_03, lL_03, lL_03, twoColorS) : na
+// == TREND CALCULATIONS (USING A TUPLE TO CONSOLIDATE REPETATIVE CODE AND GENERATE MULTIPE VARIABLES WITH ONE FUNCTION ==
+f_signal(highLevel, lowLevel) =>
+    uptrendSignal    = high > highLevel
+    downtrendSignal  = low < lowLevel
+    inUptrend        = bool(na)
+    inDowntrend      = bool(na) 
+    inUptrend       := uptrendSignal[1] ? true : downtrendSignal[1] ? false : inUptrend[1]
+    inDowntrend     := not inUptrend
+    [uptrendSignal, downtrendSignal, inUptrend, inDowntrend]
+[uptrendSignal1, downtrendSignal1, inUptrend1, inDowntrend1] = f_signal(hL_01, lL_01)  // 1st Timeframe
+[uptrendSignal2, downtrendSignal2, inUptrend2, inDowntrend2] = f_signal(hL_02, lL_02)  // 2nd Timeframe
+[uptrendSignal3, downtrendSignal3, inUptrend3, inDowntrend3] = f_signal(hL_03, lL_03)  // 3rd Timeframe
+// == TREND TABLE PLOTTING ==
+tablePos = tableLocation == "Top" ? position.top_right : position.bottom_right
+var table trendTable = table.new(tablePos, 3, 1, border_width = 3)
+upColor = color.rgb(38, 166, 154)
+downColor = color.rgb(240, 83, 80)
+f_fillCell(_column, _row, _cellText, _c_color) =>
+    table.cell(trendTable, _column, _row, _cellText, bgcolor = color.new(_c_color, 70), text_color = _c_color, width = 6)
+if barstate.islast or barstate.islastconfirmedhistory
+    f_fillCell(0, 0, inUptrend1 ? "▲" : "▼", inUptrend1 ? upColor : downColor)
+    f_fillCell(1, 0, inUptrend2 ? "▲ " + twoSet : "▼ " + twoSet, inUptrend2 ? upColor : downColor)
+    f_fillCell(2, 0, inUptrend3 ? "▲ " + threeSet : "▼ " + threeSet, inUptrend3 ? upColor : downColor)
+// Conditions for entry and exit
+buyConditions = 
+  (trendFilter == "1st Timeframe" ? hL_01 >= hL_02 : trendFilter == "Both Timeframes" ? (hL_01 > hL_02) and (hL_01 > hL_03) : true) and
+//   (useRsiFilter ? rsiVal[1] < rsiOB : true) and
+  time > Start and time < Finish
+buySignal = high > hL_01 and buyConditions // Code to act like a stop-buy for the Study
+sellSignal = low < lL_01 // Code to act like a stop-loss for the Study
+// (STRATEGY ONLY) Comment out for Study
+strategy.entry("Long", strategy.long, stop = hL_01, when = buyConditions)
+// strategy.entry("Long", strategy.long, stop = buyLevel2, when = time > Start and time < Finish and high > maFilterCheck)
+strategy.exit("Exit Long", from_entry = "Long", stop=lL_01)
+Expand (126 lines)

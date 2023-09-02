@@ -1,0 +1,126 @@
+Script Name: Buurmans Tutorial
+Author: Je_Buurman
+Description: A little Script as part of a Tutorial using Monday as entries and Friday as exits/shorts, with option to Long-Only and a rudimentary Stoploss.
+
+outlined in detail here
+
+
+can't find a better fitting Category, so bear with me
+PineScript code:
+
+Pine Script™ strategy
+Buurmans Tutorial
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+// © Je_Buurman September 1st 2020
+// PhaseIII-b update Oct. 3rd 2020
+//@version=4
+strategy("Buurmans Tutorial", overlay=true, initial_capital=1000, pyramiding=0, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_value=0.2)
+// Some initial inputs, these are needed in case the strategy returns an error of "too many trades; > 3000" 
+Year        = input(defval = 2020, title = "From Year", minval = 2010)
+Month       = input(defval = 1, title = "From Month", minval = 1, maxval=12)
+Day         = input(defval = 1, title = "From Day", minval = 1, maxval=31)
+LongOnly    = input(true, title="Only go Long?")
+// Phase I - the initial "Strategy" - buy Monday, sell Friday
+entryday_input  = input(title="Enter on which day?", defval="Monday", options=["Monday", "Tuesday", "Wetnessday"])
+entryday        = if (entryday_input=="Monday")
+    dayofweek.monday
+else if (entryday_input=="Tuesday")
+    dayofweek.tuesday
+else if (entryday_input=="Wetnessday")
+    dayofweek.wednesday
+longCondition   = dayofweek==entryday and (time > timestamp(Year, Month, Day, 00, 00, 00))
+shortCondition  = dayofweek==dayofweek.friday and (time > timestamp(Year, Month, Day, 23, 59, 59))
+// Phase II - some rudimentary "risk-management" e.g. stoploss
+Use_stoploss    = input(true, title="Use stoploss ?")
+stoploss_input  = input(2.9, title="Stoploss in $", step=0.1)
+Stoploss        = Use_stoploss ? strategy.position_size>0 ? iff(strategy.position_size>0,strategy.position_avg_price - stoploss_input, na) : strategy.position_size<0 ? iff(strategy.position_size<0,strategy.position_avg_price + stoploss_input, na) : na : na
+plot(Use_stoploss and strategy.position_size!=0 ? Stoploss : na, color=iff(Stoploss!=na,color.silver, color.red),style=plot.style_linebr)
+// Phase III - make it more profitable by trying to filter conditions
+// only buy on odd Mondays ? only buy on full moon Mondays ? something else entirely ? Maybe change the days ?
+// Phase III-b
+// make a Take Profit entry, note how this is basically the same as a stoploss, just opposite
+Use_takeprofit  = input(true, title="Take Profit ?")
+takeprofit_input= input(5.9, title="Stoploss in $", step=0.1)
+TakeProfit      = Use_takeprofit ? strategy.position_size>0 ? iff(strategy.position_size>0,strategy.position_avg_price + takeprofit_input, na) : strategy.position_size<0 ? iff(strategy.position_size<0,strategy.position_avg_price - takeprofit_input, na) : na : na
+plot(Use_takeprofit and strategy.position_size!=0 ? TakeProfit : na, color=iff(TakeProfit!=na,color.silver, color.green),style=plot.style_linebr)
+// The actual trades, going Long, close Long, going Short and Stoploss
+if (longCondition)
+    strategy.entry("Buy on Monday", strategy.long)
+    
+if (shortCondition and LongOnly==false)
+    strategy.entry("Short on Friday", strategy.short)
+if (shortCondition and LongOnly)
+    strategy.close("Buy on Monday", comment="Sell on Friday")
+if (Use_takeprofit and high > TakeProfit)
+    strategy.close("Buy on Monday", comment="Long Took Profit on some day")
+if (low < Stoploss)
+    strategy.close("Buy on Monday", comment="Long Stopped on some day")
+if (high > Stoploss)
+    strategy.close("Short on Friday", comment="Short Stopped on some day")
+Expand (66 lines)

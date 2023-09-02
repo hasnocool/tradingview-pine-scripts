@@ -1,0 +1,466 @@
+Script Name: Strategy - Trend Chaser - PSe
+Author: ElvinKennedyHernandezLatayan
+Description: Trend Chaser for Philippine Stock Exchange - LONG ONLY
+
+-Elvin Kennedy Latayan 2022
+PineScript code:
+
+Pine Script™ strategy
+Strategy - Trend Chaser - PSe
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Dillon_Grech / Elvin Latayan
+//@version=5
+strategy('Strategy - Trend Chaser - PSe', overlay=true, currency=currency.USD, pyramiding=1, initial_capital=25000)
+//==============================================================================
+//FOREX EXCHANGE - Currency Conversion
+//==============================================================================
+//Select quote currency
+quoteCurrency = syminfo.currency  //gets quote currency automatically by looking using syminfo function - thank you Rodenwild
+//Get currency pair rate quoted against USD (base currency)
+usdUSDrate = request.security('USDUSD', 'D', close[1])
+gbpUSDrate = request.security('GBPUSD', 'D', close[1])
+audUSDrate = request.security('AUDUSD', 'D', close[1])
+nzdUSDrate = request.security('NZDUSD', 'D', close[1])
+cadUSDrate = request.security('CADUSD', 'D', close[1])
+chfUSDrate = request.security('CHFUSD', 'D', close[1])
+eurUSDrate = request.security('EURUSD', 'D', close[1])
+jpyUSDrate = request.security('JPYUSD', 'D', close[1])
+phpUSDrate = request.security('PHPUSD', 'D', close[1])
+//Fuction to get currency rate into variable 
+cr_function(source) =>
+    if quoteCurrency == 'USD'
+        1
+    else
+        if quoteCurrency == 'GBP'
+            gbpUSDrate
+        else
+            if quoteCurrency == 'AUD'
+                audUSDrate
+            else
+                if quoteCurrency == 'NZD'
+                    nzdUSDrate
+                else
+                    if quoteCurrency == 'CAD'
+                        cadUSDrate
+                    else
+                        if quoteCurrency == 'CHF'
+                            chfUSDrate
+                        else
+                            if quoteCurrency == 'EUR'
+                                eurUSDrate
+                            else
+                                if quoteCurrency == 'PHP'
+                                    phpUSDrate
+                                else
+                                    jpyUSDrate
+//Put currency rate function into variable
+cr_multi = cr_function(ta.tr(true))
+//==============================================================================
+//==============================================================================
+//BACKTEST DATE RANGE - Select Dates
+//==============================================================================
+//Input for date window
+startDay = input.int(defval=1, title='Start Day', minval=1, maxval=31)
+startMonth = input.int(defval=1, title='Start Month', minval=1, maxval=12)
+startYear = input.int(defval=2008, title='Start Year', minval=1970)
+endDay = input.int(defval=1, title='End Day', minval=1, maxval=31)
+endMonth = input.int(defval=12, title='End Month', minval=1, maxval=12)
+endYear = input.int(defval=2022, title='End Year', minval=1970)
+//Submit date window
+startDate = timestamp(startYear, startMonth, startDay, 00, 00, 00)  // backtest start date
+endDate = timestamp(endYear, endMonth, endDay, 23, 59, 59)  // backtest end date
+dateRange() =>  // specify where date range is true
+    time >= startDate and time <= endDate ? true : false
+// Remove EurChf from testing
+EURCHFCrashDate = syminfo.currency == 'CHF' or syminfo.basecurrency == 'CHF' ? time >= timestamp(2015, 01, 01) and time <= timestamp(2015, 01, 18) ? false : true : true
+//==============================================================================
+//==============================================================================
+//MONEY MANAGEMENT - ATR
+//==============================================================================
+//Entrer intial capital and percentage risk inputs
+percentRisk = input.float(title='Risk Per Trade', defval=0.02, minval=0.001, maxval=1)
+//Enter ATR inputs
+atrLength = 14 
+atrMulti_Loss = input(title='Atr Loss Multiple', defval=1.25)
+tsMulti = input(title='Trailing Stop Multiple', defval=1.25)
+//ATR function
+truncate(number, decimals) =>
+    factor = math.pow(10, decimals)
+    int(number * factor) / factor
+atr = truncate(ta.atr(atrLength), 5)
+//Fuction for pse lot size
+pse_lotsize(tickSize) =>
+    if tickSize == 0.0001
+        10000
+    else
+        if tickSize >= 0.001 and tickSize <= 0.005
+            1000
+        else
+            if tickSize >= 0.01 and tickSize <= 0.05
+                100
+            else
+                if tickSize >= 0.10 and tickSize <= 0.50
+                    10
+                else
+                    if tickSize >= 1 and tickSize <= 5
+                        1
+//Get position size
+//posSize = round((((strategy.initial_capital/100) * percentRisk) / (atrMulti_Loss * atr))/ syminfo.mintick)
+riskMoney = strategy.initial_capital / pse_lotsize(syminfo.mintick) * percentRisk
+posSize = math.round(riskMoney / (atrMulti_Loss * atr * syminfo.pointvalue) / syminfo.mintick)
+//==============================================================================
+//==============================================================================
+//INDICATOR 1 - Trigger
+//==============================================================================
+//Indicator Name
+[macdLine, signalLine, histLine] = ta.macd(close, 12, 26, 9)
+Ind_1_L = ta.crossover(histLine, 0) and macdLine > 0
+Ind_1_S = false
+//==============================================================================
+//==============================================================================
+//INDICATOR 2
+//==============================================================================
+//Indicator Name
+//
+// @author LazyBear 
+// List of all my indicators: 
+// https://docs.google.com/document/d/15AGCufJZ8CIUvwFJ9W-IKns88gkWOKBCvByMEvm5MLo/edit?usp=sharing
+//
+// Modified for Crypto Market by ShayanKM
+sensitivity = input(150, title='Sensitivity')
+fastLength = input(20, title='FastEMA Length')
+slowLength = input(40, title='SlowEMA Length')
+channelLength = input(20, title='BB Channel Length')
+mult = input(2.0, title='BB Stdev Multiplier')
+DEAD_ZONE = nz(ta.rma(ta.tr(true), 100)) * 3.7
+calc_macd(source, fastLength, slowLength) =>
+    fastMA = ta.ema(source, fastLength)
+    slowMA = ta.ema(source, slowLength)
+    fastMA - slowMA
+calc_BBUpper(source, length, mult) =>
+    basis = ta.sma(source, length)
+    dev = mult * ta.stdev(source, length)
+    basis + dev
+calc_BBLower(source, length, mult) =>
+    basis = ta.sma(source, length)
+    dev = mult * ta.stdev(source, length)
+    basis - dev
+t1 = (calc_macd(close, fastLength, slowLength) - calc_macd(close[1], fastLength, slowLength)) * sensitivity
+e1 = calc_BBUpper(close, channelLength, mult) - calc_BBLower(close, channelLength, mult)
+trendUp = t1 >= 0 ? t1 : 0
+trendDown = t1 < 0 ? -1 * t1 : 0
+//Long and Short Orders (Confirmation Conditions)
+Ind_2_L = trendUp > e1
+Ind_2_S = false
+//==============================================================================
+//ENTRY CONDITIONS - Submit Orders
+//==============================================================================
+//Long and short strategy conditions
+entry_long = strategy.position_size <= 0 and dateRange() and EURCHFCrashDate and Ind_1_L and Ind_2_L
+entry_short = strategy.position_size >= 0 and dateRange() and EURCHFCrashDate and Ind_1_S and Ind_2_S
+plotshape(entry_long, color=color.new(color.lime, 0), style=shape.arrowup, location=location.belowbar, text='Buy')
+plotshape(entry_short, color=color.new(color.red, 0), style=shape.arrowdown, location=location.abovebar, text='Sell')
+//Store ATR and Price upon entry of trade.
+entry_atr = float(0.0)  //set float
+entry_price = float(0.0)  //set float
+entry_atr := strategy.position_size == 0 or entry_long or entry_short ? atr : entry_atr[1]
+entry_price := strategy.position_size == 0 or entry_long or entry_short ? close : entry_price[1]
+//Submit long and short orders based on entry conditions
+if entry_long
+    strategy.entry(id='Long Entry 1', direction=strategy.long, qty=posSize)
+if entry_short
+    strategy.entry(id='Short Entry 1', direction=strategy.short, qty=posSize)
+//==============================================================================
+//==============================================================================
+//TAKE PROFIT & STOP LOSS VALUES
+//==============================================================================
+//Calculate stop loss and take profit distance (in price)
+nLoss = entry_atr * atrMulti_Loss
+nProfit = entry_atr
+ts_loss = entry_atr  * tsMulti
+//Find long take profit and stop loss levels
+long_profit_level = float(0.0)  //set float
+long_stop_level = float(0.0)  //set float
+long_profit_level := entry_price + nLoss
+long_stop_level := entry_price - nLoss
+if math.max(close, close[1]) > long_profit_level
+    long_stop_level := entry_price
+    long_stop_level
+if long_stop_level < math.max(close - (ts_loss + ts_loss), nz(long_stop_level[1], 0))
+    long_stop_level := math.max(close - (ts_loss + ts_loss), nz(long_stop_level[1], 0), strategy.position_avg_price)
+    long_stop_level
+//Find short take profit and stop loss levels
+short_profit_level = float(0.0)  //set float
+short_stop_level = float(0.0)  //set float
+short_profit_level := entry_price - nProfit
+short_stop_level := entry_price + nLoss
+//Plot stop loss and profit level on graph; hide levels when no trade
+plot(strategy.position_size <= 0 or entry_long or entry_short ? na : long_stop_level, color=color.new(color.red, 0), style=plot.style_linebr, linewidth=2)
+plot(strategy.position_size <= 0 or entry_long or entry_short ? na : long_profit_level, color=color.new(color.green, 0), style=plot.style_linebr, linewidth=2)
+plot(strategy.position_size >= 0 or entry_long or entry_short ? na : short_stop_level, color=color.new(color.red, 0), style=plot.style_linebr, linewidth=2)
+plot(strategy.position_size >= 0 or entry_long or entry_short ? na : short_profit_level, color=color.new(color.green, 0), style=plot.style_linebr, linewidth=2)
+//==============================================================================
+//==============================================================================
+//EXIT CONDITIONS - Submit Orders
+//==============================================================================
+//Submit exit orders on static profit and loss
+strategy.exit('TP/SL 1', 'Long Entry 1', stop=long_stop_level)
+strategy.exit('TP/SL 1', 'Short Entry 1', stop=short_stop_level)
+//Submit exit orders on exit indicator - Exit 1
+strategy.close(id='Long Entry 1', comment='Exit 1 L1', when=Ind_1_S)
+strategy.close(id='Short Entry 1', comment='Exit 1 S1', when=Ind_1_L)
+//==============================================================================
+if entry_long
+    label.new(bar_index, na, "•ENTRY•\nPosition Size = " + str.tostring(posSize) + "\n Potential Stop Loss = " + str.tostring(close - nLoss) + "\n Actual Stop Loss = " + str.tostring(long_stop_level), yloc = yloc.abovebar, style = label.style_none, textcolor = color.black, size = size.normal)
+Expand (250 lines)

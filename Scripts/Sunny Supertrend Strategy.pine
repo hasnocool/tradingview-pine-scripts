@@ -1,0 +1,146 @@
+Script Name: Sunny Supertrend Strategy
+Author: jay2906
+Description: It provides fantastic accuracy in anticipating trend reversals and works perfectly as a timing indicator.
+Thus it increases patience skills on the market and helps traders enter and exit in the markets at the right moment.
+
+The adaptability of TD sequential is also part of its strength.
+It can be applied to any timeframe and any asset class to the point that it...
+PineScript code:
+
+Pine Script™ strategy
+Sunny Supertrend Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+//@version=5
+strategy("Sunny Supertrend Strategy", overlay=true, default_qty_type=strategy.percent_of_equity)
+atrPeriod = input(10, "ATR Length")
+factor = input.float(3.0, "Factor", step = 0.01)
+[_, direction] = ta.supertrend(factor, atrPeriod)
+shor= close > open and close[1] > open[1] and close[2] > open[2] 
+lon = open > close and open[1] > close[1] and  open[2] > close[2]
+tt= ta.change(direction) < 0
+ss= ta.change(direction) > 0
+long= tt
+longexit = lon or ss
+short= ss
+shortexit = shor or tt
+longPosMem = false
+longexitPosMem = false
+shortPosMem = false
+shortexitPosMem = false
+longPosMem := long ? true : short ? false : longPosMem[1]
+longexitPosMem := longexit ? true : shortexit ? false : longexitPosMem[1]
+shortPosMem := short ? true : long ? false : shortPosMem[1]
+shortexitPosMem := shortexit ? true : longexit ? false : shortexitPosMem[1]
+longy = long and not(longPosMem[1])
+longexity = longexit and not(longexitPosMem[1])
+shorty = short and not(shortPosMem[1])
+shortexity = shortexit and not(shortexitPosMem[1])
+//Use this to customize the look of the arrows to suit your needs.
+plotshape(longy, location=location.abovebar, color=color.green, style=shape.arrowup, text="Buy")
+plotshape(longexity, location=location.top, color=color.green, style=shape.xcross, text="Buy exit")
+plotshape(shorty, location=location.belowbar, color=color.red, style=shape.arrowdown, text="Sell")
+plotshape(shortexity, location=location.bottom, color=color.red, style=shape.xcross, text="Sell exit")
+//plot(strategy.equity, title="equity", color=color.red, linewidth=2, style=plot.style_areabr)
+// STEP 1:
+// Make input options that configure backtest date range
+startDate = input.int(title="Start Date", defval=1, minval=1, maxval=31)
+startMonth = input.int(title="Start Month", 
+     defval=1, minval=1, maxval=12)
+startYear = input.int(title="Start Year",
+     defval=2021, minval=1800, maxval=2100)
+endDate = input.int(title="End Date",
+     defval=1, minval=1, maxval=31)
+endMonth = input.int(title="End Month",
+     defval=2, minval=1, maxval=12)
+endYear = input.int(title="End Year",
+     defval=2021, minval=1800, maxval=2100)
+// STEP 2:
+// Look if the close time of the current bar
+// falls inside the date range
+inDateRange = (time >= timestamp(syminfo.timezone, startYear,
+         startMonth, startDate, 0, 0)) and
+     (time < timestamp(syminfo.timezone, endYear, endMonth, endDate, 0, 0))
+// STEP 3:
+// Submit entry orders, but only when bar is inside date range
+if (inDateRange and longy)
+    strategy.entry("enter long",strategy.long,when= longy)
+    strategy.close("long",when=longexity)
+if (inDateRange and shorty)
+    strategy.entry("enter short",strategy.short,when = shorty)
+    strategy.close("short", when=shortexity)
+Expand (75 lines)

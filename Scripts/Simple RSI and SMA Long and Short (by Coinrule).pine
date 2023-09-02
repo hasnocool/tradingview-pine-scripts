@@ -1,0 +1,80 @@
+Script Name: Simple RSI and SMA Long and Short (by Coinrule)
+Author: Coinrule
+Description: The relative strength index ( RSI ) is a momentum indicator used in technical analysis . RSI measures the speed and magnitude of a security's recent price changes to evaluate overvalued or undervalued conditions in the price of that security. The RSI is displayed as an oscillator (a line graph) on a scale of zero to 100. The RSI can do more than point to...
+PineScript code:
+
+Pine Script™ strategy
+Simple RSI and SMA Long and Short (by Coinrule)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Coinrule
+//@version=5
+strategy('RSI and SMA',
+         overlay=true,
+         initial_capital=1000,
+         process_orders_on_close=true,
+         default_qty_type=strategy.percent_of_equity,
+         default_qty_value=30,
+         commission_type=strategy.commission.percent,
+         commission_value=0.1)
+showDate = input(defval=true, title='Show Date Range')
+timePeriod = time >= timestamp(syminfo.timezone, 2022, 1, 1, 0, 0)
+notInTrade = strategy.position_size <= 0
+//==================================Buy Conditions============================================
+//RSI
+length = input(14)
+rsi = ta.rsi(close, length)
+//SMA
+fastEMA = ta.sma(close, 100)
+slowEMA = ta.sma(close, 150)
+plot(fastEMA, color = color.green)
+plot(slowEMA, color = color.blue)
+bullish = ta.crossover(fastEMA, slowEMA) and rsi > 50
+bearish = ta.crossover(slowEMA, fastEMA) and rsi < 50
+strategy.entry("Long", strategy.long, when=bullish and timePeriod)
+strategy.close("Exit", when=bearish)
+strategy.entry("Short", strategy.short, when=bearish and timePeriod)
+strategy.close("Exit", when=bullish)
+Expand (42 lines)

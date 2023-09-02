@@ -1,0 +1,166 @@
+Script Name: RSI KANNEMAN
+Author: samuelkanneman
+Description: Para hacer muchos SUYAI
+Basado en RSI y media de RSI, con sobre compras y sobre ventas.
+PineScript code:
+
+Pine Script™ strategy
+RSI KANNEMAN
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © samuelkanneman
+//@version=4
+strategy("RSI KANNEMAN")
+//////Entrada///////
+i_startTime         = input(title="Start Date Filter", defval=timestamp("01 Nov 2020 13:30 +0000"), type=input.time, tooltip="Date & time to begin trading from")
+i_endTime           = input(title="End Date Filter", defval=timestamp("1 Nov 2022 19:30 +0000"), type=input.time, tooltip="Date & time to stop trading")
+sobrecompra= input(70, title="Sobre Compra", type=input.integer ,minval=50, maxval=100 )
+sobreventa= input(30, title="Sobre Venta", type=input.integer ,minval=0, maxval=50 )
+l1=hline(sobrecompra)
+l2=hline(sobreventa, color=color.purple)
+periodos= input(14, title="Periodos", type=input.integer ,minval=1, maxval=50 )
+periodos_media= input(14, title="Logintud media movil", type=input.integer ,minval=1, maxval=200 )
+var SL =0.0
+var TP=0.0
+StopLoss = input(2.0, title="SL %", step=0.2)
+TakeProfit = input(5.0, title="TP %", step=0.2)
+//////Proceso///////
+mi_rsi=rsi(close,periodos)
+mm_rsi=sma(mi_rsi,periodos_media)
+Es_compra= crossover(mm_rsi,sobreventa)
+Es_venta= crossunder(mm_rsi,sobrecompra)
+comprado= strategy.position_size > 0
+vendido = strategy.position_size < 0
+//time to test 
+dateFilter = time >= i_startTime and time <= i_endTime
+//timePeriod = time >= timestamp(syminfo.timezone, 2020, 11, 1, 0, 0)
+// long
+if (not comprado and Es_compra and dateFilter  )
+    // realizar long
+    cantidad = strategy.equity/hlc3
+    strategy.entry ("compra", strategy.long , cantidad)
+    SL := close*(1-(StopLoss/100))
+    TP := close*(1+(TakeProfit/100))
+    
+if close >= TP
+    strategy.close ("compra" , comment="Salto TP")  
+if (comprado and Es_venta  )
+    strategy.close ("compra" , comment="Sobre Venta")
+if close <= SL
+    strategy.close ("compra" , comment="Salto SL")
+    
+// short
+if (not vendido and Es_venta and dateFilter  )
+    // realizar short
+    cantidad = strategy.equity/hlc3
+    strategy.entry ("venta", strategy.short , cantidad)
+    SL := close*(1+(StopLoss/100))
+    TP := close*(1-(TakeProfit/100))
+    
+if close <= TP
+    strategy.close ("venta" , comment="Salto TP")  
+if (vendido and Es_compra  )
+    strategy.close ("venta" , comment="Sobre Compra")
+if close >= SL
+    strategy.close ("venta" , comment="Salto SL")
+    
+    
+    
+   ///////Salida//////
+fill(l1,l2)
+plot(mi_rsi)
+plot(mm_rsi, color=color.yellow)
+bgcolor(Es_compra ? color.blue : na , transp=0)
+bgcolor(Es_venta ? color.red : na , transp=0)
+// 1d 70 22 5 4 3 15    6 meses
+//1h 70 20 6 4 5 7      1 mese
+//15m 70 20 5 4 4 7      1 semana
+Expand (88 lines)

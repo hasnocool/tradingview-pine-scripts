@@ -1,0 +1,159 @@
+Script Name: RSI2 BTCUSD Sell Strategy (Erroneously Profitable)
+Author: ricmos
+Description: I put this strategy here to attract the attention of someone and see if he finds the error in the code that leads to error in the calculation.
+PineScript code:
+
+Pine Script™ strategy
+RSI2 BTCUSD Sell Strategy (Erroneously Profitable)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+//@version=4
+// Copyright (c) 2021-present, RicMos
+//study("RSI2 Sell Strategy, overlay=true)
+//------------------------------------------USER VARIABLE DEFINITIONS --------------------------------------
+var float lots = 0.1
+//var float fixed_commission = 0.6 // forex pairs commission  value USD per position size two sides
+var float fixed_commission = 10 // BTC commission value USD per position size two sides
+//var float money = 10000 //forex pairs position size
+var float money = 0.3333 //BTC position size
+strategy(title="RSI2 Sell Strategy", commission_type=strategy.commission.cash_per_order, calc_on_every_tick =true, commission_value = fixed_commission/2, overlay=true, default_qty_value= lots*100000, initial_capital=1000, currency = "USD", calc_on_order_fills = false)
+len = input(2, minval=1, title="RSI Length")
+src = input(close, "RSI Source", type = input.source)
+upRsi = rma(max(change(src), 0), len)
+downRsi = rma(-min(change(src), 0), len)
+rsi = downRsi == 0 ? 100 : upRsi == 0 ? 0 : 100 - (100 / (1 + upRsi / downRsi))
+var color buyColor = color.blue
+var color sellColor = color.red
+plotshape(rsi <= 10 ? low : na, title="Arrow Up", style=shape.triangleup, location=location.belowbar, size=size.tiny, color=buyColor)
+plotshape(rsi >= 90 ? high : na, title="Arrow Down", style=shape.triangledown, location=location.abovebar, size=size.tiny, color=sellColor)
+// long = rsi <= 10 
+// var float longsl = 0
+// var int long_ts_points = 0
+// if long
+//     longsl:= low
+//     long_ts_points := 200
+    
+// if rsi >= 70
+//     long_ts_points := 100
+// else if rsi >= 80
+//     long_ts_points := 80
+// plot (longsl)
+// var int barsPassed = 0
+// barsPassed := barssince(long)
+// if long
+//     strategy.entry("long", long = strategy.long, qty = 10000, stop = high)
+// strategy.exit("slLo", from_entry="long", stop = longsl-0.0002, trail_points = long_ts_points )
+// //strategy.close("long", when = rsi[1]>=50 and rsi < 50 , comment = "rsi under 50" )
+// strategy.cancel_all(barsPassed > 3  and not long)
+short = rsi >= 90 
+var float shortsl = 0
+var int short_ts_points = 0
+//var bool stClose = 0
+if short
+    shortsl:= high
+    short_ts_points := 200
+    
+if rsi <= 30
+    short_ts_points := 100
+    //stClose :=1
+else if rsi <= 20
+    short_ts_points := 80 
+//else
+    //stClose := 0
+plot (shortsl)
+var int barsPassedSh = 0
+barsPassedSh := barssince(short)
+if short
+    strategy.entry("short", long = strategy.short, qty = money, stop = low)
+strategy.exit("slSh", from_entry="short", stop = shortsl, trail_points = short_ts_points, trail_offset =20 )
+//strategy.close("short", comment="rsi<30", when = stClose)
+//strategy.close("long", when = rsi[1]>=50 and rsi < 50 , comment = "rsi under 50" )
+strategy.cancel_all(barsPassedSh > 3  and not short)
+Expand (88 lines)

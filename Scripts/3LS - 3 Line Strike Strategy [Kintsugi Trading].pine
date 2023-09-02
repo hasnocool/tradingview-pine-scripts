@@ -1,0 +1,614 @@
+Script Name: 3LS - 3 Line Strike Strategy [Kintsugi Trading]
+Author: KintsugiTrading
+Description: What is the 3LS | 3 Line Strike Strategy? 
+
+Incorporating the 3 Line Strike candlestick pattern into our strategy was inspired by  Arty at The Moving Average  and the amazing traders at  TheTrdFloor . 
+The Three Line Strike is a trend continuation candlestick pattern consisting of four candles. Depending on their heights and collocation, a bullish or a bearish...
+PineScript code:
+
+Pine Script™ strategy
+3LS | 3 Line Strike Strategy [Kintsugi Trading]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © KintsugiTrading
+//@version=5
+strategy(title="3LS | 3 Line Strike Strategy [Kintsugi Trading]", overlay=true, process_orders_on_close=true, calc_on_every_tick=true, initial_capital=10000)
+//INPUTS
+showRiskReward = input(true,title="Show Risk/Reward Area",group="Risk Management")
+takeLong = input(true, title="Enter Long Position",group="Risk Management")
+takeShort = input(true, title="Enter Short Position",group="Risk Management")
+stopType = input.string("Fix PIP Size",title="Stop Loss Strategy",options=["ATR Trail","ATR Trail-Stop","Fix PIP Size"], group="Risk Management")
+atrPeriod = input(14,title="ATR Period",group="Risk Management",tooltip="Uses on ATR Trail-stop")
+atrMultip = input.float(2.0,step=0.1,title="ATR Multiplier",group="Risk Management",tooltip="Uses on ATR Trail-stop")
+riskMultip = input.float(1.0,title="Risk/Reward Ratio",minval=0.1,step=0.1,group="Risk Management")
+stopTickSize = input(3,title="Additional Stop PIP Size",group="Risk Management")*syminfo.mintick*10
+isSessionFilterActive = input.bool(false,title="Session Filter Active?",group="Session")
+i_tz = input.string('GMT', title='Timezone: ', tooltip='e.g. \'America/New_York\', \'Asia/Tokyo\', \'GMT-4\', \'GMT+9\'...', group='Session')
+sessionOneRange = input.session(title='Trade Session: ', defval='0900-1600', group='Session')
+maFill = input(true,title="MA Cloud Fill",group="MA")
+maPeriod1 = input.int(21,title="MA Period Fast",group="MA")
+maPeriod2 = input.int(55,title="MA Period Slow",group="MA")
+//VSA{
+showVsa = input.bool(true,title="Show VSA Status?",group="VSA")
+ma0_length = input.int(30, "Moving Average", minval=1, group="VSA")
+ma1_length = input.float(0.5,step=0.1,title="MA-1 Multiplier",group="VSA")
+ma2_length = input.float(1.5,step=0.1,title="MA-2 Multiplier",group="VSA")
+ma3_length = input.float(3.0,step=0.1,title="MA-3 Multiplier",group="VSA")
+ma0 = ta.sma(volume, ma0_length)
+ma1 = ma0 * ma1_length
+ma2 = ma0 * ma2_length
+ma3 = ma0 * ma3_length
+histColor = volume < ma1 ? color.navy  : volume < ma2 ? color.green  : volume < ma3 ? color.yellow : volume > ma3 ? color.red  : color.gray       
+volumeEntryCond = volume > ma2
+plotshape(showVsa ? -1 : na, color=histColor, style=shape.square, location=location.bottom, size=size.auto, title='VSA Status')
+plotshape(showVsa ? -1 : na, color=histColor, textcolor=histColor, text='VSA Status', style=shape.square, location=location.bottom, size=size.auto, title='VSA Label', show_last=1, offset=0)
+//}
+//3LS{
+showBear3LS = input.bool(title='Show Bearish KT Signal', defval=true, group='3 Line Strike')
+showBull3LS = input.bool(title='Show Bullish KT Signal', defval=true, group='3 Line Strike')
+getCandleColorIndex(barIndex) =>
+    int ret = na
+    if (close[barIndex] > open[barIndex])
+        ret := 1
+    else if (close[barIndex] < open[barIndex])
+        ret := -1
+    else
+        ret := 0
+    ret
+// Check for engulfing candles
+isEngulfing(checkBearish) =>
+    // In an effort to try and make this a bit more consistent, we're going to calculate and compare the candle body sizes
+    // to inform the engulfing or not decision, and only use the open vs close comparisons to identify the candle "color"
+    ret = false
+    sizePrevCandle = close[1] - open[1] // negative numbers = red, positive numbers = green, 0 = doji
+    sizeCurrentCandle = close - open    // negative numbers = red, positive numbers = green, 0 = doji
+    isCurrentLagerThanPrevious = (math.abs(sizeCurrentCandle) > math.abs(sizePrevCandle)) ? true : false
+    // We now have the core info to evaluate engulfing candles
+    switch checkBearish
+        true => 
+            // Check for bearish engulfing (green candle followed by a larger red candle)
+            isGreenToRed = ((getCandleColorIndex(0) < 0) and (getCandleColorIndex(1) > 0)) ? true : false
+            ret := (isCurrentLagerThanPrevious and isGreenToRed) ? true : false
+        false => 
+            // Check for bullish engulfing (red candle followed by a larger green candle)
+            isRedToGreen = ((getCandleColorIndex(0) > 0) and (getCandleColorIndex(1) < 0)) ? true : false
+            ret := (isCurrentLagerThanPrevious and isRedToGreen) ? true : false
+        => ret := false // This should be impossible to trigger...
+    ret
+//
+// Helper functions that wraps the isEngulfing above...
+isBearishEngulfuing() =>
+    ret = isEngulfing(true)
+    ret
+//
+isBullishEngulfuing() =>
+    ret = isEngulfing(false)
+    ret
+//
+// Functions to check for 3 consecutive candles of one color, followed by an engulfing candle of the opposite color
+//
+// Bearish 3LS = 3 green candles immediately followed by a bearish engulfing candle
+is3LSBear() =>
+    ret = false
+    is3LineSetup = ((getCandleColorIndex(1) > 0) and (getCandleColorIndex(2) > 0) and (getCandleColorIndex(3) > 0)) ? true : false
+    ret := (is3LineSetup and isBearishEngulfuing()) ? true : false
+    ret
+//
+// Bullish 3LS = 3 red candles immediately followed by a bullish engulfing candle
+is3LSBull() =>
+    ret = false
+    is3LineSetup = ((getCandleColorIndex(1) < 0) and (getCandleColorIndex(2) < 0) and (getCandleColorIndex(3) < 0)) ? true : false
+    ret := (is3LineSetup and isBullishEngulfuing()) ? true : false
+    ret
+is3LSBearSig = is3LSBear()
+is3LSBullSig = is3LSBull()
+plotshape(showBull3LS ? is3LSBullSig : na, style=shape.triangleup, color=color.rgb(0, 255, 0, 0), location=location.belowbar, size=size.small, text='KT-Bull', title='3 Line Strike Up')
+plotshape(showBear3LS ? is3LSBearSig : na, style=shape.triangledown, color=color.rgb(255, 0, 0, 0), location=location.abovebar, size=size.small, text='KT-Bear', title='3 Line Strike Down')
+//}
+useCustomRisk = input(true,title="Use Custom Risk",group="Risk Calculation")
+maxPercRisk = input.float(2.0,step=0.1,minval=0.1,title="% Risk Per Trade",group="Risk Calculation",tooltip="This value used only for backtest results not for auto trading.")/100
+// AutoView Settings
+var g_av            = "AutoView Settings [OANDA]"
+av_use              = input.bool(title="Use AutoView?", defval=false, group=g_av, tooltip="If turned on then the alerts this script generates will use AutoView syntax for auto-trading (WARNING: USE AT OWN RISK! RESEARCH THE DANGERS)")
+av_oandaDemo        = input.bool(title="Use Oanda Demo?", defval=true, group=g_av, tooltip="If turned on then oandapractice broker prefix will be used for AutoView alerts (demo account). If turned off then live account will be used")
+av_limitOrder       = input.bool(title="Use Limit Order?", defval=true, group=g_av, tooltip="If turned on then AutoView will use limit orders. If turned off then market orders will be used")
+av_accountBalance   = input.float(title="Account Balance", defval=1000.0, step=100, group=g_av, tooltip="Your account balance (used for calculating position size)")
+av_accountCurrency  = input.string(title="Account Currency", defval="USD", options=["AUD", "CAD", "CHF", "EUR", "GBP", "JPY", "NZD", "USD"], group=g_av, tooltip="Your account balance currency (used for calculating position size)")
+av_riskPerTrade     = input.float(title="Risk Per Trade %", defval=2.0, step=0.5, group=g_av, tooltip="Your risk per trade as a % of your account balance")
+// PineConnector Settings
+var g_pc = 'PineConnector Settings'
+pc_use = input.bool(title='Use PineConnector?', defval=true, group=g_pc, tooltip='Use PineConnector Alerts? (WARNING: USE AT OWN RISK! RESEARCH THE DANGERS)')
+pc_id = input.string(title='License ID', defval='ID', group=g_pc, tooltip='This is your PineConnector license ID')
+pc_risk = input.float(title='Risk Per Trade', defval=1, step=0.5, group=g_pc, tooltip='This is how much to risk per trade (% of balance or lots - based on PC settings)')
+pc_prefix = input.string(title='MetaTrader Prefix', defval='', group=g_pc, tooltip='This is your broker\'s MetaTrader symbol prefix (leave blank if there is none)')
+pc_suffix = input.string(title='MetaTrader Suffix', defval='', group=g_pc, tooltip='This is your broker\'s MetaTrader symbol suffix (leave blank if there is none)')
+// Generate PineConnector alert string
+var symbol = pc_prefix + syminfo.ticker + pc_suffix
+var broker = av_oandaDemo ? "oandapractice" : "oanda"
+var pair = syminfo.basecurrency + "/" + syminfo.currency
+pc_entry_alert(direction, entry, sl, tp) =>
+    order_price = entry
+    tp_value = na(tp) == false ? ',tp=' + str.tostring(tp) : ""
+    price = 'price=' + str.tostring(order_price)
+    pc_id + ',' + direction  + ',' + symbol + ',' + price + ',sl=' + str.tostring(sl) + tp_value + ',risk=' + str.tostring(pc_risk)
+pc_exit_alert(direction) =>
+    pc_id + ',' + direction  + ',' + symbol
+av_entry_alert(side, qty, entry, sl, tp)=>
+    tp_value = na(tp) == false ? " ftp=" + str.tostring(tp) : ""
+    "e=" + broker + " b="+side+" q=" + str.tostring(qty) + " s=" + pair+ " t=" + (av_limitOrder ? "limit fp=" + str.tostring(entry) : "market")+ " fsl=" + str.tostring(sl)+ tp_value
+av_exit_alert(side) =>
+    "e=" + broker + " s=" + pair +" c=position b="+side
+//AUTOTRADE
+//DETERMINE POSITION SIZE
+atr = ta.atr(14)
+toWhole(number) =>
+    returnVal = atr < 1.0 ? (number / syminfo.mintick) / (10 / syminfo.pointvalue) : number
+    returnVal := atr >= 1.0 and atr < 100.0 and syminfo.currency == "JPY" ? returnVal * 100 : returnVal
+    
+var tradePositionSize = 0.0
+accountSameAsCounterCurrency = av_accountCurrency == syminfo.currency
+accountSameAsBaseCurrency = av_accountCurrency == syminfo.basecurrency
+accountNeitherCurrency = not accountSameAsCounterCurrency and not accountSameAsBaseCurrency
+conversionCurrencyPair = accountSameAsCounterCurrency ? syminfo.tickerid : accountNeitherCurrency ? av_accountCurrency + syminfo.currency : av_accountCurrency + syminfo.currency
+conversionCurrencyRate = request.security(symbol=syminfo.type == "forex" ? conversionCurrencyPair : "AUDUSD", timeframe="D", expression=close)
+getPositionSize(stopLossSizePoints) =>
+    riskAmount = (av_accountBalance * (av_riskPerTrade / 100)) * (accountSameAsBaseCurrency or accountNeitherCurrency ? conversionCurrencyRate : 1.0)
+    riskPerPoint = (stopLossSizePoints * syminfo.pointvalue)
+    positionSize = (riskAmount / riskPerPoint) / syminfo.mintick
+    math.round(positionSize)
+//CALCS
+//ATR
+atrValue = ta.atr(atrPeriod)
+//Sessions
+in_session_one = time(timeframe.period, sessionOneRange,i_tz)
+sessionOneActive = in_session_one and timeframe.multiplier <= 1440
+sessionFilterResult = isSessionFilterActive ? sessionOneActive : true
+//MA
+maValue1 = ta.sma(close,maPeriod1)
+maValue2 = ta.sma(close,maPeriod2)
+//STRATEGY
+var float longStop = na,var float longRisk = na,var float longTp = na
+var float shortStop = na,var float shortRisk = na,var float shortTp = na
+string entryAlertString = "", string exitAlertString = ""
+fix_long_exit = "Exit LONG"
+fix_short_exit = "Exit SHORT"
+var float positionSize = 1
+calcPositionSize(unitRisk)=>
+    if useCustomRisk == false
+        1
+    else
+        totalRisk = strategy.equity *maxPercRisk
+        math.round(totalRisk/unitRisk,6)
+//FUNCTION
+calcAtrTrailStop(side)=>
+    if side == "long"
+        tempStop = close - (atrValue * atrMultip)
+        (tempStop > longStop and tempStop < close) ? tempStop : longStop
+    else
+        tempStop = close + (atrValue * atrMultip)
+        (tempStop < shortStop and tempStop > close) ? tempStop : shortStop
+//ATR TRAIL-STOP
+if (stopType == "ATR Trail-Stop" or stopType == "ATR Trail") and strategy.position_size > 0
+    longStop := calcAtrTrailStop("long")
+    if av_use
+        exitAlertString := av_exit_alert('long')
+    else if pc_use
+        exitAlertString := pc_exit_alert('closelong')
+    strategy.exit('Long Exit', 'Long', comment="EXIT LONG", stop=longStop, limit=longTp, alert_message=exitAlertString)
+if (stopType == "ATR Trail-Stop" or stopType == "ATR Trail") and strategy.position_size < 0 
+    shortStop := calcAtrTrailStop("short")
+    if av_use
+        exitAlertString := av_exit_alert('short')
+    else if pc_use
+        exitAlertString := pc_exit_alert('closeshort')
+    strategy.exit('Short Exit', 'Short', comment="EXIT SHORT", stop=shortStop, limit=shortTp, alert_message=exitAlertString)
+//LONG
+longCond = is3LSBullSig and volumeEntryCond and maValue1 > maValue2
+shortCond = is3LSBearSig and volumeEntryCond and maValue1 < maValue2 
+if longCond and takeLong and sessionFilterResult and strategy.position_size == 0 and barstate.isconfirmed and strategy.equity > 0
+    longStop := stopType == "Fix PIP Size" ? low - stopTickSize : close - (atrValue*atrMultip)
+    longRisk := (close - longStop) 
+    longTp :=   stopType != "ATR Trail" ?  close + (riskMultip*longRisk) : na
+    longStopDistance = close - longStop
+    positionSize := calcPositionSize(longRisk) 
+    
+    if av_use
+        entryAlertString := av_entry_alert("long",tradePositionSize,close,longStop,longTp)
+        exitAlertString := fix_long_exit
+    else if pc_use
+        entryAlertString := pc_entry_alert("buy", close, longStop, longTp)
+        exitAlertString := fix_long_exit    
+    
+    strategy.entry("Long",strategy.long,comment="LONG", qty=positionSize, alert_message=entryAlertString)
+    if stopType != "ATR Trail"
+        strategy.exit("Long Exit","Long", comment="EXIT LONG", stop=longStop, limit=longTp, alert_message=exitAlertString) 
+    tradePositionSize := getPositionSize(toWhole(longStopDistance) * 10)
+    if av_use
+        setTp = na(longTp) == false ? " ftp=" + str.tostring(longTp) : ""
+        alert(message="e=" + broker + " b=long q="
+         + str.tostring(tradePositionSize) 
+         + " s=" + pair
+         + " t=" + (av_limitOrder ? "stop fp=" + str.tostring(close) : "market")
+         + " fsl=" + str.tostring(longStop)
+         + setTp, 
+         freq=alert.freq_once_per_bar)
+    
+    if pc_use
+        alertString = pc_entry_alert('buystop', close, longStop, longTp)
+        alert(alertString, alert.freq_once_per_bar_close)
+//SHORT
+if shortCond and takeShort and sessionFilterResult and strategy.position_size == 0 and barstate.isconfirmed and strategy.equity > 0
+    shortStop := stopType == "Fix PIP Size" ? high + stopTickSize : close + (atrValue*atrMultip)
+    shortRisk := (shortStop - close)
+    shortTp := stopType != "ATR Trail" ? close - (riskMultip*shortRisk) : na
+    shortStopDistance = math.abs(close-shortStop)
+    positionSize := calcPositionSize(shortRisk)
+    
+    if av_use
+        entryAlertString := av_entry_alert("short",tradePositionSize,close,shortStop,shortTp)
+        exitAlertString := fix_short_exit
+    else if pc_use
+        entryAlertString := pc_entry_alert('sell', close, shortStop, shortTp)
+        exitAlertString := fix_short_exit 
+    strategy.entry("Short",strategy.short,comment="SHORT", qty=positionSize, alert_message=entryAlertString)
+    if stopType != "ATR Trail"
+        strategy.exit("Short Exit","Short", comment="EXIT SHORT", stop=shortStop, limit=shortTp, alert_message=exitAlertString)  
+    
+    tradePositionSize := getPositionSize(toWhole(shortStopDistance) * 10)
+    if av_use
+        setTp = na(shortTp) == false ? " ftp=" + str.tostring(shortTp) : ""
+        alert(message="e=" + broker + " b=short q="
+         + str.tostring(tradePositionSize)
+         + " s=" + pair
+         + " t=" + (av_limitOrder ? "stop fp=" + str.tostring(close) : "market")
+         + " fsl=" + str.tostring(shortStop)
+         + setTp,
+         freq=alert.freq_once_per_bar) 
+    if pc_use
+        alertString = pc_entry_alert('sellstop', close, shortStop, shortTp)
+        alert(alertString, alert.freq_once_per_bar_close)
+//PLOTS
+p1=plot(maValue1,title="MA Fast",color=color.green,linewidth=1)
+p2=plot(maValue2,title="MA Slow",color=color.red,linewidth=1)
+fill(p1,p2, color=maFill ? maValue1 > maValue2 ? color.new(color.green,90) : color.new(color.red,90) : color.new(color.black,100))
+L1 = plot(showRiskReward and strategy.position_size > 0 ? strategy.position_avg_price : na, color=color.green, linewidth=1, style=plot.style_linebr, title="Long Entry Price")
+L2 = plot(showRiskReward and strategy.position_size > 0 ? longTp : na, color=color.green, linewidth=1, style=plot.style_linebr, title="Long TP Price")
+L3 = plot(showRiskReward and strategy.position_size > 0 ? longStop : na, color=color.red, linewidth=1, style=plot.style_linebr, title="Long Stop Price")
+S1 = plot(showRiskReward and strategy.position_size < 0 ? strategy.position_avg_price : na, color=color.teal, linewidth=1, style=plot.style_linebr, title="Short Entry Price")
+S2 = plot(showRiskReward and strategy.position_size < 0 ? shortTp : na , color=color.teal, linewidth=1, style=plot.style_linebr, title="Short TP Price")
+S3 = plot(showRiskReward and strategy.position_size < 0 ? shortStop : na, color=color.maroon, linewidth=1, style=plot.style_linebr, title="Short Stop Price")
+fill(L1,L2,color=color.new(color.green,90))
+fill(L1,L3,color=color.new(color.red,90))
+fill(S1,S2,color=color.new(color.teal,90))
+fill(S1,S3,color=color.new(color.maroon,90))
+bgcolor(sessionOneActive and isSessionFilterActive ? color.new(color.orange,90) : na, title="Trade Session")
+var table nameDisplay = table.new(position.middle_center, 1, 1, bgcolor = color.white, frame_width = 0)
+if barstate.isconfirmed and math.round(strategy.equity,0) <= 0
+    table.cell(nameDisplay, 0, 0, "Total Equity dropped below ZERO.\nThese parameters are not useful.",text_color=color.white, bgcolor=color.red)
+Expand (326 lines)

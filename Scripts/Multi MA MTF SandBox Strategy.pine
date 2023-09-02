@@ -1,0 +1,393 @@
+Script Name: Multi MA MTF SandBox Strategy
+Author: dman103
+Description: A moving averages SandBox strategy where you can experiment using two different moving averages (like KAMA, ALMA, HMA, JMA, VAMA and more) on different time frames to generate BUY and SELL signals, when they cross.
+Great sandbox for experimenting with different moving averages and different time frames.
+
+== How to use ==
+We select two types of moving averages on...
+PineScript code:
+
+Pine Script™ strategy
+Multi MA MTF SandBox Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+// This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License https://creativecommons.org/licenses/by-sa/4.0/
+// © dman103
+// A moving averages SandBox strategy where you can experiment with two moving averages (like KAMA, ALMA, HMA, JMA, VAMA, and more) on different time frames to generate BUY and SELL signals, when they cross.
+// Great sandbox for experimenting with different moving averages and different time frames.
+//
+// == How to use ==
+// We select two types of moving averages on two different time frames:
+//
+// First is the FAST moving average which should be at the same time frame or higher.
+// Second is the SLOW moving average that should be on the same time frame or higher.
+// When FAST moving average cross over the SLOW moving average we have a BUY signal (for LONG)
+// When FAST moving average cross under the SLOW moving average we have a SELL signal (for SHORT)
+// WARNING: Using a lower time frame than your chart time frame will result in unrealistic results in your backtesting and bar replay.
+// == NOTES ==
+// You can select BOTH, LONG and SHORT in the strategy settings.
+// You can also enable Stop Loss and Take Profit.
+// More sandboxes to come, Follow to get notified.
+// Can also act as an indicator by settings 'Act as indicator' to true.
+//@version=5
+strategy('Multi MA MTF SandBox Strategy', 'Multi MA SandBox', overlay=true, default_qty_type=strategy.cash, default_qty_value=3500, initial_capital=10000)
+tradeType = input.string('LONG', title='What trades should be taken:', options=['LONG', 'SHORT', 'BOTH'])
+act_like_indicator = input.bool(false,'Act as indicator (will disable strategy functionality)')
+start_date = input.time(title='Start Date', defval=timestamp('1 JAN 2020 09:30:00 +0000'))
+end_date = input.time(title='End Date', defval=timestamp('1 JAN 2030 09:30:00 +0000'))
+window() =>
+    time_close >= start_date and time_close <= end_date ? true : false
+ma_select1 = input.string(title='First Slow moving average', defval='EMA', options=['SMA', 'EMA', 'WMA', 'HMA', 'JMA', 'KAMA', 'TMA', 'VAMA', 'SMMA', 'DEMA', 'VMA', 'WWMA', 'EMA_NO_LAG', 'TSF', 'ALMA'],group="Moving Average 1 (Blue)")
+resma_fast = input.timeframe(title='First Time Frame', defval='',group="Moving Average 1 (Blue)")
+lenma_fast = input(title='First MA Length', defval=6,group="Moving Average 1 (Blue)")
+ma_select2 = input.string(title='Second Fast moving average', defval='JMA', options=['SMA', 'EMA', 'WMA', 'HMA', 'JMA', 'KAMA', 'TMA', 'VAMA', 'SMMA', 'DEMA', 'VMA', 'WWMA', 'EMA_NO_LAG', 'TSF', 'ALMA'],group="Moving Average 2 (Yellow)")
+resma_slow = input.timeframe(title='Second time frame', defval='',group="Moving Average 2 (Yellow)")
+lenma_slow = input(title='Second MA length', defval=14,group="Moving Average 2 (Yellow)")
+lineWidth = input(2, title='Line Width', group="Visual Settings")
+color_fast = input(title='Fast Line Color (or Buy)', defval=color.new(#26c6da, 40), group="Visual Settings")
+color_slow = input(title='Slow Line Color (or Sell)', defval=color.new(color.yellow, 40), group="Visual Settings")
+change_line_color = input.bool(true, title='Change line color based on signal', tooltip='Change line color based on Buy or Sell Signal. Effected by Fast/Slow Line Color settings above.', group="Visual Settings")
+fillColor = input(title='Fill Color', defval=true, group="Visual Settings")
+offset = input.float(title='Alma Offset (only for ALMA)', defval=0.85, step=0.05, group="Moving Average Parameters")
+volatility_lookback = input(title='Volatility lookback (only for VAMA)', defval=12, group="Moving Average Parameters")
+i_fastAlpha = input.float(1.25, 'KAMA\'s alpha (only for KAMA)', minval=1, step=0.25, group="Moving Average Parameters")
+fastAlpha = 2.0 / (i_fastAlpha + 1)
+slowAlpha = 2.0 / 31
+///////Moving Averages
+MA_selector(src, length, ma_select) =>
+    ma = 0.0
+    if ma_select == 'SMA'
+        ma := ta.sma(src, length)
+        ma
+    if ma_select == 'EMA'
+        ma := ta.ema(src, length)
+        ma
+    if ma_select == 'WMA'
+        ma := ta.wma(src, length)
+        ma
+    if ma_select == 'HMA'
+        ma := ta.hma(src, length)
+        ma
+    if ma_select == 'JMA'
+        beta = 0.45 * (length - 1) / (0.45 * (length - 1) + 2)
+        alpha = beta
+        tmp0 = 0.0
+        tmp1 = 0.0
+        tmp2 = 0.0
+        tmp3 = 0.0
+        tmp4 = 0.0
+        tmp0 := (1 - alpha) * src + alpha * nz(tmp0[1])
+        tmp1 := (src - tmp0[0]) * (1 - beta) + beta * nz(tmp1[1])
+        tmp2 := tmp0[0] + tmp1[0]
+        tmp3 := (tmp2[0] - nz(tmp4[1])) * (1 - alpha) * (1 - alpha) + alpha * alpha * nz(tmp3[1])
+        tmp4 := nz(tmp4[1]) + tmp3[0]
+        ma := tmp4
+        ma
+    if ma_select == 'KAMA'
+        momentum = math.abs(ta.change(src, length))
+        volatility = math.sum(math.abs(ta.change(src)), length)
+        efficiencyRatio = volatility != 0 ? momentum / volatility : 0
+        smoothingConstant = math.pow(efficiencyRatio * (fastAlpha - slowAlpha) + slowAlpha, 2)
+        var kama = 0.0
+        kama := nz(kama[1], src) + smoothingConstant * (src - nz(kama[1], src))
+        ma := kama
+        ma
+    if ma_select == 'TMA'
+        ma := ta.sma(ta.sma(src, math.ceil(length / 2)), math.floor(length / 2) + 1)
+        ma
+    if ma_select == 'VMA'
+        valpha = 2 / (length + 1)
+        vud1 = src > src[1] ? src - src[1] : 0
+        vdd1 = src < src[1] ? src[1] - src : 0
+        vUD = math.sum(vud1, 9)
+        vDD = math.sum(vdd1, 9)
+        vCMO = nz((vUD - vDD) / (vUD + vDD))
+        VAR = 0.0
+        VAR := nz(valpha * math.abs(vCMO) * src) + (1 - valpha * math.abs(vCMO)) * nz(VAR[1])
+        ma := VAR
+        ma
+    if ma_select == 'WWMA'
+        wwalpha = 1 / length
+        WWMA = 0.0
+        WWMA := wwalpha * src + (1 - wwalpha) * nz(WWMA[1])
+        ma := WWMA
+        ma
+    if ma_select == 'EMA_NO_LAG'
+        EMA1 = ta.ema(src, length)
+        EMA2 = ta.ema(EMA1, length)
+        Difference = EMA1 - EMA2
+        ma := EMA1 + Difference
+        ma
+    if ma_select == 'TSF'
+        lrc = ta.linreg(src, length, 0)
+        lrc1 = ta.linreg(src, length, 1)
+        lrs = lrc - lrc1
+        TSF = ta.linreg(src, length, 0) + lrs
+        ma := TSF
+        ma
+    if ma_select == 'VAMA'  // Volatility Adjusted from @fractured
+        mid = ta.ema(src, length)
+        dev = src - mid
+        vol_up = ta.highest(dev, volatility_lookback)
+        vol_down = ta.lowest(dev, volatility_lookback)
+        ma := mid + math.avg(vol_up, vol_down)
+        ma
+    if ma_select == 'SMMA'
+        smma = float(0.0)
+        smaval = ta.sma(src, length)
+        smma := na(smma[1]) ? smaval : (smma[1] * (length - 1) + src) / length
+        ma := smma
+        ma
+    if ma_select == 'DEMA'
+        e1 = ta.ema(src, length)
+        e2 = ta.ema(e1, length)
+        ma := 2 * e1 - e2
+        ma
+    if ma_select == 'ALMA'
+        ma := ta.alma(src, length, offset, 6)
+        ma
+    ma
+// Calculate EMA
+ma_fast = MA_selector(close, lenma_fast, ma_select1)
+ma_slow = MA_selector(close, lenma_slow, ma_select2)
+maFastStep = request.security(syminfo.tickerid, resma_fast, ma_fast)
+maSlowStep = request.security(syminfo.tickerid, resma_slow, ma_slow)
+colors = ma_fast > ma_slow ? color.new(color.green, 70) : color.new(color.red, 70)
+colors_setting = ma_fast > ma_slow ? color_fast : color_slow
+ma1_plot = plot(maFastStep, color=change_line_color == false ? color_fast : colors_setting, linewidth=lineWidth)
+ma2_plot = plot(maSlowStep, color=change_line_color == false ? color_slow : colors_setting, linewidth=lineWidth)
+fill(ma1_plot, ma2_plot, color=fillColor ? colors : na)
+closeStatus = strategy.openprofit > 0 ? 'win' : 'lose'
+////////Long Rules
+long = ta.crossover(maFastStep, maSlowStep) and (tradeType == 'LONG' or tradeType == 'BOTH')
+longClose = ta.crossunder(maFastStep, maSlowStep)  //and falling(maSlowStep,1) 
+///////Short Rules
+short = ta.crossunder(maFastStep, maSlowStep) and (tradeType == 'SHORT' or tradeType == 'BOTH')
+shortClose = ta.crossover(maFastStep, maSlowStep)
+longShape = ta.crossover(maFastStep, maSlowStep) and act_like_indicator
+shortShape = ta.crossunder(maFastStep, maSlowStep) and act_like_indicator
+plotshape(longShape, style=shape.triangleup, location=location.belowbar, color=color.new(color.lime, 0), size=size.small)
+plotshape(shortShape, style=shape.triangledown, location=location.abovebar, color=color.new(color.red, 0), size=size.small)
+// === Stop LOSS ===
+useStopLoss = input(false, title='Use Stop Loss',group="Stop Loss")
+sl_inp = input.float(2.5, title='Stop Loss %', step=0.1, group="Stop Loss") // / 100
+useTakeprofit = input(false, title='Use Take Profit',group="Take Profit")
+tp_inp = input.float(5, title='Take Profit %', step=0.1,group="Take Profit") // / 100
+percentToTicks(pcnt) =>
+    strategy.position_size != 0 ? math.round(pcnt / 100.0 * strategy.position_avg_price / syminfo.mintick) : float(na)
+float stop_level = percentToTicks(sl_inp)
+float take_level = percentToTicks(tp_inp)
+if long and window() and act_like_indicator==false
+    strategy.entry('long', strategy.long)
+if short and window() and act_like_indicator==false
+    strategy.entry('short', strategy.short)
+if (longClose)
+    strategy.close('long', comment=closeStatus)
+if (shortClose)
+    strategy.close('short',  comment=closeStatus)
+if useStopLoss or useTakeprofit
+    if (useTakeprofit and useStopLoss==false)
+        strategy.exit('Take Profit',   profit=take_level, comment='tp '+closeStatus)
+    if (useTakeprofit==false and useStopLoss)
+        strategy.exit('Stop loss', loss=stop_level, comment='sl')
+    if (useTakeprofit and useStopLoss)
+        strategy.exit('Take Profit/Stop Loss',   profit=take_level,loss=stop_level, comment_profit ='tp '+closeStatus,comment_loss='sl')
+Expand (199 lines)

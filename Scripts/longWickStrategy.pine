@@ -1,0 +1,117 @@
+Script Name: longWickStrategy
+Author: ondrej17
+Description: price action strategy for intraday trading based on candle vs wick length ratio
+PineScript code:
+
+Pine Script™ strategy
+longWickStrategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ondrej17
+//@version=4
+strategy("longWickstrategy", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=0.1)
+ 
+// Inputs
+st_yr_inp = input(defval=2020, title='Backtest Start Year')
+st_mn_inp = input(defval=01, title='Backtest Start Month')
+st_dy_inp = input(defval=01, title='Backtest Start Day')
+en_yr_inp = input(defval=2025, title='Backtest End Year')
+en_mn_inp = input(defval=01, title='Backtest End Month')
+en_dy_inp = input(defval=01, title='Backtest End Day')
+sltp_inp = input(defval=0.8, title='N - % offset for N*SL and (2N)*TP')/100
+ 
+// Dates
+start = timestamp(st_yr_inp, st_mn_inp, st_dy_inp,00,00)
+end = timestamp(en_yr_inp, en_mn_inp, en_dy_inp,00,00)
+canTrade = time >= start and time <= end
+// Indicators Setup
+ 
+// Strategy Calcuations
+lowerWick = (open > close) ? close-low : open - low
+upperWick = (open > close) ? high-open : high-close
+wickLength = max(lowerWick,upperWick)
+candleLength = high-low
+wickToCandleRatio = wickLength / candleLength
+entryFilterCandleLength = candleLength > 0.75*atr(48)
+// Entries and Exits
+ 
+longCondition = entryFilterCandleLength and wickToCandleRatio > 0.5 and lowerWick > upperWick and canTrade and strategy.position_size == 0
+shortCondition = entryFilterCandleLength and wickToCandleRatio > 0.5 and lowerWick < upperWick and canTrade and strategy.position_size == 0
+strategy.entry("pendingLong", strategy.long, limit=low+wickLength/2, when = longCondition)
+strategy.entry("pendingShort", strategy.short, limit=high-wickLength/2, when = shortCondition)
+longStop = strategy.position_size > 0 ? strategy.position_avg_price*(1-sltp_inp) : na
+longTP = strategy.position_size > 0 ? strategy.position_avg_price*(1+2*sltp_inp) : na
+shortStop = strategy.position_size < 0 ? strategy.position_avg_price*(1+sltp_inp) : na
+shortTP = strategy.position_size < 0 ? strategy.position_avg_price*(1-2*sltp_inp) : na
+strategy.exit("longSLTP","pendingLong", stop=longStop, limit = longTP)
+strategy.exit("shortSLTP","pendingShort", stop=shortStop, limit = shortTP)  
+ 
+plot(longStop, color=color.red, style=plot.style_linebr, linewidth=2)
+plot(shortStop, color=color.red, style=plot.style_linebr, linewidth=2)
+plot(longTP, color=color.green, style=plot.style_linebr, linewidth=2)
+plot(shortTP, color=color.green, style=plot.style_linebr, linewidth=2)
+plotLongCondition = longCondition ? high+abs(open-close) : na
+plot(plotLongCondition, style=plot.style_circles, linewidth=4, color=color.green)
+plotShortCondition = shortCondition ? high+abs(open-close) : na
+plot(plotShortCondition, style=plot.style_circles, linewidth=4, color=color.red)
+Expand (60 lines)

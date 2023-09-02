@@ -1,0 +1,273 @@
+Script Name: Long only strategy VWAP with BB and Golden Cross EMA50-200
+Author: SoftKill21
+Description: This is strategy, mainly designed for stock markets
+It makes uses of the EMA 50/ 200 ( Golden cross) and VWAP and Bollinger bands.
+It only takes long positions. It can be adapted to all time frames, but preferably to be used with longer timeframes 1h +
+
+The rules for entry are the next ones :
+
+1. EMA50 > EMA 200
+2. if current close > vwap session  value 
+3. check...
+PineScript code:
+
+Pine Script™ strategy
+Long only strategy VWAP with BB and Golden Cross EMA50/200
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mohanee
+//@version=4
+strategy(title="VWAP and BB strategy [$$]", overlay=true,pyramiding=2, default_qty_value=1, default_qty_type=strategy.fixed,    initial_capital=10000, currency=currency.USD)
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 6, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2020, title = "From Year", minval = 1970)
+ 
+// To Date Inputs
+toDay = input(defval = 1, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 8, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2020, title = "To Year", minval = 1970)
+ 
+// Calculate start/end date and time condition
+DST = 1 //day light saving for usa
+//--- Europe
+London = iff(DST==0,"0000-0900","0100-1000")
+//--- America
+NewYork = iff(DST==0,"0400-1300","0500-1400")
+//--- Pacific
+Sydney = iff(DST==0,"1300-2200","1400-2300")
+//--- Asia
+Tokyo = iff(DST==0,"1500-2400","1600-0100")
+//-- Time In Range
+timeinrange(res, sess) => time(res, sess) != 0
+london = timeinrange(timeframe.period, London)
+newyork = timeinrange(timeframe.period, NewYork)
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate 
+is_price_dipped_bb(pds,source1) =>
+    t_bbDipped=false
+    for i=1 to pds
+        t_bbDipped:=  (t_bbDipped   or  close[i]<source1) ? true : false
+        if t_bbDipped==true
+            break
+        else
+            continue
+            
+    t_bbDipped
+is_bb_per_dipped(pds,bbrSrc) =>
+    t_bbDipped=false
+    for i=1 to pds
+        t_bbDipped:=  (t_bbDipped   or  bbrSrc[i]<=0) ? true : false
+        if t_bbDipped==true
+            break
+        else
+            continue
+            
+    t_bbDipped
+    
+// variables  BEGIN
+shortEMA = input(50, title="fast EMA", minval=1)
+longEMA = input(200, title="slow EMA", minval=1)
+//BB
+smaLength = input(7, title="BB SMA Length", minval=1)
+bbsrc = input(close, title="BB Source")
+strategyCalcOption = input(title="strategy to use", type=input.string, options=["BB", "BB_percentageB"],      defval="BB")
+//addOnDivergence = input(true,title="Add to existing on Divergence")
+//exitOption = input(title="exit on RSI or BB", type=input.string, options=["RSI", "BB"],      defval="BB")
+//bbSource = input(title="BB  source", type=input.string, options=["close", "vwap"],      defval="close")
+     
+//vwap_res = input(title="VWAP Resolution", type=input.resolution, defval="session")
+stopLoss = input(title="Stop Loss%", defval=1, minval=1)
+//variables  END
+longEMAval= ema(close, longEMA)
+shortEMAval= ema(close, shortEMA)
+ema200val = ema(close, 200)
+vwapVal=vwap(close)
+// Drawings
+//plot emas
+plot(shortEMAval, color = color.green, linewidth = 1, transp=0)
+plot(longEMAval, color = color.orange, linewidth = 1, transp=0)
+plot(ema200val, color = color.purple, linewidth = 2, style=plot.style_line ,transp=0)
+//bollinger calculation 
+mult = input(2.0, minval=0.001, maxval=50, title="StdDev")
+basis = sma(bbsrc, smaLength)
+dev = mult * stdev(bbsrc, smaLength)
+upperBand = basis + dev
+lowerBand = basis - dev
+offset = input(0, "Offset", type = input.integer, minval = -500, maxval = 500)
+bbr = (bbsrc - lowerBand)/(upperBand - lowerBand) 
+//bollinger calculation 
+//plot bb
+//plot(basis, "Basis", color=#872323, offset = offset)
+p1 = plot(upperBand, "Upper", color=color.teal, offset = offset)
+p2 = plot(lowerBand, "Lower", color=color.teal, offset = offset)
+fill(p1, p2, title = "Background", color=#198787, transp=95)
+plot(vwapVal, color = color.purple, linewidth = 2, transp=0)
+// Colour background
+//barcolor(shortEMAval>longEMAval and close<=lowerBand ? color.yellow: na)
+  
+//longCondition=  shortEMAval > longEMAval and  close>open and  close>vwapVal
+longCondition=  ( shortEMAval > longEMAval  and close>open and close>vwapVal and close<upperBand ) //and time_cond //     and  close>=vwapVal 
+//Entry
+strategy.entry(id="long", comment="VB LE" , long=true,  when= longCondition and ( strategyCalcOption=="BB"? is_price_dipped_bb(10,lowerBand) : is_bb_per_dipped(10,bbr)  )   and strategy.position_size<1 )   //is_price_dipped_bb(10,lowerBand))  //and strategy.position_size<1       is_bb_per_dipped(15,bbr) 
+//add to the existing position
+strategy.entry(id="long", comment="Add" , long=true,  when=strategy.position_size>=1 and close<strategy.position_avg_price and close>vwapVal) //and time_cond)
+barcolor(strategy.position_size>=1  ? color.blue: na)
+strategy.close(id="long", comment="TP Exit",   when=crossover(close,upperBand) )
+//stoploss
+stopLossVal =   strategy.position_avg_price * (1-(stopLoss*0.01) )
+//strategy.close(id="long", comment="SL Exit",   when= close < stopLossVal)
+//strategy.risk.max_intraday_loss(stopLoss, strategy.percent_of_equity)
+Expand (152 lines)

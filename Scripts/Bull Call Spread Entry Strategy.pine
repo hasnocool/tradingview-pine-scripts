@@ -1,0 +1,544 @@
+Script Name: Bull Call Spread Entry Strategy
+Author: DeuceDavis
+Description: This strategy script uses the "Spread Entry Strength" overlay indicator script I designed to show entry timing optimized for an Option Bull
+Call Spread.
+
+As for this strategy...
+
+The defaults for the strategy itself are as follows:
+ 
+ Period for strategy: 1/1/18 to 12/1/2021. This can be changed to a different period using the settings.
+ Condition for entry:
+  ...
+PineScript code:
+
+Pine Script™ strategy
+Bull Call Spread Entry Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © DeuceDavis
+//@version=4
+strategy("Spread Entry Strategy", shorttitle="SE Strategy", max_bars_back=1, overlay=true)
+//Remove or Add Narrative Label
+narrationYes = input(title="Provide Narrative (Troubleshooting)", type=input.bool, defval=false)
+//Overall Market Condition
+//This used to filter out noise caused by overall dramatic market moves
+//Any comparison ticker can be used, the default is the QQQ ticker
+//Defaults are 1% for being to hot and 2.5% for being too cold
+mktFilter = input(title="Use Market Filter", type=input.bool, defval=true)
+mkt = input(title="Market Ticker to Use", type=input.symbol, defval="QQQ")
+mktChange = (security(mkt, "D", close) - security(mkt, "D", close[1])) / security(mkt, "D", close[1]) * 100
+mktChangeTooHighLevel = input(title="Market Too Hot Level", type=input.float, defval = 1)
+mktChangeTooCoolLevel = input(title="Market Too Cool Level", type=input.float, defval = -2.5)
+mktIsHot = not mktFilter ? false: mktChange >= mktChangeTooHighLevel ? true:false
+mktIsCold = not mktFilter ? false: mktChange <= mktChangeTooCoolLevel ? true:false
+//Sets the level for when an overlay will show using the absolute power on the side of the trade setting up
+strengthFilter = input(title="Overlay Signal Strength Level", type=input.integer, defval=6)
+//Filters out Bull and Bear overlays when engaged
+useSqueezeFilter = input(title="Remove Strength Indicator When Squeezed", type=input.bool, defval=false)
+//Shades the background when the stock is undergoing a squeeze
+showSqueezes = input(title="Show Squeezes (Will Override Indicator When Concurrent)", type=input.bool, defval=false) 
+showBear = input(title="Show Bear Side", type=input.bool, defval=true)
+showBull = input(title="Show Bull Side", type=input.bool, defval=true)
+rsiPeriod = input(title="RSI Period", type=input.integer, defval=14)
+dmiPeriod = input(title="DMI Period", type=input.integer, defval=14)
+dmiSmoothing = input(title="DMI Smoothing", type=input.integer, defval=14)
+bbPeriod = input(title="Bollinger Bands Period", type=input.integer, defval=20)
+bbMultiplier = input(title="Bollinger Bands Multiplier", type=input.integer, defval=2)
+kcPeriod = input(title="Keltner Channel Period", type=input.integer, defval=20)
+kcMultiplier = input(title="Keltner Channel Multiplier", type=input.float, defval=1.5)
+shortSMAPeriod = input(title="Short SMA Period", type=input.integer, defval=20)
+mediumSMAPeriod = input(title="Medium SMA Period", type=input.integer, defval=50)
+longSMAPeriod = input(title="Long SMA Period", type=input.integer, defval=200)
+smaShort = sma(close, shortSMAPeriod)
+smaMedium = sma(close, mediumSMAPeriod)
+smaLong = sma(close, longSMAPeriod)
+rsiPlot = rsi(close, rsiPeriod)
+[diPlus, diMinus, adx] = dmi(dmiPeriod, dmiSmoothing)
+[middleBB, upperBB, lowerBB] = bb(close, 20, 2)
+[middleKC, upperKC, lowerKC] = kc(close, 20, 1.5, useTrueRange=true)
+//Bull or Bear side is determined whether the price is above or below the Bollinger Band Basis (BB Middle)
+bullOrBear = close < middleBB ? "Bull" : "Bear"
+//Squeeze Condition
+bbOutsideKC = (((lowerBB < lowerKC) and (upperBB > upperKC))) ? 1 : 0
+currentlySqueezed = bbOutsideKC == 0 ? true : false
+squeezedOut = bbOutsideKC > bbOutsideKC[1] ? 1 : 0
+//Penalty for -DI and +DI going in same direction (Currently not used)
+diDirDivergency = (diPlus > diPlus[1]) and (diMinus < diMinus[1]) ? "UpDn" :
+     (diPlus < diPlus[1]) and (diMinus > diMinus[1]) ? "DnUp" :
+     (diPlus > diPlus[1]) and (diMinus > diMinus[1]) ? "UpUp" : "DnDn"
+diPenalty = (diDirDivergency == "UpUp") or (diDirDivergency == "DnDn") ? 2 : 0
+adxUpDown = adx > adx[1] ? "Up" : "Down"
+diMinusUpDown = diMinus > diMinus[1] ? "Up" : "Down"
+diPlusUpDown = diPlus > diPlus[1] ? "Up" : "Down"
+rsiUpDown = rsiPlot > rsiPlot[1] ? "Up" : "Down"
+//Conditions for Bull Strength
+lowerBB_Bounce = lowest(5) <= lowerBB ? 1 : 0
+adxUpTrend = adx > adx[1] ? 1 : 0
+bullRSIStat = rsiPlot[0] > rsiPlot[1] ? 1 : 0
+diMinusStat = diMinus[0] < diMinus[1] ? 1 : 0
+lowerBBStat = close < middleBB and close > lowerBB ? 1 : 0
+lowerKCStat = close < lowerKC ? 1 : 0
+rsiUnder30 = rsiPlot < 30 ? 1: 0
+bullCondition = rsiPlot > 70 ? 0 : 
+     bullRSIStat + 
+     diMinusStat + 
+     lowerBBStat + 
+     lowerKCStat + 
+     bbOutsideKC + 
+     lowerBB_Bounce + 
+     adxUpTrend + 
+     rsiUnder30 
+//Conditions for Bear Strength
+upperBB_Bounce = highest(5) >= upperBB ? 1 : 0
+adxDownTrend = adx < adx[1] ? 1 : 0
+bearRSIStat = rsiPlot[0] < rsiPlot[1] ? 1 : 0
+diPlusStat = diPlus[0] > diPlus[1] ? 1 : 0
+upperBBStat = close > middleBB and close < upperBB ? 1 : 0
+upperKCStat = close > upperKC ? 1 : 0
+rsiOver70 = rsiPlot > 70 ? 1: 0
+bearCondition = rsiPlot < 30 ? 0 : 
+     (
+     bearRSIStat + 
+     diPlusStat + 
+     upperBBStat + 
+     upperKCStat + 
+     bbOutsideKC + 
+     upperBB_Bounce + 
+     adxDownTrend + 
+     rsiOver70 
+     ) 
+     * -1
+//Overall Trade Condition, used to find the right side
+//tradeCondition = (bullOrBear == "Bull") ? (bullCondition) : (bearCondition)
+tradeCondition = (currentlySqueezed and useSqueezeFilter) ? 0 :
+     bullOrBear == "Bull" ?
+         (bullCondition > 1 ? bullCondition : 0) :
+         (bearCondition < -1 ? bearCondition : 0)
+signalYesNo = "Yes" //Not currently used
+bullColor = color.blue
+bearColor = color.purple
+squeezeColor = color.orange
+var sessionFills = array.new_color(22)
+array.set(sessionFills, 0, color.new(bearColor, 0))
+array.set(sessionFills, 1, color.new(bearColor, 10))
+array.set(sessionFills, 2, color.new(bearColor, 20))
+array.set(sessionFills, 3, color.new(bearColor, 30))
+array.set(sessionFills, 4, color.new(bearColor, 40))
+array.set(sessionFills, 5, color.new(bearColor, 50))
+array.set(sessionFills, 6, color.new(bearColor, 60))
+array.set(sessionFills, 7, color.new(bearColor, 70))
+array.set(sessionFills, 8, color.new(bearColor, 80))
+array.set(sessionFills, 9, color.new(bearColor, 90))
+array.set(sessionFills, 10, color.new(bullColor, 100))
+array.set(sessionFills, 11, color.new(bullColor, 90))
+array.set(sessionFills, 12, color.new(bullColor, 80))
+array.set(sessionFills, 13, color.new(bullColor, 70))
+array.set(sessionFills, 14, color.new(bullColor, 60))
+array.set(sessionFills, 15, color.new(bullColor, 50))
+array.set(sessionFills, 16, color.new(bullColor, 40))
+array.set(sessionFills, 17, color.new(bullColor, 30))
+array.set(sessionFills, 18, color.new(bullColor, 20))
+array.set(sessionFills, 19, color.new(bullColor, 10))
+array.set(sessionFills, 20, color.new(bullColor, 0))
+array.set(sessionFills, 21, color.new(squeezeColor, 90))
+//Calculate Overlay Color
+fillNumber = (currentlySqueezed and showSqueezes) ? 21 :
+     (mktIsHot or mktIsCold) ? 10 : 
+     signalYesNo == "No" ? 10 :
+     abs(tradeCondition) < strengthFilter ? 10 :
+     (bullOrBear == "Bear") and (not showBear) ? 10 :
+     (bullOrBear == "Bull") and (not showBull) ? 10 :
+     tradeCondition + 10
+bgcolor(array.get(sessionFills, fillNumber))
+//plot(lowerKC, title='lowerKC', color=#00ffaa, linewidth=2, style=plot.style_line)
+bullOrBearColor = bullOrBear == "Bull" ? color.green : color.red
+plotshape(tradeCondition, title="Entry Strength", offset=0, style=shape.flag, 
+     location=location.top, color=bullOrBearColor, transp=100)
+plotshape(bullCondition, title="Bull Strength", offset=0, style=shape.flag, 
+     location=location.top, color=bullColor, transp=100)
+plotshape(bearCondition, title="Bear Strength", offset=0, style=shape.flag, 
+     location=location.top, color=bearColor, transp=100)
+curHour = hour(time) - 5
+rippleDoD = smaShort > smaShort[1] ? "UP" : "DOWN"
+waveDoD = smaMedium > smaMedium[1] ? "UP" : "DOWN"
+tideDoD = smaLong > smaLong[1] ? "UP" : "DOWN"
+rippleWaveUpDn = smaShort > smaMedium ? "ABOVE" : "BELOW"
+waveTideUpDn = smaMedium > smaLong ? "ABOVE" : "BELOW"
+// STEP 1:
+// Make input options that configure backtest date range
+startDate = input(title="Start Date", type=input.integer,
+     defval=1, minval=1, maxval=31)
+startMonth = input(title="Start Month", type=input.integer,
+     defval=1, minval=1, maxval=12)
+startYear = input(title="Start Year", type=input.integer,
+     defval=2018, minval=1800, maxval=2100)
+endDate = input(title="End Date", type=input.integer,
+     defval=1, minval=1, maxval=31)
+endMonth = input(title="End Month", type=input.integer,
+     defval=12, minval=1, maxval=12)
+endYear = input(title="End Year", type=input.integer,
+     defval=2021, minval=1800, maxval=2100)
+// STEP 2:
+// Look if the close time of the current bar
+// falls inside the date range
+inDateRange = (time >= timestamp(syminfo.timezone, startYear,
+         startMonth, startDate, 0, 0)) and
+     (time < timestamp(syminfo.timezone, endYear, endMonth, endDate, 0, 0))
+  
+entryLimit = close
+triggerBar = (bullOrBear=="Bull" and bullCondition >= strengthFilter and (not mktIsHot and not mktIsCold))
+if triggerBar and inDateRange
+    strategy.entry("BCS", strategy.long, 100, limit=entryLimit, when=strategy.position_size <= 0)
+    
+//    strategy.entry("sell", strategy.short, 10, when=strategy.position_size > 0)
+//plot(strategy.equity)
+exitWeekDay = dayofweek == 5 ? 1 : 0 //Exiting on Thursday
+entryBar = strategy.position_size[0] > strategy.position_size[1]
+barsPassedBy = barssince(entryBar)
+triggerBars = barssince(triggerBar)
+strategy.cancel("BCS", when = (triggerBars>0))
+exitStrategy = (barsPassedBy >= 30) and exitWeekDay
+strategy.close("BCS", when=exitStrategy)
+//Narrative Build
+narSqueezed = currentlySqueezed ? "A Squeezed" + "\n" : na
+narrativeText = narSqueezed + bullOrBear + " Setup Strength " + tostring(abs(tradeCondition)) + "\n\n"
+     + "RSI  " + rsiUpDown + " to " + tostring(rsiPlot, "#.##") + "\n\n"
+     + "ADX " + adxUpDown + " to " + tostring(adx, "#.##") + "\n\n"
+     + "+DI  " + diPlusUpDown + " to " + tostring(diPlus, "#.##") + "\n"
+     + "-DI  " + diMinusUpDown + " to " + tostring(diMinus, "#.##") + "\n"
+     + "\n-------------------\n"
+     + "Box Score"
+     + "\n-------------------\n"
+     + "Bulls " + tostring(bullCondition) + " | "
+     + "Bears " + tostring(abs(bearCondition)) + "\n\n"
+     + tostring(bullRSIStat) + " RSI " + tostring(bearRSIStat) + "\n" 
+     + tostring(diMinusStat) + " DI " + tostring(diPlusStat) + "\n"
+     + tostring(lowerBBStat) + " BB " + tostring(upperBBStat) + "\n"
+     + tostring(lowerKCStat) + " KC " + tostring(upperKCStat) + "\n" 
+     + tostring(bbOutsideKC) + " SQ " + tostring(bbOutsideKC) + "\n"
+     + tostring(lowerBB_Bounce) + " BB Bounce " + tostring(upperBB_Bounce) + "\n" 
+     + tostring(adxUpTrend) + " ADX " + tostring(adxDownTrend) + "\n" 
+     + tostring(rsiUnder30) + " RSI 30/70 " + tostring(rsiOver70) + "\n"
+     +"\n-------------------\n"
+     + "Additional Narrative"
+     + "\n-------------------\n"
+     + tostring(shortSMAPeriod, "##") + " SMA is " + rippleWaveUpDn + " " + tostring(mediumSMAPeriod, "##") + " SMA\n"
+     + "and is " + rippleDoD + " compared to prior bar\n\n"
+     + tostring(mediumSMAPeriod, "##") + " SMA is " + waveTideUpDn + " " + tostring(longSMAPeriod, "##") + " SMA\n"
+     + "and is " + waveDoD + " compared to prior bar\n\n"
+     + tostring(longSMAPeriod, "##") + " SMA is " + tideDoD + " compared to prior bar\n"
+     + "entry Conditions\n"
+     + "BullOrBear " + (bullOrBear) + "\n"
+     + "BullCondition " + tostring(bullCondition,"##") + "\n"
+     + "Entry Limit " + tostring(entryLimit,"##.##") + "\n"  
+     + "BullCondition " + tostring(bullCondition,"##") + "\n"     
+     + "Bars Passed " + tostring(barsPassedBy,"##") + "\n"   
+     + "Tigger Bar " + tostring(triggerBars,"##") + "\n"   
+     
+narrativeLabel = narrationYes ? label.new(x=time, y=((low+high)/2), xloc=xloc.bar_time, 
+     text=narrativeText, 
+     color=bullOrBear=="Bull" ? bullColor : bearColor, 
+     textcolor=color.white,
+     style=label.style_label_left) : na
+     
+label.set_x(id=narrativeLabel, x=label.get_x(narrativeLabel) + 1)
+label.delete(narrativeLabel[1])
+Expand (297 lines)

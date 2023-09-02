@@ -1,0 +1,61 @@
+Script Name: Saturday Strategy BTC By Kzi
+Author: Cazimiro
+Description: I take the hypothèse that saturday is the most stable day of the week because, no SP500, no fed announcement and no weekly closure.
+My Strategy is very simple:
+Take the friday color (Red = Short // Green = Long) 
+Then open at the friday close price
+Take a small pourcentage (1 or 2 %) then close.
+What ever close on midnight.
+
+Work Well on the 1h chart.
+
+The Yellow...
+PineScript code:
+
+Pine Script™ strategy
+Saturday Strategy BTC By Kzi
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+//@version=5
+/// Open Saturday with BTCUSDT // Work well with 1h btcusdt chart
+strategy(title='Saturday Strategy By Kzi', shorttitle='Saturday Strategy by Kzi', overlay=true, initial_capital=75, currency=currency.USD, commission_value=0.01,commission_type=strategy.commission.percent)
+bgcolor(dayofweek == 7 ? #FEFD01 : na, transp=50)
+ID1 = input.symbol('BINANCE:BTCUSDTPERP', group='Symbol inputs')
+ID1DailyClose = request.security(ID1, 'D', close[1])
+ID1DailyOpen = request.security(ID1, 'D', open[1])
+greenCandle = (ID1DailyClose > ID1DailyOpen)
+if greenCandle and dayofweek == 7 
+    strategy.entry('Buy_long', strategy.long)
+    
+strategy.close("Buy_long",when=(close >=strategy.position_avg_price*1.007))
+strategy.close("Buy_long",when=(dayofweek < 7))
+if greenCandle==false and dayofweek == 7
+    strategy.entry('Buy_short', strategy.short)
+    
+strategy.close("Buy_short",when=(close <=strategy.position_avg_price*0.093))
+strategy.close("Buy_short",when=(dayofweek < 7))
+Expand (25 lines)

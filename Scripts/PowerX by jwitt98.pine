@@ -1,0 +1,291 @@
+Script Name: PowerX by jwitt98
+Author: jwitt98
+Description: This strategy attempts to replicate the PowerX strategy as described in the book by  by Markus Heitkoetter
+
+Three indicators are used:
+RSI (7) - An RSI above 50 indicates and uptrend. An RSI below 50 indicates a downtrend.
+Slow Stochastics (14, 3, 3) - A %K above 50 indicates an uptrend. A %K below 50 indicates a downtrend. 
+MACD (12, 26, 9) - A MACD above the...
+PineScript code:
+
+Pine Script™ strategy
+PowerX by jwitt98
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © jwitt98
+//The PowerX strategy - based on the rules outlined in the book "The PowerX Strategy: How to Trade Stocks and Options in Only 15 Minutes a Day" by Markus Heitkoetter
+//@version=5
+strategy("PowerX", overlay=true, initial_capital=10000)
+longEntry = "Enter long"
+shortEntry = "Enter short"
+longExit = "Exit long"
+shortExit = "Exit short"
+//*********************************Begin inputs*********************************
+//get time range inputs and set time range bool
+timeRangeGroup = "Select the trading range"
+startDate = input.time(timestamp("1 Jan 2021 00:00 +0000"), "Start date", "Select the start date for the trading range", "", timeRangeGroup)
+endDate = input.time(timestamp("1 Jan 2050 00:00 +0000"), "End date", "Select the end date for the trading range", "", timeRangeGroup)
+isInTimeRange = time >= startDate and time <= endDate
+//get long/short inputs
+positionsAllowedGroup = "Select the direction(s) of trades to allow"
+isLongsAllowed = input.bool(true, "Allow long positions", "Check the box if you want to allow long positions", "", positionsAllowedGroup)
+isShortsAllowed = input.bool(true, "Allow short positions", "Check the box if you want to allow short positions", "", positionsAllowedGroup)
+//get the stop loss and profit target multiples.  Per the PowerX rules the ratio shoud be 1:2.  1.5 and 3 are defaults
+adrMultuplesGroup="Select the multipliers for the stop loss and profit targets"
+stopLossMultiple = input.float(1.5, "Stop loss multiple", 0.1, 10, 0.1, "The ADR is multiplied by the stop loss multiple to calculate the stop loss", group=adrMultuplesGroup)
+profitTargetMultiple=input.float(3.0, "Profit target multiple", 0.1, 10, 0.1, "The ADR is multiplied by the profit target multiple to calculate the profit target", group=adrMultuplesGroup)
+//get the option to use the money management stategy or not.  This is a fixed ratio type management system
+moneyManagementGroup="Money management"
+isUsingMoneyManagement=input.bool(false, "Use money management", "Check the box if you want to use a fixed ratio type money management system, such as the type described in PowerX", group=moneyManagementGroup)
+initial_riskPercent=input.float(2.0, "Percent risk per trade", .1, 100, .1, "The percentage of capital you want to risk when starting out.  This will increase or decrease base on the money management rules.  Only applicable if money managent is used", group=moneyManagementGroup)/100
+isRiskDowsideLimited=input.bool(false, "Keep risk at or above the set point", "Check the box if you don't want the risk to fall below the set \"risk per trade\" percentage, for example, when your equity is underwater. Only applicable if money management is used", "", moneyManagementGroup)
+initial_riskPerTrade=initial_riskPercent * strategy.initial_capital 
+riskFactor = 0.0
+currentProfit = 0.0
+currentRisk = 0.0
+//*********************************End inputs*********************************
+//*********************************Begin money management*********************************
+if(isUsingMoneyManagement)
+    currentProfit := strategy.equity - strategy.initial_capital
+    if(currentProfit < 0)
+        currentProfit:=math.abs(currentProfit)
+        riskFactor := 0.5*(math.pow(1+8*currentProfit/(2*initial_riskPerTrade), 0.5)+1)
+        currentRisk := 1/riskFactor * initial_riskPercent * strategy.initial_capital
+        if(isRiskDowsideLimited)
+            currentRisk := initial_riskPerTrade
+    else
+        riskFactor := 0.5*(math.pow(1+8*currentProfit/(2*initial_riskPerTrade), 0.5)+1)
+        currentRisk := riskFactor * initial_riskPercent * strategy.initial_capital
+        
+plot(strategy.equity, "Strategy equity", display=display.data_window)
+plot(currentRisk, "Current risk", display=display.data_window)
+plot(riskFactor, "Risk Factor", display=display.data_window)
+//*********************************End money management*********************************
+//*********************************Begin indicators*********************************
+//4 indicators are used in this strategy, RSI(7), Stochastics(14, 3, 3), MACD(12, 26, 9), and ADR(7)
+rsiVal = ta.rsi(close, 7)//this checks out
+plot(rsiVal, "RSI(7)", color.lime, display=display.data_window)
+stochKVal = ta.sma(ta.sma(ta.stoch(close, high, low, 14),3),3)//this formula checks out
+plot(stochKVal, "Stoch %K", color.lime, display=display.data_window)
+[macdLine, signalLine, histLine] = ta.macd(close, 12, 26, 9)
+plot(histLine, "MACD Hist", color.lime, display=display.data_window)
+adr = ta.sma(high, 7) - ta.sma(low, 7)
+plot(adr, "Average daily range", color.orange, display=display.data_window)
+//*********************************End indicators*********************************
+//*********************************Define the bar colors*********************************
+greenBar = rsiVal > 50 and stochKVal > 50 and histLine > 0
+redBar = rsiVal < 50 and stochKVal < 50 and histLine < 0
+blackBar = not greenBar and not redBar
+color currentBarColor = switch
+    greenBar => color.green
+    redBar => color.red
+    blackBar => color.gray //because black is too hard to see in dark mmode
+    => color.yellow
+    
+barcolor(currentBarColor)
+//*********************************End defining the bar colors*********************************
+//*********************************Define the entry, stop loss and profit target*********************************
+longStopLimit = high + .01
+longProfitTarget = high + (profitTargetMultiple * adr)
+longStopLoss = high - (stopLossMultiple * adr)
+shortStopLimit = low - .01
+shortProfitTarget = low - (profitTargetMultiple * adr)
+shortStopLoss = low + (stopLossMultiple * adr)
+qtyToTrade= math.floor(currentRisk / (stopLossMultiple * adr))//only if using money management
+if(qtyToTrade * high > strategy.equity)
+    qtyToTrade := math.floor(strategy.equity / high)
+//*********************************End defining stop loss and profit targets*********************************
+//*********************************Execute trades, set rules, stop loss and profit targets*********************************
+if (greenBar and not greenBar[1] and isInTimeRange and isLongsAllowed)
+    if(isUsingMoneyManagement)
+        strategy.order(longEntry, strategy.long, qtyToTrade, limit=longStopLimit, stop=longStopLimit)
+        //strategy.order(longEntry, strategy.long, qtyToTrade, stop=longStopLimit)
+    else
+        strategy.order(longEntry, strategy.long, limit=longStopLimit,stop=longStopLimit)
+        //strategy.order(longEntry, strategy.long, stop=longStopLimit)
+    strategy.exit("Long limit/stop", from_entry=longEntry, limit=longProfitTarget, stop=longStopLoss)
+    
+if(blackBar or redBar)
+    strategy.cancel(longEntry)
+    strategy.close(longEntry, longExit)
+    
+if (redBar and not redBar[1] and isInTimeRange and isShortsAllowed)
+    if(isUsingMoneyManagement)
+        strategy.order(shortEntry, strategy.short, qtyToTrade, limit=shortStopLimit, stop=shortStopLimit)
+        //strategy.order(shortEntry, strategy.short, qtyToTrade, stop=shortStopLimit)
+    else
+        strategy.order(shortEntry, strategy.short, limit=shortStopLimit, stop=shortStopLimit)
+        //strategy.order(shortEntry, strategy.short, stop=shortStopLimit)
+    strategy.exit("Short limit/stop", from_entry=shortEntry, limit=shortProfitTarget, stop=shortStopLoss)
+if(blackBar or greenBar)
+    strategy.cancel(shortEntry)
+    strategy.close(shortEntry, shortExit)
+    
+//*********************************End execute trades, set rules, stop loss and profit targets*********************************
+Expand (166 lines)

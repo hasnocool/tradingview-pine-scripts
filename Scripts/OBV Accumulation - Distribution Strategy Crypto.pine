@@ -1,0 +1,54 @@
+Script Name: OBV Accumulation - Distribution Strategy Crypto
+Author: SoftKill21
+Description: This version its made for 8-12h and works amazingly on the ETH pairs. Can be adapted to others as well
+
+
+For this example, I used an initial 1$ account, using always full capital on each trade(without using any leverage), together with a 0.1% commission/fees for each deal, on Coinbase broker.
+
+This is a long only strategy
+
+The components for the inside of the...
+PineScript code:
+
+Pine Script™ strategy
+OBV Accumulation / Distribution Strategy Crypto
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+//@version=4
+//@author SoftKill21
+strategy(title="OBV Accumulation / Distribution Strategy", overlay=true, initial_capital = 1, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent , commission_value=0.1 )
+// eachpoint = volume * ((close - open)/(high-low) )
+eachpoint2 = volume * ((close - nz(close[1]))/(high-low) )
+allpoints = cum(eachpoint2)
+len = input(20, minval=1, title="Length")
+src = allpoints
+EMA = ema(src, len)
+up = crossover(allpoints,EMA)
+down  = crossunder(allpoints,EMA)
+long = up and close > open and allpoints > allpoints[1] 
+short = down and close < open and allpoints < allpoints[1] and close < low[1] 
+strategy.entry("long",1,when=long)
+strategy.close("long",when=short)
+Expand (23 lines)

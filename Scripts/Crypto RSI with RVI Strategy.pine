@@ -1,0 +1,197 @@
+Script Name: Crypto RSI with RVI Strategy
+Author: exlux99
+Description: This is a long only strategy adapted for crypto market.
+
+Its idea is to take the most juice out of a long trend and cut the losses as soon as possible.
+
+For this , its components are RSI with a very big length - 100 or 200 preferably and RVI.
+
+Rules for entry
+If RVI is in the buy zone and we have a crossover from RSI with the overbought level.
+
+
+Rules for...
+PineScript code:
+
+Pine Script™ strategy
+Crypto RSI with RVI Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © exlux99
+strategy(title="Crypto RSI + RVI Strategy", overlay=true, initial_capital = 1000, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent, commission_value=0.03, pyramiding=1  )
+Period = input(100, minval=1)
+BuyZone = input(49, minval=1)
+SellZone = input(50, minval=1)
+length=Period
+MA_s=0.0
+pos=0.0
+possig=0.0
+nU=0.0
+nD=0.0
+nRes=0.0
+ob=SellZone
+os=BuyZone
+WiMA(src, length) => 
+    MA_s=0.0
+    MA_s:=(src + nz(MA_s[1] * (length-1)))/length
+    MA_s
+calc_rsi_volume(fv, length) =>    
+    up=iff(fv>fv[1],abs(fv-fv[1])*volume,0)
+    dn=iff(fv<fv[1],abs(fv-fv[1])*volume,0)
+    upt=WiMA(up,length)
+    dnt=WiMA(dn,length)
+    100*(upt/(upt+dnt))
+rsi_v = calc_rsi_volume(close, length)
+// u=plot(ob)
+// l=plot(os)
+// fill(u,l,color.red)
+// plot(50)
+// plot(rsi_v, color=color.red, linewidth=1)
+ 
+reverse = input(false, title="Trade reverse")
+xPrice = close
+StdDev = stdev(xPrice, Period)
+d = iff(close > close[1], 0, StdDev)
+u = iff(close > close[1], StdDev, 0)
+nU := (13 * nz(nU[1],0) + u) / 14
+nD := (13 * nz(nD[1],0) + d) / 14
+nRes := 100 * nU / (nU + nD)
+pos := iff(nRes < BuyZone, -1,
+       iff(nRes > SellZone, 1, nz(pos[1], 0))) 
+possig := iff(reverse and pos == 1, -1,
+          iff(reverse and pos == -1, 1, pos))       
+ 
+long=crossover (rsi_v,ob) and (possig == 1) 
+short=crossunder(rsi_v,os) and (possig == -1)
+g(v, p) => round(v * (pow(10, p))) / pow(10, p)
+risk     = input(100)
+leverage = input(2.5)
+c = g((strategy.equity * leverage / open) * (risk / 100), 4)
+strategy.entry("long",1,c,when=long)
+strategy.close("long",when=short)
+//strategy.entry("short",0,when=short)
+ 
+// ------------------------- Strategy Logic --------------------------------- //
+var longOpeneda = false
+var shortOpeneda = false
+var int timeOfBuya = na
+ 
+longCondition= long and not longOpeneda 
+if longCondition
+    longOpeneda := true
+    timeOfBuya := time
+longExitSignala = short
+exitLongCondition = longOpeneda[1] and longExitSignala
+if exitLongCondition
+    longOpeneda := false
+    timeOfBuya := na
+//plotshape(longCondition, style=shape.labelup, location=location.belowbar, color=color.color.green, size=size.tiny, title="BUY", text="BUY", textcolor=color.color.white)
+//plotshape(exitLongCondition, style=shape.labeldown, location=location.abovebar, color=color.color.red, size=size.tiny, title="SELL", text="SELL", textcolor=color.color.white)
+sl=input(0.2)
+tp=input(1.0)
+strategy.exit("long_tp/sl", "long", profit=close * tp / syminfo.mintick, loss=close * sl / syminfo.mintick, comment='long_tp/sl', alert_message = 'closelong')
+strategy.exit("short_tp/sl", "short", profit=close * tp / syminfo.mintick, loss=close * sl / syminfo.mintick, comment='short_tp/sl',  alert_message = 'closeshort')
+Expand (102 lines)

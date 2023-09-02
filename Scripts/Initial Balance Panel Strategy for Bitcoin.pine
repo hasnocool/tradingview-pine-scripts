@@ -1,0 +1,712 @@
+Script Name: Initial Balance Panel Strategy for Bitcoin
+Author: Smollet
+Description: Initial Balance Strategy 
+Initial Balance Strategy uses a source code of "Initial Balance Monitoring Panel" that build from "Initial Balance Markets Time Zones - Overall Highest and Lowest".
+Initial Balance is based on the highest and lowest price action within the first 60 minutes of trading. Reading online this can depict which way the market can trend for the...
+PineScript code:
+
+Pine Script™ strategy
+Initial Balance Panel Strategy for Bitcoin
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+//@version=5
+strategy(title='Initial Balance Panel Strategy', shorttitle='Initial Balance Strategy')
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+LongCNT = input.int(15, "Num of pairs for Long", group = "Main Settings")
+ShortCNT = input.int(17, "Num of pairs for Short", group = "Main Settings")
+BTCsame = input.bool(false, "BTC break the level")
+BTCNB = input.bool(false, "BTC not break the level")
+// Volatility Stop
+length = input.int(20, "Length", minval = 2, group = "Volatility Stop")
+src = input.source(close, "Source", group = "Volatility Stop")
+factor = input.float(2.0, "Multiplier", minval = 0.25, step = 0.25, group = "Volatility Stop")
+volStop(src, atrlen, atrfactor) =>
+    var max     = src
+    var min     = src
+    var uptrend = true
+    var stop    = 0.0
+    atrM        = nz(ta.atr(atrlen) * atrfactor, ta.tr)
+    max         := math.max(max, src)
+    min         := math.min(min, src)
+    stop        := nz(uptrend ? math.max(stop, max - atrM) : math.min(stop, min + atrM), src)
+    uptrend     := src - stop >= 0.0
+    if uptrend != nz(uptrend[1], true)
+        max    := src
+        min    := src
+        stop   := uptrend ? max - atrM : min + atrM
+    [stop, uptrend]
+[vStop, uptrend] = volStop(src, length, factor)
+plot(vStop, "Volatility Stop", style=plot.style_line, linewidth =2, color= uptrend ? #00C0FF80 : #FF008080)
+// USER Symbol Input
+Symbol01 = input(title='Symbol Selection', defval='BINANCE:BTCUSDT')
+Symbol02 = input(title='Symbol Selection', defval='BINANCE:ETHUSDT')
+Symbol03 = input(title='Symbol Selection', defval='BINANCE:EOSUSDT')
+Symbol04 = input(title='Symbol Selection', defval='BINANCE:LTCUSDT')
+Symbol05 = input(title='Symbol Selection', defval='BINANCE:XRPUSDT')
+Symbol06 = input(title='Symbol Selection', defval='BINANCE:DASHUSDT')
+Symbol07 = input(title='Symbol Selection', defval='BINANCE:IOTAUSDT')
+Symbol08 = input(title='Symbol Selection', defval='BINANCE:NEOUSDT')
+Symbol09 = input(title='Symbol Selection', defval='BINANCE:QTUMUSDT')
+Symbol10 = input(title='Symbol Selection', defval='BINANCE:XMRUSDT')
+Symbol11 = input(title='Symbol Selection', defval='BINANCE:ZECUSDT')
+Symbol12 = input(title='Symbol Selection', defval='BINANCE:ETCUSDT')
+Symbol13 = input(title='Symbol Selection', defval='BINANCE:ADAUSDT')
+Symbol14 = input(title='Symbol Selection', defval='BINANCE:XTZUSDT')
+Symbol15 = input(title='Symbol Selection', defval='BINANCE:LINKUSDT')
+Symbol16 = input(title='Symbol Selection', defval='BINANCE:DOTUSDT')
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Start of the function, must include all calculations
+IBCALC() =>
+    // Asia START //
+    //////////////////////////////////// Initial Balance Asia Start
+    time_int_01 = input.session('0000-0100:1234567', 'Asia IB Range')
+    in_time_int_01 = time(timeframe.period, time_int_01)
+    var highe_01 = 0.0
+    var lowe_01 = 10e10
+    if in_time_int_01
+        if not in_time_int_01[1]
+            highe_01 := high
+            lowe_01 := low
+            lowe_01
+        else
+            highe_01 := math.max(high, highe_01)
+            lowe_01 := math.min(low, lowe_01)
+            lowe_01
+    //////////////////////////////////// Initial Balance Asia Finish
+    //////////////////////////////////// Asia IB Plot Start
+    //High
+    AsiaIBHighInput = input('0100-0101:1234567', title='Capture Asia IB High')
+    AsiaIBHigh = time('1', AsiaIBHighInput)
+    var AsiaIBHighPA = 0.0
+    if AsiaIBHigh
+        if not AsiaIBHigh[1]
+            AsiaIBHighPA := highe_01
+            AsiaIBHighPA
+    //Low
+    AsiaIBLowInput = input('0100-0101:1234567', title='Capture Asia IB Low')
+    AsiaIBLow = time('1', AsiaIBLowInput)
+    var AsiaIBLowPA = 0.0
+    if AsiaIBLow
+        if not AsiaIBLow[1]
+            AsiaIBLowPA := lowe_01
+            AsiaIBLowPA
+    // Asia FINISH //
+    // London START //
+    //////////////////////////////////// Initial Balance London Start
+    time_int_02 = input.session('0800-0900:1234567', 'London IB Range')
+    time_lon_pre = input.session('0500-0800:1234567', 'London Pre Market Trading')
+    in_time_int_02 = time(timeframe.period, time_int_02)
+    PreMarketLon = time(timeframe.period, time_lon_pre)
+    var highe_02 = 0.0
+    var lowe_02 = 10e10
+    if in_time_int_02
+        if not in_time_int_02[1]
+            highe_02 := high
+            lowe_02 := low
+            lowe_02
+        else
+            highe_02 := math.max(high, highe_02)
+            lowe_02 := math.min(low, lowe_02)
+            lowe_02
+    //////////////////////////////////// Initial Balance London Finsh
+    //////////////////////////////////// London IB Plot Start
+    //High
+    LonIBHighInput = input('0900-0901:1234567', title='Capture London IB High')
+    LonIBHigh = time('1', LonIBHighInput)
+    var LonIBHighPA = 0.0
+    if LonIBHigh
+        if not LonIBHigh[1]
+            LonIBHighPA := highe_02
+            LonIBHighPA
+    //Low
+    LonIBLowInput = input('0900-0901:1234567', title='Capture London IB Low')
+    LonIBLow = time('1', LonIBLowInput)
+    var LonIBLowPA = 0.0
+    if LonIBLow
+        if not LonIBLow[1]
+            LonIBLowPA := lowe_02
+            LonIBLowPA
+    //////////////////////////////////// London IB Plot Finish
+    // London FINISH //
+    // New York START //
+    //////////////////////////////////// Initial Balance New York Start
+    time_int_03 = input.session('1430-1530:1234567', 'New York IB Range')
+    time_ny_pre = input.session('1130-1430:1234567', 'New York Pre Market Trading')
+    in_time_int_03 = time(timeframe.period, time_int_03)
+    PreMarketNY = time(timeframe.period, time_ny_pre)
+    var highe_03 = 0.0
+    var lowe_03 = 10e10
+    if in_time_int_03
+        if not in_time_int_03[1]
+            highe_03 := high
+            lowe_03 := low
+            lowe_03
+        else
+            highe_03 := math.max(high, highe_03)
+            lowe_03 := math.min(low, lowe_03)
+            lowe_03
+    //////////////////////////////////// Initial Balance New York Finish
+    //////////////////////////////////// New York IB Plot Start
+    //High
+    NYIBHighInput = input('1530-1531:1234567', title='Capture New York IB High')
+    NYIBHigh = time('1', NYIBHighInput)
+    var NYIBHighPA = 0.0
+    if NYIBHigh
+        if not NYIBHigh[1]
+            NYIBHighPA := highe_03
+            NYIBHighPA
+    //Low
+    NYIBLowInput = input('1530-1531:1234567', title='Capture New York IB Low')
+    NYIBLow = time('1', NYIBLowInput)
+    var NYIBLowPA = 0.0
+    if NYIBLow
+        if not NYIBLow[1]
+            NYIBLowPA := lowe_03
+            NYIBLowPA
+    //////////////////////////////////// New York IB Plot Finish
+    // New York FINISH //
+    // IB Highest Settings
+    AsiaAboveHigh = close > AsiaIBHighPA
+    LondonAboveHigh = close > LonIBHighPA
+    NewYorkAboveHigh = close > NYIBHighPA
+    Buy = AsiaAboveHigh and LondonAboveHigh and NewYorkAboveHigh
+    // IB Lowest Settings
+    AsiaBelowLow = close < AsiaIBLowPA
+    LondonBelowLow = close < LonIBLowPA
+    NewYorkBelowLow = close < NYIBLowPA
+    Sell = AsiaBelowLow and LondonBelowLow and NewYorkBelowLow
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // IB Color Settings
+    AboveAllIBs = color.green  //#0CAB07 // Dark Green  -> Long
+    BelowAllIBs = color.red  //#DE071C // Dark Red    -> Short
+    InBetween = color.white  //#E1DE14 // Yellow      #000000   #555555
+    IBcolor_ = Buy ? AboveAllIBs : Sell ? BelowAllIBs : InBetween
+//    NYIB = in_time_int_03
+    NYIB = #00008b  //dark blue
+    AsiaIB = color.purple
+    LonIB = #9b870c  //color.yellow
+    NoIB = color.black
+    PreTradeLon = color.yellow  //#FFFF99 // Light Yellow
+    PreTradeNY = color.blue  //#FFFF99 // Light Yellow
+    IBBuildColor_ = PreMarketLon ? PreTradeLon : PreMarketNY ? PreTradeNY : in_time_int_03 ? NYIB : in_time_int_02 ? LonIB : in_time_int_01 ? AsiaIB : NoIB
+    [IBcolor_, IBBuildColor_]
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+[IBcolor_, IBBuildColor_] = IBCALC()
+color_Sym01 = request.security(Symbol01, timeframe.period, IBcolor_)
+color_Sym02 = request.security(Symbol02, timeframe.period, IBcolor_)
+color_Sym03 = request.security(Symbol03, timeframe.period, IBcolor_)
+color_Sym04 = request.security(Symbol04, timeframe.period, IBcolor_)
+color_Sym05 = request.security(Symbol05, timeframe.period, IBcolor_)
+color_Sym06 = request.security(Symbol06, timeframe.period, IBcolor_)
+color_Sym07 = request.security(Symbol07, timeframe.period, IBcolor_)
+color_Sym08 = request.security(Symbol08, timeframe.period, IBcolor_)
+color_Sym09 = request.security(Symbol09, timeframe.period, IBcolor_)
+color_Sym10 = request.security(Symbol10, timeframe.period, IBcolor_)
+color_Sym11 = request.security(Symbol11, timeframe.period, IBcolor_)
+color_Sym12 = request.security(Symbol12, timeframe.period, IBcolor_)
+color_Sym13 = request.security(Symbol13, timeframe.period, IBcolor_)
+color_Sym14 = request.security(Symbol14, timeframe.period, IBcolor_)
+color_Sym15 = request.security(Symbol15, timeframe.period, IBcolor_)
+color_Sym16 = request.security(Symbol16, timeframe.period, IBcolor_)
+color_Sym17 = request.security(Symbol01, timeframe.period, IBBuildColor_)
+var int cntL = 0
+var int cntS = 0
+cntL := 0
+cntS := 0
+if color_Sym01 == color.green
+    cntL += 1
+    cntL
+if color_Sym02 == color.green
+    cntL += 1
+    cntL
+if color_Sym03 == color.green
+    cntL += 1
+    cntL
+if color_Sym04 == color.green
+    cntL += 1
+    cntL
+if color_Sym05 == color.green
+    cntL += 1
+    cntL
+if color_Sym06 == color.green
+    cntL += 1
+    cntL
+if color_Sym07 == color.green
+    cntL += 1
+    cntL
+if color_Sym08 == color.green
+    cntL += 1
+    cntL
+if color_Sym09 == color.green
+    cntL += 1
+    cntL
+if color_Sym10 == color.green
+    cntL += 1
+    cntL
+if color_Sym11 == color.green
+    cntL += 1
+    cntL
+if color_Sym12 == color.green
+    cntL += 1
+    cntL
+if color_Sym13 == color.green
+    cntL += 1
+    cntL
+if color_Sym14 == color.green
+    cntL += 1
+    cntL
+if color_Sym15 == color.green
+    cntL += 1
+    cntL
+if color_Sym16 == color.green
+    cntL += 1
+    cntL
+if color_Sym17 == color.green
+    cntL += 1
+    cntL
+if color_Sym01 == color.red
+    cntS += 1
+    cntS
+if color_Sym02 == color.red
+    cntS += 1
+    cntS
+if color_Sym03 == color.red
+    cntS += 1
+    cntS
+if color_Sym04 == color.red
+    cntS += 1
+    cntS
+if color_Sym05 == color.red
+    cntS += 1
+    cntS
+if color_Sym06 == color.red
+    cntS += 1
+    cntS
+if color_Sym07 == color.red
+    cntS += 1
+    cntS
+if color_Sym08 == color.red
+    cntS += 1
+    cntS
+if color_Sym09 == color.red
+    cntS += 1
+    cntS
+if color_Sym10 == color.red
+    cntS += 1
+    cntS
+if color_Sym11 == color.red
+    cntS += 1
+    cntS
+if color_Sym12 == color.red
+    cntS += 1
+    cntS
+if color_Sym13 == color.red
+    cntS += 1
+    cntS
+if color_Sym14 == color.red
+    cntS += 1
+    cntS
+if color_Sym15 == color.red
+    cntS += 1
+    cntS
+if color_Sym16 == color.red
+    cntS += 1
+    cntS
+if color_Sym17 == color.red
+    cntS += 1
+    cntS
+buysignal = cntL >= LongCNT and uptrend and (not BTCsame or color_Sym01 == color.green) and (not BTCNB or color_Sym01 == color.white)
+sellsignal = cntS >= ShortCNT and not uptrend and (not BTCsame or color_Sym01 == color.red) and (not BTCNB or color_Sym01 == color.white)
+exitFL = strategy.position_size > 0 and uptrend[1] and not uptrend
+exitFS = strategy.position_size < 0 and not uptrend[1] and uptrend
+if buysignal
+    strategy.entry("Long", strategy.long)
+if sellsignal
+    strategy.entry("Short", strategy.short)
+if exitFL
+    strategy.close("Long")
+if exitFS
+    strategy.close("Short")
+//plot(cntL, color=color.new(color.green, 0))
+//plot(cntS, color=color.new(color.red, 0))
+Expand (381 lines)

@@ -1,0 +1,82 @@
+Script Name: Daytrader strategies for major currencies
+Author: SoftKill21
+Description: Hello, 
+
+This technique is for those who want the most simple method that is almost fool-proof. It must be done only during the busiest trading hours, 3 am to 11 am EST. This method doesn't work in sideways markets, only in volatile trending markets.
+
+
+
+Indicators:
+ Ema 3 
+ MA 20 
+ Awesome Oscillator.
+
+
+Enter Long: when the red 3 EMA has crossed up through the...
+PineScript code:
+
+Pine Script™ strategy
+Daytrader strategies for major currencies
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+//@version=4
+//@author SoftKill21
+strategy(title="MA cross + AO", shorttitle="MA_AO")
+ao = sma(hl2,5) - sma(hl2,34)
+len = input(3, minval=1, title="Length")
+src = input(close, title="Source")
+out = ema(src, len)
+len1 = input(20, minval=1, title="Length")
+src1 = input(close, title="Source")
+out1 = sma(src1, len1)
+timeinrange(res, sess) => time(res, sess) != 0
+londopen = timeinrange(timeframe.period, "0300-1100") 
+nyopen = timeinrange(timeframe.period, "0800-1600") 
+longC = crossover(out,out1) and ao>0 and londopen
+shortC = crossunder(out,out1) and ao<0 and londopen
+invert = input(title="Reverse position ?", type=input.bool, defval=false)
+if(invert==false)
+    strategy.entry("LONG",1,when=longC)
+    strategy.entry("SHORT",0,when=shortC)
+if(invert==true)
+    strategy.entry("short",0,when=longC)
+    strategy.entry("long",1,when=shortC)
+    
+strategy.close_all(when= not (londopen))
+Expand (37 lines)

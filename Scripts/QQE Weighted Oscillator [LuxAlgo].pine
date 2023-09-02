@@ -1,0 +1,120 @@
+Script Name: QQE Weighted Oscillator [LuxAlgo]
+Author: LuxAlgo
+Description: The QQE (Quantitative Qualitative Estimation) Weighted Oscillator improves on its original version by weighting the RSI based on the indications given by the trailing stop, requiring more effort in order for a cross with the trailing stop to occur.
+
+🔶  USAGE 
+
+  
+
+The QQE Weighted Oscillator is comprised of a smoothed RSI oscillator and a trailing stop derived...
+PineScript code:
+
+Pine Script™ indicator
+QQE Weighted Oscillator [LuxAlgo]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+// This work is licensed under a Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) https://creativecommons.org/licenses/by-nc-sa/4.0/
+// © LuxAlgo
+//@version=5
+indicator("QQE Weighted Oscillator [LuxAlgo]", "LuxAlgo - QQE Weighted Oscillator")
+//------------------------------------------------------------------------------
+//Settings
+//-----------------------------------------------------------------------------{
+length = input.int(14, minval = 1)
+factor = input.float(4.236, minval = 0)
+smooth = input.int(5, minval = 1)
+weight = input.float(2)
+src    = input(close)
+//Style
+rsiCss = input(#3179f5, 'RSI', group = 'Style')
+tsBearCss = input(color.red, 'Trailing Stop', group = 'Style', inline = 'inline1')
+tsBullCss = input(color.teal, '', group = 'Style', inline = 'inline1')
+//-----------------------------------------------------------------------------}
+//Weighted QQE
+//-----------------------------------------------------------------------------{
+var ts = 0.
+var rsi = 0.
+delta = src - src[1]
+w = nz(delta * (rsi - ts) > 0 ? weight : 1, 1)
+//Rsi
+num = ta.rma(delta * w, length)
+den = ta.rma(math.abs(delta * w), length)
+rsi := 50 * ta.ema(num / den, smooth) + 50
+//Trailing stop
+diff = ta.rma(math.abs(rsi - rsi[1]), length)
+crossover = ta.crossover(rsi, ts)
+crossunder = ta.crossunder(rsi, ts)
+ts := nz(crossover ? rsi - diff * factor
+  : crossunder ? rsi + diff * factor
+  : rsi > ts ? math.max(rsi - diff * factor, ts)
+  : math.min(rsi + diff * factor, ts), rsi)
+//-----------------------------------------------------------------------------}
+//Plots
+//-----------------------------------------------------------------------------{
+css = rsi > ts ? tsBullCss : tsBearCss
+plot_rsi = plot(rsi, 'RSI', rsiCss)
+plot_ts  = plot(ts, 'Traling Stop', css)
+fill(plot_rsi, plot_ts, rsi, ts, color.new(rsiCss, 50), color.new(css, 50))
+hline(70)
+hline(30)
+//-----------------------------------------------------------------------------}
+Expand (60 lines)

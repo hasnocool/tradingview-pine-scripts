@@ -1,0 +1,470 @@
+Script Name: Extremely Overfit Bitcoin Long-Short
+Author: jsmith_crypto
+Description: This is a highly overfit (in my opinion) script to long/short BTC on the 15m time frame. May be usable for other cryptocurrencies or timeframes with some parameter adjustments. I backtested it on a few exchanges with ETH.
+
+The simplest way to increase the number of trades is to decrease the "FastChannelLength" parameter or increase the "SlowChannelLength"...
+PineScript code:
+
+Pine Script™ strategy
+Extremely Overfit Bitcoin Long/Short
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+//@version=4
+strategy("Extremely Overfit", overlay=true, commission_type=strategy.commission.percent, commission_value=.16, default_qty_type=strategy.percent_of_equity, default_qty_value=100, pyramiding = 1)
+price = close
+goLong = input(title="go long?", type=input.bool, defval=true)
+goShort = input(title="go short?", type=input.bool, defval=true)
+//trendRestrict = input(title="basic trend restriction?", type=input.bool, defval=false)
+dynamicRestrict = true //input(title="dynamic trend restriction?", type=input.bool, defval=true)
+longtrendimpt = true //input(title="additional weight on long-term trends?", type=input.bool, defval=true)
+volRestrict = true //input(title="volume restriction?", type=input.bool, defval=true)
+conservativeClose = false //input(title="conservative order closing?", type=input.bool, defval=false)
+Restrictiveness = input ( -40,step=10,title ="Restrictiveness (higher = make fewer trades)")
+volatilityImportance = 3.2 //input( 3.2, step = 0.1, minval = 0)
+fastChannelLength = input( 6 )
+fastChannelMargin = input ( 3.2, step = 0.1, minval = 0)
+slowChannelLength = input ( 6, step = 1, minval = 0)
+slowChannelMargin = input ( 1.5, step = 0.1, minval = 0)
+fastHMAlength = input (4, step = 1, minval = 0)
+stopLoss = input( 3, step = 0.1, minval = 0)
+//altClosePeriod = input( 27, step = 1, minval = 1)
+//altCloseFactor = input( 4.9, step = 0.1)
+stopLossFlexibility = 50 //input(50, step=10, title="effect of volatility on SL?")
+volumeMAlength = 14 //input ( 14, step = 1, minval = 1)
+volumeVolatilityCutoff = 3.8 // ( 3.8, step = 1, minval = 0)
+trendSensitivity = 3.8 //input ( 3.8, step = 0.1)
+obvLookback = 10 //input(10, step = 10, minval = 10)
+obvCorrThreshold = 0.89 //input(0.89, step = 0.01)
+ROClength = 80 //input( 80, step = 10)
+ROCcutoff = 5.6 //input( 5.6, step=0.1)
+trendRestrict = false
+//trendLookback = input ( 360, step = 10, minval = 10)
+//longTrendLookback = input(720, step = 10, minval = 10)
+//longTrendImportance = input(1.5, step = 0.05)
+trendLookback = 360
+longTrendLookback = 720
+longTrendImportance = 1.5
+//conservativeness = input( 2.4, step = 0.1)
+conservativeness = 0
+//trendPower = input( 0, step=1)
+trendPower = 0
+//conservativenessLookback = input( 650, step = 10, minval = 0)
+conservativenessLookback = 10
+//consAffectFactor = input( 0.85,step=0.01)
+consAffectFactor = 0.85
+//volatilityLookback = input(50, step=1, minval=2)
+volatilityLookback = int(50)
+recentVol = stdev(price,volatilityLookback)/sqrt(volatilityLookback)
+//price channel
+fastChannel = ema(price, fastChannelLength)
+fastChannelUB = fastChannel * (1 + (float(fastChannelMargin) / 1000)) + (recentVol * (float(volatilityImportance) * (1 + (Restrictiveness/100))))
+fastChannelLB = fastChannel * (1 - (float(fastChannelMargin) / 1000)) - (recentVol * (float(volatilityImportance) * (1 + (Restrictiveness/100))))
+fchU = ((fastChannelUB < open) and (fastChannelUB < close))
+fchL = ((fastChannelLB > open) and (fastChannelLB > close))
+//plot(fastChannelUB)
+//plot(fastChannelLB)
+//slow channel
+//slowChannelLBmargin = input ( 2, step = 0.1, minval = 0 )
+slowChannel = ema(ema(price,slowChannelLength),slowChannelLength)
+slowChannelUB = slowChannel * (1 + (float(slowChannelMargin) / 2000)) + (recentVol * (float(volatilityImportance) * (1 + (Restrictiveness/100))))
+slowChannelLB = slowChannel * (1 - (float(slowChannelMargin) / 2000)) - (recentVol * (float(volatilityImportance) * (1 + (Restrictiveness/100))))
+schU = ((slowChannelUB < close))
+schL = ((slowChannelLB > close))
+cschU = (((slowChannelUB * (1 + conservativeness)) < close))
+cschL = (((slowChannelUB * (1 - conservativeness)) > close))
+//plot(slowChannel,color = #00FF00)
+//plot(slowChannelUB,color = #00FF00)
+//plot(slowChannelLB,color = #00FF00)
+fastHMA = hma(price,fastHMAlength)
+fastAboveUB = (fastHMA > slowChannelUB)
+fastBelowLB = (fastHMA < slowChannelLB)
+//plot(fastHMA, color =     #FF0000, linewidth = 2)
+//consecutive candles
+//consecutiveCandlesReq = input(1, step = 1, minval = 1, maxval = 4)
+consecutiveCandlesReq = 1
+consecutiveBullReq = float(consecutiveCandlesReq)
+consecutiveBearReq = float(consecutiveCandlesReq)
+cbull = ((close[0] > close[1]) and (consecutiveBullReq == 1)) or (((close[0] > close[1]) and (close[1] > close[2])) and consecutiveBullReq == 2) or (((close[0] > close[1]) and (close[1] > close[2]) and (close[2] > close[3])) and consecutiveBullReq == 3) or (((close[0] > close[1]) and (close[1] > close[2]) and (close[2] > close[3]) and (close[3] > close[4])) and consecutiveBullReq == 4)
+cbear = ((close[0] < close[1]) and (consecutiveBearReq == 1)) or (((close[0] < close[1]) and (close[1] < close[2])) and consecutiveBearReq == 2) or (((close[0] < close[1]) and (close[1] < close[2]) and (close[2] < close[3])) and consecutiveBearReq == 3) or (((close[0] < close[1]) and (close[1] < close[2]) and (close[2] < close[3]) and (close[3] < close[4])) and consecutiveBearReq == 4)
+//trend detection
+//trendCutoff = input(0, step = 0.1)
+trendCutoff = 0
+trendDetectionPct = float(trendCutoff/100)
+trendVal = float((close[0] - close[trendLookback])/close[0])
+trendUp = (trendVal > (0 + trendDetectionPct))
+trendDown = (trendVal < (0 - trendDetectionPct))
+//plot(trendVal+36.5,linewidth=2)
+// peak indicators
+peakHigh = ((fastHMA > fastChannelUB) and (fastChannelLB > slowChannelUB))
+peakLow = ((fastHMA < fastChannelLB) and (fastChannelUB < slowChannelLB))
+TpeakHigh = (fastHMA > fastChannelUB) and (fastChannelUB > slowChannelUB)
+TpeakLow = (fastHMA < fastChannelUB) and (fastChannelLB < slowChannelLB)
+//TpeakHigh = (fastHMA > fastChannelUB) and (fastChannelLB > avg(slowChannelUB,slowChannelLB))
+//TpeakLow = (fastHMA < fastChannelUB) and (fastChannelUB < avg(slowChannelLB,slowChannelUB))
+//TpeakHigh = ((crossover(fastHMA,fastChannelUB)) and (fastChannelLB > slowChannelUB))
+//TpeakLow = ((crossover(fastChannelLB,fastHMA)) and (fastChannelUB < slowChannelLB))
+//TpeakHigh = (fastHMA > (fastChannelUB * (1 + (trendPower/800)))) and (fastChannelUB > (slowChannelUB * (1 + (trendPower/800))))
+//TpeakLow = (fastHMA < (fastChannelUB * (1 - (trendPower/800)))) and (fastChannelLB < (slowChannelLB * (1 - (trendPower/800))))
+//TpeakHigh = (fastHMA > (fastChannelUB * (1 + (trendPower/800)))) and (avg(fastChannelUB,fastChannelLB) > (slowChannelUB * (1 + (trendPower/800))))
+//TpeakLow = (fastHMA < (fastChannelUB * (1 - (trendPower/800)))) and (avg(fastChannelLB,fastChannelUB) < (slowChannelLB * (1 - (trendPower/800))))
+//plot(fastChannelUB * (1 + (trendPower/700)), color=#FF69B4)
+// and for closing...
+closeLong = (crossover(fastHMA,fastChannelUB) and (fastChannelLB > slowChannelUB))
+closeShort = (crossover(fastChannelLB,fastHMA) and (fastChannelUB < slowChannelLB))
+//closeLong = (crossover(fastHMA,fastChannelUB) and (fastChannelLB > slowChannelUB)) or (roc(price,altClosePeriod) > altCloseFactor)
+//closeShort = (crossover(fastChannelLB,fastHMA) and (fastChannelUB < slowChannelLB))  or (roc(price,altClosePeriod) < (altCloseFactor) * -1)
+//closeLong = (crossover(fastHMA,fastChannelUB) and (fastChannelLB > slowChannelUB)) or (((price - fastChannelUB) > (altCloseFactor * abs(((fastChannelUB - fastChannelLB)/2) - ((slowChannelUB - slowChannelLB)/2)))) and (fastChannelLB > slowChannelUB))
+//closeShort = (crossover(fastChannelLB,fastHMA) and (fastChannelUB < slowChannelLB)) or (((fastChannelLB - price) > (altCloseFactor * abs(((fastChannelUB - fastChannelLB)/2) - ((slowChannelUB - slowChannelLB)/2)))) and (fastChannelUB < slowChannelLB))
+//closeLong = crossover(fastHMA,fastChannelUB) and ((fastChannelLB[0] - fastChannelLB[1]) < (slowChannelUB[0] - slowChannelUB[1]))
+//closeShort = crossover(fastChannelLB,fastHMA) and ((fastChannelUB[0] - fastChannelUB[1]) > (slowChannelLB[0] - slowChannelLB[1]))
+//stop-loss
+priceDev = stdev(price,trendLookback) * (1 + stopLossFlexibility/5)
+stopLossMod = stopLoss * (1 + (priceDev/price))
+//longStopPrice  = strategy.position_avg_price * (1 - (stopLoss/100))
+//shortStopPrice = strategy.position_avg_price * (1 + (stopLoss/100))
+longStopPrice  = strategy.position_avg_price * (1 - (stopLossMod/100))
+shortStopPrice = strategy.position_avg_price * (1 + (stopLossMod/100))
+// volume
+volumeMA = ema(volume,volumeMAlength)
+volumeDecrease = ((not volRestrict ) or (volumeMA[0] < ema(volumeMA[1] * (1 - (volumeVolatilityCutoff/100)),5)))
+volumeCutoff = ema(volumeMA[1] * (1 - (volumeVolatilityCutoff/100)),5)
+//plot(volumeMA)
+//plot(volumeCutoff)
+// detect volatility
+//trendinessLookback = input ( 600, step = 10, minval = 0)
+trendinessLookback = trendLookback
+trendiness = (stdev(price,trendinessLookback)/price) * (1 - (Restrictiveness/100))
+longtermTrend = ((price - price[longTrendLookback])/price)
+//dynamicTrendDetected = (dynamicRestrict and (abs(trendiness * 100) < trendSensitivity))
+dynamicTrendDetected = (longtrendimpt and (dynamicRestrict and (abs(trendiness * 100) < (trendSensitivity+(longtermTrend * longTrendImportance))))) or (not longtrendimpt and ((dynamicRestrict and (abs(trendiness * 100) < trendSensitivity))))
+// adapt conservativeness to volatility
+//consVal = sma(((stdev(price,conservativenessLookback))/price)*100,25)
+consVal = sma(((stdev(price,conservativenessLookback))/price)*100,25)
+cVnorm = sma(avg(consVal,3),60)
+cVal = consVal - cVnorm
+//conservativenessMod = conservativeness * (cVal * consAffectFactor)
+conservativenessMod = conservativeness * (consVal * consAffectFactor)
+//plot(consVal,linewidth=4)
+//plot(cVnorm,color = #00FF00)
+//plot(cVal,linewidth=2)
+// ROC cutoff (for CLOSING)
+//rocCloseLong = (ema(roc(price,ROClength),10) > ROCcutoff)
+//rocCloseShort = (ema(roc(price,ROClength),10) < (ROCcutoff * -1))
+ROCval = roc(price,ROClength)
+ROCema = ema(ROCval,30)
+ROCabs = abs(ROCema)
+ROCallow = ROCabs < ROCcutoff
+ROCallowLong = (ROCabs < ROCcutoff)  or ((ROCabs >= ROCcutoff) and ((fastChannelLB < slowChannelLB) and (fastHMA < fastChannelLB)))
+ROCallowShort = (ROCabs < ROCcutoff) or ((ROCabs >= ROCcutoff) and ((fastChannelUB > slowChannelUB) and (fastHMA > fastChannelUB)))
+//plot(ROCallow)
+// obv
+evidence_obv = (correlation(price,obv[0],obvLookback))
+obvAllow = evidence_obv > obvCorrThreshold
+//if (not na(vrsi))
+if trendRestrict or dynamicTrendDetected
+    //if (strategy.position_size == 0)
+    if not (strategy.position_size < 0)
+        if trendUp
+            //if cbear and schL and fchL and trendUp and goLong
+            if cbear and TpeakLow and volumeDecrease and ROCallow and goLong and obvAllow
+            //if cbear and peakLow and rocHigh and volumeDecrease and goLong
+                strategy.entry("Long", strategy.long, comment="Long")
+    if not (strategy.position_size > 0)
+        if trendDown
+            //if cbull and schU and fchU and trendDown and goShort
+            if cbull and TpeakHigh and volumeDecrease and ROCallow and goShort and obvAllow
+            //if cbull and peakHigh and rocLow and volumeDecrease and goShort
+                strategy.entry("Short", strategy.short, comment="Short")
+else
+    //if (strategy.position_size == 0)
+    if not (strategy.position_size < 0)
+        //if cbear and peakLow and goLong
+        //if cbear and peakLow and volumeDecrease and ROCallow and goLong
+        if TpeakLow and goLong and obvAllow
+            strategy.entry("Long", strategy.long, comment="Long")
+    if not (strategy.position_size > 0)
+        //if cbull and peakHigh and goShort
+        //if cbull and peakHigh and volumeDecrease and ROCallow and goShort
+        if TpeakHigh and goShort and obvAllow
+            strategy.entry("Short", strategy.short, comment="Short")
+if conservativeClose
+    //pkHigh = ((fastHMA > fastChannelUB) and (fastChannelUB > (slowChannelUB * (1 + conservativeness/1000))))
+    //pkLow = ((fastHMA < fastChannelLB) and (fastChannelLB < (slowChannelLB * (1 - conservativeness/1000))))
+    //pkHigh = ((fastHMA > fastChannelUB) and (fastChannelUB > (slowChannelUB * (1 + conservativenessMod/1000))))
+    //pkLow = ((fastHMA < fastChannelLB) and (fastChannelLB < (slowChannelLB * (1 - conservativenessMod/1000))))
+    pkHigh = ((fastHMA > fastChannelUB) and (fastChannelUB > (slowChannelUB * (1 + ((conservativenessMod/1000) * (1 - Restrictiveness/100))))))
+    pkLow = ((fastHMA < fastChannelLB) and (fastChannelLB < (slowChannelLB * (1 - ((conservativenessMod/1000) * (1 - Restrictiveness/100))))))
+    
+    if (strategy.position_size > 0)
+        //if fastAboveUB
+        //if pkHigh and closeLong
+        if closeLong
+            strategy.close("Long", comment="closeLong")
+    if (strategy.position_size < 0)
+        //if fastBelowLB
+        //if pkLow and closeShort
+        if closeShort
+            strategy.close("Short", comment="closeShort")
+else
+    if (strategy.position_size > 0)
+        //if fastAboveUB
+        if peakHigh
+            strategy.close("Long", comment="closeLong")
+    if (strategy.position_size < 0)
+        //if fastBelowLB
+        if peakLow
+            strategy.close("Short", comment="closeShort")
+if (strategy.position_size > 0)
+    strategy.exit(id="Long", stop=longStopPrice, comment="stopLong")
+if (strategy.position_size < 0)
+    strategy.exit(id="Short", stop=shortStopPrice, comment="stopShort")
+//plot(strategy.equity, title="equity", color=color.red, linewidth=2, style=plot.style_areabr)
+Expand (249 lines)

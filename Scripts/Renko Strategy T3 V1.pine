@@ -1,0 +1,183 @@
+Script Name: Renko Strategy T3 V1
+Author: dman103
+Description: An interesting strategy using Renko calculations and Tilson T3 on normal charts targeted for cryptocurrencies but can work with different assets.
+Tested on Daily but can work with lower frames  using Renko Size and T3 Length adjustments.
+
+ == Description ==
+Strategy get Renko close/open/high/low values and smooth them with T3 Tilson.
+Base on these results the...
+PineScript code:
+
+Pine Script™ strategy
+Renko Strategy T3 V1
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+//@version=4
+// This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License https://creativecommons.org/licenses/by-sa/4.0/
+// © dman103
+// An interesting strategy using Renko calculations and T3 Tilson on normal charts targeted for cryptocurrencies but can work with different assets.
+// Tested on Daily but can work with lower frames (no too low) using Renko Size and T3 Length adjustments.
+// == Description ==
+// Strategy get Renko close/open/high/low values and smooth them with T3 Tilson.
+// Base on these results the strategy triggers a long and short orders, where green uptrending and red downtrending. 
+// Including Alerts
+//
+// == Repaint ==
+// There seems to be some sort of inconsistency when doing 'Replay' to the strategy, which means using Replay function won't trade like if you see the trading results without Replay.
+// Regarding real time, it does not repaint. Of course you need to wait for the last active bar to complete for it to give you indication.
+// You can disable strategy to use it has a sole indicator.
+// There might be a new script of Renko Strategy V2 in the future as i have a prototype, follow to get updated: https://www.tradingview.com/u/dman103/#published-scripts
+strategy(title="Renko Strategy T3 V1", shorttitle="Renko Strategy T3 V1", overlay=true,precision=3, commission_value=0.0, default_qty_type=strategy.cash, default_qty_value=10000, initial_capital=10000)
+useDate = input(true,     title='---------------- Trade Range ----------------', type=input.bool)
+FromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+FromDay   = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+FromYear  = input(defval = 2017, title = "From Year", minval = 2000)
+ToMonth   = input(defval = 1, title = "To Month", minval = 1, maxval = 12)
+ToDay     = input(defval = 1, title = "To Day", minval = 1, maxval = 31)
+ToYear    = input(defval = 2021, title = "To Year", minval = 2010)
+start     = timestamp(FromYear, FromMonth, FromDay, 00, 00)  // backtest start window
+finish    = timestamp(ToYear, ToMonth, ToDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false // time range function
+settings = input(true,     title='---------------- Settings ----------------', type=input.bool)
+renkoSize = input(5,title="Renko size",step=1)
+renkoTimePeriod = input("", title="Time frame")// For experimenting, Leave this blank for current time frame, D is for day, W is for week and so on. Numbers for minues.
+renko_tickerid = renko(syminfo.tickerid, "ATR", renkoSize)
+allow_short = input(true,title="Allow Short")
+color_bars = input(false, title="Color Bars")
+disable_strategy = input(false,title="Disable Strategy")
+// === Tilson T3 ===
+T3Factor=input( defval=0.5, minval=0,maxval = 100,step = 0.05,title="T3 Factor")
+T3Length = input(defval=2, minval=1, title ="T3 Length")
+T3FactorCalc = T3Factor *.10
+gd(src, T3Length, T3FactorCalc) => ema(src, T3Length) * (1 + T3FactorCalc) - ema(ema(src, T3Length), T3Length) * T3FactorCalc 
+t3(src, T3Length, T3FactorCalc) => gd(gd(gd(src, T3Length, T3FactorCalc), T3Length, T3FactorCalc), T3Length, T3FactorCalc) 
+//=== Renko Logic ===
+renko_close = security(renko_tickerid, renkoTimePeriod, close[1],lookahead=barmerge.lookahead_on)
+renko_open = security(renko_tickerid, renkoTimePeriod, open[1],lookahead=barmerge.lookahead_on)
+renko_high = security(renko_tickerid, renkoTimePeriod, high[1],lookahead=barmerge.lookahead_on)
+renko_low = security(renko_tickerid,  renkoTimePeriod, low[1],lookahead=barmerge.lookahead_on)
+o2 = t3(renko_open, T3Length, T3FactorCalc) 
+c2 =  t3(renko_close, T3Length, T3FactorCalc) 
+h2 =  t3(renko_high, T3Length, T3FactorCalc) 
+l2 =  t3(renko_low, T3Length, T3FactorCalc) 
+//=== Plotting ===
+crossPlot= 0.0
+if (o2 < c2)
+    crossPlot := l2
+else 
+    crossPlot := h2
+// Used to make sure that even if o2 and c2 are equal the result (short or long) will be based on previous trend. Usually happens when T3 Tilson length is small.
+bars_since_up=barssince(o2 < c2)
+bars_since_down=barssince(o2 > c2)
+go_long= (bars_since_up<bars_since_down) and  o2<c2
+go_short = (bars_since_up>bars_since_down) and o2>c2
+plotColor = go_long and  o2<c2 ? color.green : go_short and o2>c2?  color.red : color.white 
+plot(crossPlot, color = plotColor, style = plot.style_circles, linewidth = 2,join=false)
+barcolor(color_bars ? plotColor==color.green ?color.lime : color.red : na)
+changeCond = plotColor != plotColor[1]
+//=== Buy/Sell ===
+closeStatus =  strategy.openprofit > 0 ? "win" : "lose"
+long_entry = plotColor == color.green and window()  and changeCond
+long_exit_entry = plotColor == color.red //or (allow_alternative_sl and close < low_result  )
+short_entry = plotColor == color.red  and window() and changeCond
+short_exit_entry = plotColor == color.green   // or (allow_alternative_sl and close > high_result )
+if (disable_strategy == false)
+    strategy.entry("long", true, when = long_entry)
+    strategy.close("long",when=long_exit_entry,comment=closeStatus)
+    if (allow_short)
+        strategy.entry("short",false, when = short_entry)
+strategy.close("short",when=short_exit_entry,comment=closeStatus)
+//=== Alerts ===
+alertcondition(go_long and changeCond , title='Renko Buy Signal', message='Renko Revered to Buy Signal')
+alertcondition(go_short and changeCond , title='Renko Sell Signal', message='Renko Revered to Sell Signal')
+Expand (91 lines)

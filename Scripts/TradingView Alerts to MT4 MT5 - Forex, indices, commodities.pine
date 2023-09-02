@@ -1,0 +1,157 @@
+Script Name: TradingView Alerts to MT4 MT5 - Forex, indices, commodities
+Author: Peter_O
+Description: Howdy Algo-Traders! This example script has been created for educational purposes - to present how to use and automatically execute TradingView Alerts on real markets.
+
+I'm posting this script today for a reason. TradingView has just released a new feature of the PineScript language - ALERT() function. Why is it important? It is finally possible to set alerts...
+PineScript code:
+
+Pine Script™ strategy
+TradingView Alerts to MT4 MT5 - Forex, indices, commodities
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Peter_O
+//@version=4
+strategy(title="TradingView Alerts to MT4 MT5 - Forex, indices, commodities, stocks, crypto", commission_type=strategy.commission.cash_per_contract, commission_value=0.00003, overlay=false, default_qty_value=20000, initial_capital=1000)
+//
+// This script was created for educational purposes only.
+// It is showing how to use Alerts-Straight-From-Strategies and
+// dynamic variables in TradingView alerts.
+// And how to auto-execute them in Forex, indices, commodities markets
+// 
+// (This method will also work with stocks and crypto - anything your 
+// broker is offering via their MT4/MT5 platform).
+ 
+TakeProfitLevel=input(400)
+TakePartialProfitLevel=input(150)
+// **** Entries logic **** {
+periodK = input(13, title="K", minval=1)
+periodD = input(3, title="D", minval=1)
+smoothK = input(4, title="Smooth", minval=1)
+k = sma(stoch(close, high, low, periodK), smoothK)
+d = sma(k, periodD)
+plot(k, title="%K", color=color.blue)
+plot(d, title="%D", color=color.orange)
+h0 = hline(80)
+h1 = hline(20)
+fill(h0, h1, color=color.purple, transp=75)
+GoLong=crossover(k,d) and k<80 and year>2009
+GoShort=crossunder(k,d) and k>20 and year>2009
+AlertTest=open>close or open<close or open==close
+// } End of entries logic
+// **** Pivot-points and stop-loss logic **** {
+piv_high = pivothigh(high,1,1)
+piv_low = pivotlow(low,1,1)
+var float stoploss_long=low
+var float stoploss_short=high
+pl=valuewhen(piv_low,piv_low,0)
+ph=valuewhen(piv_high,piv_high,0)
+if GoLong 
+    stoploss_long := low<pl ? low : pl
+if GoShort 
+    stoploss_short := high>ph ? high : ph
+// } End of Pivot-points and stop-loss logic
+// **** Trade counter and partial closing mechanism **** {
+var int trade_id=0
+if GoLong or GoShort
+    trade_id:=trade_id+1
+TakePartialProfitLong = barssince(GoLong)<barssince(GoShort) and crossover(high,(valuewhen(GoLong,close,0)+TakePartialProfitLevel*syminfo.mintick))
+TakePartialProfitShort = barssince(GoLong)>barssince(GoShort) and crossunder(low,(valuewhen(GoShort,close,0)-TakePartialProfitLevel*syminfo.mintick))
+// } End of Trade counter and partial closing mechanism
+strategy.entry("Long", strategy.long, when=GoLong)
+strategy.exit("XPartLong", from_entry="Long", qty_percent=50, profit=TakePartialProfitLevel)
+strategy.exit("XLong", from_entry="Long", stop=stoploss_long, profit=TakeProfitLevel)
+strategy.entry("Short", strategy.short, when=GoShort)
+strategy.exit("XPartShort", from_entry="Short", qty_percent=50, profit=TakePartialProfitLevel)
+strategy.exit("XShort", from_entry="Short", stop=stoploss_short, profit=TakeProfitLevel)
+if GoLong
+    alertsyntax_golong='long slprice=' + tostring(stoploss_long) + ' tradeid=' + tostring(trade_id) + ' tp=' + tostring(TakeProfitLevel)
+    alert(message=alertsyntax_golong, freq=alert.freq_once_per_bar_close)
+if GoShort
+    alertsyntax_goshort='short slprice=' + tostring(stoploss_short) + ' tradeid=' + tostring(trade_id) + ' tp=' + tostring(TakeProfitLevel)
+    alert(message=alertsyntax_goshort, freq=alert.freq_once_per_bar_close)
+if TakePartialProfitLong
+    alertsyntax_closepartlong='closepart tradeid=' + tostring(trade_id) + ' part=0.5'
+    alert(message=alertsyntax_closepartlong, freq=alert.freq_once_per_bar_close)
+if TakePartialProfitShort
+    alertsyntax_closepartshort='closepart tradeid=' + tostring(trade_id) + ' part=0.5'
+    alert(message=alertsyntax_closepartshort, freq=alert.freq_once_per_bar_close)
+Expand (79 lines)

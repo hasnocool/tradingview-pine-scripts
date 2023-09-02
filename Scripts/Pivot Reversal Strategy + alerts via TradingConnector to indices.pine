@@ -1,0 +1,62 @@
+Script Name: Pivot Reversal Strategy + alerts via TradingConnector to indices
+Author: Peter_O
+Description: Software part of algotrading is simpler than you think. TradingView is a great place to do this actually. To present it, I'm publishing each of the default strategies you can find in Pinescript editor's "built-in" list with slight modification - I'm only adding 2 lines of code, which will trigger alerts, ready to be forwarded to your broker via TradingConnector...
+PineScript code:
+
+Pine Script™ strategy
+Pivot Reversal Strategy + alerts via TradingConnector to indices
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+//@version=4
+strategy("Pivot Reversal Strategy + alerts via TradingConnector to indices", overlay=true)
+leftBars = input(4)
+rightBars = input(2)
+swh = pivothigh(leftBars, rightBars)
+swl = pivotlow(leftBars, rightBars)
+swh_cond = not na(swh)
+hprice = 0.0
+hprice := swh_cond ? swh : hprice[1]
+le = false
+le := swh_cond ? true : (le[1] and high > hprice ? false : le[1])
+if (le)
+    strategy.entry("PivRevLE", strategy.long, comment="PivRevLE", stop=hprice + syminfo.mintick)
+    alert(message='long', freq=alert.freq_once_per_bar_close)
+swl_cond = not na(swl)
+lprice = 0.0
+lprice := swl_cond ? swl : lprice[1]
+se = false
+se := swl_cond ? true : (se[1] and low < lprice ? false : se[1])
+if (se)
+    strategy.entry("PivRevSE", strategy.short, comment="PivRevSE", stop=lprice - syminfo.mintick)
+    alert(message='short', freq=alert.freq_once_per_bar_close)
+//plot(strategy.equity, title="equity", color=color.red, linewidth=2, style=plot.style_areabr)
+//Lines of code added to the original built-in script: 14 and 22 only.
+//They trigger alerts ready to be executed on real markets through TradingConnector
+//available for Forex, indices, crypto, stocks - anything your broker offers for trading via MetaTrader4/5
+Expand (27 lines)

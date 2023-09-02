@@ -1,0 +1,65 @@
+Script Name: BollingerBands Strat + pending order alerts via TradingConnector
+Author: Peter_O
+Description: Software part of algotrading is simpler than you think. TradingView is a great place to do this actually. To present it, I'm publishing each of the default strategies you can find in Pinescript editor's "built-in" list with slight modification - I'm only adding 2 lines of code, which will trigger alerts, ready to be forwarded to your broker via TradingConnector...
+PineScript code:
+
+Pine Script™ strategy
+BollingerBands Strat + pending order alerts via TradingConnector
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+//@version=5
+strategy("Bollinger Bands Strategy with alerts (incl. pending orders) via TradingConnector to Forex", overlay=true, default_qty_value=1000)
+source = close
+length = input.int(20, minval=1)
+mult = input.float(2.0, minval=0.001, maxval=50)
+basis = ta.sma(source, length)
+dev = mult * ta.stdev(source, length)
+upper = basis + dev
+lower = basis - dev
+buyEntry = ta.crossover(source, lower)
+sellEntry = ta.crossunder(source, upper)
+if (ta.crossover(source, lower))
+    strategy.entry("BBandLE", strategy.long, stop=lower, oca_name="BollingerBands", oca_type=strategy.oca.cancel, comment="BBandLE")
+    alert(message='long price='+str.tostring(lower), freq=alert.freq_once_per_bar_close)
+else
+    strategy.cancel(id="BBandLE")
+    alert(message='cancel long', freq=alert.freq_once_per_bar_close)
+if (ta.crossunder(source, upper))
+    strategy.entry("BBandSE", strategy.short, stop=upper, oca_name="BollingerBands", oca_type=strategy.oca.cancel, comment="BBandSE")
+    alert(message='short price='+str.tostring(upper), freq=alert.freq_once_per_bar_close)
+else
+    strategy.cancel(id="BBandSE")
+    alert(message='cancel short', freq=alert.freq_once_per_bar_close)
+//plot(strategy.equity, title="equity", color=color.red, linewidth=2, style=plot.style_areabr)
+//Lines of code added to the original built-in script: 14, 17, 20 and 23 only.
+//They trigger alerts ready to be executed on real markets through TradingConnector
+//available for Forex, indices, crypto, stocks - anything your broker offers for trading via MetaTrader4/5
+Expand (29 lines)

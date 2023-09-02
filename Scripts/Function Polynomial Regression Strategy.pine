@@ -1,0 +1,505 @@
+Script Name: Function Polynomial Regression Strategy
+Author: Gentleman-Goat
+Description: To be clear I'm using the code from Richard Santos for the functional polynomial regression.  I really loved his script idea (given that I'm into linear regression myself).  I took his code and made a strategy which applies to bitcoin on the 5 minute chart (but you could adjust this for any asset), and you could make this work on anytime frame by adjusting the...
+PineScript code:
+
+Pine Script™ strategy
+Function Polynomial Regression Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Credit for polynomial linear regression to RicardoSantos! Great work!
+// © X11joe for strategy using it.
+//@version=4
+strategy(title="Function Polynomial Regression Strategy", overlay=false, precision=2,commission_value=0.0025,commission_type=strategy.commission.percent, initial_capital=5000, currency=currency.USD, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+f_array_polyreg(_X, _Y)=>
+//{
+//| Returns a polynomial regression channel using (X,Y) vector points.
+//| Resources:
+//|     language D: https://rosettacode.org/wiki/Polynomial_regression
+    int _sizeY = array.size(id=_Y)
+    int _sizeX = array.size(id=_X)
+    //
+    float _meanX = array.sum(id=_X) / _sizeX
+    float _meanY = array.sum(id=_Y) / _sizeX
+    float _meanXY = 0.0
+    float _meanY2 = 0.0
+    float _meanX2 = 0.0
+    float _meanX3 = 0.0
+    float _meanX4 = 0.0
+    float _meanX2Y = 0.0
+    if _sizeY == _sizeX
+        for _i = 0 to _sizeY - 1
+            float _Xi = array.get(id=_X, index=_i)
+            float _Yi = array.get(id=_Y, index=_i)
+            _meanXY := _meanXY + (_Xi * _Yi)
+            _meanY2 := _meanY2 + pow(_Yi, 2)
+            _meanX2 := _meanX2 + pow(_Xi, 2)
+            _meanX3 := _meanX3 + pow(_Xi, 3)
+            _meanX4 := _meanX4 + pow(_Xi, 4)
+            _meanX2Y := _meanX2Y + pow(_Xi, 2) * _Yi
+        _meanXY := _meanXY / _sizeX
+        _meanY2 := _meanY2 / _sizeX
+        _meanX2 := _meanX2 / _sizeX
+        _meanX3 := _meanX3 / _sizeX
+        _meanX4 := _meanX4 / _sizeX
+        _meanX2Y := _meanX2Y / _sizeX
+    //-----------|covs
+    float _sXX = _meanX2 - _meanX * _meanX
+    float _sXY = _meanXY - _meanX * _meanY
+    float _sXX2 = _meanX3 - _meanX * _meanX2
+    float _sX2X2 = _meanX4 - _meanX2 * _meanX2
+    float _sX2Y = _meanX2Y - _meanX2 * _meanY
+    //-----------|
+    float _b = (_sXY * _sX2X2 - _sX2Y * _sXX2) / (_sXX * _sX2X2 - _sXX2 * _sXX2)
+    float _c = (_sX2Y * _sXX - _sXY * _sXX2) / (_sXX * _sX2X2 - _sXX2 * _sXX2)
+    float _a = _meanY - _b * _meanX - _c * _meanX2
+    //-----------|
+    float[] _predictions = array.new_float(size=0, initial_value=0.0)
+    float _max_dev = 0.0
+    float _min_dev = 0.0
+    float _stdev = 0.0
+    for _i = 0 to _sizeX - 1
+        float _Xi = array.get(id=_X, index=_i)
+        float _vector = _a + _b * _Xi + _c * _Xi * _Xi
+        array.push(id=_predictions, value=_vector)
+        //
+        float _Yi = array.get(id=_Y, index=_i)
+        float _diff = _Yi - _vector
+        if _diff > _max_dev
+            _max_dev := _diff
+        if _diff < _min_dev
+            _min_dev := _diff
+        _stdev := _stdev + abs(_diff)
+//| Output:
+//|     _predictions:   Array with adjusted _Y values.
+//|     _max_dev:       Max deviation from the mean.
+//|     _min_dev:       Min deviation from the mean.
+//|     _stdev/_sizeX:  Average deviation from the mean.
+//}
+    [_predictions, _max_dev, _min_dev, _stdev/_sizeX]
+int length = input(59)
+var float[] prices = array.new_float(size=length, initial_value=open)
+var int[] indices = array.new_int(size=length, initial_value=0)
+if pivothigh(2, 2)
+    e = array.pop(id=prices)
+    i = array.pop(id=indices)
+    array.insert(id=prices, index=0, value=high[2])
+    array.insert(id=indices, index=0, value=bar_index[2])
+if pivotlow(2, 2)
+    e = array.pop(id=prices)
+    i = array.pop(id=indices)
+    array.insert(id=prices, index=0, value=low[2])
+    array.insert(id=indices, index=0, value=bar_index[2])
+[P, Pmax, Pmin, Pstdev] = f_array_polyreg(indices, prices)
+//|----------------------------------------------------------------------------||
+//|----------------------------------------------------------------------------||
+//|----------------------------------------------------------------------------||
+//|----------------------------------------------------------------------------||
+//|----------------------------------------------------------------------------||
+//|----------------------------------------------------------------------------||
+color _pr_mid_col = input(color.blue)
+color _pr_std_col = input(color.aqua)
+color _pr_max_col = input(color.purple)
+f_init_mid()=>line.new(x1=bar_index, y1=0.0, x2=bar_index, y2=0.0, color=_pr_mid_col, style=line.style_solid, width=2)
+f_init_std()=>line.new(x1=bar_index, y1=0.0, x2=bar_index, y2=0.0, color=_pr_std_col, style=line.style_dashed, width=1)
+f_init_max()=>line.new(x1=bar_index, y1=0.0, x2=bar_index, y2=0.0, color=_pr_max_col, style=line.style_dotted, width=1)
+var line pr_mid00 = f_init_mid(), var line pr_min00 = f_init_max(), var line pr_max00 = f_init_max()
+var line pr_mid01 = f_init_mid(), var line pr_min01 = f_init_max(), var line pr_max01 = f_init_max()
+var line pr_mid02 = f_init_mid(), var line pr_min02 = f_init_max(), var line pr_max02 = f_init_max()
+var line pr_mid03 = f_init_mid(), var line pr_min03 = f_init_max(), var line pr_max03 = f_init_max()
+var line pr_mid04 = f_init_mid(), var line pr_min04 = f_init_max(), var line pr_max04 = f_init_max()
+var line pr_mid05 = f_init_mid(), var line pr_min05 = f_init_max(), var line pr_max05 = f_init_max()
+var line pr_mid06 = f_init_mid(), var line pr_min06 = f_init_max(), var line pr_max06 = f_init_max()
+var line pr_mid07 = f_init_mid(), var line pr_min07 = f_init_max(), var line pr_max07 = f_init_max()
+var line pr_mid08 = f_init_mid(), var line pr_min08 = f_init_max(), var line pr_max08 = f_init_max()
+var line pr_mid09 = f_init_mid(), var line pr_min09 = f_init_max(), var line pr_max09 = f_init_max()
+var line pr_lower00 = f_init_std(), var line pr_upper00 = f_init_std()
+var line pr_lower01 = f_init_std(), var line pr_upper01 = f_init_std()
+var line pr_lower02 = f_init_std(), var line pr_upper02 = f_init_std()
+var line pr_lower03 = f_init_std(), var line pr_upper03 = f_init_std()
+var line pr_lower04 = f_init_std(), var line pr_upper04 = f_init_std()
+var line pr_lower05 = f_init_std(), var line pr_upper05 = f_init_std()
+var line pr_lower06 = f_init_std(), var line pr_upper06 = f_init_std()
+var line pr_lower07 = f_init_std(), var line pr_upper07 = f_init_std()
+var line pr_lower08 = f_init_std(), var line pr_upper08 = f_init_std()
+var line pr_lower09 = f_init_std(), var line pr_upper09 = f_init_std()
+f_pr_mid_line_selector(_i)=>(_i==0?pr_mid00:(_i==1?pr_mid01:(_i==2?pr_mid02:(_i==3?pr_mid03:(_i==4?pr_mid04:(_i==5?pr_mid05:(_i==6?pr_mid06:(_i==7?pr_mid07:(_i==8?pr_mid08:(_i==9?pr_mid09:pr_mid00))))))))))
+f_pr_max_line_selector(_i)=>(_i==0?pr_max00:(_i==1?pr_max01:(_i==2?pr_max02:(_i==3?pr_max03:(_i==4?pr_max04:(_i==5?pr_max05:(_i==6?pr_max06:(_i==7?pr_max07:(_i==8?pr_max08:(_i==9?pr_max09:pr_max00))))))))))
+f_pr_min_line_selector(_i)=>(_i==0?pr_min00:(_i==1?pr_min01:(_i==2?pr_min02:(_i==3?pr_min03:(_i==4?pr_min04:(_i==5?pr_min05:(_i==6?pr_min06:(_i==7?pr_min07:(_i==8?pr_min08:(_i==9?pr_min09:pr_min00))))))))))
+f_pr_upper_line_selector(_i)=>(_i==0?pr_upper00:(_i==1?pr_upper01:(_i==2?pr_upper02:(_i==3?pr_upper03:(_i==4?pr_upper04:(_i==5?pr_upper05:(_i==6?pr_upper06:(_i==7?pr_upper07:(_i==8?pr_upper08:(_i==9?pr_upper09:pr_upper00))))))))))
+f_pr_lower_line_selector(_i)=>(_i==0?pr_lower00:(_i==1?pr_lower01:(_i==2?pr_lower02:(_i==3?pr_lower03:(_i==4?pr_lower04:(_i==5?pr_lower05:(_i==6?pr_lower06:(_i==7?pr_lower07:(_i==8?pr_lower08:(_i==9?pr_lower09:pr_lower00))))))))))
+int pr_fractions = 10
+int pr_size = array.size(id=P)
+int pr_step = max(pr_size / pr_fractions, 1)
+for _i = 0 to pr_size - pr_step - 1 by pr_step
+    int _next_step_index = _i + pr_step
+    int _line = _i / pr_step
+    line.set_xy1(id=f_pr_mid_line_selector(_line), x=array.get(id=indices, index=_i), y=array.get(id=P, index=_i))
+    line.set_xy2(id=f_pr_mid_line_selector(_line), x=array.get(id=indices, index=_i + pr_step), y=array.get(id=P, index=_i + pr_step))
+    line.set_xy1(id=f_pr_max_line_selector(_line), x=array.get(id=indices, index=_i), y=array.get(id=P, index=_i) + Pmax)
+    line.set_xy2(id=f_pr_max_line_selector(_line), x=array.get(id=indices, index=_i + pr_step), y=array.get(id=P, index=_i + pr_step) + Pmax)
+    line.set_xy1(id=f_pr_min_line_selector(_line), x=array.get(id=indices, index=_i), y=array.get(id=P, index=_i) + Pmin)
+    line.set_xy2(id=f_pr_min_line_selector(_line), x=array.get(id=indices, index=_i + pr_step), y=array.get(id=P, index=_i + pr_step) + Pmin)
+    line.set_xy1(id=f_pr_upper_line_selector(_line), x=array.get(id=indices, index=_i), y=array.get(id=P, index=_i) + Pstdev)
+    line.set_xy2(id=f_pr_upper_line_selector(_line), x=array.get(id=indices, index=_i + pr_step), y=array.get(id=P, index=_i + pr_step) + Pstdev)
+    line.set_xy1(id=f_pr_lower_line_selector(_line), x=array.get(id=indices, index=_i), y=array.get(id=P, index=_i) - Pstdev)
+    line.set_xy2(id=f_pr_lower_line_selector(_line), x=array.get(id=indices, index=_i + pr_step), y=array.get(id=P, index=_i + pr_step) - Pstdev)
+//@JA - Code from below was my strategy edits.
+minval = line.get_y1(f_pr_min_line_selector(pr_size))
+maxval = line.get_y1(f_pr_max_line_selector(pr_size))
+plot(minval,color=color.green)
+plot(maxval,color=color.red)
+plot(close,color=color.yellow)
+var inLong = false
+var inShort = false
+sinceShort = barssince(inLong == true)
+sinceLong = barssince(inShort == true)
+allowLongs = input(title="Allow Longs",type=input.bool,defval=true)
+allowShorts = input(title="Allow Shorts",type=input.bool,defval=true)
+closeNoShort = input(title="Close instead of Short", type=input.bool, defval=false)
+closeNoLong = input(title="Close instead of Long", type=input.bool, defval=false)
+// === INPUT BACKTEST RANGE ===
+FromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+FromDay   = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+FromYear  = input(defval = 1980, title = "From Year", minval = 1980)
+ToMonth   = input(defval = 1, title = "To Month", minval = 1, maxval = 12)
+ToDay     = input(defval = 1, title = "To Day", minval = 1, maxval = 31)
+ToYear    = input(defval = 9999, title = "To Year", minval = 2017)
+start     = timestamp(FromYear, FromMonth, FromDay, 00, 00)  // backtest start window
+finish    = timestamp(ToYear, ToMonth, ToDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false // create function "within window of time"
+// -- END BACKTEST RANGE --
+//@JA - This is required so it works the first time onward
+//plot(sinceLong,color=color.green)
+//plot(sinceShort,color=color.red)
+// avgLong = ema(sinceLong,length*10)
+// avgShort = ema(sinceShort,length*10)
+//plot(avgLong,color=color.green)
+//plot(avgShort,color=color.red)
+if(window()==true)
+    if(crossunder(close,maxval))
+        if(closeNoShort==false and allowShorts==true)
+            strategy.entry("short",false)
+            inShort := true
+            inLong := false
+        if(closeNoShort==true and allowShorts==false)
+            strategy.close("long") //@JA - Then close the strategy instead of going into short
+            inLong := false
+    if(crossover(close,minval))
+        if(closeNoLong==false and allowLongs==true)
+            strategy.entry("long",true)
+            inLong := true
+            inShort := false
+        if(closeNoLong==true and allowLongs==false)
+            strategy.close("short") //@JA - Then close the strategy instead of going into short
+            inShort := false
+// //@JA - If going long and a long cross shows again and the minimum time for long has elapsed.
+// if( strategy.position_size > 0 and crossunder(close,minval) and sinceLong>=10 )
+//     strategy.entry("short cancel",false)
+//     inShort := true
+//     inLong := false
+    
+// if( strategy.position_size < 0 and crossover(close,maxval) and sinceShort>=10 )
+//     strategy.entry("long cancel",true)
+//     inLong := true
+    
+//TRAILING STOP LOSS -----------------------------------------------------------
+useTrailing = input(title="Use Trailing Stop Losses",type=input.bool,defval=false)
+longTrailPerc = input(title="Trail Long Loss (%)",
+     type=input.float, minval=0.0, step=0.1, defval=10) * 0.01
+shortTrailPerc = input(title="Trail Short Loss (%)",
+     type=input.float, minval=0.0, step=0.1, defval=4.6) * 0.01
+// Create the variables that keep track of the stop price for being short or long.  These values are always changing in a trailing stop loss based on if the bar is higher or lower than the previous.
+longStopPrice = 0.0, shortStopPrice = 0.0
+//Calculate the LONG stop price accounting for the percentage
+longStopPrice := if (strategy.position_size > 0)
+    stopValue = close * (1 - longTrailPerc)
+    max(stopValue, longStopPrice[1])
+else
+    0
+//Calculate the SHORT stop price accounting for the percentage
+shortStopPrice := if (strategy.position_size < 0)
+    stopValue = close * (1 + shortTrailPerc)
+    min(stopValue, shortStopPrice[1])
+else
+    999999
+// Plot stop loss values for confirmation
+// plot(series=(strategy.position_size > 0) ? longStopPrice : na,
+//      color=color.green, style=plot.style_cross,
+//      linewidth=2, title="Long Trail Stop")
+// plot(series=(strategy.position_size < 0) ? shortStopPrice : na,
+//      color=color.red, style=plot.style_cross,
+//      linewidth=2, title="Short Trail Stop")
+//Exit if trailing stop loss conditions met to lock in profits.
+if (strategy.position_size > 0 and useTrailing==true)
+    strategy.exit(id="TS X Long", stop=longStopPrice)
+if (strategy.position_size < 0 and useTrailing==true)
+    strategy.exit(id="TS X Short", stop=shortStopPrice)
+//END TRAILING STOP LOSS --------------------------------------------------------
+    
+Expand (265 lines)

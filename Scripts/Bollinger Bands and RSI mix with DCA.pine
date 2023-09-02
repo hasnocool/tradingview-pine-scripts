@@ -1,0 +1,181 @@
+Script Name: Bollinger Bands and RSI mix with DCA
+Author: lagobrian23
+Description: This strategy uses a mix of Bollinger Bands and RSI to enter long positions. It impliments DCA.
+PineScript code:
+
+Pine Script™ strategy
+Bollinger Bands and RSI mix with DCA
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+// © lagobrian23
+//@version=4
+strategy(title = 'Bollinger Bands and RSI mix with DCA', shorttitle = 'BB/RSI with DCA',pyramiding = 20, calc_on_every_tick = true, process_orders_on_close=true,overlay = false )
+source=close
+smoothK = input(3, "K", minval=1)
+smoothD = input(3, "D", minval=1)
+lengthRSI = input(14, "RSI Length", minval=1)
+lengthStoch = input(14, "Stochastic Length", minval=1)
+src = input(close, title="RSI Source")
+rsi1 = rsi(src, lengthRSI)
+k = sma(stoch(rsi1, rsi1, rsi1, lengthStoch), smoothK)
+d = sma(k, smoothD)
+// Bollinger Band
+length = input(20,title = 'BB lookback length', minval=1)
+mult = input(2.0, minval=0.001, maxval=50, title="StdDev")
+basis = sma(src, length)
+dev = mult * stdev(src, length)
+upper = basis + dev
+lower = basis - dev
+BBval = (src - basis)/dev*30+50
+offset = input(0, title = "Offset", type = input.integer, minval = -500, maxval = 500)
+mix=(d + BBval)/2
+//plot
+//plot(k, "K", color=#606060)
+plot(BBval, "BBval", color=#872323, offset = offset)
+plot(d, "D", color=#FF6A00)
+h0 = hline(80, "Upper Band", color=#606060)
+h1 = hline(20, "Lower Band", color=#606060)
+plot(mix, "MIX", color=#888888, linewidth=3)
+//background MIX
+bgcolor(mix < 20 ? color.green : color.white, transp=50)
+bgcolor(mix > 80 ? color.red : color.white, transp=50)
+// Choosing the date range
+fromMonth = input(defval = 1,    title = "From Month",      type = input.integer, minval = 1, maxval = 12)
+fromDay   = input(defval = 1,    title = "From Day",        type = input.integer, minval = 1, maxval = 31)
+fromYear  = input(defval = 2020, title = "From Year",       type = input.integer, minval = 1970)
+toMonth = input(defval = 10,    title = "To Month",      type = input.integer, minval = 1, maxval = 12)
+toDay   = input(defval = 1,    title = "To Day",        type = input.integer, minval = 1, maxval = 31)
+toYear  = input(defval = 2020, title = "To Year",       type = input.integer, minval = 1970)
+start     = timestamp(fromYear, fromMonth, fromDay, 00, 00)        // backtest start window
+finish    = timestamp(toYear, toMonth, toDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false
+// Initializing the strategy paraeters
+P = input(defval = 1, title = 'Amount (P)' , type = input.integer, minval = 1, maxval = 100)
+X = input(defval = 2, title = '% Price drop for consecutive entries(X)', type = input.float, minval = 1, maxval = 100)
+B_tp = input(defval = 3, title = '% Level for Take Profit (B)', type = input.float , minval = 1, maxval = 100)
+D_sl = input(defval = 4, title = '% Level for Stop Loss (D)', type = input.float, minval = 1, maxval = 100)
+A = input(defval = 4, title = 'Max consecutive entries (A)', type = input.integer, minval = 2, maxval = 20)
+Z = input(defval = 1, title = 'Z', type = input.float , minval = 0, maxval = 10)
+P2 = input(defval = 0, title = 'Amount (P2)' , type = input.float, minval = 0, maxval = 100)
+// Declaring key DCA variables
+entry_price = 0.0
+entry_price := na(entry_price[1]) ? na : entry_price[1]
+new_entry = 0.0
+// Implementing the strategy
+longEntry = crossover(mix,20)
+exitLongs = crossunder(mix,80)
+if(longEntry)
+    entry_price := close
+    strategy.entry('main_LE', strategy.long, P, when = window() and longEntry)
+// close all if exit conditions are met
+// Consecutive entries upto A times
+strategy.risk.max_intraday_filled_orders(A)
+main_stop = strategy.position_avg_price - strategy.position_avg_price*(D_sl/100)
+main_takeprofit = strategy.position_avg_price + strategy.position_avg_price*(B_tp/100)
+slCondition = close <= main_stop
+tpCondition = close >= main_takeprofit
+exitConditions = exitLongs or slCondition or tpCondition
+//Dollar-Cost-Averaging
+// Enter long whenever price goes down X%: amount set to (P+Y)*Z
+newAmount = ceil(Z*(P + P2))
+// calcualte DCA price 
+dcaCond = strategy.opentrades < A and strategy.opentrades > 0
+if(dcaCond  and not exitConditions)
+    new_entry := entry_price - ((X/100)*entry_price)
+    strategy.entry('consec_LE', strategy.long, newAmount, limit = new_entry, when = window())
+    entry_price := new_entry
+// The main trade is closed only when the  main exit conditions are satisfied
+strategy.close_all(exitConditions)
+Expand (93 lines)

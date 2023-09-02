@@ -1,0 +1,546 @@
+Script Name: CHOP Zone Entry Strategy + DMI-PSAR Exit
+Author: IronCasper
+Description: This is a Strategy with associated visual indicators and Long/Short and Reverse/Close Position Alerts for the  Choppiness Index (CHOP) .  It is used to determine if the market is choppy (trading sideways) or not choppy (trading within a trend in either direction).  CHOP is not directional, so a DMI script was ported into this strategy to allow for trend...
+PineScript code:
+
+Pine Script™ strategy
+CHOP Zone Entry Strategy + DMI/PSAR Exit
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//
+// Title:    "CHOP Zone Entry Strategy + DMI/PSAR Exit"
+// Revision: 1.2
+// Author:   © IronCasper
+//@version=4
+strategy("CHOP Zone Entry Strategy + DMI/PSAR Exit", shorttitle="CHOP Zone Strategy", default_qty_value=1, overlay=false)
+//-----------------------//
+// Inputs                //
+//-----------------------//
+showChopAs = input(title="Show Chop Index as", defval="Colored Line (PSAR)", options=["Line", "Colored Line (MOM)", "Colored Line (PSAR)", "Columns"])
+lookbackPeriod = input(14, title="Lookback Period", minval=1)
+smoothLength = input(4, title="Smooth Length", minval=1)
+offset = input(0, "Offset", type = input.integer, minval = -500, maxval = 500)
+tradeType = input(title="Strategy Direction", defval="Follow Trend", options=["Short Only", "Long Only", "Both", "Follow Trend"])
+sensitivity = input(title="Alert Sensitivity", type=input.integer, defval=1, minval=1, maxval=10)
+colorBg = input(true, title="Color Background to CHOP State", type=input.bool)
+colorBars = input(true, title="Color Candles to CHOP State", type=input.bool)
+enableDMI = input(true, title="════ Enable Directional Movement Index ════", type=input.bool)
+adxLen = input(14, title="ADX Smoothing")
+diLen = input(14, title="DI Length")
+adxKeyLevel = input(25, title="Key Level for ADX", type=input.integer, minval=1, maxval=100)
+enablePSAR = input(true, title="════ Enable Parabolic Stop and Reverse ════", type=input.bool)
+psarStart = input(defval=0.015, title="Start", type=input.float, step=0.015, minval=0)
+psarIncr = input(defval=0.001, title="Increment", type=input.float, step=0.001, minval=0)
+psarMax = input(defval=0.2, title="Max Value", type=input.float, step=0.2, minval=0)
+//---------------------------------------------------------------------------------------//
+// Calculate Chop                                                                        //
+//  ... derived from TradingView Reference Manual                                        //
+//      https://www.tradingview.com/support/solutions/43000501980-choppiness-index-chop  //
+//---------------------------------------------------------------------------------------//
+sumAtrOverLookback = sum(atr(1), lookbackPeriod) // sum of the Avg True Range over past n bars
+maxHi = highest(high >= close[1] ? high : close[1], lookbackPeriod) // highest high over past n bars
+minLo = lowest(low <= close[1] ? low : close[1], lookbackPeriod) // lowest low over past n bars
+chopIndex = 100 * log10( sumAtrOverLookback / ( maxHi - minLo ) ) / log10(lookbackPeriod)
+// Smooth (average) Chop Index if user selected option
+chopIndex := sma(chopIndex, smoothLength) // a value of 1 has the same effect as disabiling the smooth feature
+//----------------------------//
+// Determine Chop conditions  //
+//----------------------------//
+condChopIndex38minus = chopIndex <= 38.2 and close[1] > close ? true : false // 38.2-
+condChopIndex38to45  = chopIndex >= 38.2 and chopIndex < 45   ? true : false // 38.2 to 45
+condChopIndex45to55  = chopIndex >= 45   and chopIndex < 55   ? true : false // 45 to 55
+condChopIndex55to61  = chopIndex >= 55   and chopIndex < 61.8 ? true : false // 55 to 61.8
+condChopIndex61plus  = chopIndex >= 61.8   and close[1] < close ? true : false // 61.8+
+// Extra conditions for chop zone background color
+condChopIndex30minus = chopIndex <= 30   and close[1] > close ? true : false // 30-
+condChopIndex30to38  = chopIndex >  30   and chopIndex < 38.2 ? true : false // 30 to 38.2
+condChopIndex61to70  = chopIndex >= 61.8 and chopIndex < 70   ? true : false // 61.8 to 70
+condChopIndex70plus  = chopIndex >= 70   and close[1] < close ? true : false // 70+
+//-----------------------------------------------------------//
+// Compute Momentum State for Trend Line and Entry Determination     //
+//-----------------------------------------------------------//
+// Borrowed from script by LazyBear
+val = linreg(close - avg(avg(highest(high, lookbackPeriod), lowest(low, lookbackPeriod)), ema(close, lookbackPeriod)), lookbackPeriod, 0)
+// Determine Momenteum State
+curr_momUpTrend = val > nz(val[1])
+curr_momDnTrend = val < nz(val[1])
+// Determine Momentum Line Color
+momentumLineColor = curr_momUpTrend ? color.green : (curr_momDnTrend ? color.maroon : na)
+//-----------------------------------------------------------------------//
+// Calculate Parabolic SAR for Trend Line and Entry/Exit Determination   //
+//-----------------------------------------------------------------------//
+// Use built-in parabolic sar function
+psar = sar(psarStart, psarIncr, psarMax)
+// Determine psar trending state
+psarTrendState = psar < close ? "up" : "dn"
+// Determine PSAR Line Color
+psarLineColor = psarTrendState == "up" ? color.green : (psarTrendState == "dn" ? color.maroon : na)
+//------------------------------------------------------//
+// Color Candles & Chop Index Line based on Chop State  //
+//------------------------------------------------------//
+// Create user defined chop limit
+hli1 = hline(showChopAs != "Columns" ? 38.2 : na, linestyle=hline.style_dotted, editable=false) // Loose Chop Lower Limit
+hli2 = hline(showChopAs != "Columns" ? 61.8 : na, linestyle=hline.style_dotted, editable=false) // Loose Chop Upper Limit
+fill(hli1, hli2, color=color.yellow, transp=95, editable=false)
+// Plot Chop Index Line
+lineColor = showChopAs == "Colored Line (PSAR)" ? psarLineColor : (showChopAs == "Colored Line (MOM)" ? momentumLineColor : color.gray)
+plot(showChopAs != "Columns" ? chopIndex : na, style=plot.style_linebr, linewidth=2, color=lineColor, offset=offset, editable=false)
+// Plot bars to match chop state
+var color candleColor = na
+candleColor := condChopIndex38minus ? #800080      : candleColor // Short
+candleColor := condChopIndex38to45  ? color.yellow : candleColor // Loose Chop
+candleColor := condChopIndex45to55  ? #000000      : candleColor // Tight Chop
+candleColor := condChopIndex55to61  ? color.yellow : candleColor // Loose Chop
+candleColor := condChopIndex61plus  ? #0000FF      : candleColor // Long
+barcolor(colorBars ? candleColor : na, editable=false)
+//-----------------------//
+// Plot Chop Zone        //
+//-----------------------//
+var color chopZoneColor = na
+chopZoneColor := condChopIndex30minus ? #800080       : chopZoneColor // Dark Purple
+chopZoneColor := condChopIndex30to38  ? color.purple  : chopZoneColor
+chopZoneColor := condChopIndex38to45  ? color.yellow  : chopZoneColor
+chopZoneColor := condChopIndex45to55  ? #000000       : chopZoneColor // Black
+chopZoneColor := condChopIndex55to61  ? color.yellow  : chopZoneColor
+chopZoneColor := condChopIndex61to70  ? color.blue    : chopZoneColor
+chopZoneColor := condChopIndex70plus  ? #0000FF       : chopZoneColor // Dark Blue
+// Plot columns vs bgcolor if Chop Index is not shown
+plot(showChopAs == "Columns" ? 1 : na, color=chopZoneColor, style=plot.style_columns, transp=70, editable=false)
+// Plot as bgcolor if selected in Line view
+chopZoneColor := colorBg and showChopAs != "Columns" ? chopZoneColor : na
+bgcolor(color=chopZoneColor, transp=80, editable=false)
+//-----------------------------------------------------------------------------------------//
+// Compute DMI                                                                             //
+//  ... derived from TradingView Reference Manual                                          //
+//      https://www.tradingview.com/chart/?solution=43000502250                            //
+//                                                                                         //
+// This is the same script as used in my DMI study                                         //
+//    https://www.tradingview.com/script/9OoEHrv5-Directional-Movement-Index-DMI-Alerts    //
+//-----------------------------------------------------------------------------------------//
+// Part 1 - Calculate +DI and -DI
+dirmov(diLen) =>
+    // Determine Directional Movement
+    upMove = change(high) // current high - previous high
+    downMove = -change(low) // current low - previous low
+    
+    // Determine +DM and -DI by High, Low, and Close for each period
+    plusDI = upMove > downMove and upMove > 0 ? upMove : 0
+    minusDI = downMove > upMove and downMove > 0 ? downMove : 0
+    
+    // Update DM based on the number of user defined periods
+    trueRange = ema(tr, diLen)
+    plusDI := fixnan(100 * ema(plusDI, diLen) / trueRange)
+    minusDI := fixnan(100 * ema(minusDI, diLen) / trueRange)
+    
+    [plusDI, minusDI] // Return
+// Part 2 - Calculate ADX
+adx(diLen, adxLen) =>
+    [plusDI, minusDI] = dirmov(diLen)
+    
+    // Determine the ADX
+    tmp = abs((plusDI - minusDI) / (plusDI + minusDI))
+    adx = fixnan(100 * ema(tmp, adxLen))
+    
+    [adx, plusDI, minusDI] // Return
+// Get ADX and DI from function
+[adxSignal, plusDI, minusDI] = adx(diLen, adxLen)
+//-------------------------------------------------------//
+// Determine Trade State for Long/Short Entry            //
+//-------------------------------------------------------//
+// Establish long and short actions
+goLong = condChopIndex61plus and not(condChopIndex61plus[sensitivity]) and (enableDMI ? adxSignal > adxKeyLevel : true)
+goShort = condChopIndex38minus and not(condChopIndex38minus[sensitivity]) and (enableDMI ? adxSignal > adxKeyLevel : true)
+// Increment to user selected sensitivity to only trigger actions on the n-th candle
+if sensitivity != 1 and (goLong or goShort) // bypass if sensitivity equals one or no active go
+    for i = 1 to sensitivity-1
+        // Update long action based on past states
+        if( condChopIndex61plus[i] != condChopIndex61plus )
+            goLong := false
+            //break // break loop if any candles aren't in a long state
+            //bool(na) // required to trick compiler to return from loop
+    
+        // Update short action based on past states
+        if( condChopIndex38minus[i] != condChopIndex38minus )
+            goShort := false//, break, bool(na)
+// Clear action if it doesn't follow the trend, if user selected
+if tradeType == "Follow Trend"
+    goLong := showChopAs == "Colored Line (Momentum)" ? (curr_momUpTrend ? goLong : na) : (psarTrendState == "up" ? goLong : na)
+    goShort := showChopAs == "Colored Line (Momentum)" ? (curr_momDnTrend ? goShort : na) : (psarTrendState == "dn" ? goShort : na)
+//-------------------------------------------------------//
+// Determine Trade State for Exit and Reverse            //
+//-------------------------------------------------------//
+// Declare Active Position Identifiers
+var bool activeLong = false
+var bool activeShort = false
+// Determine DMI Close Trade Action, if applicable
+dmiCloseLong = enableDMI ? adxSignal < adxKeyLevel and minusDI > plusDI : false
+dmiCloseShort = enableDMI ? adxSignal < adxKeyLevel and plusDI > minusDI : false
+// Determine PSAR Close Trade Action, if applicable
+psarCloseLong = enablePSAR ? psarTrendState == "dn" and psarTrendState[1] == "up" : false
+psarCloseShort = enablePSAR ? psarTrendState == "up" and psarTrendState[1] == "dn" : false
+// Determine Default Close Trade Action (Chop Index Reversal), if PSAR or DMI not selected
+chopCloseLong = enablePSAR or enableDMI ? false : chopIndex < 38.2
+chopCloseShort = enablePSAR or enableDMI ? false : chopIndex > 61.8
+// Consolidate close actions to a single variable
+closeLongState = activeLong and (psarCloseLong or dmiCloseLong or chopCloseLong or goShort)
+closeShortState = activeShort and (psarCloseShort or dmiCloseShort or chopCloseShort or goLong)
+// Determine if in a Reverse Position State
+goReverse = (closeLongState and goShort) or (closeShortState and goLong) ? true : false
+// Determine new close action based on reverse state
+goClose = not(goReverse) and (closeLongState or closeShortState) ? true : false
+//--------------------------------//
+// Plot Entry and Exits           //
+//--------------------------------//
+// Determine User Selected Trade Types
+longSelected = tradeType == "Both" or tradeType == "Follow Trend" ? true : tradeType == "Long Only" ? true : false
+shortSelected = tradeType == "Both" or tradeType == "Follow Trend" ? true : tradeType == "Short Only" ? true : false
+reverseAllowed = tradeType == "Both" or tradeType == "Follow Trend"
+// Identify series for when plotting shapes at the absolute location
+plotSeries = showChopAs != "Columns" ? chopIndex : 0
+// Plot Long and Short Indicators only on first entering state (i.e., position not already active)
+plotshape(not(activeLong) and longSelected and goLong and not(goReverse) ? plotSeries : na
+     , style=shape.circle, location=location.absolute, size=size.tiny, color=color.lime, text="Long", title="Long")
+plotshape(not(activeShort) and shortSelected and goShort and not(goReverse) ? plotSeries : na
+     , style=shape.circle, location=location.absolute, size=size.tiny, color=color.red, text="Short", title="Short")
+// Consolidate active actions to one variable
+active = activeLong or activeShort
+// Plot Close Indicator
+plotshape(active and goClose ? plotSeries : na
+     , style=shape.xcross, location=location.absolute, size=size.tiny, color=color.olive, text="Close", title="Close")
+// Plot Reverse Indicator
+plotshape(active and reverseAllowed and goReverse ? plotSeries : na
+     , style=shape.diamond, location=location.absolute, size=size.tiny, color=color.blue, text="Reverse", title="Reverse")
+//-------------------------------------//
+// Chop Alerts + Strategy              //
+//-------------------------------------//
+// Create Long/Short/Close/Reverse Strategies with Custom Alert Messages
+//  ... and log active long and short positions to prevent pyramiding before a close or reverse
+if not(activeLong) and longSelected and goLong and not(goReverse)
+    strategy.entry("Long", strategy.long, alert_message="Buy {{ticker}} from Chop Zone Strategy") // Open Long
+    activeLong := true
+if not(activeShort) and shortSelected and goShort and not(goReverse)
+    strategy.entry("Short", strategy.short, alert_message="Sell {{ticker}} from Chop Zone Strategy") // Open Short
+    activeShort := true
+        
+if active and reverseAllowed
+    if goLong and goReverse
+        strategy.entry("Long", strategy.long, alert_message="Reverse {{ticker}} from Chop Zone Strategy") // Reverse Short to Long
+        activeLong := true
+        activeShort := false
+    if goShort and goReverse
+        strategy.entry("Short", strategy.short, alert_message="Reverse {{ticker}} from Chop Zone Strategy") // Reverse Long to Short
+        activeShort := true
+        activeLong := false
+ 
+strategy.close("Long", when = active and goClose, alert_message="Close {{ticker}} from Chop Zone Strategy") // Close Long
+strategy.close("Short", when = active and goClose, alert_message="Close {{ticker}} from Chop Zone Strategy") // Close Short
+if goClose
+    activeLong := false
+    activeShort := false
+Expand (306 lines)

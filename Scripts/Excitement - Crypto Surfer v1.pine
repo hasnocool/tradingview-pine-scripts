@@ -1,0 +1,102 @@
+Script Name: Excitement - Crypto Surfer v1
+Author: TsangYouJun
+Description: For those of us who need more excitement in our crypto journey besides just HODL, here’s a simple crypto robot that trades on the hourly (1H) candles.  I call it the Crypto Surfer because it uses the 20 and 40 EMAs (Exponential Moving Averages) to decide when to enter and exit; price tends to “surf” above these EMAs when it is bullish, and “sink” below these EMAs...
+PineScript code:
+
+Pine Script™ strategy
+Excitement - Crypto Surfer v1
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+//@version=3
+strategy("Crypto Surfer (1H)", overlay=true)
+//moving average period
+fastPeriod = 20
+slowPeriod = 40
+basePeriod = 160
+//load ROC into arrays
+fastLine = ema(close, fastPeriod)
+slowLine = ema(close, slowPeriod)
+baseLine = sma(close, basePeriod)
+//units to buy
+amount = 10000
+units = amount / close
+//plot moving average
+plot(fastLine, color=red, linewidth=1)
+plot(slowLine, color=blue, linewidth=1)
+plot(baseLine, color=green, linewidth=1)
+// MA Slope Function
+angle(_source) =>
+    rad2degree=180/3.14159265359
+    ang=rad2degree*atan((_source[0] - _source[1])/atr(14)) 
+// Calculate MA Slope
+baseSlope=angle(baseLine)
+//long
+//long signal
+if (close > fastLine and fastLine > slowLine and close > baseLine and baseSlope > 2 and strategy.position_size == 0)
+    strategy.order("Long", strategy.long, units)
+//close long signal
+if (close < fastLine and fastLine < slowLine and strategy.position_size > 0)
+    strategy.order("Close Long", strategy.short, strategy.position_size)
+    
+//short
+//short signal
+//if (close < fastLine and fastLine < slowLine and strategy.position_size == 0)
+    //strategy.order("Short", strategy.short, units)
+    
+//close short signal
+//if (close > fastLine and fastLine > slowLine and strategy.position_size < 0)
+    //strategy.order("Close Short", strategy.long, strategy.position_size)
+//plot strategy equity
+//plot(strategy.netprofit, color=blue, linewidth=2, title="Net Profit")
+Expand (52 lines)

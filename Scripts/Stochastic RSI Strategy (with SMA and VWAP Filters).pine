@@ -1,0 +1,98 @@
+Script Name: Stochastic RSI Strategy (with SMA and VWAP Filters)
+Author: thedoggwalker
+Description: The strategy is designed to trade on the Stochastic RSI indicator crossover signals.
+
+Below are all of the trading conditions: 
+-When the Stochastic RSI crosses above 30, a long position is entered.
+-When the Stochastic RSI crosses below 70, a short position is entered.
+-The strategy also includes two additional conditions for entry:
+-Long entries must have a...
+PineScript code:
+
+Pine Script™ strategy
+Stochastic RSI Strategy (with SMA and VWAP Filters)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © thedoggwalker
+//@version=4
+strategy("Stochastic RSI Strategy", overlay=true)
+// Stochastic RSI
+length = input(14, title="Length")
+src = input(close, title="Source")
+smoothK = input(3, title="K")
+smoothD = input(3, title="D")
+rsiValue = rsi(src, length)
+highestRSI = highest(rsiValue, length)
+lowestRSI = lowest(rsiValue, length)
+k = (rsiValue - lowestRSI) / (highestRSI - lowestRSI) * 100
+d = sma(k, smoothD)
+// Moving averages
+maShort = sma(close, 9)
+maLong = sma(close, 21)
+// Spread between moving averages
+spread = maShort - maLong
+// VWAP
+vwapValue = vwap(hlc3)
+// Entry conditions
+longCondition = crossover(k, 30) and spread > 0 and close < vwapValue
+shortCondition = crossunder(k, 70) and spread < 0 and close > vwapValue
+// Entry orders
+if (longCondition)
+    strategy.entry("Long", strategy.long)
+if (shortCondition)
+    strategy.entry("Short", strategy.short)
+// Exit orders
+longStopLoss = close - 20 * syminfo.mintick
+longTakeProfit = close + 25 * syminfo.mintick
+strategy.exit("Exit Long", "Long", stop=longStopLoss, limit=longTakeProfit)
+shortStopLoss = close + 20 * syminfo.mintick
+shortTakeProfit = close - 25 * syminfo.mintick
+strategy.exit("Exit Short", "Short", stop=shortStopLoss, limit=shortTakeProfit)
+Expand (47 lines)

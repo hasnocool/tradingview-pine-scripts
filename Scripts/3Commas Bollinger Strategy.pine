@@ -1,0 +1,194 @@
+Script Name: 3Commas Bollinger Strategy
+Author: tedwardd
+Description: This strategy is intended for use as a way of backtesting various parameters available on 3commas.io composite bot using a bollinger band type trading strategy. While it's primary intention is to provide users a way of backtesting bot parameters, it can also be used to trigger a deal start by either using the {{strategy.open.alert_message}} field in your alert and...
+PineScript code:
+
+Pine Script™ strategy
+3Commas Bollinger Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © tedwardd
+// This strategy is intended to help users of the 3commas.io platform backtest bot performance based on a Bollinger Strategy.
+// It can also be used to signal a bot to open a deal by providing the Bot ID, email token and trading pair in the strategy settings screen.
+// As currently written, this strategy uses a basic Bollinger Band strategy, recommening a deal start when the closing price crosses under the lower band.
+// The thick red line plotted on the chart shows the average entry price of the current deal.
+strategy("3Commas Bollinger Strategy", overlay=true, default_qty_type=strategy.cash, default_qty_value=1000, initial_capital=5000, currency="USD", commission_value=0.1)
+// 3Commas Bot settinsg
+bot_type                = input(title="Simple bot", defval="composite", options=["simple", "composite"])
+bot_id                  = input(title="3Commas Bot ID", defval="")
+email_token             = input(title="Bot Email Token", defval="")
+base_order_size         = input(title="Base order size",minval=10, step=1, defval=500)
+safety_order_size       = input(title="Safety order size", minval=15, step=1, defval=1000)
+volume_scale            = input(title="Safety Order Vol Scale (%)", minval=0.00, step=0.01, defval=1.83)
+safety_step             = input(title="Safety Order Step Scale (%)", minval=0.00, step=0.1, defval=1.55)
+safety_max              = input(title="Max Number of Safety Orders", minval=0, step=1, defval=4)
+initial_deviation_input = input(title="Initial SO Deviation (%)", minval=0, step=0.01, defval=0.8) * 0.01
+stoploss_input          = input(title="Long Stop Loss (%)", minval=0, step=1, defval=15) * 0.01
+takeprofit_input        = input(title="Long Take Profit (%)", minval=0, step=1, defval=1.4) * 0.01
+// USER INPUTS
+sma_short_val           = input(title="Short MA Window", defval=20)
+sma_long_val            = input(title="Long MA Window", defval=100)
+ubOffset                = input(title="Upper Band Offset", defval=2.5, step=0.5)
+lbOffset                = input(title="Lower Band Offset", defval=2.5, step=0.5)
+cross                   = input(title="Entrry at Cross Over/Under Lower", defval="over", options=["over", "under"])
+// Backtesting Date Ranges
+startDate  = input(title="Start Date", defval=1, minval=1, maxval=31)
+startMonth = input(title="Start Month", defval=1, minval=1, maxval=12)
+startYear  = input(title="Start Year", defval=2016, minval=1800, maxval=2100)
+endDate    = input(title="End Date", defval=31, minval=1, maxval=31)
+endMonth   = input(title="End Month", defval=12, minval=1, maxval=12)
+endYear    = input(title="End Year", defval=2022, minval=1800, maxval=2100)
+// VARS
+short_sma        = sma(close, sma_short_val)
+long_sma         = sma(close, sma_long_val)
+stdDev           = stdev(close, sma_short_val)
+upperBand        = short_sma + (stdDev * ubOffset)
+lowerBand        = short_sma - (stdDev * lbOffset)
+stoploss_value   = strategy.position_avg_price * (1 - stoploss_input)
+takeprofit_value = strategy.position_avg_price * (1 + takeprofit_input)
+initial_dev_val  = strategy.position_avg_price * (1 - initial_deviation_input)
+inDateRange      = (time >= timestamp(syminfo.timezone, startYear, startMonth, startDate, 0, 0)) and (time < timestamp(syminfo.timezone, endYear, endMonth, endDate, 0, 0))
+initial_deviation = close < initial_dev_val
+// Market Conditions
+goodBuy    = cross=="over"?crossover(close, lowerBand):crossunder(close, lowerBand) // Buy when close crossing lower band
+safety     = initial_deviation and (1-(close/strategy.position_avg_price))/.01 > strategy.opentrades-1 * safety_step and strategy.opentrades <= safety_max // SO when price deviates below SO threshold %
+stoploss   = close <= stoploss_value // Stoploss condition - true if closing price for current bar drops below stoploss %
+takeprofit = close >= takeprofit_value // Take profit condition - true if closing price for current bar is >= take profit percentage
+// goodSell is currently unused for any practical purpose. If you wish to try it, switch these two values. 
+// Doing so will make sell suggestions at high crossover upper bollinger but it does not trigger the bot to sell as written but may affect backtest results
+//goodSell = crossover(high, upperBand)
+goodSell   = false
+// Plot some lines
+plot(short_sma, color=color.green)
+plot(upperBand)
+plot(lowerBand, color=color.yellow)
+plot(strategy.position_avg_price, color=color.red, linewidth=3)
+// Webhook message. Defaults to string. To signal 3c bot, fill in bot_id and email_token in user settings
+var enter_msg = "Enter Position"
+var exit_msg  = "Exit Position"
+var close_all = "Exit Position"
+if bot_id != "" and email_token != ""
+    if bot_type == "composite"
+        enter_msg := '{"message_type": "bot",  "bot_id": ' + bot_id + ',  "email_token": "' + email_token + '", "delay_seconds": 0, "pair": "' + syminfo.currency + "_" + syminfo.basecurrency + '"}'
+    else
+        enter_msg := '{"message_type": "bot",  "bot_id": ' + bot_id + ',  "email_token": "' + email_token + '", "delay_seconds": 0}'
+    exit_msg  := '{  "message_type": "bot",  "bot_id": ' + bot_id + ',  "email_token": ' + email_token + ',  "delay_seconds": 0,  "action": "close_at_market_price"}'
+    close_all := '{ "message_type": "bot", "bot_id": ' + bot_id + ', "email_token": ' + email_token + ', "delay_seconds": 0, "action": "close_at_market_price_all"}'
+actual_safety_size = float(safety_order_size) // Set safety order size to starting safety
+if strategy.opentrades > 2 // If we have more than two open trades we need to start scaling the safety size by the volume_scale
+    actual_safety_size := (strategy.position_size - base_order_size) * volume_scale // Remove base order from total position size and scale it for next safety order
+// Strategy Actions
+if inDateRange and goodBuy
+    strategy.entry("Good Buy", strategy.long, base_order_size, when = strategy.opentrades <= 0, alert_message=enter_msg)
+if inDateRange and safety
+    strategy.order("Good Buy", strategy.long, actual_safety_size, when = strategy.opentrades > 0, comment = "safety order")
+if inDateRange and goodSell
+    strategy.close_all(comment="Good sell point")
+if inDateRange and stoploss
+    strategy.close_all(comment="Stoploss")
+if inDateRange and takeprofit
+    strategy.close_all(comment="TP Target")
+Expand (102 lines)

@@ -1,0 +1,281 @@
+Script Name: FMC
+Author: oliverbadaoui
+Description: For RAK, an example of a simple RSI based strategy
+PineScript code:
+
+Pine Script™ strategy
+FMC
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © oliverbadaoui
+//@version=4
+strategy("FMC", overlay=true, pyramiding=0, initial_capital=10000)
+// GLOBAL VARIABLES
+source = input(close, title="Source")
+//SMA
+sma_length = input(100, title="SMA Length")
+Vsma=sma(source, sma_length)
+// RELATIVE STRENGTH INDEX (RSI) 
+rsi_length = input(2, title="RSI Length")
+rsi_ob_threshold = input(70, title="RSI Overbought Threshold")
+rsi_os_threshold = input(10, title="RSI Oversold Threshold")
+rsi_mid = input(50, title="RSI Midrange")
+rsi_ob_earlywarning_threshold = input(75, title="RSI Overbought Early Warning")
+rsi_os_earlywarning_threshold = input(25, title="RSI Oversold Early Warning")
+Vrsi = rsi(source, rsi_length)
+rsi_ob = Vrsi > rsi_ob_threshold
+rsi_os = Vrsi < rsi_os_threshold
+rsi_ob_crossover = crossover(Vrsi, rsi_ob_threshold)
+rsi_ob_crossunder = crossunder(Vrsi, rsi_ob_threshold)
+rsi_os_crossunder = crossunder(Vrsi, rsi_os_threshold)
+rsi_os_crossover = crossover(Vrsi, rsi_os_threshold)
+rsi_mid_crossover = crossover(Vrsi, rsi_mid)
+rsi_mid_crossunder = crossunder(Vrsi, rsi_mid)
+rsi_above_mid = Vrsi > rsi_mid
+rsi_below_mid = Vrsi < rsi_mid
+rsi_ob_earlywarning = crossover(Vrsi, rsi_ob_earlywarning_threshold)
+rsi_os_earlywarning = crossunder(Vrsi, rsi_os_earlywarning_threshold)
+// BOLLINGER BANDS (BB) 
+bb_sma_length = input(20, title="Bollinger SMA Length")
+bb_sma = sma(source, bb_sma_length)
+stdev_mult = input(2, title="Number of St. Devs.")
+Vstdev = stdev_mult * stdev(source, bb_sma_length)
+upperband = bb_sma + Vstdev
+lowerband = bb_sma - Vstdev
+upper_bb_crossover = crossover(source,upperband)
+upper_bb_crossunder = crossunder(source,upperband)
+bb_sma_crossunder = crossunder(source, bb_sma)
+bb_sma_crossover = crossover(source, bb_sma)
+lower_bb_crossover = crossover(source, lowerband)
+lower_bb_crossunder = crossunder(source, lowerband)
+above_upper_bb = source > upperband
+percent_bb = (source - lowerband) / (upperband - lowerband)
+percent_bb_ob = percent_bb > 1
+percent_bb_os = percent_bb < 0
+percent_bb_ob_crossover = crossover(percent_bb, 1)
+percent_bb_os_crossunder = crossunder(percent_bb, 0)
+percent_bb_ob_earlywarning_threshold = input(0.9, title="BB Overbought Early Warning")
+percent_bb_os_earlywarning_threshold = input(0.1, title="BB Oversold Early Warning")
+percent_bb_ob_earlywarning = crossover(percent_bb, percent_bb_ob_earlywarning_threshold)
+percent_bb_os_earlywarning = crossunder(percent_bb, percent_bb_os_earlywarning_threshold)
+// PLOTS & SIGNALS
+// BB
+bb_sma_plot = plot(series=bb_sma, title="Bollinger SMA", color=color.teal, transp=80)
+upperband_plot = plot(series=upperband, title="Bollinger Upper Band", color=color.rgb(26, 80, 74), linewidth=1)
+lowerband_plot = plot(series=lowerband, title="Bollinger Lower Band", color=color.rgb(26, 80, 74), linewidth=1)
+fill(upperband_plot, lowerband_plot, title = "Bollinger Background", color=color.rgb(0, 137, 123, 96))
+// FMC
+if(rsi_os)
+    strategy.entry(id="Bull", long=true)
+if(rsi_ob)
+    strategy.close("Bull")
+// if(rsi_ob)
+//     strategy.entry(id="Bear", long=false)
+// if(rsi_os)
+//     strategy.close("Bear")
+// Bam_geo_put_1 = rsi_ob_crossover and percent_bb_ob
+// Bam_geo_call_1 = rsi_os_crossunder and percent_bb_os
+// Bam_geo_put_2 = percent_bb_ob_crossover and rsi_ob
+// Bam_geo_call_2 = percent_bb_os_crossunder and rsi_os
+// Bam_geo_put_warning_1 = rsi_ob_earlywarning and percent_bb_ob
+// Bam_geo_call_warning_1 = rsi_os_earlywarning and percent_bb_os
+// Bam_geo_put_warning_2 = percent_bb_ob_earlywarning and rsi_ob
+// Bam_geo_call_warning_2 = percent_bb_os_earlywarning and rsi_os
+// plotchar(Bam_geo_put_1, title="Buy Puts", char="★", location=location.top, color=color.black, size=size.small)
+// plotchar(Bam_geo_call_1, title="Buy Calls", char="★", location=location.top, color=color.black, size=size.small)
+// plotchar(Bam_geo_put_2, title="Buy Puts", char="★", location=location.top, color=color.black, size=size.small)
+// plotchar(Bam_geo_call_2, title="Buy Puts", char="★", location=location.top, color=color.black, size=size.small)
+// plotchar(rsi_ob_earlywarning, char="!", location=location.belowbar, color=color.red, size=size.tiny)
+// plotchar(rsi_os_earlywarning, char="!", location=location.belowbar, color=color.red, size=size.tiny)
+// plotchar(percent_bb_ob_earlywarning, char="!", location=location.abovebar, color=color.red, size=size.tiny)
+// plotchar(percent_bb_os_earlywarning, char="!", location=location.belowbar, color=color.red, size=size.tiny)
+// // EARLY WARNING TRADES TO ACT AS ALERTS
+// // For when RSI crossover leads and then BB condition is satisfied
+// // if(Bam_geo_call_warning_1)
+// //     strategy.entry(id="Call warning 1", long=true)
+// //     strategy.close("Call warning 1")
+    
+// // if(Bam_geo_put_warning_1)
+// //     strategy.entry(id="Put warning 1", long=false)
+// //     strategy.close("Put warning 1")
+    
+// // For when BB crossover leads and then RSI condition is satisfied
+// if(Bam_geo_call_warning_2)
+//     strategy.entry(id="Call warning 2", long=true)
+//     strategy.close("Call warning 2")
+    
+// if(Bam_geo_put_warning_2)
+//     strategy.entry(id="Put warning 2", long=false)
+//     strategy.close("Put warning 2")
+// // EXECUTION OF REAL ORDERS
+// // For when RSI crossover leads and then BB condition is satisfied
+// if(Bam_geo_call_1)
+//     strategy.entry(id="Call 1", long=true)
+// if(rsi_os_crossover)
+//     strategy.close("Call 1")
+    
+// if(Bam_geo_put_1)
+//     strategy.entry(id="Put 1", long=false)
+// if(rsi_ob_crossunder)
+//     strategy.close("Put 1")
+    
+// // For when BB crossover leads and then RSI condition is satisfied
+// if(Bam_geo_call_2)
+//     strategy.entry(id="Call 2", long=true)
+// if(rsi_os_crossover)
+//     strategy.close("Call 2")
+    
+// if(Bam_geo_put_2)
+//     strategy.entry(id="Put 2", long=false)
+// if(rsi_ob_crossunder)
+//     strategy.close("Put 2")
+Expand (149 lines)

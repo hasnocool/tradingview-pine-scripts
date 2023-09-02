@@ -1,0 +1,258 @@
+Script Name: TTM-SQUEEZE STRATEGY
+Author: Hodl4dearlife
+Description: TTM squeeze strategy to pair with overlay study
+PineScript code:
+
+Pine Script™ strategy
+TTM-SQUEEZE STRATEGY
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Hodl4dearlife
+// create base on http://www.dailyfx.com/forex_forum/coding-strategy-advisors-indicators-functions/237563-ttm-squeeze-indicator.html
+//@version=4
+strategy(title="TTM-SQUEEZE STRATEGY", overlay=false, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=100, commission_value = 0.1)//////////////////////  USER INPUTS /////////////////////////
+// Only enter long positions //
+strategy.risk.allow_entry_in(strategy.direction.long)
+// Backtest Start Date //
+startDate   = input(title="Start Date",  type=input.integer, defval=1,    minval=1,    maxval=31)
+startMonth  = input(title="Start Month", type=input.integer, defval=1,    minval=1,    maxval=12)
+startYear   = input(title="Start Year",  type=input.integer, defval=2020, minval=1800, maxval=2100)
+afterStartDate = (time >= timestamp(syminfo.timezone, startYear, startMonth, startDate, 0, 0))
+//////////////////////  USER INPUTS  /////////////////////////
+useTrend = input(true, title="Use Trend as Indicator", type=input.bool)
+trendMA = input(100, title="Trend Indicating MA Length")
+useTrueRange = input(true, title="Use TrueRange (KC)", type=input.bool)
+activeTrader = input(false, title="Engage Active Trade Mode", type=input.bool)
+hybridTrader = input(false, title="Engage Hybrid Trade Mode", type=input.bool)
+safety = input(true, title="Engage Safety Mode", type=input.bool)
+showMACD = input(true, title="Plot MACD?", type=input.bool)
+length = input(20, title="BB Length")
+mult = input(2,title="BB MultFactor")
+lengthKC=input(20, title="KC Length")
+multKC = input(1.5, title="KC MultFactor")
+lbp = input(title="Slope Lookback Periods", type=input.integer, defval= 3, minval = 1)
+//////////////////////  TTM SQUEEZE VARIABLES /////////////////////////
+//  Calculate BB    //
+source = close
+basis = sma(source, length)
+[middleBB, upperBB, lowerBB] = bb(source, length, mult)
+// Calculate KC //
+f_kc(src, length, multKC, useTrueRange) =>
+    float base = sma(src, length)
+    float range = (useTrueRange) ? tr : (high - low)
+    float rangeSma = sma(range, length)
+    [base, base + rangeSma * multKC, base - rangeSma * multKC]
+[middleKC, upperKC, lowerKC] = f_kc(source, length, multKC, useTrueRange)
+sqzOn  = (lowerBB > lowerKC) and (upperBB < upperKC)
+sqzOff = not sqzOn
+noSqz  = (sqzOn == false) and (sqzOff == false)
+val = linreg(source  -  avg(avg(highest(high, lengthKC), lowest(low, lengthKC)),sma(close,lengthKC)), lengthKC,0)
+//////////////////////  OTHER VARIABLES /////////////////////////
+slopeMOM = 10 * ((val - val[lbp])/lbp)
+maFast = hma(close, 7)
+maMedium = sma(close, 7)
+maSlow = wma(close, trendMA)
+slopeMA = (maSlow - maSlow[lbp])/lbp
+slopeTrend = slopeMA > 0
+lb = 3
+mom_PH = pivothigh(val,lb,lb) and val > 0
+mom_PL = pivotlow(val,lb,lb) and val < 0
+slope_PH = pivothigh(slopeMOM,lb,lb) and val > 0
+slope_PL = pivotlow(slopeMOM,lb,lb) and val < 0
+up = close > open
+dwn = close < open
+[macdLine, signalLine, _] = macd(close, 12, 26, 9)
+macdArea = macdLine - signalLine
+macdBear = crossunder(macdLine, signalLine)
+//////////////////////  TRIGGER CONDITIONS  /////////////////////////
+///buy = sqzOff and sqzOn[1] and up
+buy = sqzOn and slopeTrend
+//sell = sqzOff and sqzOn[1] and dwn
+sell = macdBear
+buy_A = sqzOn[1] and maFast > maMedium
+sell_A =  maFast < maMedium
+crossUp = showMACD and crossover(macdLine, signalLine)
+crossDwn = showMACD and crossunder(macdLine, signalLine)
+//////////////////////  PLOT VARIABLES /////////////////////////
+plotMACD = if showMACD
+    color.teal
+else 
+    na
+plotSignal = if showMACD
+    color.red
+else 
+    na
+bcolor = iff( val > 0, iff( val > nz(val[1]), color.olive, color.gray), iff( val < nz(val[1]), color.maroon, color.gray))
+scolor = sqzOn ? color.red : color.green 
+plot(val, color=bcolor, style=plot.style_histogram, linewidth=4, transp = 50)
+plot(0, color=scolor, style=plot.style_circles, linewidth=3)
+plot(macdLine, color=plotMACD, style=plot.style_line, linewidth=2)
+plot(signalLine, color=plotSignal, style=plot.style_line, linewidth=2)
+bgcolor(color=(buy[1] and not buy[2]) ? color.green : na, transp = 80)
+bgcolor(color=(sell[1] and not sell[2]) ? color.red : na, transp = 80)
+//////////////////////  PLACE ORDERS     /////////////////////////
+if(not activeTrader and not hybridTrader and not useTrend and buy and afterStartDate)
+    strategy.entry("Buy - Long Term", long=true)
+if(not activeTrader and not hybridTrader and not useTrend and sell and afterStartDate)
+    strategy.close("Buy - Long Term")
+if(not activeTrader and not hybridTrader and useTrend and slopeMA > 0 and buy and afterStartDate)
+    strategy.entry("Buy - Long Term", long=true)
+if(not activeTrader and not hybridTrader and useTrend and sell and afterStartDate)
+    strategy.close("Buy - Long Term")
+/// Active Trader Mode ///
+if(not useTrend and not hybridTrader and activeTrader and buy_A and afterStartDate)
+    strategy.entry("Buy - Active Trading", long=true)
+if(not useTrend and not hybridTrader and activeTrader and sell_A and afterStartDate)
+    strategy.close("Buy - Active Trading")
+if(not hybridTrader and useTrend and slopeMA > 0 and activeTrader and buy_A and afterStartDate)
+    strategy.entry("Buy - Active Trading", long=true)
+if(not hybridTrader and useTrend and activeTrader and sell_A and afterStartDate)
+    strategy.close("Buy - Active Trading")    
+/// HYBRID MODE ///
+if(hybridTrader and not useTrend and buy and afterStartDate)
+    strategy.entry("Buy - Long Term", long=true)
+if(not useTrend and hybridTrader and sell and afterStartDate)
+    strategy.close("Buy - Long Term")
+if(useTrend and hybridTrader and slopeMA > 0 and buy and afterStartDate)
+    strategy.entry("Buy - Long Term", long=true)
+if(useTrend and hybridTrader and sell and afterStartDate)
+    strategy.close("Buy - Long Term")
+if(not useTrend and hybridTrader and buy_A and afterStartDate)
+    strategy.entry("Buy - Active Trading", long=true)
+if(not useTrend and hybridTrader and sell_A and afterStartDate)
+    strategy.close("Buy - Active Trading")
+if(useTrend and hybridTrader and slopeMA > 0 and activeTrader and buy_A and afterStartDate)
+    strategy.entry("Buy - Active Trading", long=true)
+if(useTrend and hybridTrader and sell_A and afterStartDate)
+    strategy.close("Buy - Active Trading")
+if(safety and sqzOff)
+    strategy.exit("Sell Safety", "Buy - Long Term", stop = lowerBB)
+Expand (128 lines)

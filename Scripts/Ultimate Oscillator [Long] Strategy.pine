@@ -1,0 +1,262 @@
+Script Name: Ultimate Oscillator [Long] Strategy
+Author: mohanee
+Description: After I published Short Selling strategy with RSIofUO , I have been working for Long side strategy with same indicator.
+
+but for Long strategy , I have used only  the Ultimate Oscillator ... (Not the RSI of UO)  
+
+Logic behind this is , when UO goes below oversold level , high chance of possible reversal from there ...
+
+Ultimate Oscialltor values , I have used are...
+PineScript code:
+
+Pine Script™ strategy
+Ultimate Oscillator [Long] Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mohanee
+//@version=4
+strategy(title="Ultimate Oscillator [Long] Strategy",  shorttitle="UO" , overlay=false, pyramiding=2,     default_qty_type=strategy.percent_of_equity,  default_qty_value=20, initial_capital=10000, currency=currency.USD)  //default_qty_value=10, default_qty_type=strategy.fixed,
+    
+//Ultimate Oscillator logic copied from  TradingView   builtin indicator
+/////////////////////////////////////////////////////////////////////////////////
+length1 = input(5, minval=1), length2 = input(10, minval=1), length3 = input(15, minval=1)
+//rsiUOLength = input(7, title="RSI UO length", minval=1)
+signalLength = input(9, title="Signal length", minval=1)
+buyLine = input (45, title="Buy Line (UO crossing up oversold at ) ")       //crossover
+exitLine = input (70, title="Exit Line (UO crsossing down overbought at) ")      //crossunder
+riskCapital = input(title="Risk % of capital", defval=10, minval=1)
+stopLoss=input(3,title="Stop Loss",minval=1)
+takeProfit=input(false, title="Take Profit")
+profitExitLine = input (75, title="Take Profit at RSIofUO crossing below this value ") //crossunder
+showSignalLine=input(true, "show Signal Line")
+//showUO=input(false, "show Ultimate Oscialltor")
+average(bp, tr_, length) => sum(bp, length) / sum(tr_, length)
+high_ = max(high, close[1])
+low_ = min(low, close[1])
+bp = close - low_
+tr_ = high_ - low_
+avg7 = average(bp, tr_, length1)
+avg14 = average(bp, tr_, length2)
+avg28 = average(bp, tr_, length3)
+ultOscVal = 100 * (4*avg7 + 2*avg14 + avg28)/7
+//Ultimate Oscillator 
+/////////////////////////////////////////////////////////////////////////////////
+//Willimas Alligator  copied from  TradingView built in Indicator
+/////////////////////////////////////////////////////////////////////////////////
+smma(src, length) =>
+    smma =  0.0
+    smma := na(smma[1]) ? sma(src, length) : (smma[1] * (length - 1) + src) / length
+    smma
+//moving averages logic copied from Willimas Alligator -- builtin indicator in TradingView
+sma1=smma(hl2,5)
+sma2=smma(hl2,20)
+sma3=smma(hl2,50)
+//Willimas Alligator
+/////////////////////////////////////////////////////////////////////////////////
+myVwap= vwap(hlc3)
+//drawings
+/////////////////////////////////////////////////////////////////////////////////
+hline(profitExitLine, title="Middle Line 60  [Profit Exit Here]", color=color.purple  , linestyle=hline.style_dashed)
+obLevelPlot = hline(exitLine, title="Overbought",  color=color.red , linestyle=hline.style_dashed)
+osLevelPlot = hline(buyLine, title="Oversold", color=color.blue, linestyle=hline.style_dashed)
+//fill(obLevelPlot, osLevelPlot, title="Background", color=color.blue, transp=90)
+//rsiUO = rsi(ultOscVal,rsiUOLength)
+rsiUO=ultOscVal
+//emaUO = ema(rsiUO, 9)
+//signal line
+emaUO = ema(ultOscVal , 5)     // ema(ultOscVal / rsiUO, 9)
+//ultPlot=plot(showUO==true? ultOscVal : na, color=color.green, title="Oscillator")
+plot(rsiUO, title = "rsiUO" ,  color=color.purple)
+plot(showSignalLine ? emaUO : na , title = "emaUO [signal line]" ,  color=color.blue)  //emaUO
+//drawings
+/////////////////////////////////////////////////////////////////////////////////
+//Strategy Logic 
+/////////////////////////////////////////////////////////////////////////////////
+longCond=  crossover(rsiUO, buyLine)  or crossover(rsiUO, 30)
+//longCond= ( ema10>ema20 and crossover(rsiUO, buyLine) ) or ( ema10 < ema20 and crossover(rsiUO, 75)  )
+//Entry--
+//Echeck how many units can be purchased based on risk manage ment and stop loss
+qty1 = (strategy.equity  * riskCapital / 100 ) /  (close*stopLoss/100)  
+//check if cash is sufficient  to buy qty1  , if capital not available use the available capital only
+qty1:= (qty1 * close >= strategy.equity ) ? (strategy.equity / close) : qty1
+//strategy.entry(id="LERSIofUO", long=true,   qty=qty1,  when = close > open and  barssince(longCond)<=3  and strategy.position_size<1 )  //and sma1 > sma3)  //  and close>open and  rsiUO >= 25 )   //and
+strategy.entry(id="LEUO", long=true,   qty=qty1,  when = close > open and  barssince(longCond)<=3  and strategy.position_size<1  and sma2 > sma3)  //  and close>open and  rsiUO >= 25 )   //and
+//Add
+//strategy.entry(id="LEUO", comment="Add" , qty=qty1/2 ,  long=true,   when = strategy.position_size>=1 and close < strategy.position_avg_price and crossover(rsiUO, 60) )  //and sma1 > sma3)  //  and close>open and  rsiUO >= 25 )   //and
+//strategy.entry(id="LEUO", long=true,   qty=qty1, when = close > open and  barssince(longCond)<=10  and valuewhen(longCond , close , 1)  > close  and rsiUO>=30) //  and close>open and  rsiUO >= 25 )   //and 
+//for Later versions
+//also check for divergence  ... later version
+//also check if close above vwap session
+//strategy.entry(id="LEUO", long=false, when = sma1< sma2  and crossunder(rsiUO,60) )
+//change the bar color to yellow , indicating startegy will trigger BUY
+barcolor( close > open and  barssince(longCond)<=3  and strategy.position_size<1  and sma2 > sma3 ? color.orange : na)
+//barcolor(abs(strategy.position_size)>=1 ? color.blue : na )
+bgcolor(abs(strategy.position_size)>=1 ? color.blue : na , transp=70)
+//signal for addition to existing position 
+barcolor( strategy.position_size>=1 and close < strategy.position_avg_price and crossover(rsiUO, 60) ? color.yellow : na)
+//bgcolor( strategy.position_size>=1 and close < strategy.position_avg_price and crossover(rsiUO, 60)  ? color.yellow : na, transp=30)
+//partial exit
+strategy.close(id="LEUO", comment="PExit",  qty=strategy.position_size/3, when= takeProfit and abs(strategy.position_size)>=1 and close > strategy.position_avg_price and crossunder(rsiUO,profitExitLine) )
+//close the Long order
+strategy.close(id="LEUO", comment="Profit is "+tostring(close - strategy.position_avg_price,  "###.##"), when=abs(strategy.position_size)>=1 and crossunder(rsiUO,exitLine) ) //and close > strategy.position_avg_price )
+//strategy.close(id="LEUO", comment="CloseAll", when=abs(strategy.position_size)>=1 and crossunder(rsiUO2,40) ) //and close > strategy.position_avg_price )
+// stop loss exit
+stopLossVal = strategy.position_size>=1 ?  strategy.position_avg_price * ( 1 - (stopLoss/100) ) : 0.00
+strategy.close(id="LEUO", comment="SL exit Loss is  "+tostring(close - strategy.position_avg_price,  "###.##") , when=abs(strategy.position_size)>=1 and close < stopLossVal and rsiUO < exitLine)   
+//reason to rsiUO <30 is if price is going down , indicator should reflect it ... but indicator is above 30 means it showing divergence... so hold on it until it crossdown 30 ...that way even Stop Loss less than predefined ...
+//Strategy Logic 
+/////////////////////////////////////////////////////////////////////////////////
+Expand (153 lines)

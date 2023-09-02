@@ -1,0 +1,298 @@
+Script Name: Master Pattern [LuxAlgo]
+Author: LuxAlgo
+Description: The Master Pattern indicator is derived from the framework proposed by Wyckoff and automatically displays major/minor patterns and their associated expansion lines on the chart.
+
+Liquidity levels are also included and can be used as targets/stops. Note that the Liquidity levels are plotted retrospectively as they are based on pivots.
+
+🔶  USAGE 
+
+  
+
+The Master...
+PineScript code:
+
+Pine Script™ indicator
+Master Pattern [LuxAlgo]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+// This work is licensed under a Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) https://creativecommons.org/licenses/by-nc-sa/4.0/
+// © LuxAlgo
+//@version=5
+indicator("Master Pattern [LuxAlgo]", "LuxAlgo - Master Pattern Indicator", overlay = true, max_boxes_count = 500, max_lines_count = 500)
+//------------------------------------------------------------------------------
+//Settings
+//-----------------------------------------------------------------------------{
+length = input.int(3, 'Contraction Detection Lookback', minval = 1)
+liqLength = input.int(20, 'Liquidity Levels', minval = 1)
+showMajor = input(true, 'Show Major Pattern')
+showMinor = input(true, 'Show Minor Pattern')
+//Style
+bullCss = input.color(color.teal, 'Bullish Pattern', inline = 'bull', group = 'Pattern Style')
+showBullBox = input(true, 'Area', inline = 'bull', group = 'Pattern Style')
+showBullLvl = input(true, 'Line', inline = 'bull', group = 'Pattern Style')
+bearCss = input.color(color.red, 'Bearish Pattern', inline = 'bear', group = 'Pattern Style')
+showBearBox = input(true, 'Area', inline = 'bear', group = 'Pattern Style')
+showBearLvl = input(true, 'Line', inline = 'bear', group = 'Pattern Style')
+//Liquidity Style
+showLiq = input(true, 'Show Liquidity Levels', group = 'Liquidity')
+bullLiqCss = input.color(color.teal, 'Upper Liquidity', group = 'Liquidity')
+bearLiqCss = input.color(color.red, 'Lower Liquidity', group = 'Liquidity')
+//-----------------------------------------------------------------------------}
+//UDT
+//-----------------------------------------------------------------------------{
+type mp
+    box area
+    line avg
+    bool breakup
+    bool breakdn
+//-----------------------------------------------------------------------------}
+//Detect contraction
+//-----------------------------------------------------------------------------{
+var phy = 0., var phx = 0, var pht = 0.
+var ply = 0., var plx = 0, var plt = 0.
+var float top = na
+var float btm = na
+n = bar_index
+ph = ta.pivothigh(length, length)
+pl = ta.pivotlow(length, length)
+if ph
+    pht := math.sign(ph - phy)
+    phy := ph
+    if pht == -1 and plt == 1
+        top := ph
+        btm := ply
+        phx := n-length
+if pl
+    plt := math.sign(pl - ply)
+    ply := pl
+    if pht  == -1 and plt == 1
+        top := phy
+        btm := pl
+        plx := n-length
+//-----------------------------------------------------------------------------}
+//Set pattern
+//-----------------------------------------------------------------------------{
+var mp master = mp.new()
+//Detect master pattern
+isbull = high[length] > top and top > btm
+isbear = low[length] < btm and top > btm
+if isbull or isbear
+    css = isbull ? bullCss : bearCss
+    master.avg.set_x2(n-length)
+    val = math.avg(top, btm)
+    //Create new master pattern object
+    master := mp.new(
+      (isbull and showBullBox) or (isbear and showBearBox) ? box.new(math.max(phx, plx), top, n-length, btm, na, bgcolor = showMinor ? color.new(css, 50) : na) : na
+      , (isbull and showBullLvl) or (isbear and showBearLvl) ? line.new(n-length, val, n, val, color = showMinor ? css : na) : na
+      , isbull
+      , isbear)
+    top := na
+    btm := na
+//Determine if pattern switch to major
+if master.breakup
+    if low < master.area.get_bottom()
+        if not showMajor
+            master.area.delete()
+            master.avg.delete()
+        else
+            master.area.set_border_color(bullCss)
+            if not showMinor
+                master.area.set_bgcolor(color.new(bullCss, 50))
+                master.avg.set_color(bullCss)
+else if master.breakdn
+    if high > master.area.get_top()
+        if not showMajor
+            master.area.delete()
+            master.avg.delete()
+        else
+            master.area.set_border_color(bearCss)
+            if not showMinor
+                master.area.set_bgcolor(color.new(bearCss, 50))
+                master.avg.set_color(bearCss)
+//Set friction level x2 coordinate to current bar
+if not na(master.avg)
+    master.avg.set_x2(n)
+//-----------------------------------------------------------------------------}
+//Liquidity levels
+//-----------------------------------------------------------------------------{
+var line liqup = na, var liqup_reach = false
+var line liqdn = na, var liqdn_reach = false
+liqph = ta.pivothigh(liqLength, liqLength)
+liqpl = ta.pivotlow(liqLength, liqLength)
+//Set upper liquidity
+if liqph and showLiq
+    if not liqup_reach
+        liqup.set_x2(n-liqLength)
+    liqup := line.new(n-liqLength, liqph, n, liqph, color = bullLiqCss, style = line.style_dotted)
+    liqup_reach := false
+else if not liqup_reach and showLiq
+    liqup.set_x2(n)
+    if high > liqup.get_y1()
+        liqup_reach := true
+//Set lower liquidity
+if liqpl and showLiq
+    if not liqdn_reach
+        liqdn.set_x2(n-liqLength)
+    liqdn := line.new(n-liqLength, liqpl, n, liqpl, color = bearLiqCss, style = line.style_dotted)
+    liqdn_reach := false
+else if not liqdn_reach and showLiq
+    liqdn.set_x2(n)
+    if low < liqdn.get_y1()
+        liqdn_reach := true
+//-----------------------------------------------------------------------------}
+Expand (156 lines)

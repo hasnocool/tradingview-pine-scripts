@@ -1,0 +1,95 @@
+Script Name: I11L Long Put-Call Ratio Inversion
+Author: I11L
+Description: The Strategy uses the Put/Call Options Ratio Inversaion as a Signal and Implements simple Money Management rules.
+It is adjusted for the NDX and for the SPX in the 30min Range.
+The Oscilation has to be finetuned to reflect the correct Reversal point.
+A good indicator of the correct Reversal Point is a solid range of good backtesting results..
+PineScript code:
+
+Pine Script™ strategy
+I11L Long Put/Call Ratio Inversion
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © I11L
+//@version=5
+strategy("I11L Long Put/Call Ratio Inversion", overlay=false, pyramiding=1, default_qty_value=10000, initial_capital=10000, default_qty_type=strategy.cash)
+SL = input.float(0.01,step=0.01)
+CRV = input.float(3)
+TP = SL * CRV
+len = input.int(30,"Lookback period in Days",step=10)
+ratio_sma_lookback_len = input.int(20,step=10)
+mult = input.float(1.5,"Standard Deviation Multiple")
+ratio_sma = ta.sma(request.security("USI:PCC","D",close),ratio_sma_lookback_len)
+median = ta.sma(ratio_sma,len)
+standartDeviation = ta.stdev(ratio_sma,len)
+upperDeviation = median + mult*standartDeviation
+lowerDeviation = median - mult*standartDeviation
+isBuy = ta.crossunder(ratio_sma, upperDeviation)// and close < buyZone
+isCloseShort = (ratio_sma > median and strategy.position_size < 0)
+isSL = (strategy.position_avg_price * (1.0 - SL) > low and strategy.position_size > 0) or (strategy.position_avg_price * (1.0 + SL) < high and strategy.position_size < 0)
+isSell = ta.crossover(ratio_sma,lowerDeviation) 
+isTP = strategy.position_avg_price * (1 + TP) < high
+if(isBuy)
+    strategy.entry("Long", strategy.long)
+if(isCloseShort)
+    strategy.exit("Close Short",limit=close)
+if(isSL)
+    strategy.exit("SL",limit=close)
+if(isTP)
+    strategy.exit("TP",limit=close)
+    
+plot(ratio_sma,color=color.white)
+plot(median,color=color.gray)
+plot(upperDeviation,color=color.rgb(0,255,0,0))
+plot(lowerDeviation,color=color.rgb(255,0,0,0))
+bgcolor(isBuy?color.rgb(0,255,0,90):na)
+bgcolor(isSell?color.rgb(255,0,0,90):na)
+Expand (48 lines)

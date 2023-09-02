@@ -1,0 +1,248 @@
+Script Name: SEMA-X
+Author: kimchulho
+Description: SEMA-X (sema cross)
+It's a simple EMA cross strategy
+
+Rules of strategy
+1. 2 EMA crossing
+2. Long (Golden Cross), Short (Dead Cross)
+3. Target profit, stop loss setting
+
+You can also get big trend gains if you set a long target price.
+
+* * *
+
+SEMA-X (세마크로스)
+간단한 EMA 교차 전략 입니다.
+
+전략의 규칙
+1. 2개의 EMA 교차
+2. 매수(골든 크로스), 매도(데드...
+PineScript code:
+
+Pine Script™ strategy
+SEMA-X
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+// SEMA-X(SEMA CROSS) [AB] : Simple EMA cross strategy Alert & Backtest
+// 1. 2 EMA cross
+// 2. Next candle entry
+// 3. TP & SL
+//@version=5
+strategy("SEMA-X", "SEMA-X", overlay=false, margin_long=1,
+ initial_capital=1000000, default_qty_type=strategy.percent_of_equity, default_qty_value=100,
+ commission_type=strategy.commission.percent, commission_value=0.075, slippage=3)
+//****************************************************************************//
+// Input
+//****************************************************************************//
+// EMA length
+emaLen25 = input.int(25, "Short", minval=1, confirm=true, group="[EMA]----------", inline="1")
+emaLen50 = input.int(50, "Long",  minval=1, confirm=true, group="[EMA]----------", inline="1")
+// TP & SL
+isLong   = input.bool(true, "Long - ",    confirm=true, group="[TP & SL(%)]----------", inline="1")
+tpLong   = input.float(2, "TP", minval=0, confirm=true, group="[TP & SL(%)]----------", inline="1")*0.01
+slLong   = input.float(2, "SL", minval=0, confirm=true, group="[TP & SL(%)]----------", inline="1")*0.01
+isShort  = input.bool(false, "Short - ",  confirm=true, group="[TP & SL(%)]----------", inline="2")
+tpShort  = input.float(2, "TP", minval=0, confirm=true, group="[TP & SL(%)]----------", inline="2")*0.01
+slShort  = input.float(2, "SL", minval=0, confirm=true, group="[TP & SL(%)]----------", inline="2")*0.01
+// Position size
+stRatio  = input.float(100.0, "Ratio(%)", confirm=true, group="[POSITION SIZE]----------", inline="1") * 0.01
+leverage = input.float(1,     "Leverage", confirm=true, group="[POSITION SIZE]----------", inline="1")
+// Backtest period
+sTime = input.time(timestamp("0001-01-01"), "Start", group="[Backtest]----------")
+eTime = input.time(timestamp("9999-01-01"), "End",   group="[Backtest]----------")
+inDateRange   = time >= sTime and time <= eTime
+periodBg      = input.bool(false, "Backtest BGcolor", confirm=true, group="[Backtest]----------", inline="1")
+bgLong        = input.bool(false, "Position BGcolor", confirm=true, group="[Backtest]----------", inline="1")
+periodBgColor = periodBg and inDateRange ? color.new(color.green, 95) : na
+bgcolor(periodBgColor, title="Backtest BGcolor")
+bgColorLong   = bgLong and strategy.position_size>0 ? color.new(color.green, 95) : na
+bgcolor(bgColorLong, title="Position BGcolor")
+// IRISBOT
+exchange = input.string("binance",  "Exchange", confirm=true, group="[IRISBOT]----------", inline="2", options=["binance", "bybit", "upbit"])
+account  = input.string("account1", "Account",  confirm=true, group="[IRISBOT]----------", inline="2")
+symbol   = input.string("BTC/USDT", "Symbol",   confirm=true, group="[IRISBOT]----------", inline="3")
+strategy = input.string("sema-x",   "Strategy", confirm=true, group="[IRISBOT]----------", inline="3")
+token    = input.string("token",    "Token",    confirm=true, group="[IRISBOT]----------", inline="4")
+isPlotMsg = input.bool(false, "View alert msg", confirm=true, group="[IRISBOT]----------", inline="4")
+// Another bot
+botLong  = input.string("", "Long msg",  confirm=true, group="[ANOTHER BOT]----------")
+botShort = input.string("", "Short msg", confirm=true, group="[ANOTHER BOT]----------")
+botExit  = input.string("", "Exit msg",  confirm=true, group="[ANOTHER BOT]----------", tooltip="If you another bot(tvextbot, autoview...)\nReplacement - [L] : Leverage, [R] : Ratio")
+//****************************************************************************//
+// Process
+//****************************************************************************//
+ema25=ta.ema(close, emaLen25)
+ema50=ta.ema(close, emaLen50)
+// Entry condition
+longCondition  = isLong and ta.crossover(ema25, ema50)
+shortCondition = isShort and ta.crossunder(ema25, ema50)
+// Entry price
+var price=0.0
+var pricePlot=0.0
+if (longCondition or shortCondition) and strategy.position_size == 0
+    price:=close
+pricePlot:=price
+if (strategy.position_size==0)
+    pricePlot:=na
+// Amount
+amount = str.tostring(stRatio*100)
+// IRISBOT alert msg (for auto trading, you can change this for autoview, tvextbot, thanksbot, etc webhookbot)
+botLong := str.replace_all(botLong, "[L]", str.tostring(leverage))
+botLong := str.replace_all(botLong, "[R]", str.tostring(stRatio*100))
+msgLong  = botLong==na  ? '{"exchange":"'+exchange+'","account":"'+account+'","strategy":"'+strategy+'","symbol":"'+symbol+'","type":"market","side":"buy","amount":"'+amount+'%","leverage":"'+str.tostring(leverage)+'","token":"'+token+'"}' : botLong
+msgShort = botShort==na ? '{"exchange":"'+exchange+'","account":"'+account+'","strategy":"'+strategy+'","symbol":"'+symbol+'","type":"market","side":"sell","amount":"'+amount+'%","leverage":"'+str.tostring(leverage)+'","token":"'+token+'"}' : botShort
+msgExit  = botExit==na  ? '{"exchange":"'+exchange+'","account":"'+account+'","strategy":"'+strategy+'","symbol":"'+symbol+'","type":"market","side":"close","token":"'+token+'"}' : botExit
+// Entry signal
+if inDateRange
+    strategy.entry("L", strategy.long,  qty=strategy.equity/close*stRatio*leverage, when=longCondition,  comment="L", alert_message=msgLong)
+    strategy.entry("S", strategy.short, qty=strategy.equity/close*stRatio*leverage, when=shortCondition, comment="S", alert_message=msgShort)
+    strategy.exit("XL", "L", profit=price*tpLong/syminfo.mintick,  loss=price*slLong/syminfo.mintick,  comment="X", alert_message=msgExit)
+    strategy.exit("XS", "S", profit=price*tpShort/syminfo.mintick, loss=price*slShort/syminfo.mintick, comment="X", alert_message=msgExit)
+//****************************************************************************//
+// Plot
+//****************************************************************************//
+// Alert msg plot
+var msgTable = table.new(position = position.bottom_right, columns = 2, rows = 3, bgcolor = color.new(color.blue, 80), border_width = 1)
+if isPlotMsg
+    if isLong
+        table.cell(msgTable, 0, 0, "Long",  text_halign=text.align_left)
+        table.cell(msgTable, 1, 0, msgLong, text_halign=text.align_left)
+    
+    if isShort
+        table.cell(msgTable, 0, 1, "Short",  text_halign=text.align_left, bgcolor=color.new(color.red, 80))
+        table.cell(msgTable, 1, 1, msgShort, text_halign=text.align_left, bgcolor=color.new(color.red, 80))
+    
+    if isLong or isShort
+        table.cell(msgTable, 0, 2, "Exit",  text_halign=text.align_left, bgcolor=color.new(color.purple, 80))
+        table.cell(msgTable, 1, 2, msgExit, text_halign=text.align_left, bgcolor=color.new(color.purple, 80))
+// EMA
+e0=plot(ema25, "Short", color.green)
+e1=plot(ema50, "Long", color.red)
+fill(e0, e1, ema25>ema50 ? color.new(color.green, 50) : color.new(color.red, 50), "EMA BG")
+// TP & SL
+p0=plot(pricePlot, "Entry", color.black, style=plot.style_linebr)
+p1=plot(pricePlot*(strategy.position_size>0 ? 1+tpLong : 1-tpShort), "TP", color.new(color.green, 50), style=plot.style_linebr)
+p2=plot(pricePlot*(strategy.position_size>0 ? 1-slLong : 1+slShort), "SL", color.new(color.red, 50), style=plot.style_linebr)
+fill(p0, p1, color.new(color.green, 80), "TP BG")
+fill(p0, p2, color.new(color.red, 80), "SL BG")
+Expand (120 lines)

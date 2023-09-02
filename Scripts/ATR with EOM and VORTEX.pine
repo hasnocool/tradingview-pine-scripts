@@ -1,0 +1,84 @@
+Script Name: ATR with EOM and VORTEX
+Author: SoftKill21
+Description: This is a strategy, designed for long trends for stock and crypto market.
+
+Its made of ATR for volatility, EOM for volume and VORTEX for the trend direction.
+
+In this case on the ATR, I applied an EMA to check if current position is above the EMA -> bull trend, below ema -> bear trend
+For EOM I am using the positive and negative value scale, if its positive we are...
+PineScript code:
+
+Pine Script™ strategy
+ATR with EOM and VORTEX
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © SoftKill21
+//@version=4
+strategy("atr+eom+vortex strat", overlay=true,initial_capital = 1000, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent , commission_value=0.01 )
+//atr and ema
+atr_lenght=input(10)
+atrvalue = atr(atr_lenght)
+//plot(atrvalue)
+ema_atr_length=input(5)
+ema_atr = ema(atrvalue,ema_atr_length)
+//plot(ema_atr,color=color.white)
+//EOM and ema
+lengthEOM = input(10, minval=1)
+div = 10//input(10000, title="Divisor", minval=1)
+eom = sma(div * change(hl2) * (high - low) / volume, lengthEOM)
+// + - 0 long/short
+//VORTEX
+period_ = input(10, title="Length", minval=2)
+VMP = sum( abs( high - low[1]), period_ )
+VMM = sum( abs( low - high[1]), period_ )
+STR = sum( atr(1), period_ )
+VIP = VMP / STR
+VIM = VMM / STR
+avg_vortex=(VIP+VIM)/2
+//plot(avg_vortex)
+long= atrvalue > ema_atr and eom > 0 and avg_vortex>1 
+short=atrvalue < ema_atr and eom < 0 and avg_vortex<1 
+strategy.entry("long",1,when=long)
+//strategy.entry("short",0,when=short)
+strategy.close("long",when=short)
+Expand (40 lines)

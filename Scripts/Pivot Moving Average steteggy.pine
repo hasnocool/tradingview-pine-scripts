@@ -1,0 +1,381 @@
+Script Name: Pivot Moving Average steteggy
+Author: prakashbariya333
+Description: this Pivot Moving Average steteggy works best on a chart --->>Above 100$ crypto
+
+Sniper is very profitable in terms of% good trades
+It will perform very well on 1-5X Leverage (Solid leverage, not variable depending on the volume )
+
+TP: 0.9 %
+SL : 5.5 %
+PineScript code:
+
+Pine Script™ strategy
+Pivot Moving Average steteggy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © LonesomeThecolor.blue
+//@version=4
+strategy("Pivot Moving Average Strategy", overlay =true, max_lines_count = 500, shorttitle="PMAS")
+lb = input(5, title="Left Bars", minval = 1)
+rb = input(5, title="Right Bars", minval = 1)
+trad_amount = input(100, title="Trad Amount", minval = 1)
+minimum_profite = input(-2, title="Minimum Profite")
+showsupres = input(true, title="Support/Resistance", inline = "srcol")
+supcol = input(color.lime, title ="", inline = "srcol")
+rescol = input(color.red, title ="", inline = "srcol")
+srlinestyle = input(line.style_dotted, title = "Line Style/Width", options = [line.style_solid, line.style_dashed, line.style_dotted], inline ="style")
+srlinewidth = input(1, title = "", minval = 1, maxval = 5, inline ="style")
+changebarcol = input(true, title="Change Bar Color", inline = "bcol")
+bcolup = input(color.blue, title ="", inline = "bcol")
+bcoldn = input(color.black, title ="", inline = "bcol")
+length = input(14, title="Chopiness Bars", minval=1)
+atrPeriod = input(10, "ATR Length")
+factor = input(3.0, "Factor", step = 0.01)
+ph = pivothigh(lb, rb)
+pl = pivotlow(lb, rb)
+hl = iff(ph, 1, iff(pl, -1, na)) // Trend direction
+zz = iff(ph, ph, iff(pl, pl, na)) // similar to zigzag but may have multiple highs/lows
+zz :=iff(pl and hl == -1 and valuewhen(hl, hl, 1) == -1 and pl > valuewhen(zz, zz, 1), na, zz)
+zz :=iff(ph and hl == 1  and valuewhen(hl, hl, 1) == 1  and ph < valuewhen(zz, zz, 1), na, zz)
+hl := iff(hl==-1 and valuewhen(hl, hl, 1)==1 and zz > valuewhen(zz, zz, 1), na, hl)
+hl := iff(hl==1 and valuewhen(hl, hl, 1)==-1 and zz < valuewhen(zz, zz, 1), na, hl)
+zz := iff(na(hl), na, zz)
+findprevious()=>  // finds previous three points (b, c, d, e)
+    ehl = iff(hl==1, -1, 1)
+    loc1 = 0.0, loc2 = 0.0, loc3 = 0.0, loc4 = 0.0
+    xx = 0
+    for x=1 to 1000
+        if hl[x]==ehl and not na(zz[x])
+            loc1 := zz[x]
+            xx := x + 1
+            break
+    ehl := hl
+    for x=xx to 1000
+        if hl[x]==ehl and not na(zz[x])
+            loc2 := zz[x]
+            xx := x + 1
+            break
+    ehl := iff(hl==1, -1, 1)
+    for x=xx to 1000
+        if hl[x]==ehl and not na(zz[x])
+            loc3 := zz[x]
+            xx := x + 1
+            break
+    ehl := hl
+    for x=xx to 1000
+        if hl[x]==ehl and not na(zz[x])
+            loc4 := zz[x]
+            break
+    [loc1, loc2, loc3, loc4]
+float a = na, float b = na, float c = na, float d = na, float e = na
+if not na(hl)
+    [loc1, loc2, loc3, loc4] = findprevious()
+    a := zz 
+    b := loc1
+    c := loc2
+    d := loc3
+    e := loc4
+_hh = zz and (a > b and a > c and c > b and c > d)
+_ll = zz and (a < b and a < c and c < b and c < d)
+_hl = zz and ((a >= c and (b > c and b > d and d > c and d > e)) or (a < b and a > c and b < d))
+_lh = zz and ((a <= c and (b < c and b < d and d < c and d < e)) or (a > b and a < c and b > d))
+plotshape(_hl, text="HL", title="Higher Low", style=shape.labelup, color=color.lime, textcolor=color.black, location=location.belowbar, offset = -rb)
+plotshape(_hh, text="HH", title="Higher High", style=shape.labeldown, color=color.lime, textcolor=color.black, location=location.abovebar, offset = -rb)
+plotshape(_ll, text="LL", title="Lower Low", style=shape.labelup, color=color.red, textcolor=color.white, location=location.belowbar, offset = -rb)
+plotshape(_lh, text="LH", title="Lower High", style=shape.labeldown, color=color.red, textcolor=color.white, location=location.abovebar, offset = -rb)
+float res = na, float sup = na
+res := iff(_lh, zz, res[1])
+sup := iff(_hl, zz, sup[1])
+var int trend = na
+trend := iff(close > res, 1, iff(close < sup, -1, nz(trend[1])))
+res := iff((trend == 1 and _hh) or (trend == -1 and _lh), zz, res)
+sup := iff((trend == 1 and _hl) or (trend == -1 and _ll), zz, sup)
+rechange = res != res[1]
+suchange = sup != sup[1]
+var line resline = na
+var line supline = na
+if showsupres
+    if rechange
+        line.set_x2(resline, bar_index)
+        line.set_extend(resline, extend = extend.none)
+        resline := line.new(x1 = bar_index - rb, y1 = res, x2 = bar_index, y2 = res, color = rescol, extend = extend.right, style = srlinestyle, width = srlinewidth)
+     
+    if suchange
+        line.set_x2(supline, bar_index)
+        line.set_extend(supline, extend = extend.none)
+        supline := line.new(x1 = bar_index - rb, y1 = sup, x2 = bar_index, y2 = sup, color = supcol, extend = extend.right, style = srlinestyle, width = srlinewidth)    
+barcolor(color = iff(changebarcol, iff(trend == 1, bcolup, bcoldn), na))
+var float chopiness = na, float rsi = na
+var bool movingAverageTrad = na, bool movingAverageUpTrad = na, bool movingAverageDownTrad = na, bool highVolume = na
+var float ema3 = na, float ema5 = na, float ema8 = na, float ema13 = na, float ema21 = na, float ema34 = na, float ema55 = na, float ema100 = na
+// ema200 = security(syminfo.tickerid, "D", ema(close, 200), barmerge.gaps_off, barmerge.lookahead_on)
+ema200 = ema(close, 200)
+movingAverageTrad := ema200 < close
+ema3 := ema(close, 3)
+ema5 := ema(close, 5)
+ema8 := ema(close, 8)
+ema13 := ema(close, 13)
+ema21 := ema(close, 21)
+ema34 := ema(close, 34)
+ema55 := ema(close, 55)
+ema100 := ema(close, 100)
+movingAverageUpTrad := ema3 > ema5 and ema5 > ema8 and ema8 > ema13 and ema13 > ema21 and ema21 > ema34 and ema34 > ema200
+movingAverageDownTrad :=  ema3 < ema5 and ema5 < ema8 and ema8 < ema13 and ema13 < ema21 and ema21 < ema34 and ema34 < ema200
+highVolume := ema(volume, 14) < volume
+chopiness := 100 * log10(sum(atr(1), length) / (highest(length) - lowest(length))) / log10(length)
+rsiT = rsi(close, 14)
+rsi := security(syminfo.tickerid, "60", rsiT, barmerge.gaps_off, barmerge.lookahead_on)
+[middle, upper, lower] = bb(close,length=20, mult=2)
+stdev = stdev(close, 14)
+[supertrendT, directionT] = supertrend(factor, atrPeriod)
+[supertrend, direction] = security(syminfo.tickerid, "60", [supertrendT, directionT], barmerge.gaps_off, barmerge.lookahead_on)
+plot(ema3, "ema3", color=color.red)
+plot(ema5, "ema5",  color=color.blue)
+plot(ema8, "ema8",  color=color.orange)
+plot(ema13, "ema13",  color=color.yellow)
+plot(ema21, "ema21", color=color.red)
+plot(ema34, "ema34", color=color.blue)
+plot(ema55, "ema55",  color=color.red, linewidth=2)
+// plot(ema200, "ema200D",  color=color.red)
+var bool buy = na, bool sell = na, bool closeFull = na, bool closeHaft = na
+buy := trend == 1  and movingAverageUpTrad  and direction < 0// and stdev > stdev[1]
+sell := trend != 1  and movingAverageDownTrad  and direction > 0// and stdev > stdev[1]
+var float entryPrice = na, bool isOpenPosition = false, string position = na, string closeComments = na
+if cross(ema3, ema8)
+    closeFull := true
+else if (position[1]== "SELL"  and ema3 > ema5 and strategy.openprofit < minimum_profite) 
+    closeFull := true
+else if (position[1]== "BUY"  and ema3 < ema5 and strategy.openprofit < minimum_profite) 
+    closeFull := true
+else 
+    closeFull := false
+if not na(position[1])
+    position := closeFull ? na : position[1]
+    entryPrice := closeFull ? na : entryPrice[1]
+else if buy
+    position := "BUY"
+    entryPrice := (close[1] + open[1])/2
+else if sell
+    position := "SELL"
+    entryPrice := (close[1] + open[1])/2
+    
+if buy or sell
+    line.new(x1 = bar_index - rb, y1 = entryPrice, x2 = bar_index, y2 = entryPrice, color = supcol, extend = extend.none, color=color.red, style = line.style_solid, width = 1)    
+if isOpenPosition[1]
+    isOpenPosition := closeFull ? false : isOpenPosition[1] 
+else if position == "SELL"   and rsi[1] < rsi[2] and supertrendT != supertrendT[1]
+    isOpenPosition := true
+else if position == "BUY"  and rsi[1] > rsi[2] and supertrendT != supertrendT[1]
+    isOpenPosition := true
+    
+if strategy.openprofit < minimum_profite
+    closeComments := "Exit"
+else 
+    closeComments := "Trailing Stop"
+message = '{"symbol":"{{ticker}}","action":"' + tostring(position) +'","quantity":"{{strategy.order.contracts}}"}'
+if position== "SELL" and isOpenPosition and not isOpenPosition[1]
+    strategy.entry("Short", strategy.short, trad_amount, alert_message = message)
+if position== "BUY" and isOpenPosition and not isOpenPosition[1]
+    strategy.entry("Long", strategy.long, trad_amount, alert_message = message)
+if closeFull and isOpenPosition[1]
+    messageClose = '{"symbol":"{{ticker}}","close":' + tostring(closeFull) + '}'
+    strategy.close(position, comment = closeComments, alert_message = messageClose)
+  
+Expand (197 lines)

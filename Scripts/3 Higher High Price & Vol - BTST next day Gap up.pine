@@ -1,0 +1,66 @@
+Script Name: 3 Higher High Price & Vol - BTST next day Gap up
+Author: SharemarketRaja
+Description: 1) Price & Volume forms Higher High in the last 45 min
+2) Volume is above Avg (20 MA Vol)
+3) Indicates EOD buying next Gap up will happen
+4) BTST strategy
+5) Scanner available
+PineScript code:
+
+Pine Script™ strategy
+3 Higher High Price & Vol - BTST next day Gap up
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © SharemarketRaja
+//@version=4
+//Scanner available 
+strategy("3 Higher High Price & Vol", overlay=true)
+volma = sma(volume, 20)
+PriceHH = high > high[1] and high[1] > high[2] 
+VolHH = volume > volume[1] and volume[1] > volume[2]
+Volma =  volume > volma and volume[1] > volma[1] and volume[2] > volma[2]
+Allgreen = close > open and close[1] > open[1] and close[2] > open[2]
+PriceLL = low < low[1] and low[1] < low[2]
+Allred = close < open and close[1] < open[1] and close[2] < open[2]
+Qty = 100
+Buy = (PriceHH == true and VolHH == true and Volma == true and Allgreen == true) and time("15", "1515-1530")
+Reversal = (PriceLL == true and VolHH == true and Volma == true and Allred == true) and time("15", "1515-1530")
+plotshape(Buy, style=shape.arrowup, size=size.large, color=color.green, location=location.belowbar)
+plotshape(Reversal, style=shape.arrowup, size=size.large, color=color.red, location=location.belowbar)
+strategy.entry(id="L", qty=Qty, long=true, when=Buy)
+// strategy.entry(id="R", qty=Qty, long=true, when=Reversal)
+// strategy.exit(id="LE", from_entry="L", profit=Profit, loss=Loss)
+strategy.close_all(when=(time("15", "1500-1515")) )
+Expand (32 lines)

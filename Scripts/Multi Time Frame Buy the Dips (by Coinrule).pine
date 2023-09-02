@@ -1,0 +1,91 @@
+Script Name: Multi Time Frame Buy the Dips (by Coinrule)
+Author: Coinrule
+Description: Buying the dips is a relatively easy automated trading strategy that can return impressive profits, especially during uptrend times. Not all price drops are for buying, though. This trading system is based on a multi time frame buy-the-dip approach to optimize each trade.
+
+The strategy catches sudden price drops on a 1-hr time frame when the price increases...
+PineScript code:
+
+Pine Script™ strategy
+Multi Time Frame Buy the Dips (by Coinrule)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Coinrule
+//@version=1
+strategy(shorttitle='Multi Time Frame Buy the Dips',title='Multi Time Frame Buy the Dips (by Coinrule)', overlay=true, initial_capital = 1000, default_qty_type = strategy.percent_of_equity, default_qty_value = 30, commission_type=strategy.commission.percent, commission_value=0.1)
+//Backtest dates
+fromMonth = input(defval = 1,  title = "From Month")     
+fromDay   = input(defval = 10,    title = "From Day")       
+fromYear  = input(defval = 2020, title = "From Year")       
+thruMonth = input(defval = 1,    title = "Thru Month")     
+thruDay   = input(defval = 1,    title = "Thru Day")     
+thruYear  = input(defval = 2112, title = "Thru Year")       
+showDate  = input(defval = true, title = "Show Date Range")
+start     = timestamp(fromYear, fromMonth, fromDay, 00, 00)        // backtest start window
+finish    = timestamp(thruYear, thruMonth, thruDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+inp_lkb = input(12, title='Lookback Long Period')
+inp_lkb_2 = input(2, title='Lookback Short Period')
+ 
+perc_change(lkb) =>
+    overall_change = ((close[0] - close[lkb]) / close[lkb]) * 100
+// Call the function    
+overall = perc_change(inp_lkb)
+overall_2 = perc_change(inp_lkb_2)
+//Entry
+dip= -(input(1))
+increase= (input(3))
+strategy.entry(id="long", long = true, when = overall > increase and overall_2 < dip and window()) 
+//Exit
+Stop_loss= ((input (3))/100)
+Take_profit= ((input (4))/100)
+longStopPrice  = strategy.position_avg_price * (1 - Stop_loss)
+longTakeProfit = strategy.position_avg_price * (1 + Take_profit)
+strategy.close("long", when = close < longStopPrice or close > longTakeProfit and window())
+Expand (47 lines)

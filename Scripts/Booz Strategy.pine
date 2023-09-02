@@ -1,0 +1,151 @@
+Script Name: Booz Strategy
+Author: ArnoldTrader_
+Description: Booz Backtesting : Booz Backtesting is a method for analyzing the performance of your current trading strategy . Booz Backtesting aims to help you generate results and evaluate risk and return without risking real capital.
+
+The Booz Backtesting is the Booz Super Swing Indicator equivalent but gives you the ability to backtest data on different charts.
+
+This is an...
+PineScript code:
+
+Pine Script™ strategy
+Booz Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+////////////////////////////////////////////////////////////////////////////////
+// ArnoldTrader - Estrategia Booz
+// Creado por Arnold para la Comunidad
+// Versión 1.2 - Última actualización: 2023-06-22
+////////////////////////////////////////////////////////////////////////////////
+//@timeframe=120
+// Esta es la versión de ArnoldTrader de la Estrategia Booz, creada por Arnold para la Comunidad.
+// La estrategia utiliza una combinación de promedios móviles y filtros de tendencia para identificar posibles operaciones.
+// También incluye entradas personalizables para el stop loss, take profit, apalancamiento y período de backtest.
+// ¡Feliz trading!
+//@version=4
+strategy("Estrategia Booz", "", true, default_qty_type=strategy.percent_of_equity, default_qty_value=100, margin_long=0, margin_short=0)
+// ----------------------------- Inputs ------------------------------------- //
+source_ma_type = input("EMA", "Tipo de MA Fuente", options=["SMA", "EMA"])
+source_ma_length = input(50, "Longitud de la MA Fuente")
+fast_ma_length = input(50, "Longitud de la MA Rápida")
+slow_ma_length = input(100, "Longitud de la MA Lenta")        
+use_trend_filter = input(true, "Filtro de Tendencia")
+trend_filter_ma_type = input("EMA", "Tipo de MA Filtro de Tendencia", options=["SMA", "EMA"])
+trend_filter_ma_length = input(200, "Período de la MA Filtro de Tendencia")
+show_mas = input(true, "Mostrar MAs")
+swing_trading_mode = input(false, "Modo de Trading Swing")
+// -------------------------- Calculations ---------------------------------- //
+fast_ma = ema(close, fast_ma_length)
+slow_ma = ema(close, slow_ma_length)
+source_ma = source_ma_type == "EMA"? ema(close, source_ma_length): 
+                                     sma(close, source_ma_length)
+trend_filter_ma = trend_filter_ma_type == "EMA"? ema(close, trend_filter_ma_length): 
+                                                 sma(close, trend_filter_ma_length)
+// --------------------------- Conditions ----------------------------------- //
+uptrend = not use_trend_filter or close > trend_filter_ma
+buy_cond = crossover(fast_ma, slow_ma) and uptrend
+downtrend = not use_trend_filter or close < trend_filter_ma
+sell_cond = crossunder(fast_ma, slow_ma) and downtrend
+// ---------------------------- Plotting ------------------------------------ //
+bgcolor(use_trend_filter and downtrend? color.red: use_trend_filter? color.green: na)
+plot(show_mas? fast_ma: na, "MA Rápida", color.green)
+plot(show_mas? slow_ma: na, "MA Lenta", color.red)
+plot(show_mas? source_ma: na, "MA Fuente", color.purple)
+plot(show_mas? trend_filter_ma: na, "MA Filtro de Tendencia", color.blue)
+// ---------------------------- Trading  ------------------------------------ //
+// Inputs
+sl_perc = input(1.0, "Stop Loss (en %)", group="Control de Backtest")/100
+tp_perc = input(1.0, "Take Profit (en %)", group="Control de Backtest")/100
+leverage = input(1, "Apalancamiento", maxval=100, group="Control de Backtest")
+bt_start_time = input(timestamp("2021 01 01"), "Hora de inicio de Backtest", input.time, group="Control de Backtest")
+bt_end_time = input(timestamp("2029 12 31"), "Hora de finalización de Backtest", input.time, group="Control de Backtest")
+// Trading Window
+in_trading_window = time >= bt_start_time and time <= bt_end_time
+trade_qty = (strategy.equity * leverage) / close 
+// Long Side
+strategy.entry("Compra", strategy.long, trade_qty, when=buy_cond and in_trading_window)
+long_tp = strategy.position_avg_price * (1 + tp_perc)
+long_sl = strategy.position_avg_price * (1 - sl_perc)
+if not swing_trading_mode
+    strategy.exit("Cierre Compra", "Compra", limit=long_tp, stop=long_sl)
+// Short Side
+strategy.entry("Venta", strategy.short, trade_qty, when=sell_cond and in_trading_window)
+short_tp = strategy.position_avg_price * (1 - tp_perc)
+short_sl = strategy.position_avg_price * (1 + sl_perc)
+if not swing_trading_mode
+    strategy.exit("Cierre Venta", "Venta", limit=short_tp, stop=short_sl)
+Expand (76 lines)

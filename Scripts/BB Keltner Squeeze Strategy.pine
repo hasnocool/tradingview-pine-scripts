@@ -1,0 +1,205 @@
+Script Name: BB Keltner Squeeze Strategy
+Author: jimmaay
+Description: Shows all bollinger bands (solid lines) and keltner channels (dotted line) and will go long/short when a squeeze happens between bollinger bands and keltner channel and exit the positions once there is no more momentum
+PineScript code:
+
+Pine Script™ strategy
+BB Keltner Squeeze Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+//@version=4
+strategy("BB Keltner Squeeze Strategy", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value = 100, initial_capital=10000, currency='USD')
+length = input(title="Length", type=input.integer, defval=20, minval=0)
+src = input(close, title="Source")
+bband(length, mult) =>
+    sma(close, length) + mult * stdev(close, length)
+keltner(length, mult) =>
+    ema(close, length) + mult * ema(tr, length)
+squeeze_choice = input(title="Squeeze Type", defval="Within", options=["Within", "Width"])
+widthRatio = input(title="Squeeze Width Ratio", type=input.float, step=0.1, defval=1.0)//If using width
+// === INPUT BACKTEST RANGE ===
+fromMonth = input(defval = 1,    title = "From Month",      type = input.integer, minval = 1, maxval = 12)
+fromDay   = input(defval = 1,    title = "From Day",        type = input.integer, minval = 1, maxval = 31)
+fromYear  = input(defval = 1970, title = "From Year",       type = input.integer, minval = 1970)
+thruMonth = input(defval = 1,    title = "Thru Month",      type = input.integer, minval = 1, maxval = 12)
+thruDay   = input(defval = 1,    title = "Thru Day",        type = input.integer, minval = 1, maxval = 31)
+thruYear  = input(defval = 2100, title = "Thru Year",       type = input.integer, minval = 1970)
+start     = timestamp(fromYear, fromMonth, fromDay, 00, 00)        // backtest start window
+finish    = timestamp(thruYear, thruMonth, thruDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+//BB
+B2mult = input(2.0, minval=0.001, maxval=50, title="BB Multiplier")
+B2basis = sma(src, length)
+B2dev = B2mult * stdev(src, length)
+B2upper = B2basis + B2dev
+B2lower = B2basis - B2dev
+plot(B2basis, color=color.blue)
+p1 = plot(B2upper, color=#00ffff, linewidth=2, title="BB Upper")
+p2 = plot(B2lower, color=#00ffff, linewidth=2, title=" 2SD lower")
+B2width = 2 * B2mult * stdev(src, length) / B2basis
+//Keltner
+useTrueRange = input(true)
+Kmult = input(1.5, title="Keltner Multiplier")
+Kma = ema(src, length)
+Krange = useTrueRange ? tr : high - low
+Krangema = ema(Krange, length)
+Kupper = Kma + Krangema * Kmult
+Klower = Kma - Krangema * Kmult
+p5 = plot(Kupper, color=color.yellow, linewidth=2, style=plot.style_circles, title="Keltner upper")
+p6 = plot(Klower, color=color.yellow, linewidth=2, style=plot.style_circles, title="Keltner lower")
+Kwidth = 2 * Kmult * Krangema / Kma
+direction = 0
+squeeze = squeeze_choice=="Width" ? (B2width / Kwidth <= widthRatio) : (B2upper <= Kupper or B2lower >= Klower)
+midc = 0
+midc := squeeze ? 0 : close > B2basis ? 1 : 2
+midcolor = midc == 0 ? #666666 : midc == 1 ? #00ff00 : #ff0000
+direction := midc[1]
+plot(B2basis, color=midcolor, linewidth=4, title="BB Mid")
+bgcolor(midc == 0 ? #333333 : #000000, transp=75)
+partial1    = input(defval = 0, step=0.01, title = "Partial 1 Profit %", minval = 0)/100
+partial1_quantity = input(50, title="Partial 1 Quantity (%)")
+partial2    = input(defval = 0, step=0.01, title = "Partial 2 Profit %", minval = 0)/100
+partial2_quantity = input(50, title="Partial 2 Quantity (%)")
+take_profit    = input(defval = 0, step=0.01, title = "Take Profit %", minval = 0)/100
+stop_loss    = input(defval = 0, step=0.01, title = "Stop Loss %", minval = 0)/100
+stop_loss_trailing    = input(defval = 0, step=0.01, title = "Trailing Stop Loss %", minval = 0)/100
+if direction == 0
+    if midc[1] == 0 and midc == 1
+        strategy.entry("LONG", strategy.long, when=window())
+        if partial1>0
+            strategy.exit("Partial 1"  , from_entry = "LONG" , limit = close  * (1 + partial1) , qty_percent=partial1_quantity)
+        if partial2>0
+            strategy.exit("Partial 2"  , from_entry = "LONG" , limit = close  * (1 + partial2) , qty_percent=partial2_quantity)
+        if take_profit>0
+            strategy.exit("Take Profit"    , from_entry = "LONG" , limit = close  * (1 + take_profit)  , qty_percent=100)
+        if stop_loss>0
+            strategy.exit("Stop Loss"    , from_entry = "LONG" , stop = close  * (1 - stop_loss)  , qty_percent=100)
+        if stop_loss_trailing>0
+            strategy.exit("Stop Loss Trailing"    , from_entry = "LONG" , trail_points = close  * stop_loss_trailing / syminfo.mintick  , trail_offset = close  * stop_loss_trailing / syminfo.mintick, qty_percent=100)
+        direction := 1
+    else if midc[1] == 0 and midc == 2
+        strategy.entry("SHORT", strategy.short, when=window())
+        if partial1>0
+            strategy.exit("Partial 1"  , from_entry = "SHORT", limit = close * (1 - partial1),  qty_percent=partial1_quantity)
+        if partial2>0
+            strategy.exit("Partial 2"  , from_entry = "SHORT", limit = close * (1 - partial2),  qty_percent=partial2_quantity)
+        if take_profit>0
+            strategy.exit("Take Profit"    , from_entry = "SHORT", limit = close * (1 - take_profit) ,  qty_percent=100)
+        if stop_loss>0
+            strategy.exit("Stop Loss"    , from_entry = "SHORT" , stop = close  * (1 + stop_loss)  , qty_percent=100)
+        if stop_loss_trailing>0
+            strategy.exit("Stop Loss Trailing"    , from_entry = "SHORT" , trail_points = close  * stop_loss_trailing / syminfo.mintick  , trail_offset = close  * stop_loss_trailing / syminfo.mintick, qty_percent=100)
+        direction := 2
+else if direction != midc
+    strategy.close_all()
+    direction := 0
+    
+   
+Expand (108 lines)

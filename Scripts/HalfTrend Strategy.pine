@@ -1,0 +1,1008 @@
+Script Name: HalfTrend Strategy
+Author: maxencetajet
+Description: BTCUSD -- 5 min
+
+ BUY POSITION 
+
+1 : The price is above the ema
+2 : A buy signal appears on the HalfTrend (blue triangle)
+
+ SELL POSITION 
+
+1 : The price is bellow the ema
+2 : A sell signal appears on the HalfTrend (red triangle)
+PineScript code:
+
+Pine Script™ strategy
+HalfTrend Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+//@version=5
+strategy('HalfTrend Strategy', overlay=true, initial_capital=1000)
+tlpc = input.string(title="Alert", defval="PineConnector", options=["PineConnector", "Telegram"], tooltip="Go to alertatron to have alerts automatically sent to Telegram")
+// Setting 
+ID = input("1234567890123", title="License ID (PineConnector)", group="Setting")
+risk = input.float(2, title="Risk per Trade %", group="Setting", step=0.5)
+typeSL = input.string(title="StopLoss", defval="ATR", options=["Swing", "ATR"], group="Setting")
+typeTP = input.string(title="TakeProfit", defval="R:R", options=["R:R", "Multiple Target"], group="Setting")
+trendA = input.string(title="Trend Indicator", defval="EMA", options=["EMA", "Superichi"], group="Setting")
+_x = input.bool(false, title="do not take too small positions", group="Setting", tooltip="This parameter is used to avoid positions that have a stoploss too close to the entry point and that the broker's spreads take all the gains")
+security = input.float(10, title="min of pips (00001.00)", group="Setting")
+riskt = risk / 100 + 1
+//Backtest Time Period
+useDateFilter = input.bool(false, title="Filter Date Range of Backtest", group="Backtest Time Period")
+backtestStartDate = input.time(timestamp("1 June 2022"), title="Start Date", group="Backtest Time Period", tooltip="This start date is in the time zone of the exchange " + "where the chart's instrument trades. It doesn't use the time " + "zone of the chart or of your computer.")
+backtestEndDate = input.time(timestamp("1 July 2022"), title="End Date", group="Backtest Time Period", tooltip="This end date is in the time zone of the exchange " + "where the chart's instrument trades. It doesn't use the time " + "zone of the chart or of your computer.")
+inTradeWindow = not useDateFilter or (time >= backtestStartDate and time < backtestEndDate)
+//StopLoss
+swingHighV = input.int(7, title="Swing High", group="Stop Loss", tooltip="Number of candles in which the parameter targets the highest")
+swingLowV = input.int(7, title="Swing Low", group="Stop Loss", tooltip="Number of candles in which the parameter targets the lowest point")
+atr1 = input.int(14, title="ATR Period", group="Stop Loss")
+atrMultiplierSL = input.int(2, title = "ATR Multiplier", group="Stop Loss")
+atr = ta.atr(atr1)
+swingHigh = ta.highest(high, swingHighV)
+swingLow = ta.lowest(low, swingLowV)
+atrSell = close + atr * atrMultiplierSL
+atrBuy = close - atr * atrMultiplierSL
+//TakeProfit
+target_stop_ratio = input.float(title='Risk/Reward (R:R)', defval=3, minval=0.5, maxval=100, step=0.1, group="TakeProfit")
+target1 = input.float(1, title='Target 1 R:R (Multiple Target)', group="TakeProfit", step=0.1)
+target2 = input.float(2, title='Target 2 R:R (Multiple Target)', group="TakeProfit", step=0.1)
+//HalfTrend
+amplitude = input(title='Amplitude', defval=2, group="HalfTrend")
+channelDeviation = input(title='Channel Deviation', defval=2, group="HalfTrend")
+showArrows = input(title='Show Arrows', defval=true, group="HalfTrend")
+showChannels = input(title='Show Channels', defval=true, group="HalfTrend")
+var int trend = 0
+var int nextTrend = 0
+var float maxLowPrice = nz(low[1], low)
+var float minHighPrice = nz(high[1], high)
+var float up = 0.0
+var float down = 0.0
+float atrHigh = 0.0
+float atrLow = 0.0
+float arrowUp = na
+float arrowDown = na
+atr2 = ta.atr(100) / 2
+dev = channelDeviation * atr2
+highPrice = high[math.abs(ta.highestbars(amplitude))]
+lowPrice = low[math.abs(ta.lowestbars(amplitude))]
+highma = ta.sma(high, amplitude)
+lowma = ta.sma(low, amplitude)
+if nextTrend == 1
+    maxLowPrice := math.max(lowPrice, maxLowPrice)
+    if highma < maxLowPrice and close < nz(low[1], low)
+        trend := 1
+        nextTrend := 0
+        minHighPrice := highPrice
+        minHighPrice
+else
+    minHighPrice := math.min(highPrice, minHighPrice)
+    if lowma > minHighPrice and close > nz(high[1], high)
+        trend := 0
+        nextTrend := 1
+        maxLowPrice := lowPrice
+        maxLowPrice
+if trend == 0
+    if not na(trend[1]) and trend[1] != 0
+        up := na(down[1]) ? down : down[1]
+        arrowUp := up - atr2
+        arrowUp
+    else
+        up := na(up[1]) ? maxLowPrice : math.max(maxLowPrice, up[1])
+        up
+    atrHigh := up + dev
+    atrLow := up - dev
+    atrLow
+else
+    if not na(trend[1]) and trend[1] != 1
+        down := na(up[1]) ? up : up[1]
+        arrowDown := down + atr2
+        arrowDown
+    else
+        down := na(down[1]) ? minHighPrice : math.min(minHighPrice, down[1])
+        down
+    atrHigh := down + dev
+    atrLow := down - dev
+    atrLow
+ht = trend == 0 ? up : down
+var color buyColor = color.blue
+var color sellColor = color.orange
+htColor = trend == 0 ? buyColor : sellColor
+htPlot = plot(ht, title='HalfTrend', linewidth=2, color=htColor)
+buySignal = not na(arrowUp) and trend == 0 and trend[1] == 1
+sellSignal = not na(arrowDown) and trend == 1 and trend[1] == 0
+//EMA
+srce = input.source(close, title="Source", group="EMA (Trend)")
+emav = input.int(200, title="Length", group="EMA (Trend)")
+ema = ta.ema(srce, emav)
+//Superichi
+tenkan_len  = input(9,'Tenkan',inline='tenkan', group="Superichi (Trend)")
+tenkan_mult = input(2.,'',inline='tenkan', group="Superichi (Trend)")
+kijun_len   = input(26,'Kijun',inline='kijun', group="Superichi (Trend)")
+kijun_mult  = input(4,'',inline='kijun', group="Superichi (Trend)")
+spanB_len   = input(52,'Senkou Span B',inline='span', group="Superichi (Trend)")
+spanB_mult  = input(6, '', inline='span', group="Superichi (Trend)")
+offset      = input(26,'Displacement', group="Superichi (Trend)")
+avg(src,length,mult)=>
+    atr = ta.atr(length)*mult
+    up = hl2 + atr
+    dn = hl2 - atr
+    upper = 0.,lower = 0.
+    upper := src[1] < upper[1] ? math.min(up,upper[1]) : up
+    lower := src[1] > lower[1] ? math.max(dn,lower[1]) : dn
+    
+    os = 0,max = 0.,min = 0.
+    os := src > upper ? 1 : src < lower ? 0 : os[1]
+    spt = os == 1 ? lower : upper
+    max := ta.cross(src,spt) ? math.max(src,max[1]) : os == 1 ? math.max(src,max[1]) : spt
+    min := ta.cross(src,spt) ? math.min(src,min[1]) : os == 0 ? math.min(src,min[1]) : spt
+    math.avg(max,min)
+tenkan = avg(close,tenkan_len,tenkan_mult)
+kijun = avg(close,kijun_len,kijun_mult)
+senkouA = math.avg(kijun,tenkan)
+senkouB = avg(close,spanB_len,spanB_mult)
+tenkan_css = #2157f3
+kijun_css = #ff5d00
+cloud_a = color.new(color.teal,50)
+cloud_b = color.new(color.red,50)
+//Alert
+getpips() =>
+    syminfo.mintick * (syminfo.type == "forex" ? 10 : 1)
+mess_buyT = "📈  𝗔𝗖𝗛𝗔𝗧  🔵  " + str.tostring(syminfo.ticker) + "\n \n" + "Prix d'entrée  " + str.tostring(close) + "\n" + "SL  " + str.tostring(swingLow) + " ⛔️ \n" + "TP  " + str.tostring(((close-swingLow)*target_stop_ratio)+close) + " 🎯 \n \n" + "⚠️ Avertissement : Respectez votre money management, risquez seulement " + str.tostring(risk) + "% de votre capital sur ce trade."
+mess_sellT = "📉  𝗩𝗘𝗡𝗧𝗘  🔴  " + str.tostring(syminfo.ticker) + "\n \n" + "Prix d'entrée  " + str.tostring(close) + "\n" + "SL  " + str.tostring(swingHigh) + " ⛔️ \n" + "TP  " + str.tostring(close-((swingHigh-close)*target_stop_ratio)) + " 🎯 \n \n" + "⚠️ Avertissement : Respectez votre money management, risquez seulement " + str.tostring(risk) + "% de votre capital sur ce trade."
+mess_buyP = "" + str.tostring(ID) + ",buy," + str.tostring(syminfo.ticker) + ",sl=" + str.tostring(swingLow) + ",tp=" + str.tostring(((close-swingLow)*target_stop_ratio)+close) + ",risk=" + str.tostring(risk) + ""
+mess_sellP = "" + str.tostring(ID) + ",sell," + str.tostring(syminfo.ticker) + ",sl=" + str.tostring(swingHigh) + ",tp=" + str.tostring(close-((swingHigh-close)*target_stop_ratio)) + ",risk=" + str.tostring(risk) + ""
+mess_buyAT = "📈  𝗔𝗖𝗛𝗔𝗧  🔵  " + str.tostring(syminfo.ticker) + "\n \n" + "Prix d'entrée  " + str.tostring(close) + "\n" + "SL  " + str.tostring(atrBuy) + " ⛔️ \n" + "TP  " + str.tostring(((close-atrBuy)*target_stop_ratio)+close) + " 🎯 \n \n" + "⚠️ Avertissement : Respectez votre money management, risquez seulement " + str.tostring(risk) + "% de votre capital sur ce trade."
+mess_sellAT = "📉  𝗩𝗘𝗡𝗧𝗘  🔴  " + str.tostring(syminfo.ticker) + "\n \n" + "Prix d'entrée  " + str.tostring(close) + "\n" + "SL  " + str.tostring(atrSell) + " ⛔️ \n" + "TP  " + str.tostring(close-((atrSell-close)*target_stop_ratio)) + " 🎯 \n \n" + "⚠️ Avertissement : Respectez votre money management, risquez seulement " + str.tostring(risk) + "% de votre capital sur ce trade."
+mess_buyAP = "" + str.tostring(ID) + ",buy," + str.tostring(syminfo.ticker) + ",sl=" + str.tostring(atrBuy) + ",tp=" + str.tostring(((close-atrBuy)*target_stop_ratio)+close) + ",risk=" + str.tostring(risk) + ""
+mess_sellAP = "" + str.tostring(ID) + ",sell," + str.tostring(syminfo.ticker) + ",sl=" + str.tostring(atrSell) + ",tp=" + str.tostring(close-((atrSell-close)*target_stop_ratio)) + ",risk=" + str.tostring(risk) + ""
+mess_buyAMT = "📈  𝗔𝗖𝗛𝗔𝗧  🔵  " + str.tostring(syminfo.ticker) + "\n \n" + "Prix d'entrée  " + str.tostring(close) + "\n" + "SL  " + str.tostring(atrBuy) + " ⛔️ \n" + "TP1  " + str.tostring(((close-atrBuy)*target1)+close) + " 🎯 \n" + "TP2  " + str.tostring(((close-atrBuy)*target2)+close) + "🎯 \n \n" + "⚠️ Avertissement : Respectez votre money management, risquez seulement " + str.tostring(risk) + "% de votre capital sur ce trade. BE si TP1 touché"
+mess_sellAMT = "📉  𝗩𝗘𝗡𝗧𝗘  🔴  " + str.tostring(syminfo.ticker) + "\n \n" + "Prix d'entrée  " + str.tostring(close) + "\n" + "SL  " + str.tostring(atrSell) + " ⛔️ \n" + "TP1  " + str.tostring(close-((atrSell-close)*target1)) + " 🎯 \n" + "TP2  " + str.tostring(close-((atrSell-close)*target2)) + "🎯 \n \n" + "⚠️ Avertissement : Respectez votre money management, risquez seulement " + str.tostring(risk) + "% de votre capital sur ce trade. BE si TP1 touché"
+mess_buyAMP1 = "" + str.tostring(ID) + ",buy," + str.tostring(syminfo.ticker) + ",sl=" + str.tostring(atrBuy) + ",tp=" + str.tostring(((close-atrBuy)*target1)+close) + ",risk=" + str.tostring(risk/2) + ""
+mess_buyAMP2 = "" + str.tostring(ID) + ",buy," + str.tostring(syminfo.ticker) + ",sl=" + str.tostring(atrBuy) + ",tp=" + str.tostring(((close-atrBuy)*target2)+close) + ",risk=" + str.tostring(risk/2) + ",betrigger=" + str.tostring(((((close-atrBuy)*target1)+close)-close)/getpips()) + ",beoffset=0"
+mess_sellAMP1 = "" + str.tostring(ID) + ",sell," + str.tostring(syminfo.ticker) + ",sl=" + str.tostring(atrSell) + ",tp=" + str.tostring(close-((atrSell-close)*target1)) + ",risk=" + str.tostring(risk/2) + ""
+mess_sellAMP2 = "" + str.tostring(ID) + ",sell," + str.tostring(syminfo.ticker) + ",sl=" + str.tostring(atrSell) + ",tp=" + str.tostring(close-((atrSell-close)*target2)) + ",risk=" + str.tostring(risk/2) + ",betrigger=" + str.tostring((close-(close-((atrSell-close)*target1)))/getpips()) + ",beoffset=0"
+mess_buyMT = "📈  𝗔𝗖𝗛𝗔𝗧  🔵  " + str.tostring(syminfo.ticker) + "\n \n" + "Prix d'entrée  " + str.tostring(close) + "\n" + "SL  " + str.tostring(swingLow) + " ⛔️ \n" + "TP1  " + str.tostring(((close-swingLow)*target1)+close) + " 🎯 \n" + "TP2  " + str.tostring(((close-swingLow)*target2)+close) + "🎯 \n \n" + "⚠️ Avertissement : Respectez votre money management, risquez seulement " + str.tostring(risk) + "% de votre capital sur ce trade. BE si TP1 touché"                                                                                 
+mess_sellMT = "📉  𝗩𝗘𝗡𝗧𝗘  🔴  " + str.tostring(syminfo.ticker) + "\n \n" + "Prix d'entrée  " + str.tostring(close) + "\n" + "SL  " + str.tostring(swingHigh) + " ⛔️ \n" + "TP1  " + str.tostring(close-((swingHigh-close)*target1)) + " 🎯 \n" + "TP2  " + str.tostring(close-((swingHigh-close)*target2)) + "🎯 \n \n" + "⚠️ Avertissement : Respectez votre money management, risquez seulement " + str.tostring(risk) + "% de votre capital sur ce trade. BE si TP1 touché"
+mess_buyMP1 = "" + str.tostring(ID) + ",buy," + str.tostring(syminfo.ticker) + ",sl=" + str.tostring(swingLow) + ",tp=" + str.tostring(((close-swingLow)*target1)+close) + ",risk=" + str.tostring(risk/2) + ""
+mess_buyMP2 = "" + str.tostring(ID) + ",buy," + str.tostring(syminfo.ticker) + ",sl=" + str.tostring(swingLow) + ",tp=" + str.tostring(((close-swingLow)*target2)+close) + ",risk=" + str.tostring(risk/2) + ",betrigger=" + str.tostring(((((close-swingLow)*target1)+close)-close)/getpips()) + ",beoffset=0"
+mess_sellMP1 = "" + str.tostring(ID) + ",sell," + str.tostring(syminfo.ticker) + ",sl=" + str.tostring(swingHigh) + ",tp=" + str.tostring(close-((swingHigh-close)*target1)) + ",risk=" + str.tostring(risk/2) + ""
+mess_sellMP2 = "" + str.tostring(ID) + ",sell," + str.tostring(syminfo.ticker) + ",sl=" + str.tostring(swingHigh) + ",tp=" + str.tostring(close-((swingHigh-close)*target2)) + ",risk=" + str.tostring(risk/2) + ",betrigger=" + str.tostring((close-(close-((swingHigh-close)*target1)))/getpips()) + ",beoffset=0"
+// Strategy
+    
+float risk_long = na
+float risk_short = na
+float stopLoss = na
+float takeProfit1 = na
+float takeProfit2 = na
+float entry_price = na
+bool longcondition = na
+bool shortcondition = na
+if trendA == "Superichi"
+    longcondition := buySignal and close > senkouA[26] and senkouA[26] > senkouB[26]
+    shortcondition := sellSignal and close < senkouA[26] and senkouA[26] < senkouB[26]
+if trendA == "EMA"   
+    longcondition := buySignal and close > ema
+    shortcondition := sellSignal and close < ema
+risk_long := risk_long[1]
+risk_short := risk_short[1]
+lotB = (strategy.equity*riskt-strategy.equity)/(close - swingLow)
+lotS = (strategy.equity*riskt-strategy.equity)/(swingHigh - close)
+    
+lotB1 = (strategy.equity*riskt-strategy.equity)/(close - atrBuy)
+lotS1 = (strategy.equity*riskt-strategy.equity)/(atrSell - close)
+if typeSL == "ATR"
+    if typeTP == "Multiple Target"
+    
+        if strategy.position_size == 0 and longcondition and inTradeWindow 
+            risk_long := (close - atrBuy) / close
+            minp = close - atrBuy
+            
+            if _x 
+                if tlpc == "Telegram" 
+                    strategy.entry("long", strategy.long, qty=lotB1, comment="Buy " + str.tostring(close) + "", alert_message = mess_buyAMT, when = minp > security)
+                
+                if tlpc == "PineConnector" 
+                    strategy.entry("long", strategy.long, qty=lotB1, comment="Buy " + str.tostring(close) + "", alert_message = mess_buyAMP1, when = minp > security)
+                    alert(mess_sellAMP2, alert.freq_once_per_bar_close)
+            else 
+                if tlpc == "Telegram" 
+                    strategy.entry("long", strategy.long, qty=lotB1, comment="Buy " + str.tostring(close) + "", alert_message = mess_buyAMT)
+                
+                if tlpc == "PineConnector" 
+                    strategy.entry("long", strategy.long, qty=lotB1, comment="Buy " + str.tostring(close) + "", alert_message = mess_buyAMP1)
+                    alert(mess_sellAMP2, alert.freq_once_per_bar_close)
+        
+        if strategy.position_size == 0 and shortcondition and inTradeWindow 
+            risk_short := (atrSell - close) / close 
+            minp = atrSell - close
+            
+            if _x 
+                if tlpc == "Telegram" 
+                    strategy.entry("short", strategy.short, qty=lotS1, comment="Sell " + str.tostring(close) + "", alert_message = mess_sellAMT, when = minp > security)
+                    
+                if tlpc == "PineConnector" 
+                    strategy.entry("short", strategy.short, qty=lotS1, comment="Sell " + str.tostring(close) + "", alert_message = mess_sellAMP1, when = minp > security)
+                    alert(mess_sellAMP2, alert.freq_once_per_bar_close)
+            else 
+                if tlpc == "Telegram" 
+                    strategy.entry("short", strategy.short, qty=lotS1, comment="Sell " + str.tostring(close) + "", alert_message = mess_sellAMT)
+                    
+                if tlpc == "PineConnector" 
+                    strategy.entry("short", strategy.short, qty=lotS1, comment="Sell " + str.tostring(close) + "", alert_message = mess_sellAMP1)
+                    alert(mess_sellAMP2, alert.freq_once_per_bar_close)
+    
+    if typeTP == "R:R"
+    
+        if strategy.position_size == 0 and longcondition and inTradeWindow 
+            risk_long := (close - atrBuy) / close
+            minp = close - atrBuy
+            
+            if _x 
+                if tlpc == "Telegram" 
+                    strategy.entry("long", strategy.long, qty=lotB1, comment="Buy " + str.tostring(close) + "", alert_message = mess_buyAT, when = minp > security)
+                
+                if tlpc == "PineConnector" 
+                    strategy.entry("long", strategy.long, qty=lotB1, comment="Buy " + str.tostring(close) + "", alert_message = mess_buyAP, when = minp > security)
+            else 
+                if tlpc == "Telegram" 
+                    strategy.entry("long", strategy.long, qty=lotB1, comment="Buy " + str.tostring(close) + "", alert_message = mess_buyAT)
+                
+                if tlpc == "PineConnector" 
+                    strategy.entry("long", strategy.long, qty=lotB1, comment="Buy " + str.tostring(close) + "", alert_message = mess_buyAP)
+        
+        if strategy.position_size == 0 and shortcondition and inTradeWindow 
+            risk_short := (atrSell - close) / close 
+            minp = atrSell - close
+         
+            if _x 
+                if tlpc == "Telegram" 
+                    strategy.entry("short", strategy.short, qty=lotS1, comment="Sell " + str.tostring(close) + "", alert_message = mess_sellAT, when = minp > security)
+                    
+                if tlpc == "PineConnector" 
+                    strategy.entry("short", strategy.short, qty=lotS1, comment="Sell " + str.tostring(close) + "", alert_message = mess_sellAP, when = minp > security)
+            else 
+                if tlpc == "Telegram" 
+                    strategy.entry("short", strategy.short, qty=lotS1, comment="Sell " + str.tostring(close) + "", alert_message = mess_sellAT)
+                    
+                if tlpc == "PineConnector" 
+                    strategy.entry("short", strategy.short, qty=lotS1, comment="Sell " + str.tostring(close) + "", alert_message = mess_sellAP)
+    
+if typeSL == "Swing"
+    if typeTP == "Multiple Target"
+    
+        if strategy.position_size == 0 and longcondition and inTradeWindow 
+            risk_long := (close - swingLow) / close
+            minp = close - swingLow
+            
+            if _x 
+                if tlpc == "Telegram" 
+                    strategy.entry("long", strategy.long, qty=lotB, comment="Buy " + str.tostring(close) + "", alert_message = mess_buyMT, when = minp > security)
+                    
+                if tlpc == "PineConnector" 
+                    strategy.entry("long", strategy.long, qty=lotB, comment="Buy " + str.tostring(close) + "", alert_message = mess_buyMP1, when = minp > security)
+                    alert(mess_buyMP2, alert.freq_once_per_bar_close)
+            else 
+                if tlpc == "Telegram" 
+                    strategy.entry("long", strategy.long, qty=lotB, comment="Buy " + str.tostring(close) + "", alert_message = mess_buyMT)
+                    
+                if tlpc == "PineConnector" 
+                    strategy.entry("long", strategy.long, qty=lotB, comment="Buy " + str.tostring(close) + "", alert_message = mess_buyMP1)
+                    alert(mess_buyMP2, alert.freq_once_per_bar_close)
+       
+        if strategy.position_size == 0 and shortcondition and inTradeWindow 
+            risk_short := (swingHigh - close) / close  
+            minp = swingHigh - close
+            
+            if _x 
+                if tlpc == "Telegram" 
+                    strategy.entry("short", strategy.short, qty=lotS, comment="Sell " + str.tostring(close) + "", alert_message = mess_sellMT, when = minp > security)
+                        
+                if tlpc == "PineConnector" 
+                    strategy.entry("short", strategy.short, qty=lotS, comment="Sell " + str.tostring(close) + "", alert_message = mess_sellMP1, when = minp > security)
+                    alert(mess_sellMP2, alert.freq_once_per_bar_close)
+            else 
+                if tlpc == "Telegram" 
+                    strategy.entry("short", strategy.short, qty=lotS, comment="Sell " + str.tostring(close) + "", alert_message = mess_sellMT)
+                        
+                if tlpc == "PineConnector" 
+                    strategy.entry("short", strategy.short, qty=lotS, comment="Sell " + str.tostring(close) + "", alert_message = mess_sellMP1)
+                    alert(mess_sellMP2, alert.freq_once_per_bar_close)
+                    
+    if typeTP == "R:R"
+        if strategy.position_size == 0 and longcondition and inTradeWindow 
+            risk_long := (close - swingLow) / close
+            minp = close - swingLow
+        
+            if _x 
+                if tlpc == "Telegram" 
+                    strategy.entry("long", strategy.long, qty=lotB, comment="Buy " + str.tostring(close) + "", alert_message = mess_buyT, when = minp > security)
+                    
+                if tlpc == "PineConnector" 
+                    strategy.entry("long", strategy.long, qty=lotB, comment="Buy " + str.tostring(close) + "", alert_message = mess_buyP, when = minp > security)
+            else 
+                if tlpc == "Telegram" 
+                    strategy.entry("long", strategy.long, qty=lotB, comment="Buy " + str.tostring(close) + "", alert_message = mess_buyT)
+                    
+                if tlpc == "PineConnector" 
+                    strategy.entry("long", strategy.long, qty=lotB, comment="Buy " + str.tostring(close) + "", alert_message = mess_buyP)
+       
+        if strategy.position_size == 0 and shortcondition and inTradeWindow 
+            risk_short := (swingHigh - close) / close  
+            minp = swingHigh - close
+  
+            if _x 
+                if tlpc == "Telegram" 
+                    strategy.entry("short", strategy.short, qty=lotS, comment="Sell " + str.tostring(close) + "", alert_message = mess_sellT, when = minp > security)
+                        
+                if tlpc == "PineConnector" 
+                    strategy.entry("short", strategy.short, qty=lotS, comment="Sell " + str.tostring(close) + "", alert_message = mess_sellP, when = minp > security)
+            else 
+                if tlpc == "Telegram" 
+                    strategy.entry("short", strategy.short, qty=lotS, comment="Sell " + str.tostring(close) + "", alert_message = mess_sellT)
+                        
+                if tlpc == "PineConnector" 
+                    strategy.entry("short", strategy.short, qty=lotS, comment="Sell " + str.tostring(close) + "", alert_message = mess_sellP)
+    
+if typeTP == "Multiple Target"
+    if tlpc == "Telegram" 
+    
+        if strategy.position_size > 0
+    
+            stopLoss := strategy.position_avg_price * (1 - risk_long)
+            takeProfit1 := strategy.position_avg_price * (1 + target1 * risk_long)
+            takeProfit2 := strategy.position_avg_price * (1 + target2 * risk_long)
+            entry_price := strategy.position_avg_price
+            mess_profit1 = "📈  𝗔𝗖𝗛𝗔𝗧  🔵  " + str.tostring(syminfo.ticker) + "\n" + "TP1 Touché ✅ +" + str.tostring(risk*target1) + "% " 
+            strategy.exit("Exit 1", "long", limit = takeProfit1, qty_percent=50, comment_profit = "TP1 ✅", alert_profit = mess_profit1)
+            
+            if ta.crossover(high, takeProfit1)
+                mess_profit2 = "📈  𝗔𝗖𝗛𝗔𝗧  🔵  " + str.tostring(syminfo.ticker) + "\n" + "TP2 Touché ✅ +" + str.tostring(risk*target2) + "% " 
+                mess_be = "📈  𝗔𝗖𝗛𝗔𝗧  🔵  " + str.tostring(syminfo.ticker) + "\n" + "BE ❎"
+                strategy.exit("Exit 2", "long", stop = entry_price, limit = takeProfit2, qty_percent = 100, comment_profit = "TP2 ✅", comment_loss = "BE ❎", alert_profit = mess_profit2)
+            else 
+                mess_loss = "📈  𝗔𝗖𝗛𝗔𝗧  🔵  " + str.tostring(syminfo.ticker) + "\n" + "SL Touché ❌ -" + str.tostring(risk) + "% " 
+                strategy.exit("Exit 1", "long", stop = stopLoss, qty_percent = 100, comment_loss = "SL ❌", alert_loss = mess_loss)
+        
+        if strategy.position_size < 0
+    
+            stopLoss := strategy.position_avg_price * (1 + risk_short)
+            takeProfit1 := strategy.position_avg_price * (1 - target1 * risk_short)
+            takeProfit2 := strategy.position_avg_price * (1 - target2 * risk_short)
+            entry_price := strategy.position_avg_price
+            mess_profit1 = "📉  𝗩𝗘𝗡𝗧𝗘  🔴  " + str.tostring(syminfo.ticker) + "\n" + "TP1 Touché ✅ +" + str.tostring(risk*target1) + "% " 
+            strategy.exit("Exit 1", "short", limit = takeProfit1, qty_percent = 50, comment_profit = "TP1 ✅", alert_profit = mess_profit1)
+            
+            if ta.crossunder(low, takeProfit1)
+                mess_profit2 = "📉  𝗩𝗘𝗡𝗧𝗘  🔴  " + str.tostring(syminfo.ticker) + "\n" + "TP2 Touché ✅ +" + str.tostring(risk*target2) + "% " 
+                mess_be = "📉  𝗩𝗘𝗡𝗧𝗘  🔴  " + str.tostring(syminfo.ticker) + "\n" + "BE ❎"
+                strategy.exit("Exit 2", "short", stop = entry_price, limit = takeProfit2, qty_percent = 100, comment_profit = "TP2 ✅", comment_loss = "BE ❎", alert_profit = mess_profit2)
+            else 
+                mess_loss = "📉  𝗩𝗘𝗡𝗧𝗘  🔴  " + str.tostring(syminfo.ticker) + "\n" + "SL Touché ❌ -" + str.tostring(risk) + "% " 
+                strategy.exit("Exit 1", "short", stop = stopLoss, qty_percent = 100, comment_loss = "SL ❌", alert_loss = mess_loss)
+                
+    if tlpc == "PineConnector" 
+        
+        if strategy.position_size > 0
+            stopLoss := strategy.position_avg_price * (1 - risk_long)
+            takeProfit1 := strategy.position_avg_price * (1 + target1 * risk_long)
+            takeProfit2 := strategy.position_avg_price * (1 + target2 * risk_long)
+            entry_price := strategy.position_avg_price
+            strategy.exit("Exit 1", "long", limit = takeProfit1, qty_percent=50, comment_profit = "TP1 ✅")
+            
+            if ta.crossover(high, takeProfit1)
+                strategy.exit("Exit 2", "long", stop = entry_price, limit = takeProfit2, qty_percent = 100, comment_profit = "TP2 ✅", comment_loss = "BE ❎")
+            else 
+                strategy.exit("Exit 1", "long", stop = stopLoss, qty_percent = 100, comment_loss = "SL ❌")
+    
+        if strategy.position_size < 0
+    
+            stopLoss := strategy.position_avg_price * (1 + risk_short)
+            takeProfit1 := strategy.position_avg_price * (1 - target1 * risk_short)
+            takeProfit2 := strategy.position_avg_price * (1 - target2 * risk_short)
+            entry_price := strategy.position_avg_price
+            strategy.exit("Exit 1", "short", limit = takeProfit1, qty_percent = 50, comment_profit = "TP1 ✅")
+            
+            if ta.crossunder(low, takeProfit1)
+                strategy.exit("Exit 2", "short", stop = entry_price, limit = takeProfit2, qty_percent = 100, comment_profit = "TP2 ✅", comment_loss = "BE ❎")
+            else 
+                strategy.exit("Exit 1", "short", stop = stopLoss, qty_percent = 100, comment_loss = "SL ❌")
+            
+if typeTP == "R:R"
+    if strategy.position_size > 0
+        stopLoss := strategy.position_avg_price * (1 - risk_long)
+        takeProfit1 := strategy.position_avg_price * (1 + target_stop_ratio * risk_long)
+        entry_price := strategy.position_avg_price
+        
+        if tlpc == "Telegram" 
+            mess_profit = "📈  𝗔𝗖𝗛𝗔𝗧  🔵  " + str.tostring(syminfo.ticker) + "\n" + "TP Touché ✅ +" + str.tostring(risk*target_stop_ratio) + "% " 
+            mess_loss = "📈  𝗔𝗖𝗛𝗔𝗧  🔵  " + str.tostring(syminfo.ticker) + "\n" + "SL Touché ❌ -" + str.tostring(risk) + "% " 
+            strategy.exit("Exit long", "long", stop = stopLoss, limit = takeProfit1, comment_profit="TP ✅", comment_loss="SL ❌", alert_profit = mess_profit, alert_loss = mess_loss)
+        
+        if tlpc == "PineConnector" 
+            strategy.exit("Exit long", "long", stop = stopLoss, limit = takeProfit1, comment_profit="TP ✅", comment_loss="SL ❌")
+            
+    if strategy.position_size < 0
+        stopLoss := strategy.position_avg_price * (1 + risk_short) 
+        takeProfit1 := strategy.position_avg_price * (1 - target_stop_ratio * risk_short) 
+        entry_price := strategy.position_avg_price
+        
+        if tlpc == "Telegram" 
+            mess_profit = "📉  𝗩𝗘𝗡𝗧𝗘  🔴  " + str.tostring(syminfo.ticker) + "\n" + "TP Touché ✅ +" + str.tostring(risk*target_stop_ratio) + "% " 
+            mess_loss = "📉  𝗩𝗘𝗡𝗧𝗘  🔴  " + str.tostring(syminfo.ticker) + "\n" + "SL Touché ❌ -" + str.tostring(risk) + "% " 
+            strategy.exit("Exit short", "short", stop = stopLoss, limit = takeProfit1, comment_profit="TP ✅" , comment_loss="SL ❌", alert_profit = mess_profit, alert_loss = mess_loss)           
+            
+        if tlpc == "PineConnector" 
+            strategy.exit("Exit short", "short", stop = stopLoss, limit = takeProfit1, comment_profit="TP ✅" , comment_loss="SL ❌")         
+        
+//plot
+trendema = trendA == "EMA" ? ema : na
+plot(trendema, title="EMA", color=color.white, linewidth=2)
+trendsuperA = trendA == "Superichi" ? senkouA : na 
+trendsuperB = trendA == "Superichi" ? senkouB : na 
+A = plot(trendsuperA,'Senkou Span A', na, offset=offset-1)
+B = plot(trendsuperB,'Senkou Span B', na, offset=offset-1)
+fill(A,B,senkouA > senkouB ? cloud_a : cloud_b)
+plotshape(showArrows and buySignal ? atrLow : na, title='Arrow Up', style=shape.triangleup, location=location.absolute, size=size.tiny, color=color.new(buyColor, 0))
+plotshape(showArrows and sellSignal ? atrHigh : na, title='Arrow Down', style=shape.triangledown, location=location.absolute, size=size.tiny, color=color.new(sellColor, 0))
+exswingH = typeSL == "Swing" ? swingHigh : na
+exswingL = typeSL == "Swing" ? swingLow : na
+plot(exswingH, color=color.new(color.white, 60), style=plot.style_cross, title='Swing High')
+plot(exswingL, color=color.new(color.white, 60), style=plot.style_cross, title='Swing Low')
+exatrS = typeSL == "ATR" ? atrSell : na
+exatrB = typeSL == "ATR" ? atrBuy : na
+plot(exatrS, color=color.new(color.white, 60), title='ATR')
+plot(exatrB, color=color.new(color.white, 60), title='ATR')
+p_ep = plot(entry_price, color=color.new(color.white, 0), linewidth=2, style=plot.style_linebr, title='entry price')
+p_sl = plot(stopLoss, color=color.new(color.red, 0), linewidth=2, style=plot.style_linebr, title='stopLoss')
+p_tp2 = plot(takeProfit2, color=color.new(color.green, 0), linewidth=2, style=plot.style_linebr, title='takeProfit1')
+p_tp1 = plot(takeProfit1, color=color.new(#52F071, 0), linewidth=1, style=plot.style_linebr, title='takeProfit2')
+fill(p_sl, p_ep, color.new(color.red, transp=85))
+fill(p_tp2, p_ep, color.new(color.green, transp=85))
+fill(p_tp1, p_ep, color.new(#52F071, transp=85))
+colorresult = strategy.netprofit > 0 ? color.green : color.red  
+profitprc = strategy.netprofit / strategy.initial_capital * 100
+periodzone = (backtestEndDate - backtestStartDate) / 3600 / 24 / 1000
+var tbl = table.new(position.top_right, 4, 2, border_width=3)
+table.cell(tbl, 0, 0, "Symbole",  bgcolor = #9B9B9B, width = 6, height = 6)
+table.cell(tbl, 1, 0, "Net Profit", bgcolor = #9B9B9B, width = 6, height = 6)
+table.cell(tbl, 2, 0, "Trades", bgcolor = #9B9B9B, width = 6, height = 6)
+table.cell(tbl, 3, 0, "Period",  bgcolor = #9B9B9B, width = 6, height = 6)
+    
+table.cell(tbl, 0, 1, str.tostring(syminfo.ticker),  bgcolor = #E8E8E8, width = 6, height = 6)
+table.cell(tbl, 1, 1, str.tostring(profitprc, format.mintick) + " %", bgcolor = colorresult,   width = 6, height = 6)
+table.cell(tbl, 2, 1, str.tostring(strategy.closedtrades), bgcolor = colorresult,   width = 6, height = 6)
+table.cell(tbl, 3, 1, str.tostring(periodzone) + " day", bgcolor = colorresult,   width = 6, height = 6)
+Expand (532 lines)

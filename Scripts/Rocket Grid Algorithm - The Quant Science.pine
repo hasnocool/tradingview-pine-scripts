@@ -1,0 +1,641 @@
+Script Name: Rocket Grid Algorithm - The Quant Science
+Author: thequantscience
+Description: The  Rocket Grid Algorithm  is a trading strategy that enables traders to engage in both long and short selling strategies. The script allows traders to backtest their strategies with a date range of their choice, in addition to selecting the desired strategy - either SMA Based Crossunder or SMA Based Crossover.
+
+The script is a combination of trend following and...
+PineScript code:
+
+Pine Script™ strategy
+Rocket Grid Algorithm - The Quant Science
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © thequantscience
+// ██████╗  ██████╗  ██████╗██╗  ██╗███████╗████████╗     ██████╗ ██████╗ ██╗██████╗      █████╗ ██╗      ██████╗  ██████╗ ██████╗ ██╗████████╗██╗  ██╗███╗   ███╗
+// ██╔══██╗██╔═══██╗██╔════╝██║ ██╔╝██╔════╝╚══██╔══╝    ██╔════╝ ██╔══██╗██║██╔══██╗    ██╔══██╗██║     ██╔════╝ ██╔═══██╗██╔══██╗██║╚══██╔══╝██║  ██║████╗ ████║
+// ██████╔╝██║   ██║██║     █████╔╝ █████╗     ██║       ██║  ███╗██████╔╝██║██║  ██║    ███████║██║     ██║  ███╗██║   ██║██████╔╝██║   ██║   ███████║██╔████╔██║
+// ██╔══██╗██║   ██║██║     ██╔═██╗ ██╔══╝     ██║       ██║   ██║██╔══██╗██║██║  ██║    ██╔══██║██║     ██║   ██║██║   ██║██╔══██╗██║   ██║   ██╔══██║██║╚██╔╝██║
+// ██║  ██║╚██████╔╝╚██████╗██║  ██╗███████╗   ██║       ╚██████╔╝██║  ██║██║██████╔╝    ██║  ██║███████╗╚██████╔╝╚██████╔╝██║  ██║██║   ██║   ██║  ██║██║ ╚═╝ ██║
+// ╚═╝  ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝   ╚═╝        ╚═════╝ ╚═╝  ╚═╝╚═╝╚═════╝     ╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝
+                                                                                                                                                                                                                                                                                                                                           
+//@version=5
+strategy(
+     title = 'Rocket Grid Algorithm - The Quant Science', 
+     overlay = true,
+     initial_capital = 10000, 
+     commission_type = strategy.commission.percent, 
+     commission_value = 0.07, 
+     pyramiding = 10,
+     default_qty_type = strategy.percent_of_equity,
+     process_orders_on_close=true
+     )
+// #########################################################################################################
+long  = input.bool(defval = false, title = "Long Strategy   |", inline = "Strategy", group = "Strategy Side")
+short = input.bool(defval = false, title = "Short Selling Strategy  ", inline = "Strategy", group = "Strategy Side")
+// #########################################################################################################
+startDate   = input.int(title="Start Date", defval=1, minval=1, maxval=31, group = "DATE PERIOD CONFIGURATION")
+startMonth  = input.int(title="Start Month", defval=1, minval=1, maxval=12, group = "DATE PERIOD CONFIGURATION")
+startYear   = input.int(title="Start Year", defval=2018, minval=1800, maxval=2100, group = "DATE PERIOD CONFIGURATION")
+endDate     = input.int(title="End Date", defval=31, minval=1, maxval=31, group = "DATE PERIOD CONFIGURATION")
+endMonth    = input.int(title="End Month", defval=12, minval=1, maxval=12, group = "DATE PERIOD CONFIGURATION")
+endYear     = input.int(title="End Year", defval=2023, minval=1800, maxval=2100, group = "DATE PERIOD CONFIGURATION")
+inDateRange = (time >= timestamp(syminfo.timezone, startYear, startMonth, startDate, 0, 0)) and (time < timestamp(syminfo.timezone, endYear, endMonth, endDate, 0, 0))
+// #########################################################################################################
+lenght_data = input.int(defval = 10, title = "Lenght: ", minval = 0, group = "Lenght Configuration")
+// #########################################################################################################
+sma     = ta.sma(close, lenght_data)
+// #########################################################################################################
+ten_grid        = input.bool(defval = false, title = "Enable Strategy", tooltip = "Create grid backtesting.", group = "STRATEGY CONFIGURATION")
+percentagegrid  = input.float(defval = 0.50, minval = 0, step = 0.10, title = "Percentage grid: ", group = "STRATEGY CONFIGURATION")
+stop_loss       = input.float(defval = 2.00, minval = 0, step = 0.10, title = "Lower destroyer: ", group = "STRATEGY CONFIGURATION")
+take_profit     = input.float(defval = 2.00, minval = 0, step = 0.10, title = "Upper destroyer: ", group = "STRATEGY CONFIGURATION")
+// #########################################################################################################
+var float high_start = 0 
+var float high_end   = 0
+trigger_event_sma1  = ta.crossunder(close, sma)  and barstate.isconfirmed
+trigger_event_sma2  = ta.crossover(close,  sma)  and barstate.isconfirmed
+TriggerGrid(type) =>
+    
+    switch type
+        'SMA Based Crossunder'   => trigger_event_sma1==true
+        'SMA Based Crossover'    => trigger_event_sma2==true
+type_input = input.string(
+     'SMA Based Crossunder',
+     title = "Select strategy: ",
+     options = [
+         'SMA Based Crossunder', 
+         'SMA Based Crossover'
+         ],
+     group = "Trigger definition"
+     )
+trigger_entry = TriggerGrid(type_input) and strategy.opentrades==0 
+p_trigger_event       = ta.valuewhen(trigger_entry, close, 0)
+total_percentage_side = 10 * percentagegrid
+if trigger_entry==true
+    high_start := p_trigger_event + ((p_trigger_event * total_percentage_side)/100)
+    high_end   := p_trigger_event - ((p_trigger_event * total_percentage_side)/100)
+grid_range = high_start - high_end
+var float grid_1  = 0
+var float grid_2  = 0
+var float grid_3  = 0
+var float grid_4  = 0
+var float grid_5  = 0
+var float grid_6  = 0
+var float grid_7  = 0
+var float grid_8  = 0
+var float grid_9  = 0
+var float grid_10 = 0
+var float grid_11  = 0
+var float grid_12  = 0
+var float grid_13  = 0
+var float grid_14  = 0
+var float grid_15  = 0
+var float grid_16  = 0
+var float grid_17  = 0
+var float grid_18  = 0
+var float grid_19  = 0
+var float grid_20  = 0
+var float factor = 0 
+var float p = 0
+if ten_grid == true and trigger_entry==true 
+    factor := grid_range / 20
+    p := p_trigger_event
+    // UP GRID
+    grid_1  := (p + (factor * 1)) 
+    grid_2  := (p + (factor * 2)) 
+    grid_3  := (p + (factor * 3)) 
+    grid_4  := (p + (factor * 4)) 
+    grid_5  := (p + (factor * 5))
+    grid_6  := (p + (factor * 6)) 
+    grid_7  := (p + (factor * 7)) 
+    grid_8  := (p + (factor * 8)) 
+    grid_9  := (p + (factor * 9))
+    grid_10 := (p + (factor * 10))
+    // DOWN GRID
+    grid_11  := (p - (factor * 1)) 
+    grid_12  := (p - (factor * 2)) 
+    grid_13  := (p - (factor * 3)) 
+    grid_14  := (p - (factor * 4)) 
+    grid_15  := (p - (factor * 5))
+    grid_16  := (p - (factor * 6)) 
+    grid_17  := (p - (factor * 7)) 
+    grid_18  := (p - (factor * 8)) 
+    grid_19  := (p - (factor * 9))
+    grid_20  := (p - (factor * 10))
+var float new_ten_grid_1  = 0 
+var float new_ten_grid_2  = 0 
+var float new_ten_grid_3  = 0 
+var float new_ten_grid_4  = 0 
+var float new_ten_grid_5  = 0 
+var float new_ten_grid_6  = 0 
+var float new_ten_grid_7  = 0 
+var float new_ten_grid_8  = 0 
+var float new_ten_grid_9  = 0 
+var float new_ten_grid_10 = 0
+var float new_ten_grid_11  = 0 
+var float new_ten_grid_12  = 0 
+var float new_ten_grid_13  = 0 
+var float new_ten_grid_14  = 0 
+var float new_ten_grid_15  = 0 
+var float new_ten_grid_16  = 0 
+var float new_ten_grid_17  = 0 
+var float new_ten_grid_18  = 0 
+var float new_ten_grid_19  = 0 
+var float new_ten_grid_20  = 0 
+destroyall = new_ten_grid_20 - (new_ten_grid_20 * stop_loss / 100)
+des_function = ta.crossunder(close, destroyall)
+takeprofitlevel = new_ten_grid_10 + (new_ten_grid_10 * take_profit / 100)
+des_function2 = ta.crossover(close, takeprofitlevel)
+var float lots_up1  = 0
+var float lots_up2  = 0
+var float lots_up3  = 0
+var float lots_up4  = 0
+var float lots_up5  = 0
+var float lots_up6  = 0
+var float lots_up7  = 0
+var float lots_up8  = 0
+var float lots_up9  = 0
+var float lots_up10 = 0
+var float lots_down1  = 0
+var float lots_down2  = 0
+var float lots_down3  = 0
+var float lots_down4  = 0
+var float lots_down5  = 0
+var float lots_down6  = 0
+var float lots_down7  = 0
+var float lots_down8  = 0
+var float lots_down9  = 0
+var float lots_down10 = 0
+if trigger_entry==true and ten_grid==true and inDateRange and strategy.opentrades==0
+    new_ten_grid_1   := grid_1
+    new_ten_grid_2   := grid_2
+    new_ten_grid_3   := grid_3
+    new_ten_grid_4   := grid_4
+    new_ten_grid_5   := grid_5
+    new_ten_grid_6   := grid_6
+    new_ten_grid_7   := grid_7
+    new_ten_grid_8   := grid_8
+    new_ten_grid_9   := grid_9
+    new_ten_grid_10  := grid_10
+    new_ten_grid_11  := grid_11
+    new_ten_grid_12  := grid_12
+    new_ten_grid_13  := grid_13
+    new_ten_grid_14  := grid_14
+    new_ten_grid_15  := grid_15
+    new_ten_grid_16  := grid_16
+    new_ten_grid_17  := grid_17
+    new_ten_grid_18  := grid_18
+    new_ten_grid_19  := grid_19
+    new_ten_grid_20  := grid_20
+    lots_up1  := (((strategy.equity / close) * 10) /100)
+    lots_up2  := (((strategy.equity / close) * 9)  /100)
+    lots_up3  := (((strategy.equity / close) * 8)  /100)
+    lots_up4  := (((strategy.equity / close) * 7)  /100)
+    lots_up5  := (((strategy.equity / close) * 6)  /100)
+    lots_up6  := (((strategy.equity / close) * 5)  /100)
+    lots_up7  := (((strategy.equity / close) * 4)  /100)
+    lots_up8  := (((strategy.equity / close) * 3)  /100)
+    lots_up9  := (((strategy.equity / close) * 2)  /100)
+    lots_up10 := (((strategy.equity / close) * 1)  /100)
+    if long == true 
+        if new_ten_grid_1
+            strategy.entry(id = "O #1",  direction = strategy.long, qty = lots_up1,  stop = new_ten_grid_1)
+        if new_ten_grid_2
+            strategy.entry(id = "O #2",  direction = strategy.long, qty = lots_up2,  stop = new_ten_grid_2)
+        if new_ten_grid_3
+            strategy.entry(id = "O #3",  direction = strategy.long, qty = lots_up3,  stop = new_ten_grid_3)
+        if new_ten_grid_4
+            strategy.entry(id = "O #4",  direction = strategy.long, qty = lots_up4,  stop = new_ten_grid_4)
+        if new_ten_grid_5
+            strategy.entry(id = "O #5",  direction = strategy.long, qty = lots_up5,  stop = new_ten_grid_5)
+        if new_ten_grid_6
+            strategy.entry(id = "O #6",  direction = strategy.long, qty = lots_up6,  stop = new_ten_grid_6)
+        if new_ten_grid_7
+            strategy.entry(id = "O #7",  direction = strategy.long, qty = lots_up7,  stop = new_ten_grid_7)
+        if new_ten_grid_8
+            strategy.entry(id = "O #8",  direction = strategy.long, qty = lots_up8,  stop = new_ten_grid_8)
+        if new_ten_grid_9
+            strategy.entry(id = "O #9",  direction = strategy.long, qty = lots_up9,  stop = new_ten_grid_9)
+        if new_ten_grid_10
+            strategy.entry(id = "O #10", direction = strategy.long, qty = lots_up10, stop = new_ten_grid_10)
+    if short == true 
+        if new_ten_grid_1 
+            strategy.entry(id = "O #1",  direction = strategy.short, qty = lots_up1,  limit = new_ten_grid_1)
+        if new_ten_grid_2
+            strategy.entry(id = "O #2",  direction = strategy.short, qty = lots_up2,  limit = new_ten_grid_2)
+        if new_ten_grid_3 
+            strategy.entry(id = "O #3",  direction = strategy.short, qty = lots_up3,  limit = new_ten_grid_3)
+        if new_ten_grid_4 
+            strategy.entry(id = "O #4",  direction = strategy.short, qty = lots_up4,  limit = new_ten_grid_4)
+        if new_ten_grid_5 
+            strategy.entry(id = "O #5",  direction = strategy.short, qty = lots_up5,  limit = new_ten_grid_5)
+        if new_ten_grid_6 
+            strategy.entry(id = "O #6",  direction = strategy.short, qty = lots_up6,  limit = new_ten_grid_6)
+        if new_ten_grid_7 
+            strategy.entry(id = "O #7",  direction = strategy.short, qty = lots_up7,  limit = new_ten_grid_7)
+        if new_ten_grid_8 
+            strategy.entry(id = "O #8",  direction = strategy.short, qty = lots_up8,  limit = new_ten_grid_8)
+        if new_ten_grid_9 
+            strategy.entry(id = "O #9",  direction = strategy.short, qty = lots_up9,  limit = new_ten_grid_9)
+        if new_ten_grid_10 
+            strategy.entry(id = "O #10", direction = strategy.short, qty = lots_up10, limit = new_ten_grid_10)
+if des_function or des_function2 or close <= destroyall or close >= takeprofitlevel
+    strategy.close_all(">>>> Destroyed Grid <<<<")
+// #########################################################################################################
+fill(plot(grid_1, color = color.new(color.rgb(0, 255, 132), 95)), 
+     plot(grid_2, color = color.new(color.rgb(0, 255, 132), 95)),  
+         color = color.new(#00ff08, 80))
+fill(plot(grid_2, color = color.new(color.rgb(0, 255, 132), 95)),  
+     plot(grid_3, color = color.new(color.rgb(0, 255, 132), 95)),  
+         color = color.new(#00ff08, 85))
+fill(plot(grid_3, color = color.new(color.rgb(0, 255, 132), 95)),  
+     plot(grid_4, color = color.new(color.rgb(0, 255, 132), 95)),  
+         color = color.new(#00ff08, 85))
+fill(plot(grid_4, color = color.new(color.rgb(0, 255, 132), 95)), 
+     plot(grid_5, color = color.new(color.rgb(0, 255, 132), 95)),  
+         color = color.new(#00ff08, 90))
+fill(plot(grid_1, color = color.new(color.rgb(0, 255, 132), 95)),  
+     plot(grid_6, color = color.new(color.rgb(0, 255, 132), 95)), 
+         color = color.new(#00ff08, 80))
+fill(plot(grid_6, color = color.new(color.rgb(0, 255, 132), 95)),  
+     plot(grid_7, color = color.new(color.rgb(0, 255, 132), 95)),  
+         color = color.new(#00ff08, 80))
+fill(plot(grid_7, color = color.new(color.rgb(0, 255, 132), 95)), 
+     plot(grid_8, color = color.new(color.rgb(0, 255, 132), 95)),  
+         color = color.new(#00ff08, 85))
+fill(plot(grid_8, color = color.new(color.rgb(0, 255, 132), 95)),  
+     plot(grid_9, color = color.new(color.rgb(0, 255, 132), 95)),  
+         color = color.new(#00ff08, 85))
+fill(plot(grid_9, color = color.new(color.rgb(0, 255, 132), 95)), 
+     plot(grid_10, color = color.new(color.rgb(0, 255, 132), 95)), 
+         color = color.new(#00ff08, 90))
+fill(plot(grid_11, color = color.new(#ff3c00, 95)), 
+     plot(grid_12, color = color.new(#fd3d36, 95)),  
+         color = color.new(#ff0000, 80))
+fill(plot(grid_12, color = color.new(#ff0000, 95)),  
+     plot(grid_13, color = color.new(#ff0000, 95)),  
+         color = color.new(#ff0000, 85))
+fill(plot(grid_13, color = color.new(#ff0000, 95)),  
+     plot(grid_14, color = color.new(#ff0000, 95)),  
+         color = color.new(#ff0000, 85))
+fill(plot(grid_14, color = color.new(#ff0000, 95)), 
+     plot(grid_15, color = color.new(#ff0000, 95)),  
+         color = color.new(#ff0000, 90))
+fill(plot(grid_11, color = color.new(#ff0000, 95)),  
+     plot(grid_16, color = color.new(#ff0800, 95)), 
+         color = color.new(#ff4800, 80))
+fill(plot(grid_16, color = color.new(#ff1100, 95)),  
+     plot(grid_17, color = color.new(#ff2600, 95)),  
+         color = color.new(#ff3300, 80))
+fill(plot(grid_17, color = color.new(#ff0000, 95)), 
+     plot(grid_18, color = color.new(#ff0000, 95)),  
+         color = color.new(#ff3c00, 85))
+fill(plot(grid_18, color = color.new(#ff3300, 95)),  
+     plot(grid_19, color = color.new(#ff3c00, 95)),  
+         color = color.new(#ff3300, 85))
+fill(plot(grid_19, color = color.new(#ff3c00, 95)), 
+     plot(grid_20, color = color.new(#ff0800, 95)), 
+         color = color.new(#ff1e00, 90))
+// #########################################################################################################
+if strategy.equity <= 0 
+    runtime.error(" BANKRUPTCY: BACKTEST RETURN LOSS > EQUITY !!! ")
+// ###########################################################################################################
+Expand (339 lines)

@@ -1,0 +1,133 @@
+Script Name: P-Signal Strategy (BTCUSD Multi Frame)
+Author: Kharevsky
+Description: This is an example of constructing P-Signal strategy on a set of probability spaces. In this case, the daily weekly and monthly time frames are used. Please note that the parameters for each of the spaces (the number of bars in the gear) are different.
+PineScript code:
+
+Pine Script™ strategy
+P-Signal Strategy (BTCUSD Multi Frame)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+// **********************************************************************************************************
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// P-Signal Strategy © Kharevsky
+// @version=4
+// **********************************************************************************************************
+strategy("P-Signal Strategy:", precision = 3, pyramiding = 3)
+// Parameters and const of P-Signal.
+nPoints_D = input(title = "Number of D Bars", type = input.integer, defval = 9, minval = 4, maxval = 100, group = "Parameters of observation.")
+nPoints_W = input(title = "Number of W Bars", type = input.integer, defval = 4, minval = 4, maxval = 100, group = "Parameters of observation.")
+nPoints_M = input(title = "Number of M Bars", type = input.integer, defval = 6, minval = 4, maxval = 100, group = "Parameters of observation.")
+int nIntr_D = nPoints_D - 1
+int nIntr_W = nPoints_W - 1
+int nIntr_M = nPoints_M - 1
+varip bool bDValveOpen = true
+varip bool bWValveOpen = true
+varip bool bMValveOpen = true
+// Horner's method for Gauss & P-Signal functions.
+fErf(x) =>
+    nT = 1.0/(1.0 + 0.5*abs(x))
+    nAns = 1.0 - nT*exp(-x*x - 1.26551223 + 
+     nT*( 1.00002368 + nT*( 0.37409196 + nT*( 0.09678418 + 
+     nT*(-0.18628806 + nT*( 0.27886807 + nT*(-1.13520398 + 
+     nT*( 1.48851587 + nT*(-0.82215223 + nT*( 0.17087277 ))))))))))
+    x >= 0 ? nAns : -nAns
+fPSignal(ser, int) => 
+    nStDev = stdev(ser, int)
+    nSma = sma(ser, int)
+    fErf(nStDev > 0 ? nSma/nStDev/sqrt(2) : 1.0)
+// Strategy.
+float nPSignal_D = sma(fPSignal(change(ohlc4), nIntr_D), nIntr_D)
+float ndPSignal_D = sign(nPSignal_D[0] - nPSignal_D[1])
+float nPSignal_W = sma(security(syminfo.tickerid, "W",fPSignal(change(ohlc4), nIntr_W)), nIntr_W)
+float ndPSignal_W = sign(nPSignal_W[0] - nPSignal_W[1])
+float nPSignal_M = sma(security(syminfo.tickerid, "M",fPSignal(change(ohlc4), nIntr_M)), nIntr_M)
+float ndPSignal_M = sign(nPSignal_M[0] - nPSignal_M[1])
+// ... Day
+if(nPSignal_D < 0 and ndPSignal_D > 0 and bDValveOpen)
+    strategy.entry("long_D", strategy.long, 1) 
+    bDValveOpen := false
+if(nPSignal_D > 0 and ndPSignal_D < 0)
+    strategy.close("long_D")
+    bDValveOpen := true
+// ... Week
+if(nPSignal_W < 0 and ndPSignal_W > 0 and bWValveOpen)
+    strategy.entry("long_W", strategy.long, 1) 
+    bWValveOpen := false
+if(nPSignal_W > 0 and ndPSignal_W < 0)
+    strategy.close("long_W")
+    bWValveOpen := true
+// ... Month
+if(nPSignal_M < 0 and ndPSignal_M > 0 and bMValveOpen)
+    strategy.entry("long_M", strategy.long, 1) 
+    bMValveOpen := false
+if(nPSignal_M > 0 and ndPSignal_M < 0)
+    strategy.close("long_M")
+    bMValveOpen := true
+// Plotting. 
+hline(+1.0, color = color.new(color.orange,70), linestyle = hline.style_dotted)
+hline(-1.0, color = color.new(color.orange,70), linestyle = hline.style_dotted)
+plot(nPSignal_D, color = color.blue, style = plot.style_line)
+plot(strategy.position_size, color = color.white, style = plot.style_cross)
+// The end.
+Expand (62 lines)

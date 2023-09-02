@@ -1,0 +1,243 @@
+Script Name: Multi-X by HamidBox
+Author: HamidBox
+Description: Hello to All, introducing Multi Types Crossover strategy,
+simply the best way of trading with Crossover and Crossunder Strategy, How it Works???
+I added 5 types of Moving Averages,
+
+1: Simple Moving Average ( SMA )
+2: Exponential Moving Average ( EMA )
+3: Weighted Moving Average ( WMA )
+4: Volume Weighted Moving Average ( VWMA )
+5: Relative Moving Average...
+PineScript code:
+
+Pine Script™ strategy
+Multi-X by HamidBox
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HAMIDBOX
+//@version=4
+strategy("Multi-X for BOT", overlay=true, default_qty_type=strategy.cash, default_qty_value=100, initial_capital=100, currency='USD', commission_value=0.1)
+maType(source , length, type)   =>
+    type    == "SMA"            ? sma(source , length)  :
+     type   == "EMA"            ? ema(source , length)  :
+     type   == "RMA"            ? rma(source, length)   : 
+     type   == "WMA"            ? wma(source, length)   :
+     type   == "VWMA"           ? vwma(source, length)  :
+     na
+     
+////////////////////////////////////////////////////////////////////////////////
+colorup             = #11ff00
+colordn             = #e91e63
+/////////////////////////// MOVING AVERAGE №1 INPUTS ///////////////////////////
+ma1_show            = input(title="MA №1", defval=true, type=input.bool, inline="ma1")
+ma1type             = input(title="", defval="EMA", options=["SMA","EMA","RMA","WMA","VWMA"], inline="ma1")
+ma1src              = input(title="", defval=close, type=input.source, inline="ma1")
+ma1Len              = input(title="", defval=9, type=input.integer, inline="ma1")
+ma1col              = input(colorup, "MA №1 Line ", type=input.color, inline="maz1")
+ma1_zon             = input(color.new(color.lime, 70), "   Zone    ", type=input.color, inline="maz1")
+ma1_width           = input(title="   Width   ", defval=2, type=input.integer, inline="maz1")
+ma1                 = maType(ma1src, ma1Len, ma1type)
+ma1p = plot(ma1_show ? ma1 : na, linewidth=ma1_width, color=color.new(ma1col , 0))
+/////////////////////////// MOVING AVERAGE №2 INPUTS ///////////////////////////
+ma2_show            = input(title="MA №2", defval=true, type=input.bool, inline="ma2")
+ma2type             = input(title="", defval="SMA", options=["SMA","EMA","RMA","WMA","VWMA"], inline="ma2")
+ma2src              = input(title="", defval=close, type=input.source, inline="ma2")
+ma2Len              = input(title="", defval=21, type=input.integer, inline="ma2")
+ma2col              = input(colordn, "MA №2 Line ", type=input.color, inline="maz2")
+ma2_zon             = input(color.new(#e91e63, 70), "   Zone    ", type=input.color, inline="maz2")
+ma2_width           = input(title="   Width   ", defval=2, type=input.integer, inline="maz2")
+ma2                 = maType(ma2src, ma2Len, ma2type)
+ma2p = plot(ma2_show ? ma2 : na, linewidth=ma2_width, color=color.new(ma2col , 0))
+/////////////////////////// MOVING AVERAGE №3 INPUTS ///////////////////////////
+read                = input(title="For Safe Side = Read This >>>", defval=true, group="Moving average zone section", tooltip="If you want to play on the safe side, Check ON Moving Average № 3, MA №3 shows the major trend, its work as a Trend-Zone,\nRule: Do not open trades if the market is below MA № 3, WHY? because Trend is Bearish and it will make more Down, NOTE:: It is possible after adding MA № 3, it will give you a small profit. But the great advantage of that, it will reduce your loss and it will also increase your Profit Factor.\nAnd if you not have any issue with Risk then you can Leave Moving Average No 3")
+ma3_show            = input(title="MA №3", defval=false, type=input.bool, inline="ma3" , group="Moving average zone section")
+ma3type             = input(title="", defval="SMA", options=["SMA","EMA","RMA","WMA","VWMA"], inline="ma3" , group="Moving average zone section")
+// ma3srcH          = input(title="", defval=high, type=input.source, inline="ma3")
+// ma3srcL          = input(title="", defval=low, type=input.source, inline="ma3")
+ma3Len              = input(title="", defval=50, type=input.integer, inline="ma3" , group="Moving average zone section")
+ma3col              = input(colordn, "", type=input.color, inline="ma3" , group="Moving average zone section")
+zone_col_on         = input(title="", defval=false, inline="ma3" , group="Moving average zone section")
+ma3col_up           = input(color.new(color.lime, 70), "", type=input.color, inline="ma3" , group="Moving average zone section")
+ma3col_dn           = input(color.new(#e91e63, 70), "", type=input.color, inline="ma3" , group="Moving average zone section")
+ma3H                = maType(high, ma3Len, ma3type)
+ma3L                = maType(low, ma3Len, ma3type)
+ma3p                = plot(ma3_show ? ma3H : na, linewidth=1, color=color.new(ma3col , 50))
+ma3p2               = plot(ma3_show ? ma3L : na, linewidth=1, color=color.new(ma3col , 50))
+Bigcross_zone_color = if zone_col_on and close > ma3H
+    ma3col_up
+else
+    if zone_col_on and close < ma3L
+        ma3col_dn
+fill(ma3p , ma3p2, color=Bigcross_zone_color, title="Cross Background Color")
+BigCrossSignal      = close > ma3H
+ZoneCrossover       = crossover(close , ma3H)
+ZoneCrossunder      = crossunder(close , ma3L)
+//////////////////////////// PLOTING AND COOLORING /////////////////////////////
+Cross               = input(true, "Cross Sign ON/OFF   | ", inline="col", group="Moving average zone section") 
+maCrossOver         = crossover(ma1 , ma2)
+maCrossUnder        = crossunder(ma1 , ma2)
+col_buy             = input(title="UP", type=input.color, defval=color.white, inline="col", group="Moving average zone section")
+col_sell            = input(title="DN", type=input.color, defval=#e91e63, inline="col", group="Moving average zone section")
+cross_zone_color    = ma1 > ma2 ? ma1_zon : ma2_zon
+plotshape(Cross ? maCrossOver : na, title="CrossUP Sign", style=shape.triangleup, location=location.belowbar, color=col_buy, size=size.tiny)
+plotshape(Cross ? maCrossUnder : na, title="CrossDN Sign", style=shape.xcross, location=location.abovebar, color=col_sell, size=size.tiny)
+fill(ma1p , ma2p, color=cross_zone_color, title="Cross Background Color")
+//////////////////////////////////////////////////////////////////
+backtest_on         = input(false, "BackTesting ON/OFF", group="Backtesting Section 🕖🕔🕟🕤")
+///////////////////////////// BACK TESTING INPUTS //////////////////////////////
+startTime           = input(title="Start Time", type=input.time, defval= timestamp("01 Jan 2021"), group="Backtesting Section 🕖🕔🕟🕤")
+endTime             = input(title="End Time", type=input.time, defval= timestamp("01 Jan 2100"), group="Backtesting Section 🕖🕔🕟🕤")
+inDateRange         = (time >= startTime) and (time < endTime)
+///////////////////////////////// (CONDITIONS) /////////////////////////////////
+bot_id = input(title="BOT ID       ", defval='', inline="bot", group="BOT SECTION")
+email_token = input(title="  Token", defval='', inline="bot", group="BOT SECTION")
+enter_msg = '{ "message_type": "bot", "bot_id":'+ bot_id + ', "email_token": "'+ email_token + '", "delay_seconds": 0 }'
+exit_msg = '{ "message_type": "bot", "bot_id":'+ bot_id + ', "email_token": "'+ email_token + '", "delay_seconds": 0 , "action": "close_at_market_price_all"}'
+// COPY PASTE THIS MSG TO TRADINGVIEW
+// {{strategy.order.alert_message}}
+///////////////////////////////// (CONDITIONS) /////////////////////////////////
+if maCrossOver and inDateRange and backtest_on and ma1_show and ma2_show
+    strategy.entry("BUY", strategy.long, alert_message=enter_msg)
+if maCrossUnder and inDateRange and backtest_on and ma1_show and ma2_show
+    strategy.close("BUY", comment="Exit", alert_message=exit_msg)
+if ZoneCrossover and backtest_on and inDateRange and ma3_show and not ma1_show and not ma2_show
+    strategy.entry("BUYzone", strategy.long, alert_message=enter_msg)
+if ZoneCrossunder and backtest_on and inDateRange and ma3_show
+    strategy.close("BUYzone", comment="Exit", alert_message=exit_msg)
+if (not inDateRange)
+    strategy.close_all()
+Expand (133 lines)

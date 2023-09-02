@@ -1,0 +1,102 @@
+Script Name: CCU MFI + RSI + STOCH RSI
+Author: Bangsoul
+Description: This demonstrates the accuracy of entry signal of the MFI + RSI + STOCH RSI strategy
+PineScript code:
+
+Pine Script™ strategy
+CCU MFI + RSI + STOCH RSI
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// Crypto Crew University strategy: 
+// Indicators: MFI, RSI, STOCH RSI
+// Entry criteria: long when the three are oversold, short otherwise.
+// Exit criteria: Take profit at Fib levels (not demonstrated here)
+// © BTA crypto
+//@version=4
+strategy("Crypto Crew University")
+//inputs
+source = hlc3
+rsi_length = input(14, minval=1)
+mfi_lenght =  input(14, minval=1)
+smoothK = input(3, minval=1)
+smoothD = input(3, minval=1)
+lengthRSI = input(14, minval=1)
+lengthStoch = input(14, minval=1)
+okay = "Okay"
+good = "Good"
+veryGood = "Very good"
+tradingOpportunity = input(title="Opportunity", defval=veryGood, options=[okay, good, veryGood])
+longThreshhold = tradingOpportunity==okay? 40 : tradingOpportunity==good ? 30 : tradingOpportunity==veryGood? 20 : 0
+shortThreshhold = tradingOpportunity==okay? 60 : tradingOpportunity==good ? 70 : tradingOpportunity==veryGood? 80 : 0
+//lines
+mfi = mfi(source, mfi_lenght)
+rsi = rsi(source, rsi_length)
+rsi1 = rsi(close, lengthRSI)
+k = sma(stoch(rsi1, rsi1, rsi1, lengthStoch), smoothK)
+d = sma(k, smoothD)
+longSignal = mfi<longThreshhold and rsi<longThreshhold and k<longThreshhold and d<longThreshhold? 1:-1
+shortSignal = mfi>shortThreshhold and rsi>shortThreshhold and k>shortThreshhold and d>shortThreshhold? 1:-1
+if longSignal > 0
+    strategy.entry("Long", strategy.long)
+    strategy.exit(id="Long Stop Loss", stop=strategy.position_avg_price*0.8) //20% stop loss 
+    
+if shortSignal > 0
+    strategy.entry("Short", strategy.short)
+    strategy.exit(id="Short Stop Loss", stop=strategy.position_avg_price*1.2) //20% stop loss
+plot(k, color=color.blue)
+plot(d, color=color.red)
+plot(rsi, color=color.yellow)
+plot(mfi, color=color.blue)
+hline(longThreshhold, color=color.gray, linestyle=hline.style_dashed)
+hline(shortThreshhold, color=color.gray, linestyle=hline.style_dashed)
+Expand (50 lines)

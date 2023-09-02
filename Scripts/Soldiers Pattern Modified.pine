@@ -1,0 +1,82 @@
+Script Name: Soldiers Pattern Modified
+Author: SushilKothawade
+Description: This can be perceived as modified 3 soldiers, relaxed NR4 or even extended harami candlestick pattern.
+Works for any instrument and any timeframe.
+The idea is to find out any number of candles having their individual highs and lows, all within high and low range of base candle.
+The count of soldiers and if they must be of same color, both can be...
+PineScript code:
+
+Pine Script™ strategy
+Soldiers Pattern Modified
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+// © SushilKothawade
+//@version=4
+strategy("Soldiers Pattern Modified", overlay=true)
+soldierCount = input(3, title="Soldiers' Count")
+allSameColor = input (true, title="Mandatorily Same Color Soldiers?")
+openCloseOfBase = input (false, title="Mandatorily Soldiers' Body Inside Base Body?")
+allSoldiersRed = allSameColor
+for index = 0 to soldierCount-1
+    allSoldiersRed := allSoldiersRed and open[index] > close[index]
+allSoldiersGreen = allSameColor
+for index = 0 to soldierCount-1
+    allSoldiersGreen := allSoldiersGreen and close[index] > open[index]
+    
+highestHigh = highest(high, soldierCount)
+lowestLow = lowest(low, soldierCount)
+withinHighLow = highestHigh < high[soldierCount] and lowestLow > low[soldierCount]
+isBaseGreen = open[soldierCount] < close[soldierCount]
+highestOpen = highest(open, soldierCount)
+lowestClose = lowest(close, soldierCount)
+isBaseRed = close[soldierCount] < open[soldierCount]
+lowestOpen = lowest(open, soldierCount)
+highestClose = highest(close, soldierCount)
+withinGreenBase = openCloseOfBase and isBaseGreen and (highestOpen < close[soldierCount] and lowestClose > open[soldierCount] and lowestOpen > open[soldierCount] and highestClose < close[soldierCount])
+withinRedBase = openCloseOfBase and isBaseRed and (highestOpen < open[soldierCount] and lowestClose > close[soldierCount] and lowestOpen > close[soldierCount] and highestClose < open[soldierCount])
+withinOpenClose = withinGreenBase or withinRedBase
+signal1 = isBaseGreen and openCloseOfBase == withinOpenClose and withinHighLow and (allSameColor == allSoldiersRed)
+signal2 = isBaseRed and openCloseOfBase == withinOpenClose  and withinHighLow and (allSameColor == allSoldiersGreen)
+plotshape(signal1 or signal2, title="Buy Signal", text="Buy @ High of Base", textcolor=color.white, style=shape.labelup, size=size.small, location=location.belowbar, color=color.blue, transp=0)
+plotshape(signal1 or signal2, title="Sell Signal", text="Sell @ Low of Base", textcolor=color.white, style=shape.labeldown, size=size.small, location=location.abovebar, color=color.red, transp=0)
+Expand (41 lines)

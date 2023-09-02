@@ -1,0 +1,123 @@
+Script Name: ATR Parabolic SAR Strategy [QuantNomad]
+Author: QuantNomad
+Description: I created a version of Parabolic SAR when I accelerate it not based on the difference from the extreme point but based on current ATR. So the idea is that for a more volatile market it should move faster.
+Performance is calculated based on 25% equity invested and 0.1% commission. 
+
+What do you think about it? Does it make sense to do something like that?
+Do you...
+PineScript code:
+
+Pine Script™ strategy
+ATR Parabolic SAR Strategy [QuantNomad]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+//@version=4
+strategy(title="ATR Parabolic SAR Strategy [QuantNomad]", shorttitle="ATR PSAR Strategy [QN]", overlay=true, default_qty_type = strategy.percent_of_equity,  default_qty_value = 100)
+atr_length = input(14)
+start      = input(0.02)
+increment  = input(0.02)
+maximum    = input(0.2)
+entry_bars = input(1, title = "Entry on Nth trend bar") 
+atr = atr(atr_length)
+atr := na(atr) ? tr : atr
+psar        = 0.0 // PSAR
+af          = 0.0 // Acceleration Factor
+trend_dir   = 0   // Current direction of PSAR
+ep          = 0.0 // Extreme point
+trend_bars  = 0
+sar_long_to_short = trend_dir[1] == 1  and close <= psar[1] // PSAR switches from long to short
+sar_short_to_long = trend_dir[1] == -1 and close >= psar[1] // PSAR switches from short to long
+trend_change = barstate.isfirst[1] or sar_long_to_short or sar_short_to_long
+// Calculate trend direction
+trend_dir    :=  barstate.isfirst[1] and close[1]  > open[1] ?  1 : 
+                 barstate.isfirst[1] and close[1] <= open[1] ? -1 : 
+                 sar_long_to_short ? -1 : 
+                 sar_short_to_long ?  1 : nz(trend_dir[1])
+trend_bars := sar_long_to_short ? -1 : 
+              sar_short_to_long ?  1 : 
+              trend_dir ==  1   ? nz(trend_bars[1]) + 1 : 
+              trend_dir == -1   ? nz(trend_bars[1]) - 1 : 
+              nz(trend_bars[1])
+// Calculate  Acceleration Factor
+af := trend_change ? start : 
+   (trend_dir == 1 and high > ep[1]) or  
+   (trend_dir == -1 and low < ep[1]) ? 
+   min(maximum, af[1] + increment) : 
+   af[1]
+// Calculate extreme point
+ep := trend_change and trend_dir == 1 ? high :  
+   trend_change and trend_dir == -1 ? low : 
+   trend_dir == 1 ? max(ep[1], high) : 
+   min(ep[1], low)
+// Calculate PSAR
+psar :=  barstate.isfirst[1] and close[1]  > open[1] ? low[1]  : 
+         barstate.isfirst[1] and close[1] <= open[1] ? high[1] : 
+         trend_change ? ep[1] :    
+         trend_dir == 1 ? psar[1] + af * atr : 
+                          psar[1] - af * atr
+plot(psar, style=plot.style_cross, color=trend_dir == 1 ? color.green : color.red,  linewidth = 2)
+// Strategy 
+strategy.entry("Long",  true,  when = trend_bars ==  entry_bars)
+strategy.entry("Short", false, when = trend_bars == -entry_bars)
+Expand (62 lines)

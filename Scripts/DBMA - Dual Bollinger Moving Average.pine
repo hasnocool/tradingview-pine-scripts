@@ -1,0 +1,182 @@
+Script Name: DBMA - Dual Bollinger Moving Average
+Author: finallynitin
+Description: The  Dual Bollinger moving average (DBMA)  consists of a moving average (MA) & two Bollinger Bands (BB), with the color of the bands representing the level of price compression. In its default settings, it is a 20-day simple moving average with 2 upper Bollinger Bands, having the standard deviation (SD) settings of 0.5 & 1, respectively. 
+
+ How close the price is...
+PineScript code:
+
+Pine Script™ indicator
+DBMA - Dual Bollinger Moving Average
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © finallynitin
+//@version=5
+indicator(title='Dual Bollinger Moving Average', shorttitle='DBMA', overlay=true)
+string GRP1             = "════════ Moving Average ═════════"
+MA_length = input.int(title='', minval=1, maxval=1000, defval=20, inline='line 1', group=GRP1)
+MA_type = input.string(title='', options=['SMA', 'EMA', 'WMA'], defval='SMA', inline='line 1', group=GRP1)
+MA_source = input.source(title='', defval=close, inline='line 1', group=GRP1)
+MA_color = input.color(title='', defval=color.green, inline='line 1', group=GRP1)
+MA_width = input.int(title='MA line width', defval=1, minval=1, maxval=4, inline='line 2', group=GRP1)
+string GRP2             = "════════ Bollinger Bands ═════════"
+BB_show_upper = input.bool(title='Show Upper Bands', defval=true, inline='line 1', group=GRP2)
+BB_show_lower = input.bool(title='Show Lower Bands', defval=false, inline='line 2', group=GRP2)
+BB_stdev_near = input.float(title='Near Band', minval=0, maxval=3, defval=0.5, step = 0.5, inline='line 3', group=GRP2)
+colorOrangeHalf = input.color(color.new(color.orange, 85), '', inline='line 3', group=GRP2)
+BB_stdev_far = input.float(title='Far Band', minval=0, maxval=3, defval=1, step = 0.5, inline='line 4', group=GRP2)
+colorOrangeOne = input.color(color.new(color.orange, 90), '', inline='line 4', group=GRP2)
+string GRP3             = "════════ Squeeze ═════════"
+toggleSQZColors = input.bool(title='Squeeze Colors', defval=true, inline='line 3', group=GRP3)
+colorRed = input.color(color.red, 'High-compression Squeeze', group=GRP3)
+colorOrange = input.color(color.orange, 'Mid-compression Squeeze', group=GRP3)
+colorYellow = input.color(color.yellow, 'Low-compression Squeeze', group=GRP3)
+colorGreen = input.color(color.green, 'Fired Squeeze', group=GRP3)
+colorBlue = input.color(color.blue, 'No Squeeze', group=GRP3)
+//--------BMA------
+BMA = 0.0
+BMA := MA_type == 'SMA' ? ta.sma(MA_source, MA_length) : MA_type == 'EMA' ? ta.ema(MA_source, MA_length) : MA_type == 'WMA' ? ta.vwma(MA_source, MA_length) : na
+p1 = plot(BMA, title='Bollingerised Moving Average', color=MA_color, linewidth=MA_width)
+//--------SQUEEZE------
+// original concept from John Carter's book "Mastering the Trade"
+// based on LazyBear's script (Squeeze Momentum Indicator) https://in.tradingview.com/script/nqQ1DT5a-Squeeze-Momentum-Indicator-LazyBear/
+devBB = BB_stdev_far * ta.stdev(MA_source, MA_length)
+devKC = ta.sma(ta.tr, MA_length)
+//Bollinger 2x
+upBB = BMA + devBB * 2
+lowBB = BMA - devBB * 2
+//Keltner 2x
+upKCWide = BMA + devKC * 2
+lowKCWide = BMA - devKC * 2
+//Keltner 1.5x
+upKCNormal = BMA + devKC * 1.5
+lowKCNormal = BMA - devKC * 1.5
+//Keltner 1x
+upKCNarrow = BMA + devKC
+lowKCNarrow = BMA - devKC
+sqzOnWide = lowBB >= lowKCWide and upBB <= upKCWide  //Low-compression Squeeze: YELLOW
+sqzOnNormal = lowBB >= lowKCNormal and upBB <= upKCNormal  //Mid-compression Squeeze: ORANGE
+sqzOnNarrow = lowBB >= lowKCNarrow and upBB <= upKCNarrow  //High-compression Squeeze: RED
+sqzOffWide = lowBB < lowKCWide and upBB > upKCWide  //Fired Squeeze: GREEN
+noSqz = sqzOnWide == false and sqzOffWide == false  //No Squeeze: BLUE
+sq_color = noSqz ? colorBlue : sqzOnNarrow ? colorRed : sqzOnNormal ? colorOrange : sqzOnWide ? colorYellow : colorGreen
+bb_colorOne = toggleSQZColors ? color.new(sq_color, 80) : colorOrangeOne
+bb_colorHalf = toggleSQZColors ? color.new(sq_color, 80) : colorOrangeHalf
+//--------BOLLINGER BANDS------
+upper = BMA + devBB
+lower = BMA - devBB
+p2 = plot(BB_show_upper ? upper : na, 'Upper Far Band', color=color.new(color.orange, 100))
+p3 = plot(BB_show_lower ? lower : na, 'Lower Far Band', color=color.new(color.red, 100))
+fill(p1, p2, title='BB Background', color=bb_colorOne)
+fill(p1, p3, title='BB Background', color=bb_colorOne)
+devhalf = BB_stdev_near * ta.stdev(close, 20)
+upperhalf = BMA + devhalf
+lowerhalf = BMA - devhalf
+p4 = plot(BB_show_upper ? upperhalf : na, 'Upper Near Band', color=color.new(color.orange, 100))
+p5 = plot(BB_show_lower ? lowerhalf : na, 'Lower Near Band', color=color.new(color.red, 100))
+fill(p1, p4, title='BB Background', color=bb_colorHalf)
+fill(p1, p5, title='BB Background', color=bb_colorHalf)
+Expand (104 lines)

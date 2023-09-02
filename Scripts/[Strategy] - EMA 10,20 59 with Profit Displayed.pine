@@ -1,0 +1,218 @@
+Script Name: [Strategy] - EMA 10,20 59 with Profit Displayed
+Author: mattehalen
+Description: This EA is still under construction !!
+
+
+So for this EA is only based on the trend of the 3 EMA's
+ Buytrend = (ema1 and ema2 > ema3) and (ema1  and ema2  > ema3 ) 
+
+
+We also change the Background depending on the trend.
+ bgcolor(Buytrend ? color.green : color.red,transp=70) 
+
+At this point I was wondering how much "profit" we would have made if this strategy was...
+PineScript code:
+
+Pine Script™ strategy
+[Strategy] - EMA 10,20 59 with Profit Displayed
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mattehalen
+//@version=4
+//study("EMA 10,20 59",overlay=true)
+strategy("EMA 10,20 59",overlay=true, process_orders_on_close = true, default_qty_type =  strategy.fixed, default_qty_value = 1000, initial_capital=250, currency=currency.USD)
+infoBox     = input(true, title="infoBox", type=input.bool)
+infoBox2    = input(false, title="infoBox2", type=input.bool)
+BuySellSignal_Bool = input(false, title="Buy & SellSignal", type=input.bool)
+infoBoxSize = input(title="infoBoxSize", defval=size.large, options=[size.auto, size.tiny, size.small, size.normal, size.large, size.huge])
+ema1Value   = input(10)
+ema2Value   = input(20)
+ema3Value   = input(59)
+maxLoss = input(3000)
+ema1        = ema(close,ema1Value)
+ema2        = ema(close,ema2Value)
+ema3        = ema(close,ema3Value)
+objcnt      = 0
+buyTitle    = tostring(close[1])
+myProfit    = float(0)
+plot(ema1,title="ema1",color=color.red,linewidth=2)
+plot(ema2,title="ema2",color=color.green,linewidth=2)
+plot(ema3,title="ema3",color=color.black,linewidth=2)
+Buytrend = (ema1 and ema2 > ema3) and (ema1[1] and ema2[1] > ema3[1])
+BarssinceBuyTrend = barssince(Buytrend)
+BarssinceSellTrend = barssince(not Buytrend)
+closeAtBuyTrend = close[1]
+bgcolor(Buytrend ? color.green : color.red,transp=70)
+BuySignal = Buytrend and not Buytrend[1] and BuySellSignal_Bool
+BuySignalOut = Buytrend and (crossunder(ema1,ema2)) and BuySellSignal_Bool
+BarssinceBuy = barssince(BuySignal)
+bgcolor(BuySignal ? color.green : na , transp=30)
+bgcolor(BuySignalOut ? color.black : na , transp=30)
+plot(BarssinceBuy,title="BarssinceBuy",display=display.none)
+SellSignal = not Buytrend and Buytrend[1] and BuySellSignal_Bool
+SellSignalOut = not Buytrend and (crossover(ema1,ema2)) and BuySellSignal_Bool
+BarssinceSell = barssince(SellSignal)
+bgcolor(SellSignal ? color.red : na , transp=30)
+bgcolor(SellSignalOut ? color.black : na , transp=30)
+plot(BarssinceSell,title="BarssinceSell",display=display.none)
+buyProfit   = float(0)
+cntBuy      =0
+sellProfit  = float(0)
+cntSell     =0
+buyProfit   := Buytrend and not Buytrend[1]? nz(buyProfit[1]) + (close[BarssinceBuyTrend[1]]-close) : nz(buyProfit[1])
+cntBuy      := Buytrend and not Buytrend[1]? nz(cntBuy[1]) + 1: nz(cntBuy[1])
+sellProfit  := not Buytrend and Buytrend[1]? nz(sellProfit[1]) + (close-close[BarssinceSellTrend[1]]) : nz(sellProfit[1])
+cntSell     := not Buytrend and Buytrend[1]? nz(cntSell[1]) + 1 : nz(cntSell[1])
+totalProfit = buyProfit + sellProfit
+if (Buytrend and not Buytrend[1] and infoBox==true)
+    l = label.new(bar_index - (BarssinceBuyTrend[1]/2), na,text="Close = " + tostring(close) + "\n" + "Start = "+tostring(close[BarssinceBuyTrend[1]]) + "\n" + "Profit = "+tostring(close[BarssinceBuyTrend[1]]-close) ,style=label.style_labelup, yloc=yloc.belowbar,color=color.red,size=infoBoxSize)
+if (not Buytrend and Buytrend[1] and infoBox==true)
+    l = label.new(bar_index - (BarssinceSellTrend[1]/2), na,text="Close = " + tostring(close) + "\n" + "Start = "+tostring(close[BarssinceSellTrend[1]]) + "\n" + "Profit = "+tostring(close-close[BarssinceSellTrend[1]]) ,style=label.style_labeldown, yloc=yloc.abovebar,color=color.green,size=infoBoxSize)
+if (BuySignalOut and not BuySignalOut[1] and infoBox2==true)
+//    l = label.new(bar_index - (BarssinceBuy[0]/2), na,text="Close = " + tostring(close) + "\n" + "Start = "+tostring(close[BarssinceBuy[0]]) + "\n" + "Profit = "+tostring(close-close[BarssinceBuy[0]]) ,style=label.style_labelup, yloc=yloc.belowbar,color=color.purple,size=infoBoxSize
+    l = label.new(bar_index, na,text="Close = " + tostring(close) + "\n" + "Start = "+tostring(close[BarssinceBuy[0]]) + "\n" + "Profit = "+tostring(close-close[BarssinceBuy[0]]) ,style=label.style_labelup, yloc=yloc.belowbar,color=color.lime,size=infoBoxSize)
+if (SellSignalOut and not SellSignalOut[1] and infoBox2==true)
+//    l = label.new(bar_index - (BarssinceSell[0]/2), na,text="Close = " + tostring(close) + "\n" + "Start = "+tostring(close[BarssinceSell[0]]) + "\n" + "Profit = "+tostring(close[BarssinceSell[0]]-close) ,style=label.style_labeldown, yloc=yloc.abovebar,color=color.purple,size=infoBoxSize)
+    l = label.new(bar_index, na,text="Close = " + tostring(close) + "\n" + "Start = "+tostring(close[BarssinceSell[0]]) + "\n" + "Profit = "+tostring(close[BarssinceSell[0]]-close) ,style=label.style_labeldown, yloc=yloc.abovebar,color=color.fuchsia,size=infoBoxSize)
+l2 = label.new(bar_index, na, 'buyProfit in pip = '+tostring(buyProfit)+"\n"+  'cntBuy = '+tostring(cntBuy) +"\n"+  'sellProfit in pip = '+tostring(sellProfit)+"\n"+  'cntSell = '+tostring(cntSell) +"\n"+  'totalProfit in pip = '+tostring(totalProfit)     , 
+  color=totalProfit>0 ? color.green : color.red, 
+  textcolor=color.white,
+  style=label.style_labeldown, yloc=yloc.abovebar,
+  size=size.large)
+label.delete(l2[1])
+//--------------------------------------------------
+//--------------------------------------------------
+if (Buytrend)
+    strategy.close("short", comment = "Exit short")
+    strategy.entry("long", true)
+    strategy.exit("Max Loss", "long", loss = maxLoss)
+//if BuySignalOut
+   // strategy.close("long", comment = "Exit Long")
+if (not Buytrend)
+    // Enter trade and issue exit order on max loss.
+    strategy.close("long", comment = "Exit Long")
+    strategy.entry("short", false)
+    strategy.exit("Max Loss", "short", loss = maxLoss)
+//if SellSignalOut
+    // Force trade exit.
+    //strategy.close("short", comment = "Exit short")
+    
+//--------------------------------------------------
+//--------------------------------------------------
+//--------------------------------------------------
+Expand (115 lines)

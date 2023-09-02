@@ -1,0 +1,564 @@
+Script Name: Position management strategy framework [LM]
+Author: lmatl
+Description: Hi Traders,
+
+This is backtest framework for position management of indicators based on systems that are used for position management of gambling systems. All examples describes situation that position unit is 100$ of given asset. For tracking there are used pinescript arrays. In all strategies I have built some max extremes for given strategy(not originaly part of...
+PineScript code:
+
+Pine Script™ strategy
+Position management strategy framework [LM]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+//@version=4
+strategy("Position management strategy framework [LM]", shorttitle="PMSF [LM]", overlay=true, initial_capital=1000.0)
+var LABOUCHERE = 'Labouchere', var MARTINGALE = 'Martingale'
+var DLAMBERT = 'D‘ Alembert', var OSCARS_GRIND = 'Oscar‘s grind'
+var FIBONACCI = 'Fibonacci'
+// general strategy settings
+i_startDate                             = input(timestamp("02 Jan 2021 00:00 +0000"), title="Start Date", type=input.time, group="general strategy settings")
+i_endDate                               = input(timestamp("14 Apr 2099 00:00 +0000"), title="End Date", type=input.time, group="general strategy settings")
+i_indicatorPlotting                     = input(false, title='show plots', group="general strategy settings")
+i_strategyOption                        = input(LABOUCHERE, "Management strategy", options=[LABOUCHERE, FIBONACCI, MARTINGALE, DLAMBERT, OSCARS_GRIND])
+// position sizing settings
+i_positionUnit                          = input(100.0,    title="Position unit", group="position sizing settings")
+i_leverage                              = input(1.0,      title="leverage", group="position sizing settings")
+// Labouchere settings
+i_laboucherePositionSerie               = input(3,      title="Labouchere serie", group="Labouchere settings")
+i_labouchereMaxArraySize                = input(10,     title="max labouchere serie size", group="Labouchere settings")
+// Fibonacci settings
+i_fibonacciMaxArraySize                 = input(10,     title="max fibonacci serie size", group="Fibonacci settings")
+// Martingale settings
+i_martingaleMult                        = input(2,      title="Martingale multipler", group="Martingale settings")
+i_isGranMartingale                      = input(false,  title="Gran Martingale?", group="Martingale settings")
+i_maxMartingaleMultiplier               = input(32,     title="Max multipler", group="Martingale settings")
+// D Lambert settings
+i_maxDLambertMultiplier                 = input(64,     title="Max multipler", group="D‘ Alembert settings")
+// Oscars grind settings
+i_maxOscarsGrindLoss                    = input(-100000,     title="Max position losses", group="Oscar‘s grind settings")
+var int[] positionArray = array.new_int()
+var int[] positionLossTrackerArray = array.new_int()
+var int   functionReturnPlaceholder = 0
+// LABOUCHERE 
+f_labouchereArrayInit() =>
+    array.clear(positionArray)
+    for var i = 1 to i_laboucherePositionSerie
+        array.push(positionArray, i)
+        
+        
+f_getLaboucherePosition() =>
+    arraySize = array.size(positionArray)
+    
+    arraySize > 1
+      ? i_positionUnit/close * (array.get(positionArray, 0) + array.get(positionArray, arraySize-1)) * i_leverage
+      : i_positionUnit/close * array.get(positionArray, 0) * i_leverage
+        
+f_failedLabouchereTrade() =>
+    arraySize = array.size(positionArray)
+    if (arraySize > 1)
+        array.push(positionArray, array.get(positionArray, 0) + array.get(positionArray, arraySize-1))
+    else
+        array.push(positionArray, array.get(positionArray, 0))
+        
+    if (arraySize + 1 == i_labouchereMaxArraySize)
+        f_labouchereArrayInit()
+    functionReturnPlaceholder
+    
+        
+f_successLabouchereTrade() =>
+    arraySize = array.size(positionArray)
+    
+    
+    if (arraySize == 1)
+        f_labouchereArrayInit()
+    
+    if (arraySize > 1)
+        array.remove(positionArray, 0)
+        array.pop(positionArray)
+    functionReturnPlaceholder
+    
+// labouchere array init
+if (i_strategyOption == LABOUCHERE and array.size(positionArray) == 0)
+    f_labouchereArrayInit()
+// LABOUCHERE
+// FIBONACCI 
+        
+        
+f_getFibonacciPosition() =>
+    arraySize = array.size(positionArray)
+    
+    arraySize > 1
+      ? i_positionUnit/close * (array.get(positionArray, arraySize - 1) + array.get(positionArray, arraySize - 2)) * i_leverage
+      : i_positionUnit/close * array.get(positionArray, 0) * i_leverage
+        
+f_failedFibonacciTrade() =>
+    arraySize = array.size(positionArray)
+    if (arraySize > 1)
+        array.push(positionArray, array.get(positionArray, arraySize-1) + array.get(positionArray, arraySize-2))
+    else
+        array.push(positionArray, array.get(positionArray, 0))
+        
+    if (arraySize + 1 == i_fibonacciMaxArraySize)
+        array.clear(positionArray)
+        array.push(positionArray, 1)
+    functionReturnPlaceholder
+    
+        
+f_successFibonacciTrade() =>
+    arraySize = array.size(positionArray)
+    
+    
+    if (arraySize > 1)
+        array.pop(positionArray)
+        array.pop(positionArray)
+        
+    if (array.size(positionArray) == 0)
+        array.push(positionArray, 1)
+    functionReturnPlaceholder
+    
+// labouchere array init
+if (i_strategyOption == FIBONACCI and array.size(positionArray) == 0)
+    array.push(positionArray, 1)
+// FIBONACCI
+// MARTINGALE
+f_getMartinagalePosition() =>
+    positionMultiplier = array.get(positionArray, 0)
+    
+    i_isGranMartingale
+      ? i_positionUnit/close * positionMultiplier * i_leverage + (i_positionUnit/close)
+      : i_positionUnit/close * positionMultiplier * i_leverage
+        
+f_failedMartingaleTrade() =>
+    positionMultiplier = array.get(positionArray, 0)
+    value = i_maxMartingaleMultiplier >= positionMultiplier * i_martingaleMult? positionMultiplier * i_martingaleMult: 1
+    array.set(positionArray, 0, value)
+    functionReturnPlaceholder
+        
+f_successMartingaleTrade() =>
+    array.set(positionArray, 0, 1)
+    functionReturnPlaceholder
+// martingale array init
+if (i_strategyOption == MARTINGALE and array.size(positionArray) == 0)
+    array.push(positionArray, 1)
+// MARTINGALE
+// DLAMBERT
+f_getDLambertPosition() =>
+    i_positionUnit/close * array.get(positionArray, 0) * i_leverage
+        
+f_failedDLambertTrade() =>
+    positionMultiplier = array.get(positionArray, 0)
+    value = i_maxDLambertMultiplier >= positionMultiplier + 1? positionMultiplier + 1: 1
+    array.set(positionArray, 0, value)
+    functionReturnPlaceholder
+        
+f_successDLambertTrade() =>
+    positionMultiplier = array.get(positionArray, 0)
+    array.set(positionArray, 0, positionMultiplier == 1? 1: positionMultiplier - 1)
+    functionReturnPlaceholder
+// dlambert array init
+if (i_strategyOption == DLAMBERT and array.size(positionArray) == 0)
+    array.push(positionArray, 1)
+// DLAMBERT
+// OSCARS_GRIND
+f_getOscarsGrindPosition() =>
+    i_positionUnit/close * array.get(positionArray, 0) * i_leverage
+        
+f_failedOscarsGrindTrade() =>
+    positionMultiplier = array.get(positionArray, 0)
+    losses = array.get(positionLossTrackerArray, 0)
+    
+    value = i_maxOscarsGrindLoss <= losses - positionMultiplier? positionMultiplier : 1
+    lossPositionValue = i_maxOscarsGrindLoss <= losses - positionMultiplier? losses - positionMultiplier : 0
+    
+    array.set(positionArray, 0, value)
+    array.set(positionLossTrackerArray, 0, lossPositionValue)
+    functionReturnPlaceholder
+        
+f_successOscarsGrindTrade() =>
+    positionMultiplier = array.get(positionArray, 0)
+    losses = array.get(positionLossTrackerArray, 0)
+    
+    value = losses + positionMultiplier >= 0? 1: losses + positionMultiplier > positionMultiplier + 1? abs(losses) : positionMultiplier + 1
+    lossPositionValue = losses + positionMultiplier >= 0? 0: losses + positionMultiplier
+    
+    array.set(positionArray, 0, value)
+    array.set(positionLossTrackerArray, 0, lossPositionValue)
+    functionReturnPlaceholder
+// oscars grind array init
+if (i_strategyOption == OSCARS_GRIND and array.size(positionArray) == 0)
+    array.push(positionArray, 1)
+    array.push(positionLossTrackerArray, 0)
+// OSCARS_GRIND
+// COMMON FUNCTIONS
+f_getPosition() =>
+    i_strategyOption == LABOUCHERE? f_getLaboucherePosition():
+      i_strategyOption == FIBONACCI? f_getFibonacciPosition():
+      i_strategyOption == MARTINGALE? f_getMartinagalePosition():
+      i_strategyOption == DLAMBERT? f_getDLambertPosition():
+      i_strategyOption == OSCARS_GRIND? f_getOscarsGrindPosition(): 0.0
+      
+f_successTrade() =>
+    i_strategyOption == LABOUCHERE? f_successLabouchereTrade():
+      i_strategyOption == FIBONACCI? f_successFibonacciTrade():
+      i_strategyOption == MARTINGALE? f_successMartingaleTrade():
+      i_strategyOption == DLAMBERT? f_successDLambertTrade():
+      i_strategyOption == OSCARS_GRIND? f_successOscarsGrindTrade(): na
+      
+f_failedTrade() =>
+     i_strategyOption == LABOUCHERE? f_failedLabouchereTrade():
+      i_strategyOption == FIBONACCI? f_failedFibonacciTrade():
+      i_strategyOption == MARTINGALE? f_failedMartingaleTrade():
+      i_strategyOption == DLAMBERT? f_failedDLambertTrade():
+      i_strategyOption == OSCARS_GRIND? f_failedOscarsGrindTrade(): na
+      
+// COMMON FUNCTIONS   
+// PUT YOUR STRATEGY HERE
+var int longSetup = 0
+longSetup := (close > close[4]) ? longSetup[1] == 9 ? 0 : longSetup[1] + 1 : 0
+var int shortSetup = 0
+shortSetup := (close < close[4]) ? shortSetup[1] == 9 ? 0 : shortSetup[1] + 1 : 0
+inDateRange = time >=  i_startDate and time <= i_endDate
+longCondition = longSetup == 2 and close > close[1]
+longConditionStopLoss = longSetup[1] >= 2 and longSetup[1] < 9 and shortSetup == 1 and barssince(longCondition) == longSetup[1] -1
+longConditionCloseSuccess = longSetup == 9 or (longConditionStopLoss and close >= close[barssince(longCondition)])
+shortCondition = shortSetup == 2 and close < close[1]
+shortConditionStopLoss = shortSetup[1] >= 2 and shortSetup[1] < 9 and longSetup == 1 and barssince(shortCondition) == shortSetup[1]-1
+shortConditionCloseSuccess = shortSetup == 9 or (shortConditionStopLoss and  close <= close[barssince(shortCondition)])
+// PUT YOUR STRATEGY HERE
+// position opening and closing
+positionAmount = f_getPosition()
+if (inDateRange and longCondition) 
+    strategy.order("L", long=strategy.long,  qty=positionAmount)
+ 
+if (inDateRange and shortCondition)
+    strategy.order("S", long=strategy.short,  qty=positionAmount)
+    
+if (inDateRange and (shortConditionCloseSuccess or longConditionCloseSuccess))
+    strategy.close_all()
+    f_successTrade()
+if (inDateRange and ((longConditionStopLoss and not longConditionCloseSuccess) or (shortConditionStopLoss and not shortConditionCloseSuccess)))
+    strategy.close_all()
+    f_failedTrade()
+// plotting    
+plotshape(i_indicatorPlotting and longSetup==1? true: na,style=shape.triangledown,text="1",color=color.green,location=location.abovebar)
+plotshape(i_indicatorPlotting and longSetup==2? true: na,style=shape.triangledown,text="2",color=color.green,location=location.abovebar)
+plotshape(i_indicatorPlotting and longSetup==3? true: na,style=shape.triangledown,text="3",color=color.green,location=location.abovebar)
+plotshape(i_indicatorPlotting and longSetup==4? true: na,style=shape.triangledown,text="4",color=color.green,location=location.abovebar)
+plotshape(i_indicatorPlotting and longSetup==5? true: na,style=shape.triangledown,text="5",color=color.green,location=location.abovebar)
+plotshape(i_indicatorPlotting and longSetup==6? true: na,style=shape.triangledown,text="6",color=color.green,location=location.abovebar)
+plotshape(i_indicatorPlotting and longSetup==7? true: na,style=shape.triangledown,text="7",color=color.green,location=location.abovebar)
+plotshape(i_indicatorPlotting and longSetup==8? true: na,style=shape.triangledown,text="8",color=color.green,location=location.abovebar)
+plotshape(i_indicatorPlotting and longSetup==9? true: na,style=shape.triangledown,text="9",color=color.green,location=location.abovebar)
+plotshape(i_indicatorPlotting and shortSetup==1? true: na,style=shape.triangleup,text="1",color=color.red,location=location.belowbar)
+plotshape(i_indicatorPlotting and shortSetup==2? true: na,style=shape.triangleup,text="2",color=color.red,location=location.belowbar)
+plotshape(i_indicatorPlotting and shortSetup==3? true: na,style=shape.triangleup,text="3",color=color.red,location=location.belowbar)
+plotshape(i_indicatorPlotting and shortSetup==4? true: na,style=shape.triangleup,text="4",color=color.red,location=location.belowbar)
+plotshape(i_indicatorPlotting and shortSetup==5? true: na,style=shape.triangleup,text="5",color=color.red,location=location.belowbar)
+plotshape(i_indicatorPlotting and shortSetup==6? true: na,style=shape.triangleup,text="6",color=color.red,location=location.belowbar)
+plotshape(i_indicatorPlotting and shortSetup==7? true: na,style=shape.triangleup,text="7",color=color.red,location=location.belowbar)
+plotshape(i_indicatorPlotting and shortSetup==8? true: na,style=shape.triangleup,text="8",color=color.red,location=location.belowbar)
+plotshape(i_indicatorPlotting and shortSetup==9? true: na,style=shape.triangleup,text="9",color=color.red,location=location.belowbar)
+Expand (305 lines)

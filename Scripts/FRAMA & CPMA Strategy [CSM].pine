@@ -1,0 +1,212 @@
+Script Name: FRAMA & CPMA Strategy [CSM]
+Author: chhagansinghmeena
+Description: The script is an advanced technical analysis tool specifically designed for trading in financial markets, with a particular focus on the BankNifty market. It utilizes two powerful indicators: the Fractal Adaptive Moving Average (FRAMA) and the CPMA (Conceptive Price Moving Average), which is similar to the well-known Chande Momentum Oscillator (CMO) with Center of...
+PineScript code:
+
+Pine Script™ strategy
+FRAMA & CPMA Strategy [CSM]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © chhagansinghmeena
+//@version=5
+strategy("FRAMA & CPMA Strategy [CSM]", shorttitle = "CSM's => FRAMA + CPMA", overlay=true, margin_long=100, margin_short=100)
+import chhagansinghmeena/BankNifty_CSM/3 as CM
+src = input.source(title = "FRAMA Source", defval = close, group = "Requirements")
+length = input.int(title='FRAMA Length', defval=21, minval=1, maxval=200, group = "Requirements")
+fracDim = input.float(title='Fractal Dimension', defval=0.8, minval=0.1, maxval=2.0, group = "Requirements")
+CPMA_length = input.int(title='CPMA Length', defval=21, minval=1, maxval=200, group = "Requirements")
+enableEngulfingFilter = input.bool(title = "Enable Engulfing Candle Filter", defval = false, group = "Requirements")
+longTakeProfit = input.float(10, 'Long Take Profit Amount', minval=0.05, step=0.05,group = "Stoploss/Target") 
+shortTakeProfit = input.float(10, 'Short Take Profit Amount', minval=0.05, step=0.05,group = "Stoploss/Target") 
+trailingTakeProfit = input.float(0.5, 'Trailing Take Profit Amount', minval=0.01, maxval=100, step=0.01,group = "Stoploss/Target") 
+LossstratA = input.float(defval=100, minval=0, maxval=10000, title="Stop Loss", step=5,group="Stoploss/Target")
+start = input.time(title='Start Date', defval=timestamp('01 Jan 2023 03:30 +0000'), group='Backtesting', tooltip='Date & time to begin trading from')
+finish = input.time(title='End Date', defval=timestamp('1 Jan 2099 15:30 +0000'), group='Backtesting', tooltip='Date & time to stop trading')
+window() =>
+    time >= start and time <= finish ? true : false
+// Get various price types
+[Open, price, High, Low , HL2, HLC3, HLCC4, OHLC4 ] = request.security(syminfo.tickerid, timeframe.period, [open, close, high, low, hl2, hlc3, hlcc4, ohlc4])
+//Get CPMA from Library
+CPMA = CM.CSM_CPMA(length = CPMA_length, price = price, HL2 = HL2, Open = Open , High = High, Low = Low, OHLC4 = OHLC4, HLC3 = HLC3, HLCC4 = HLCC4)
+//Get FRAMA from Library
+FRAMA = CM.frama_Calculation(src = src, length = length, mult = fracDim)
+plot(CPMA, color=color.orange, linewidth=2, title="CPMA")
+plot(FRAMA, color=color.blue, linewidth=2, title="FRAMA")
+// Detect bullish and bearish engulfing patterns
+bullishEngulfing = CM.candlepatternbullish()
+bearishEngulfing = CM.candlepatternbearish()
+longCondition = (ta.cross(close, FRAMA) and close > FRAMA) or (ta.cross(close, CPMA) and close > CPMA ) 
+shortCondition = (ta.cross(close, FRAMA) and close < FRAMA) or (ta.cross(close, CPMA) and close < CPMA) 
+Signal = 0
+if enableEngulfingFilter
+    longCondition := bullishEngulfing and (longCondition or ta.crossover(FRAMA, CPMA))
+    shortCondition := bearishEngulfing and (shortCondition or ta.crossunder(FRAMA, CPMA))
+else 
+    Signal := longCondition  ? 1 : shortCondition  ? -1 : nz(Signal[1])
+    isDifferentSignalType = ta.change(Signal)  
+    longCondition := longCondition and isDifferentSignalType
+    shortCondition := shortCondition and isDifferentSignalType
+longTakeProfitPerc = longTakeProfit/close
+shortTakeProfitPerc = shortTakeProfit/close
+trailingTakeProfitPerc =  trailingTakeProfit == 0.01 ? syminfo.mintick/close : trailingTakeProfit/close 
+bool longIsActive = longCondition or strategy.position_size > 0
+bool shortIsActive = shortCondition or strategy.position_size < 0
+longIsActive := longCondition or strategy.position_size > 0
+shortIsActive := shortCondition or strategy.position_size < 0
+//Long Stop Loss added
+float longStopLossprice = na
+longStopLossprice := if longIsActive 
+    if longCondition and not (strategy.opentrades.size(strategy.opentrades - 1) > 0)
+        low - LossstratA
+    else
+        nz(longStopLossprice[1], low - LossstratA)
+else
+    na
+ 
+//Long Take Profir Added
+float longTakeProfitPrice = na
+longTakeProfitPrice := if longIsActive 
+    if longCondition and not (strategy.position_size > 0)
+        close * (1 + longTakeProfitPerc)
+    else
+        nz(longTakeProfitPrice[1], high * (1 - longTakeProfitPerc))
+else
+    na
+//Short StopLoss added
+float shortStopLossprice = na
+shortStopLossprice := if shortIsActive 
+    if shortCondition and not (strategy.position_size < 0)
+        high + LossstratA
+    else
+        nz(shortStopLossprice[1], high + LossstratA)
+else
+    na
+//Short Take profit added
+float shortTakeProfitPrice = na
+shortTakeProfitPrice := if shortIsActive 
+    if shortCondition and not (strategy.position_size < 0)
+        close * (1 - shortTakeProfitPerc)
+    else
+        nz(shortTakeProfitPrice[1], close * (1 - shortTakeProfitPrice))
+else
+    na
+ 
+float longTrailingTakeProfitStepTicks = longTakeProfitPrice * trailingTakeProfitPerc / syminfo.mintick
+float shortTrailingTakeProfitStepTicks = shortTakeProfitPrice * trailingTakeProfitPerc / syminfo.mintick
+if window()
+    switch
+        longCondition=> strategy.entry("Long",strategy.long)
+        shortCondition=> strategy.entry("Short", strategy.short)
+    strategy.exit(id = 'Long TP/SL', from_entry = 'Long', trail_price = longTakeProfitPrice , trail_offset = longTrailingTakeProfitStepTicks, stop = longStopLossprice)
+    strategy.exit(id = 'Short TP/SL', from_entry = 'Short', trail_price = shortTakeProfitPrice, trail_offset = shortTrailingTakeProfitStepTicks, stop = shortStopLossprice)
+Expand (110 lines)

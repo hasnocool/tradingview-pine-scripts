@@ -1,0 +1,155 @@
+Script Name: STRATEGY R18-F-BTC
+Author: SenatorVonShaft
+Description: Hi, I'm @SenatorVonShaft
+
+Just finished the strategy "STRATEGY R18-F-BTC" for trading on #bitcoin and other cryptocurrencies.
+
+As any strategy on TradingView, R18 opens Long/Short positions (with no leverage) on certain price points for assets in the chart. But I intentionally make this strategy for Bitcoin . Strategy is effective with 1h chart and it has %36...
+PineScript code:
+
+Pine Script™ strategy
+STRATEGY R18-F-BTC
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © onurenginogutcu
+//@version=4
+strategy("STRATEGY R18-F-BTC", overlay=true, margin_long=100, margin_short=100)
+///////////default girişler 1 saatlik btc grafiği için geçerli olmak üzere - stop loss'lar %2.5 - long'da %7.6 , short'ta %8.1
+sym = input(title="Symbol", type=input.symbol, defval="BINANCE:BTCUSDT") /////////btc'yi indikatör olarak alıyoruz
+lsl = input(title="Long Stop Loss (%)",
+     minval=0.0, step=0.1, defval=2.5) * 0.01
+     
+ssl = input(title="Short Stop Loss (%)",
+     minval=0.0, step=0.1, defval=2.5) * 0.01
+     
+longtp = input(title="Long Take Profit (%)",
+     minval=0.0, step=0.1, defval=7.6) * 0.01
+     
+shorttp = input(title="Short Take Profit (%)",
+     minval=0.0, step=0.1, defval=7.5) * 0.01
+     
+capperc = input(title="Capital Percentage to Invest (%)",
+     minval=0.0, maxval=100, step=0.1, defval=90) * 0.01
+     
+choice = input(title="Reverse ?", type=input.bool, defval=false)
+symClose = security(sym, "", close)
+symHigh = security(sym, "", high)
+symLow = security(sym, "", low)
+i = ema (symClose , 15) - ema (symClose , 30) ///////// ema close 15 ve 30 inanılmaz iyi sonuç verdi (macd standartı 12 26)
+r = ema (i , 9)
+sapust = highest (i , 100) * 0.729 //////////0.729 altın oran oldu 09.01.2022
+sapalt = lowest (i , 100) * 0.729  //////////0.729 altın oran oldu 09.01.2022
+///////////highx = highest (close , 365) * 0.72 fibo belki dahiledilebilir
+///////////lowx = lowest (close , 365) * 1.272 fibo belki dahil edilebilir
+simRSI = rsi (symClose , 50 ) /////// RSI DAHİL EDİLDİ "50 MUMLUK RSI EN İYİ SONUCU VERİYOR"
+//////////////fibonacci seviyesi eklenmesi amacı ile koyuldu fakat en iyi sonuç %50 seviyesinin altı ve üstü (low ve high 38 barlık) en iyi sonuç verdi
+fibvar = 38
+fibtop = lowest (symLow , fibvar) + ((highest (symHigh , fibvar) - lowest (symLow , fibvar)) * 0.50)
+fibbottom = lowest (symLow , fibvar) + ((highest (symHigh , fibvar) - lowest (symLow , fibvar)) * 0.50)
+///////////////////////////////////////////////////////////// INDICATOR CONDITIONS
+longCondition = crossover(i, r) and i < sapalt and symClose < sma (symClose , 50) and simRSI < sma (simRSI , 50) and symClose < fibbottom
+shortCondition = crossunder(i, r) and i > sapust and symClose > sma (symClose , 50) and simRSI > sma (simRSI , 50)  and symClose > fibtop
+////////////////////////////////////////////////////////////////
+///////////////////////////////////////////STRATEGY ENTRIES AND STOP LOSSES /////stratejilerde kalan capital için strategy.equity kullan (bunun üzerinden işlem yap)
+if (choice == false and longCondition)
+    strategy.entry("Long", strategy.long , qty = capperc * strategy.equity / close ,   when = strategy.position_size == 0)
+   
+if (choice == false and shortCondition)
+    strategy.entry("Short" , strategy.short , qty = capperc * strategy.equity / close ,  when = strategy.position_size == 0)
+if (choice == true and longCondition)
+    strategy.entry("Short" , strategy.short , qty = capperc * strategy.equity / close ,  when = strategy.position_size == 0)
+if (choice == true and shortCondition)
+    strategy.entry("Long", strategy.long , qty = capperc * strategy.equity / close ,   when = strategy.position_size == 0)
+    
+if (strategy.position_size > 0)
+    strategy.exit("Exit Long", "Long", stop=strategy.position_avg_price*(1 - lsl) , limit=strategy.position_avg_price*(1 + longtp))
+if (strategy.position_size < 0)
+    strategy.exit("Exit Short", "Short", stop=strategy.position_avg_price*(1 + ssl) , limit=strategy.position_avg_price*(1 - shorttp))
+////////////////////////vertical colouring signals
+bgcolor(color=longCondition ? color.new (color.green , 70) : na)
+bgcolor(color=shortCondition ? color.new (color.red , 70) : na)
+Expand (84 lines)

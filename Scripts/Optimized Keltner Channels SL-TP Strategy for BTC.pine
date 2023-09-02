@@ -1,0 +1,115 @@
+Script Name: Optimized Keltner Channels SL-TP Strategy for BTC
+Author: chanu_lev10k
+Description: This strategy is optimized for Bitcoin with the Keltner Channel Strategy, which is TradingView's built-in strategy. In the original Keltner Channel Strategy, it was difficult to predict the timing of entry because the Buy and Sell signals floated in the middle of the candle in real time. This strategy is convenient because if the bitcoin price hits the top or...
+PineScript code:
+
+Pine Script™ strategy
+Optimized Keltner Channels SL/TP Strategy for BTC
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © chanu_lev10k
+//@version=4
+strategy(title="Optimized Keltner Channels SL/TP Strategy for BTC", overlay=true)
+length = input(9, minval=1)
+mult = input(1.0, "Multiplier")
+src = input(close, title="Source")
+exp = input(true, "Use Exponential MA")
+BandsStyle = input("Average True Range", options = ["Average True Range", "True Range", "Range"], title="Bands Style")
+atrlength = input(19, "ATR Length")
+sl = input(defval=20, minval=0, type=input.float, step=0.1, title="Stop Loss (%)")
+tp = input(defval=20.3, minval=0, type=input.float, step=0.1, title="Take Profit (%)")
+esma(source, length)=>
+    s = sma(source, length)
+    e = ema(source, length)
+    exp ? e : s
+ma = esma(src, length)
+rangema = BandsStyle == "True Range" ? rma(tr(true), length) : BandsStyle == "Average True Range" ? atr(atrlength) : rma(high - low, length)
+upper = ma + rangema * mult
+lower = ma - rangema * mult
+c = color.blue
+u = plot(upper, color=color.green, title="Upper")
+plot(ma, color=#0094FF, title="Basis")
+l = plot(lower, color=color.red, title="Lower")
+fill(u, l, color.new(color=#0094FF, transp=95), title="Background")
+crossUpper = crossover(src, upper)
+crossLower = crossunder(src, lower)
+bprice = 0.0
+bprice := crossUpper ? close+syminfo.mintick : nz(bprice[1])
+sprice = 0.0
+sprice := crossLower ? close-syminfo.mintick : nz(sprice[1])
+crossBcond = false
+crossBcond := crossUpper ? true
+     : na(crossBcond[1]) ? false : crossBcond[1]
+crossScond = false
+crossScond := crossLower ? true
+     : na(crossScond[1]) ? false : crossScond[1]
+cancelBcond = crossBcond and (src < ma or high >= bprice )
+cancelScond = crossScond and (src > ma or low <= sprice )
+if (cancelBcond)
+    strategy.cancel("KltChLE")
+if (crossUpper)
+    strategy.entry("KltChLE", strategy.long, stop=bprice, comment="Long")
+if (cancelScond)
+    strategy.cancel("KltChSE")
+if (crossLower)
+    strategy.entry("KltChSE", strategy.short, stop=sprice, comment="Short")
+strategy.exit("Long exit", "KltChLE", profit = close * tp * 0.01 / syminfo.mintick, loss = close * sl * 0.01 / syminfo.mintick)
+strategy.exit("Short exit", "KltChSE", profit = close * tp * 0.01 / syminfo.mintick, loss = close * sl * 0.01 / syminfo.mintick)
+plot(bprice, color=color.green)
+plot(sprice, color=color.red)
+Expand (55 lines)

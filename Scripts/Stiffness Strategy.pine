@@ -1,0 +1,74 @@
+Script Name: Stiffness Strategy
+Author: JMOZ1337
+Description: A strategy for the Stiffness indicator by everget.
+PineScript code:
+
+Pine Script™ strategy
+Stiffness Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+//@version=4
+// Copyright (c) 2020-present, JMOZ (1337.ltd)
+// Copyright (c) 2018-present, Alex Orekhov (everget)
+// Stiffness Indicator script may be freely distributed under the MIT license.
+strategy("Stiffness Strategy", overlay=false, initial_capital=10000, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_value=0.075)
+maLength = input(title="Moving Average Length", minval=1, defval=100)
+stiffLength = input(title="Stiffness Length", minval=1, defval=60)
+stiffSmooth = input(title="Stiffness Smoothing Length", minval=1, defval=3)
+threshold = input(title="Threshold", minval=1, defval=90)
+highlightThresholdCrossovers = input(title="Highlight Threshold Crossovers ?", type=input.bool, defval=false)
+bound = sma(close, maLength) - 0.2 * stdev(close, maLength)
+sumAbove = sum(close > bound ? 1 : 0, stiffLength)
+stiffness = ema(sumAbove * 100 / stiffLength, stiffSmooth)
+long_cond = crossover(stiffness, threshold)
+long_close = stiffness > threshold and falling(stiffness, 1)
+short_cond = crossunder(stiffness, threshold) or stiffness < threshold and falling(stiffness, 1)
+short_close = stiffness < threshold and rising(stiffness, 1)
+strategy.entry("Long", strategy.long, when=long_cond)
+strategy.close("Long", when=long_close)
+strategy.entry("Short", strategy.short, when=short_cond)
+strategy.close("Short", when=short_close)
+transparent = color.new(color.white, 100)
+bgColor = highlightThresholdCrossovers ? stiffness > threshold ? #0ebb23 : color.red : transparent
+bgcolor(bgColor, transp=90)
+plot(stiffness, title="Stiffness", style=plot.style_histogram, color=#f5c75e, transp=0)
+plot(threshold, title="Threshold", color=color.red, transp=0)
+Expand (39 lines)

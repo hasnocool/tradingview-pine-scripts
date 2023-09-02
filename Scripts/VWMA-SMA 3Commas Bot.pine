@@ -1,0 +1,333 @@
+Script Name: VWMA-SMA 3Commas Bot
+Author: CrackingCryptocurrency
+Description: This strategy utilizes two pairs of different Moving Averages, two Volume-Weighted Moving Averages (VWMA) and two Simple Moving Averages (SMA).
+
+There is a FAST and SLOW version of each VWMA and SMA. 
+
+The concept behind this strategy is that volume is not taken into account when calculating a Simple Moving Average. 
+
+Simple Moving Averages are often used to...
+PineScript code:
+
+Pine Script™ strategy
+VWMA/SMA 3Commas Bot
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// Copyright © 2022 by CrackingCryptocurrency
+//@version=5
+strategy(title="VWMA/SMA 3Commas Bot", shorttitle="VWMA/SMA 3,,, Bot", overlay=true, initial_capital=100, currency="USD",
+   calc_on_every_tick=false, pyramiding=1, calc_on_order_fills=true, process_orders_on_close = true, commission_type=strategy.commission.percent, commission_value=0.06, margin_long = 0, precision = 8)
+// INPUTS:
+i_strategySettings = 'Strategy Settings'
+i_longTrades = input.bool(defval = true, title = 'Long Trades?', tooltip = 'If enabled, the Strategy will perform Long Trades.', group = i_strategySettings)
+i_shortTrades = input.bool(defval = true, title = 'Short Trades?', tooltip = 'If enabled, the Strategy will perform Short Trades.', group = i_strategySettings)
+i_risk = input.float(defval = 2.0, title = 'Risk Percentage', minval = 0.1, step = 0.1, tooltip = 'Set your desired Risk per Trade. For example, if you input 2, you will risk 2% of your account per trade.', group = i_strategySettings)
+i_entryType = input.string(defval = 'Fast Crosses', title = 'Entry Signal', options = ['Fast Crosses', 'Medium Crosses', 'Slow Crosses'], group = i_strategySettings, 
+ tooltip = 'What signal triggers a trade. Fast Crosses are crosses of the Fast VWMA and Fast SMA. Medium Crosses are crosses of the Medium VWMA and Medium SMA. Slow Crosses are crosses of the Slow VWMA and Slow SMA.')
+i_tpmult = input.float(defval = 1.0, title = 'Take Profit Multiple', step = 0.5, tooltip = 'The Average True Range Value at the time of an Entry Trigger will be multiplied against this value to determine your positions Take Profit distance.', group = i_strategySettings)
+i_slmult = input.float(defval = 1.5, title = 'Stop Loss Multiple', step = 0.5, tooltip = 'The Average True Range Value at the time of an Entry Trigger will be multiplied against this value to determine your positions Stop Loss distance.', group = i_strategySettings)
+i_vwmaSettings = 'VWMA/SMA Settings'
+i_lenFastVWMA = input.int(13, title='Fast VWMA Length', minval=1, group = i_vwmaSettings)
+i_lenSlowVWMA = input.int(26, title='Slow VWMA Length', minval=1, group = i_vwmaSettings)
+i_lenFastSMA = input.int(13, title='Fast SMA Length', minval=1, group = i_vwmaSettings)
+i_lenSlowSMA = input.int(26, title='Slow SMA Length', minval=1, group = i_vwmaSettings)
+i_src = input(title='Source', defval=close, group = i_vwmaSettings)
+// VWMA/SMA Calculations
+fastSMA = ta.sma(i_src, i_lenFastSMA)
+slowSMA = ta.sma(i_src, i_lenSlowSMA)
+fastVWMA = ta.vwma(i_src, i_lenFastVWMA)
+slowVWMA = ta.vwma(i_src, i_lenSlowVWMA)
+//ATR Calculation
+atr = ta.atr(21)
+tp = atr * i_tpmult
+sl = atr * i_slmult
+//  Strategy Backtest Limiting Algorithm
+backtest_group = 'Backtesting Settings'
+i_startTime = input.time(defval=timestamp('01 Jan 2022 13:30 +0000'), title='Backtesting Start Time', group = backtest_group)
+i_endTime = input.time(defval=timestamp('31 Dec 2099 19:30 +0000'), title='Backtesting End Time', group = backtest_group)
+timeCond = time > i_startTime and time < i_endTime
+// Trading Signals
+fastUpCross = ta.crossover(fastVWMA, fastSMA)
+mediumUpCross = ta.crossover(fastVWMA, slowSMA)
+slowUpCross = ta.crossover(slowVWMA, slowSMA)
+fastDownCross = ta.crossunder(fastVWMA, fastSMA)
+mediumDownCross = ta.crossunder(fastVWMA, slowSMA)
+slowDownCross = ta.crossunder(slowVWMA, slowSMA)
+longEntry = false
+shortEntry = false
+if i_entryType == 'Fast Crosses' and timeCond
+    longEntry := fastUpCross
+    shortEntry := fastDownCross
+if i_entryType == 'Medium Crosses' and timeCond
+    longEntry := mediumUpCross
+    shortEntry := mediumDownCross
+if i_entryType == 'Slow Crosses' and timeCond
+    longEntry := slowUpCross
+    shortEntry := slowDownCross
+// Stochastic RSI - For Exiting Trades 
+stoch_group = 'Stochastic RSI Settings'
+useStoch = input.bool(defval = true, title = 'Use Stochastic RSI To Exit?', tooltip = 'If enabled, strategy will exit trades when the RSI crosses in Overbought or Oversold Conditions', group = stoch_group)
+k = ta.sma(ta.stoch(close, high, low, 14), 6)
+d = ta.sma(k, 3)
+stoch_crossunder = ta.crossunder(k, d)
+stoch_crossover = ta.crossover(k, d)
+stoch_ob_crossunder = ta.crossunder(k, d) ? math.avg(k, d) >= 80 : na
+stoch_os_crossover = ta.crossover(k, d) ? math.avg(k, d) <= 20 : na
+exitLong = false
+exitShort = false
+if useStoch
+    exitLong := stoch_ob_crossunder
+    exitShort := stoch_os_crossover
+    
+// Take Profit and Stop Loss - Here we calculate our Take Profit and Stop Loss Levels at the moment we receive a Trading Signal. 
+longTakeLevel = 0.0
+longTakeLevel := slowUpCross ? close + tp : longTakeLevel[1]
+longStopLevel = 0.0
+longStopLevel := slowUpCross ? close - sl : longStopLevel[1]
+shortTakeLevel = 0.0
+shortTakeLevel := slowDownCross ? close - tp : shortTakeLevel[1]
+shortStopLevel = 0.0
+shortStopLevel := slowDownCross ? close + sl : shortStopLevel[1]
+// Position Sizing - This is how we calculate our Position Size for our Backtest and for our DCA Bot.
+initialCapital = strategy.initial_capital
+balance = initialCapital + strategy.netprofit
+risk = i_risk / 100
+loss = balance * risk
+valueAtClose = ta.valuewhen(slowUpCross, close, 0)
+distanceToStop = math.abs(valueAtClose - longStopLevel) / valueAtClose
+valueAtCloseShort = ta.valuewhen(slowDownCross, close, 0)
+distanceToStopShort = math.abs(valueAtCloseShort - shortStopLevel) / valueAtCloseShort
+positionSize = (loss / (distanceToStop / valueAtClose)) / valueAtClose
+positionSizeShort = (loss / (distanceToStopShort / valueAtCloseShort)) / valueAtCloseShort
+if positionSize > 1000000
+    positionSize := 1000000
+if positionSize < 0
+    positionSize := 1
+if positionSizeShort > 1000000
+    positionSizeShort := 1000000
+if positionSizeShort < 0
+    positionSizeShort := 1
+// Close Function - This will cause the Bot to close the trade when the specified actions occur. 
+closeFunction = strategy.position_entry_name == 'Long' and high > longTakeLevel or strategy.position_entry_name == 'Long' and low < longStopLevel or strategy.position_entry_name == 'Long' and slowDownCross or exitLong
+closeFunctionShort = strategy.position_entry_name == 'Short' and low < shortTakeLevel or strategy.position_entry_name == 'Short' and high > shortStopLevel or strategy.position_entry_name == 'Short' and slowUpCross or exitShort
+//Strategy Stuff
+strategy.entry('Long', strategy.long, when = longEntry, qty = positionSize)
+strategy.entry('Short', strategy.short, when = shortEntry, qty = positionSizeShort)
+strategy.exit('Long Exit', from_entry='Long', limit = longTakeLevel, stop = longStopLevel, when = strategy.position_size > 0)
+strategy.exit('Short Exit', from_entry = 'Short', limit = shortTakeLevel, stop = shortStopLevel, when = strategy.position_size < 0)
+strategy.close('Long', when = closeFunction)
+strategy.close('Short', when = closeFunctionShort)
+// Automation Stuff 
+// Note for Users - Simply replace the JSON messages below with your Bot Message from your 3Commas DCA Bot. 
+// If you have any issues with the Bot not sizing your trades up to your correct position size, try putting a 3-6 second delay in your 'addAlert' variable. Simply replace the 0 after "delay_seconds" with a number between 3-6.
+buyAlert = '{  "message_type": "bot",  "bot_id": insert your bot id here,  "email_token": "insert your email token between these quotes",  "delay_seconds": 0}'
+exitAlert = '{  "action": "close_at_market_price",  "message_type": "bot",  "bot_id": insert your bot id here,  "email_token": "insert your email token between these quotes",  "delay_seconds": 0}'
+addAlert = '{  "action": "add_funds_in_quote",  "message_type": "bot",  "bot_id": insert your bot id here,  "email_token": "insert your email token between these quotes",  "delay_seconds": 0,  "volume":' + str.tostring(positionSize) + '}'
+shortAlert = '{  "message_type": "bot",  "bot_id": insert your bot id here,  "email_token": "insert your email token between these quotes",  "delay_seconds": 0}'
+exitShortAlert = '{  "action": "close_at_market_price",  "message_type": "bot",  "bot_id": insert your bot id here,  "email_token": "insert your email token between these quotes",  "delay_seconds": 0}'
+addShortAlert = '{  "action": "add_funds_in_quote",  "message_type": "bot",  "bot_id": insert your bot id here,  "email_token": "insert your email token between these quotes",  "delay_seconds": 0,  "volume":' + str.tostring(positionSizeShort) + '}'
+if longEntry
+    alert(buyAlert, alert.freq_once_per_bar) 
+if shortEntry
+    alert(shortAlert, alert.freq_once_per_bar)
+if closeFunction
+    alert(exitAlert, alert.freq_once_per_bar)
+if closeFunctionShort
+    alert(exitShortAlert, alert.freq_once_per_bar)
+if longEntry
+    alert(addAlert, alert.freq_once_per_bar)
+if shortEntry
+    alert(addShortAlert, alert.freq_once_per_bar)
+// Plots 
+s0 = plot(slowSMA, title='Slow SMA', color=color.new(color.red, 0), linewidth=2)
+v0 = plot(slowVWMA, title='Slow VWMA', color=color.new(color.green, 0), linewidth=2)
+s1 = plot(fastSMA, title='Fast SMA', color=color.new(color.fuchsia, 0), linewidth=2, style=plot.style_circles)
+v1 = plot(fastVWMA, title='Fast VWMA', color=color.new(color.teal, 0), linewidth=2, style=plot.style_circles)
+fill(s0, v0, color=slowSMA < slowVWMA ? color.new(color.green, 70) : color.new(color.red, 70))
+fill(s1, v1, color=fastSMA < fastVWMA ? color.new(color.teal, 80) : color.new(color.fuchsia, 80))
+Expand (185 lines)

@@ -1,0 +1,166 @@
+Script Name: Buy and Hold entry finder Strategy
+Author: Embit0one
+Description: Hello everyone! 
+
+I proudly present the backtest Strategy Script for my "Buy and Hold entry finder" Script.
+
+It basically shows you the outcome, if you would use my indicator in the past.
+
+The buy signals are limited to 1 order per month.
+
+ 
+Order Size:  Allows you to choose, how much money you want to invest per month. (Please consider, it will only invest an x...
+PineScript code:
+
+Pine Script™ strategy
+Buy and Hold entry finder Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © runescapeyttanic
+//@version=4
+strategy("Buy and Hold entry finder Strategy",pyramiding=10000, overlay=true,initial_capital=0,default_qty_type=strategy.cash,default_qty_value=1000,currency = currency.EUR,commission_type=strategy.commission.cash_per_order,commission_value=0)
+//INPUTS##################################################################################################################
+maxEmaDistance = input(title="Maximum EMA Distance", type=input.float, step=0.01, defval=50000)
+emalength = input(title="EMA Length", type=input.integer,defval=200)
+// Make input options that configure backtest date range
+startDate = input(title="Start Date", type=input.integer,
+     defval=1, minval=1, maxval=31)
+startMonth = input(title="Start Month", type=input.integer,
+     defval=1, minval=1, maxval=12)
+startYear = input(title="Start Year", type=input.integer,
+     defval=2020, minval=1800, maxval=2100)
+endDate = input(title="End Date", type=input.integer,
+     defval=12, minval=1, maxval=31)
+endMonth = input(title="End Month", type=input.integer,
+     defval=02, minval=1, maxval=12)
+endYear = input(title="End Year", type=input.integer,
+     defval=2021, minval=1800, maxval=2100)
+endDate1=endDate-1
+//starttag
+//startmonat
+//MACD########################################################################################################################
+fast_length=12
+slow_length=26
+src=close
+col_macd=#0094ff
+fast_ma = ema(src, fast_length)
+slow_ma = ema(src, slow_length)
+macd = fast_ma - slow_ma
+//EMA Distance CALC########################################################################################################
+ma1 =ema(close,emalength)
+distFromMean = close - ma1
+inDateRange = (time >= timestamp(syminfo.timezone, startYear, startMonth, startDate, 0, 0)) and (time < timestamp(syminfo.timezone, endYear, endMonth, endDate1, 0, 0))
+longCondition = (distFromMean<=maxEmaDistance and distFromMean>=distFromMean[1] and macd<=0 and inDateRange)
+longnow=false
+if(longCondition and strategy.position_size == 0)
+    strategy.entry("My Long Entry Id", strategy.long)
+    longnow:=true
+if(longCondition and strategy.position_size > 0)
+    longnow:=true
+    
+if(longCondition and strategy.position_size > 0 and month>valuewhen(longnow, month ,1) or longCondition and strategy.position_size > 0 and year>valuewhen(longnow, year ,1) and inDateRange)
+    strategy.entry("My Long Entry Id", strategy.long)
+plotchar(minute, "Minuten", "", location = location.top)
+plotchar(hour, "Stunden", "", location = location.top)    
+plotchar(dayofmonth, "Tage", "", location = location.top)
+plotchar(month, "Monat", "", location = location.top)
+plotchar(year, "Jahr", "", location = location.top)
+plotchar(strategy.position_size, "Positionen", "", location = location.top)
+plotchar(longCondition, "Long Condition", "", location = location.top)
+if(time > timestamp(syminfo.timezone, endYear, endMonth, endDate1, 0, 0))
+    strategy.close_all()
+//#########################################################################################################################
+plotArrow = if (distFromMean<=maxEmaDistance and distFromMean>=distFromMean[1] and macd<=0)
+    1
+else
+    0
+    
+plotarrow(series=plotArrow)
+Expand (87 lines)

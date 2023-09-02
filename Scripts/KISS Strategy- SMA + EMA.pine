@@ -1,0 +1,482 @@
+Script Name: KISS Strategy- SMA + EMA
+Author: MakeMoneyCoESTB2020
+Description: //Hello my fellow investors
+//I am creating a simple non-cluttered strategy that uses 3(+1) simple means to determine: viability, entry, and exit
+//1) Has a consistent trend been maintained for several days/weeks
+//2) SH SMA crossover LG SMA = Bullish entry/LG SMA crossover SH SMA = Bearish entry
+//3) Use the Slope factor & Weeks in Trend (WiT) to dertermine how...
+PineScript code:
+
+Pine Script™ strategy
+KISS Strategy: SMA + EMA
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © MakeMoneyCoESTB2020
+//*********************Notes for continued work***************
+//************************************************************
+//Hello my fellow investors
+//I am creating a simple non-cluttered strategy that uses 3(+1) simple means to determine: viability, entry, and exit
+//1) Has a consistent trend been maintained for several days/weeks
+//2) SH SMA crossover LG SMA = Bullish entry/LG SMA crossover SH SMA = Bearish entry
+//3) Use the Slope factor & Weeks in Trend (WiT) to dertermine how strong of an entry signal you are comfortable with
+//3+1) For added confidence in trend detection: Apply MACD check - buy--> MACD line above signal line and corssover below histogram \\ sell --> MACD line below signal line and crossover above histogram.
+//4) Exit position based on next SMA cross and trend reversal or stop loss%
+//*)This code also allows you to determine your desired backtesting date compliments of alanaster
+//This code is the product of many hours of hard work on the part of the greater tradingview community.  The credit goes to everyone in the community who has put code out there for the greater good.
+//Happy Hunting!
+// 1. Define strategy settings*************************************************************************************************************************************************************************
+//Title
+strategy("KISS Strategy: SMA + EMA", shorttitle="KISS Strat", default_qty_type=strategy.percent_of_equity, default_qty_value=5, initial_capital=20000,slippage=2, currency=currency.USD, overlay=true, pyramiding=2)
+//define calculations price source
+price = input(title="Price Source", defval=close)
+//Does user want to run the Strategy for Trending Up or Trending Down
+RunTrend=input(title="Run Strategy Trending Up, Down, or Both", defval="Both", options=["Up", "Down", "Both"])
+// 2. Calculate strategy values*************************************************************************************************************************************************************************
+//Calculate 13/30/200SMA 
+SH_SMA_length= input(title="SH SMA Length", defval=13) //short SMA length
+LG_SMA_length= input(title="LG SMA Length", defval=30) //long SMA length
+GV_SMA_length= input(title="SH SMA Length", defval=200) //Gravitational SMA length
+SH_SMA=sma(price, SH_SMA_length) //short SMA 
+LG_SMA=sma(price, LG_SMA_length) //long SMA
+GV_SMA=sma(price, GV_SMA_length) //gravitational SMA
+//calculate MACD
+//define variables for speed
+fast = 12, slow = 26
+//define parameters to calculate MACD
+fastMA = ema(price, fast)
+slowMA = ema(price, slow)
+//define MACD line
+macd = fastMA - slowMA
+//define SIGNAL line
+signal = sma(macd, 9)
+//Determine what type of trend we are in
+dcp = security(syminfo.tickerid, 'D', close)   //daily close price 
+wcp = security(syminfo.tickerid, 'W', close)   //weekly close price 
+WiT = input(title="Weeks In Trend", defval=1, maxval=5, minval=1)    //User input for how many weeks of price action to evaluate (Weeks in Trend = WiT)
+BearTrend = false       //initialize trend variables as false
+BullTrend = false       //initialize trend variables as false
+// BullTrend := (wcp > SH_SMA) and (SH_SMA > LG_SMA)  //true if price is trending up based on weekly price close
+// BearTrend := (wcp < SH_SMA) and (SH_SMA < LG_SMA)  //true if price is trending down based on weekly price close
+// BullTrend := (price > SH_SMA) and (SH_SMA > LG_SMA)  //true if price is trending up
+// BearTrend := (price < SH_SMA) and (SH_SMA < LG_SMA)  //true if price is trending down
+//Determine if the market has been in a trend for 'n' weeks
+n=WiT                           //create loop internal counting variable
+for i=1 to WiT                  //create loop to determine if BearTrend=true to set number of weeks
+    if (wcp[n] < price)         //evaluate if BearTrend=false comparing the current price to a paticular week close
+        BearTrend := false      //set value to false if older price value is less than newer: trending up
+        break                   //break out of for loop when trend first falters
+    if (wcp[n] > price)         //evaluate if BearTrend=true comparing the current price to a paticular week close
+        BearTrend := true       //set value to true if older price value is greater than newer: trending down
+    n:=n-1                      //set internal counter one day closer to present
+m=WiT                           //create loop internal counting variable
+for j=1 to WiT                  //create loop to determine if BearTrend=true to set number of weeks
+    if (wcp[m] > price)         //evaluate if BullTrend=false comparing the current price to a paticular week close
+        BullTrend := false      //set value to false if older price value is greater than newer: trending down
+        break                   //break out of for loop when trend first falters
+    if (wcp[m] < price)         //evaluate if BullTrend=true comparing the current price to a paticular week close
+        BullTrend := true       //set value to true if older price value is less than newer: trending up
+    m:=m-1                      //set internal counter one day closer to present
+//Determine if crossings occur
+SH_LGcrossover = crossover(SH_SMA, LG_SMA)  //returns true if short crosses over long
+SH_LGcrossunder = crossunder(SH_SMA, LG_SMA)    //returns true if short crosses under long
+//Determine the slope of the SMAs when a cross over occurs
+SlopeFactor= input(title="Slope Factor", defval=.01, minval=0, step = 0.001) //user input variable for what slope to evaluate against
+XSlopeSH = abs(SH_SMA-SH_SMA[2]) //slope of short moving average (time cancels out)
+XSlopeLG = abs(LG_SMA-LG_SMA[2]) //slope of long moving average (time cancels out)
+StrongSlope = iff (abs(XSlopeSH-XSlopeLG)>SlopeFactor, true, false) //create a boolean variable to determine is slope intensity requirement is met
+// ************************************ INPUT BACKTEST RANGE ******************************************=== coutesy of alanaster
+fromMonth = input(defval = 4,    title = "From Month",      type = input.integer, minval = 1, maxval = 12)
+fromDay   = input(defval = 1,    title = "From Day",        type = input.integer, minval = 1, maxval = 31)
+fromYear  = input(defval = 2020, title = "From Year",       type = input.integer, minval = 1970)
+thruMonth = input(defval = 1,    title = "Thru Month",      type = input.integer, minval = 1, maxval = 12)
+thruDay   = input(defval = 1,    title = "Thru Day",        type = input.integer, minval = 1, maxval = 31)
+thruYear  = input(defval = 2112, title = "Thru Year",       type = input.integer, minval = 1970)
+// === INPUT SHOW PLOT ===
+showDate  = input(defval = true, title = "Show Date Range", type = input.bool)
+// === FUNCTION EXAMPLE ===
+start     = timestamp(fromYear, fromMonth, fromDay, 00, 00)        // backtest start window
+finish    = timestamp(thruYear, thruMonth, thruDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+bgcolor(color = showDate and window() ? color.gray : na, transp = 90) 
+// === EXECUTION ===
+//strategy.entry("L", strategy.long, when = window() and crossOv)    // enter long when "within window of time" AND crossover
+//strategy.close("L", when = window() and crossUn)                   // exit long when "within window of time" AND crossunder
+// 3. Output strategy data*************************************************************************************************************************************************************************
+//Embolden line if a trend exists
+trendcolorLG = BearTrend?color.red:color.black //highlights beartrend condition met graphically
+trendcolorSH = BullTrend?color.green:color.black //highlights beartrend condition met graphically
+//plot SMAs
+plot(SH_SMA, title = "SH SMA", color = trendcolorSH)
+plot(LG_SMA, title = "LG SMA", color = trendcolorLG)
+plot(GV_SMA, title = "GV SMA", color = color.silver, linewidth = 4, transp = 70)
+//Highlight crossovers
+plotshape(series=SH_LGcrossover, style=shape.arrowup, location=location.belowbar,size=size.normal, color=color.green)
+plotshape(series=SH_LGcrossunder, style=shape.arrowdown, location=location.abovebar,size=size.normal, color=color.red)
+// 4. Determine Long & Short Entry Calculations*************************************************************************************************************************************************************************
+//Determine when to run the strategy based on user input for uptrend or downtrend
+RunTrendUp=false //Varibile for running the Strategy in an UpTrend
+RunTrendUp:= iff(RunTrend == "Up" or RunTrend == "Both", true, false)
+RunTrendDWN=false //Varibile for running the Strategy in a DownTrend
+RunTrendDWN:= iff(RunTrend == "Down" or RunTrend == "Both", true, false)
+//Define countback variable
+countback=input(minval=0, maxval=5, title="Price CountBack", defval=0)
+//User input for what evaluations to run: SMA or SMA + EMA
+SMA_Y_N=input(defval = "Y", title="Run SMA", type=input.string, options=["Y", "N"])
+MACD_Y_N=input(defval = "N", title="Run MACD", type=input.string, options=["Y", "N"])
+//Calculate SMA Cross entry conditions
+SMAbuy=false
+SMAsell=false
+SMAbuy := SH_LGcrossover and StrongSlope and BearTrend[WiT*7]   //enter long if short SMA crosses over long SMA & security has been in a BearTrend for 'n' days back
+SMAsell := SH_LGcrossunder and StrongSlope and BullTrend[WiT*7] //enter short if short SMA crosses under long SMA & security has been in a BullTrend for 'n' days back
+//Calculate MACD Cross entry conditions
+MACDbuy = iff(MACD_Y_N=="Y", crossunder(signal[countback], macd[countback]), true) and iff(MACD_Y_N=="Y", macd[countback]<0, true) and StrongSlope and BearTrend     //enter long if fast MACD crosses over slow MACD & there is a strong slope & security has been in a BearTrend for 'n' days back
+MACDsell = iff(MACD_Y_N=="Y", crossunder(macd[countback], signal[countback]), true) and iff(MACD_Y_N=="Y", signal[countback]>0, true) and StrongSlope and BullTrend  //enter short if fast MACD crosses under slow MACD & there is a strong slope & security has been in a BullTrend for 'n' days back
+//long entry condition
+dataHCLB=(iff(SMA_Y_N=="Y", SMAbuy, true) and iff(MACD_Y_N=="Y", MACDbuy, true) and RunTrendUp)
+plotshape(dataHCLB, title= "HC-LB", color=color.lime, style=shape.circle, text="HC-LB")
+strategy.entry("HC-Long", strategy.long, comment="HC-Long", when = dataHCLB and window())
+//short entry condition
+dataHCSB=(iff(SMA_Y_N=="Y", SMAsell, true) and iff(MACD_Y_N=="Y", MACDsell, true) and RunTrendDWN)
+plotshape(dataHCSB, title= "HC-SB", color=color.fuchsia, style=shape.circle, text="HC-SB")
+strategy.entry("HC-Short", strategy.short, comment="HC-Short", when=dataHCSB and window())
+// 5. Submit Profit and Loss Exit Calculations Orders*************************************************************************************************************************************************************************
+//User Options to Change Inputs 
+//Does user want to run a Trailing Stop
+trailStop_YN=input(title="Run a Trailing Stop", defval="N", options=["Y", "N"])
+TrailPerc = input(title="Trail Loss %", type=input.float, minval=0, step=1, defval=6) /100
+stopPer = input(12, title='Stop Loss %', type=input.float) / 100
+takePer = input(25, title='Take Profit %', type=input.float) / 100
+//calculate Trail stop price for MD_EMA TGT% condition
+longStopPrice=0.0//long side entry stop variable
+longStopPrice := if (strategy.position_size > 0)
+    stopValue = close * (1 - TrailPerc)  
+    max(stopValue, longStopPrice[1])
+else
+    0
+    
+shortStopPrice=0.0//short side entry stop variable
+shortStopPrice := if (strategy.position_size < 0)
+    shortStopValue = close * (1 + TrailPerc)  
+    min(shortStopValue, shortStopPrice[1])
+else
+    999999 
+    
+// Determine where you've entered and in what direction
+longStop = strategy.position_avg_price * (1 - stopPer)
+shortStop = strategy.position_avg_price * (1 + stopPer)
+shortTake = strategy.position_avg_price * (1 - takePer)
+longTake = strategy.position_avg_price * (1 + takePer)
+//exit position conditions and orders
+if strategy.position_size > 0 //long side exit conditions
+    if trailStop_YN=="Y"
+        strategy.exit(id="Close Long", when = window(), stop=longStop, limit=longTake, qty_percent=50)// sell 50% when either the TGT or the SL is hit then transition to a trailing stop loss
+        strategy.exit(id="Close Long Trailing Stop", when = window(), stop=longStopPrice, qty_percent=100)
+    if trailStop_YN=="N"
+        strategy.exit(id="Close Long", when = window(), stop=longStop, limit=longTake)// sell when either the TGT or the SL is hit   
+        
+        
+if strategy.position_size < 0 //short side exit conditions
+    if trailStop_YN=="Y"
+        strategy.exit(id="Close Short", when = window(), stop=shortStop, limit=shortTake, qty_percent=50)// sell 50% when either the TGT or the SL is hit then transition to a trailing stop loss
+        strategy.exit(id="Close Short Trailing Stop", when = window(), stop=shortStopPrice, qty_percent=100)
+    if trailStop_YN=="N"
+        strategy.exit(id="Close Short", when = window(), stop=shortStop, limit=shortTake)// sell when either the TGT or the SL is hit
+// Plot stop trailing loss values for confirmation
+plot(series=(strategy.position_size > 0 and (trailStop_YN=="Y")) ? longStopPrice : na, color=color.fuchsia, style=plot.style_cross, linewidth=2, title="Long Trail Stop") //plot the trailing stop on the chart for an uptrend
+plot(series=(strategy.position_size < 0 and (trailStop_YN=="Y")) ? shortStopPrice : na, color=color.fuchsia, style=plot.style_cross, linewidth=2, title="Short Trail Stop") //plot the trailing stop on the chart for a downtrend
+//plot fixed stop loss value
+plot(series=(strategy.position_size > 0 and (trailStop_YN=="N")) ? longStop : na, color=color.fuchsia, style=plot.style_cross, linewidth=2, title="Long Trail Stop") //plot the stop on the chart for an uptrend
+plot(series=(strategy.position_size < 0 and (trailStop_YN=="N")) ? shortStop : na, color=color.fuchsia, style=plot.style_cross, linewidth=2, title="Short Trail Stop") //plot the stop on the chart for a downtrend
+//plot the TGT profit points
+plot(series=(strategy.position_size > 0 ) ? longTake : na, color=color.lime, style=plot.style_cross, linewidth=2, title="Short Trail Stop") //plot the TGT% for long position
+plot(series=(strategy.position_size < 0 ) ? shortTake : na, color=color.lime, style=plot.style_cross, linewidth=2, title="Short Trail Stop") //plot the TGT% for short position
+// // Determine where you've entered and in what direction
+// longStop = strategy.position_avg_price * (1 - stopPer)
+// shortStop = strategy.position_avg_price * (1 + stopPer)
+// shortTake = strategy.position_avg_price * (1 - takePer)
+// longTake = strategy.position_avg_price * (1 + takePer)
+// //exit position conditions and orders
+// if strategy.position_size > 0//or crossunder(price[countback], upperBB)
+//     strategy.exit(id="Close Long", when = window(), stop=longStop, limit=longTake)
+// if strategy.position_size < 0 //or crossover(price[countback], lowerBB)
+//     strategy.exit(id="Close Short", when = window(), stop=shortStop, limit=shortTake)
+//Evaluate/debug equation***************************************************************************************************************************************************************************
+// plotshape((n==5? true : na), title='n=5', style=shape.labeldown, location=location.abovebar, text='5', color=color.white, textcolor=color.black, transp=0) //print n value if 5
+// plotshape((n==4? true : na), title='n=4', style=shape.labeldown, location=location.abovebar, text='4', color=color.white, textcolor=color.black, transp=0) //print n value if 4 
+// plotshape((n==3? true : na), title='n=3', style=shape.labeldown, location=location.abovebar, text='3', color=color.white, textcolor=color.black, transp=0) //print n value if 3
+// plotshape((n==2? true : na), title='n=2', style=shape.labeldown, location=location.abovebar, text='2', color=color.white, textcolor=color.black, transp=0) //print n value if 2
+// plotshape((n==1? true : na), title='n=1', style=shape.labeldown, location=location.abovebar, text='1', color=color.white, textcolor=color.black, transp=0) //print n value if 1
+// lineValue = 11                                           //set random visible line value to check when equation is true
+// colorP = (BearTrend==true) ? color.green : color.red
+// plot (lineValue, title = "BearTrend", color = colorP)   //Plot when condition true=green, false=red
+// plot (XSlopeLG+15, color=color.white) //used for code debugging
+// plot (XSlopeSH+15, color=color.blue) //used for code debugging
+// plot (abs(XSlopeSH-XSlopeLG)+20, color=color.fuchsia) //used for code debugging
+Expand (266 lines)

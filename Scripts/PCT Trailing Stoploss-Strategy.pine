@@ -1,0 +1,297 @@
+Script Name: PCT Trailing Stoploss-Strategy
+Author: Thumpyr
+Description: I am not a financial advisor and this is not financial advice.  This is provided for illustration only for a Percent based Trailing Stoploss.  
+
+I have been looking for a Percent based Trailing Stoploss and have not been able to find one that would work for me so I wrote my own.  This works in both a Strategies and Indicators  I put comments inline of where to...
+PineScript code:
+
+Pine Script™ strategy
+PCT Trailing Stoploss-Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Thumpyr
+//@version=5
+/////////////////////////////////////////////////////////////////////////////////////////////
+// Comment out Strategy Line and remove // from Indicator line to turn into Indicator  //////
+// Do same for alertConidction at bottom                                               //////
+/////////////////////////////////////////////////////////////////////////////////////////////
+strategy("PCT Trailing Stoploss-Strategy", shorttitle="PCT Trailing Stoploss- Strategy", overlay=true, margin_long=100, margin_short=100)
+//indicator(title="PCT Trailing Stoploss- Indicator", shorttitle="PCT Trailing Stoploss - Indicator", timeframe="", timeframe_gaps=true, overlay=true)//
+sellLow=input.float(.035, minval=0, title="Stop Loss Loss: 1% = .01", group="Sell Settings")
+trailStopArm=input.float(.0065, minval=0, title="Trailing Stop Arm: 1%=.01", group="Sell Settings")
+trailStopPct=input.float(.003, minval=0, title="Trailing Stop Trigger: 1%=.01 ", group="Sell Settings")
+/////////////////////////////////////////////////
+//               Indicators                    //
+/////////////////////////////////////////////////
+ema1Len = input.int(14, minval=1, title=" ema 1 Length", group="Trend Line Settings")
+ema1Src = input(close, title="ema 1 Source", group="Trend Line Settings")
+ema1 = ta.ema(ema1Src, ema1Len)
+plot(ema1, title="EMA", color=color.blue)
+ema2Len = input.int(22, minval=1, title=" ema 2 Length", group="Trend Line Settings")
+ema2Src = input(close, title="ema 2 Source", group="Trend Line Settings")
+ema2 = ta.ema(ema2Src, ema2Len)
+plot(ema2, title="EMA", color=color.orange)
+ema3Len = input.int(200, minval=1, title=" ema 3 Length", group="Trend Line Settings")
+ema3Src = input(close, title="ema 2 Source", group="Trend Line Settings")
+ema3 = ta.ema(ema3Src, ema3Len)
+plot(ema3, title="EMA", color=color.gray)
+/////////////////////////////
+////   Buy Conditions    ////
+/////////////////////////////
+alertBuy = ta.crossover(ema1,ema2) and close>ema3
+////////////////////////////////////////////////////////////////////
+////   Filter redundant Buy Signals if Sell has not happened    ////
+////////////////////////////////////////////////////////////////////
+var lastsignal = 0
+showAlertBuy = 0
+if(alertBuy and lastsignal !=1)
+    showAlertBuy  := 1
+    lastsignal      := 1
+buyAlert= showAlertBuy > 0
+//////////////////////////////////////////////////////////////////
+////          Track Conditions at buy Signal                  ////
+//////////////////////////////////////////////////////////////////
+alertBuyValue = ta.valuewhen(buyAlert, close,0)
+alertSellValueLow = alertBuyValue - (alertBuyValue*sellLow)
+////////////////////////////////////////////////////////////
+/////            Trailing Stop                         /////
+////////////////////////////////////////////////////////////
+var TSLActive=0         //Check to see if TSL has been activated
+var TSLTriggerValue=0.0 //Initial and climbing value of TSL
+var TSLStop = 0.0       //Sell Trigger
+var TSLRunning =0       //Continuously check each bar to raise TSL or not
+//  Check if a Buy has been triggered and set initial value for TSL //
+if buyAlert
+    TSLTriggerValue := alertBuyValue+(alertBuyValue*trailStopArm)
+    TSLActive := 0
+    TSLRunning :=1
+    TSLStop := TSLTriggerValue - (TSLTriggerValue*trailStopPct)
+    
+//  Check that Buy has triggered and if Close has reached initial TSL//  
+//  Keeps from setting Sell Signal before TSL has been armed w/TSLActive//
+beginTrail=TSLRunning==1 and TSLActive==0 and close>alertBuyValue+(alertBuyValue*trailStopArm) and ta.crossover(close,TSLTriggerValue)
+if beginTrail
+    TSLTriggerValue :=close
+    TSLActive :=1
+    TSLStop :=TSLTriggerValue - (TSLTriggerValue*trailStopPct)
+    
+//  Continuously check if TSL needs to increase and set new value //    
+runTrail= TSLActive==1 and (ta.crossover(close,TSLTriggerValue) or close>=TSLTriggerValue)
+if runTrail
+    TSLTriggerValue :=close
+    TSLStop :=TSLTriggerValue - (TSLTriggerValue*trailStopPct)
+    
+//  Verify that TSL is active and trigger when close cross below TSL Stop//
+TSL=TSLActive==1 and (ta.crossunder(close,TSLStop) or (close[1]>TSLStop and close<TSLStop)) 
+// Plot point of inital arming of TSL//
+TSLTrigger=TSLActive==1 and TSLActive[1]==0
+plotshape(TSLTrigger, title='TSL Armed', location=location.abovebar, color=color.new(color.blue, 0), size=size.small, style=shape.cross, text='TSL Armed')
+////////////////////////////////////////////////////////////
+// Plots used for troubleshooting and verification of TSL //
+////////////////////////////////////////////////////////////
+//plot(TSLActive,"Trailing Stop", color=#f48fb1)
+//plot(TSLRunning,"Trailing Stop", color=#f48fb1)
+//plot(TSLTriggerValue,"Trailing Stop Trigger", color.new(color=#ec407a, transp = TSLRunning==1 ? 0 : 100))
+//plot(TSLStop,"Trailing Stop", color.new(color=#f48fb1, transp = TSLRunning==1 ? 0 : 100))//
+////////////////////////////////////////////////////////////
+/////             Sell Conditions                    ///////
+////////////////////////////////////////////////////////////
+Sell1 = TSL
+Sell2 = ta.crossunder(close,alertSellValueLow)
+alertSell= Sell1 or Sell2
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////        Remove Redundant Signals                    ////
+////////////////////////////////////////////////////////////
+showAlertSell = 0
+if(alertSell and lastsignal != -1)
+    showAlertSell := 1
+    lastsignal      := -1
+sellAlert= showAlertSell > 0
+if sellAlert
+    TSLActive :=0
+    TSLRunning :=0
+/////////////////////////////////////////
+//  Plot Buy and Sell Shapes on Chart  //
+/////////////////////////////////////////
+plotshape(buyAlert, title='Buy', location=location.belowbar, color=color.new(color.green, 0), size=size.small, style=shape.triangleup, text='Buy')
+plotshape(sellAlert, title='Sell', location=location.abovebar, color=color.new(color.red, 0), size=size.small, style=shape.triangledown, text='Sell')
+/////////////////////////////////////////////////////////////////////////////////////////////
+//                        Remove // to setup for Indicator                                 //
+/////////////////////////////////////////////////////////////////////////////////////////////
+//Alerts
+//alertcondition(title='Buy Alert', condition=buyAlert, message='Buy Conditions are Met')
+//alertcondition(title='Sell Alert', condition=sellAlert, message='Sell Conditions are Met')
+/////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////  Comment out this section if setup as Indicator    ////
+////////////////////////////////////////////////////////////
+longCondition = buyAlert
+if (longCondition)
+    strategy.entry("Buy", strategy.long)
+    alert(message='Buy', freq=alert.freq_once_per_bar_close)
+    
+shortCondition = sellAlert
+if (shortCondition)
+    strategy.close_all(sellAlert,"Sell")
+    alert(message='Sell', freq=alert.freq_once_per_bar_close)
+/////////////////////////////////////////////////////////////
+Expand (158 lines)

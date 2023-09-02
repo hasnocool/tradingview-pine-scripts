@@ -1,0 +1,107 @@
+Script Name: EMA Strat
+Author: swagmoneytrader
+Description: If previous day close above EMA, enter long at open the following day. Exit long position if prices close below EMA.
+PineScript code:
+
+Pine Script™ strategy
+EMA Strat
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ericdwyang
+//@version=5
+strategy("EMA Strat", overlay=true, margin_long=100, margin_short=100)
+// EMA Variables
+emaInput = input(21, "Length")
+ema = ta.ema(close, emaInput)
+// Variable Declaration
+p = 0
+start = false
+// Start Date
+yearInput = input(2000, "Year")
+if (time >= timestamp(2000,01,01,01,01))
+    start := true
+// Check first candle relative to EMA
+if (close > ema and start == true)
+    p += 1
+    strategy.entry("Long", strategy.long, comment = "Entry")
+    
+// Candle close above EMA (p + 1, count reset to 0)
+above = close[1] > ema[1]
+if (above)
+    p += 1
+// Candle close below EMA (reset p to 0, count -1)
+below = close < ema
+if (below)
+    p := 0
+    strategy.close("Long", comment = "Flat")
+// // Exit Position
+// if (redCount == -2)
+//     strategy.close("Long", comment = "Flat")
+    
+// goLong = p[1] == 0 and p == 1
+// flatten = p == 0
+    
+// // Restablish long    
+// if (goLong and start == true)
+//     strategy.entry("Long", strategy.long, comment = "Entry")
+    
+plot(p)
+plot(ema)
+    
+Expand (56 lines)

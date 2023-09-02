@@ -1,0 +1,1161 @@
+Script Name: Strategy Execution Template - Master Pattern
+Author: superNature
+Description: This script is a template to execute your strategy with Stop Loss and Take Profit and showing Trades.
+
+Then, you can write your strategy without taking care of Stop Loss and Take Profit method.
+3x Fixed Percent Stop Loss, Trailing Percent Stop Loss, Trailing ATR Stop Loss, Tailing HHLL Stop Loss
+3x Fixed Percent, Take Profit
+PineScript code:
+
+Pine Script™ strategy
+Strategy Execution Template - Master Pattern
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+540
+541
+542
+543
+544
+545
+546
+547
+548
+549
+550
+551
+552
+553
+554
+555
+556
+557
+558
+559
+560
+561
+562
+563
+564
+565
+566
+567
+568
+569
+570
+571
+572
+573
+574
+575
+576
+577
+578
+579
+580
+581
+582
+583
+584
+585
+586
+587
+588
+589
+590
+591
+// -----------------------------------------------------------------
+// (c)2022 superNature
+// @version=5
+// -----------------------------------------------------------------
+strategy("Strategy Execution Template - Master Pattern",  max_labels_count=500, max_boxes_count=500, overlay=true,calc_on_order_fills=true, calc_on_every_tick=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=1000, currency='USD', slippage=2, commission_value=0.036 ,commission_type=strategy.commission.percent, close_entries_rule = "ANY")
+// ================================== //
+// ---------> User Input <----------- //
+// ================================== //
+var inputGroupBackSett      = '      🔸🔸🔸 🔍 Backtest settings 🔍 🔸🔸🔸   '
+startTimeEnable             = input.bool(group=inputGroupBackSett, title='Start Date', defval=true, inline='StartDate')
+startTime                   = input.time(group=inputGroupBackSett, title='', defval=timestamp('04 Apr 2022 13:30 +0000'), inline='StartDate')
+endTimeEnable               = input.bool(group=inputGroupBackSett, title='End Date', defval=false, inline='EndDate')
+endTime                     = input.time(group=inputGroupBackSett, title=' ',defval=timestamp('01 Jan 2099 13:30 +0000'), inline='EndDate')
+var inputGroupTradeSett     = '      🔸🔸🔸 🔧 Trade setting 🔧 🔸🔸🔸'
+wayTradeType                = input.string(group=inputGroupTradeSett, title='Way Trade', defval='Long', options=['Long','Short'], inline='Trade')
+indicatorType               = input.string(group=inputGroupTradeSett, title='Candle', defval='Candles', options=['Candles','Heikin'], inline='Trade')
+tradeConfirm                = input.bool(group=inputGroupTradeSett, title='Wait for candle confirmed', defval=true)
+dayMonTrade                 = input.bool(group=inputGroupTradeSett, title='Mond', defval=true, inline='days')
+dayTueTrade                 = input.bool(group=inputGroupTradeSett, title='Tues', defval=true, inline='days')
+dayWedTrade                 = input.bool(group=inputGroupTradeSett, title='Wedn', defval=true, inline='days')
+dayThuTrade                 = input.bool(group=inputGroupTradeSett, title='Thur', defval=true, inline='days')
+dayFriTrade                 = input.bool(group=inputGroupTradeSett, title='Frid', defval=true, inline='days')
+daySatTrade                 = input.bool(group=inputGroupTradeSett, title='Satu', defval=true, inline='days')
+daySunTrade                 = input.bool(group=inputGroupTradeSett, title='Sund', defval=true, inline='days')
+useSessionFilter            = input.bool(group=inputGroupTradeSett, title='Sesssion Filter', defval=false)
+hoursToFilter               = input.session(group=inputGroupTradeSett, title='Hours', defval='0000-0000')
+var inputGroupDrawSett      = '      🔸🔸🔸 🖌 Drawing 🖌 🔸🔸🔸   '
+showWinOrder                = input.bool(group=inputGroupDrawSett, title='Show win order', defval=true, inline='trade')
+showLoosOrder               = input.bool(group=inputGroupDrawSett, title='Show loose order', defval=true, inline='trade')
+showTradeResult             = input.bool(group=inputGroupDrawSett, title='Show Trade', defval=true, inline='trade')
+showTableResult             = input.bool(group=inputGroupDrawSett, title='Show Table Result', defval=true, inline='table')
+var inputGroupSL1           = '      🔸 🔴 ⛔ Stop loss | 🚩 1 - FIRST 🔴 🔸'  
+inputGroupSL1_When           = input.string(group=inputGroupSL1, title='Trig', defval='OFF', options=['ON','OFF','TP1','TP1TS','TP2','TP2TS','TP3','TP3TS','TP4','TP4TS','TP5','TP5TS'],inline='SL-1')
+inputGroupSL1_Type          = input.string(group=inputGroupSL1, title='Type', defval='Trailing', options=['Fixed','Trailing'],inline='SL-1')
+inputGroupSL1_QtyPer        = input.float(group=inputGroupSL1, title='Pos%', defval=33.33,inline='SL-1')
+inputGroupSL1_Stick         = input.string(group=inputGroupSL1, title='Cdl', defval='Candle', options=['Candle','Heikin'], inline='SL-1-GP')
+inputGroupSL1_Src           = input.string(group=inputGroupSL1, title='Src', defval='close', options=['open','high','low','close','hl2','hlc3','ohlc4','hlcc4','HH','LL'], inline='SL-1-GP')
+inputGroupSL1_HL            = input.bool(group=inputGroupSL1, title='', defval=false, inline='SL-1-GP')
+inputGroupSL1_LB            = input.int(group=inputGroupSL1, title='HL', defval=10, inline='SL-1-GP')
+inputGroupSL1_Meth          = input.string(group=inputGroupSL1, title='Met', defval='%', options=['%','PIPS','ATR'], inline='SL-1-DP')
+inputGroupSL1_Val           = input.float(group=inputGroupSL1, title='Val/x', defval=0.0, inline='SL-1-DP')
+inputGroupSL1_Len           = input.int(group=inputGroupSL1, title='Len', defval=10, inline='SL-1-DP')
+var inputGroupSL2           = '      🔸 🔴 ⛔ Stop loss | 🚩 2 - SECOND 🔴 🔸'
+inputGroupSL2_When           = input.string(group=inputGroupSL2, title='Trig', defval='OFF', options=['ON','OFF','TP1','TP1TS','TP2','TP2TS','TP3','TP3TS','TP4','TP4TS','TP5','TP5TS'],inline='SL-2')
+inputGroupSL2_Type          = input.string(group=inputGroupSL2, title='Type', defval='Trailing', options=['Fixed','Trailing'],inline='SL-2')
+inputGroupSL2_QtyPer        = input.float(group=inputGroupSL2, title='Pos%', defval=33.33,inline='SL-2')
+inputGroupSL2_Stick         = input.string(group=inputGroupSL2, title='Cdl', defval='Candle', options=['Candle','Heikin'], inline='SL-2-GP')
+inputGroupSL2_Src           = input.string(group=inputGroupSL2, title='Src', defval='close', options=['open','high','low','close','hl2','hlc3','ohlc4','hlcc4','HH','LL'], inline='SL-2-GP')
+inputGroupSL2_HL            = input.bool(group=inputGroupSL2, title='', defval=false, inline='SL-2-GP')
+inputGroupSL2_LB            = input.int(group=inputGroupSL2, title='HL', defval=10, inline='SL-2-GP')
+inputGroupSL2_Meth          = input.string(group=inputGroupSL2, title='Meth', defval='%', options=['%','PIPS','ATR'], inline='SL-2-DP')
+inputGroupSL2_Val           = input.float(group=inputGroupSL2, title='Val/x', defval=0.0, inline='SL-2-DP')
+inputGroupSL2_Len           = input.int(group=inputGroupSL2, title='Len', defval=10, inline='SL-2-DP')
+var inputGroupSL3           = '      🔸 🔴 ⛔ Stop loss | 🚩 3 - THIRD 🔴 🔸'
+inputGroupSL3_When           = input.string(group=inputGroupSL3, title='Trig', defval='OFF', options=['ON','OFF','TP1','TP1TS','TP2','TP2TS','TP3','TP3TS','TP4','TP4TS','TP5','TP5TS'],inline='SL-3')
+inputGroupSL3_Type          = input.string(group=inputGroupSL3, title='Type', defval='Trailing', options=['Fixed','Trailing'],inline='SL-3')
+inputGroupSL3_QtyPer        = input.float(group=inputGroupSL3, title='Pos%', defval=33.33,inline='SL-3')
+inputGroupSL3_Stick         = input.string(group=inputGroupSL3, title='Cdl', defval='Candle', options=['Candle','Heikin'], inline='SL-3-GP')
+inputGroupSL3_Src           = input.string(group=inputGroupSL3, title='Src', defval='close', options=['open','high','low','close','hl2','hlc3','ohlc4','hlcc4','HH','LL'], inline='SL-3-GP')
+inputGroupSL3_HL            = input.bool(group=inputGroupSL3, title='', defval=false, inline='SL-3-GP')
+inputGroupSL3_LB            = input.int(group=inputGroupSL3, title='HL', defval=10, inline='SL-3-GP')
+inputGroupSL3_Meth          = input.string(group=inputGroupSL3, title='Meth', defval='%', options=['%','PIPS','ATR'], inline='SL-3-DP')
+inputGroupSL3_Val           = input.float(group=inputGroupSL3, title='Val/x', defval=0.0, inline='SL-3-DP')
+inputGroupSL3_Len           = input.int(group=inputGroupSL3, title='Len', defval=10, inline='SL-3-DP')
+var inputGroupSL4           = '      🔸 🔴 ⛔ Stop loss | 🚩 4 - FOURTH 🔴 🔸'
+inputGroupSL4_When           = input.string(group=inputGroupSL4, title='Trig', defval='OFF', options=['ON','OFF','TP1','TP1TS','TP2','TP2TS','TP3','TP3TS','TP4','TP4TS','TP5','TP5TS'],inline='SL-4')
+inputGroupSL4_Type          = input.string(group=inputGroupSL4, title='Type', defval='Trailing', options=['Fixed','Trailing'],inline='SL-4')
+inputGroupSL4_QtyPer        = input.float(group=inputGroupSL4, title='Pos%', defval=33.33,inline='SL-4')
+inputGroupSL4_Stick         = input.string(group=inputGroupSL4, title='Cdl', defval='Candle', options=['Candle','Heikin'], inline='SL-4-GP')
+inputGroupSL4_Src           = input.string(group=inputGroupSL4, title='Src', defval='close', options=['open','high','low','close','hl2','hlc3','ohlc4','hlcc4','HH','LL'], inline='SL-4-GP')
+inputGroupSL4_HL            = input.bool(group=inputGroupSL4, title='', defval=false, inline='SL-4-GP')
+inputGroupSL4_LB            = input.int(group=inputGroupSL4, title='HL', defval=10, inline='SL-4-GP')
+inputGroupSL4_Meth          = input.string(group=inputGroupSL4, title='Meth', defval='%', options=['%','PIPS','ATR'], inline='SL-4-DP')
+inputGroupSL4_Val           = input.float(group=inputGroupSL4, title='Val/x', defval=0.0, inline='SL-4-DP')
+inputGroupSL4_Len           = input.int(group=inputGroupSL4, title='Len', defval=10, inline='SL-4-DP')
+var inputGroupSL5           = '      🔸 🔴 ⛔ Stop loss | 🚩 5 - FIFTH 🔴 🔸'
+inputGroupSL5_When           = input.string(group=inputGroupSL5, title='Trig', defval='OFF', options=['ON','OFF','TP1','TP1TS','TP2','TP2TS','TP3','TP3TS','TP4','TP4TS','TP5','TP5TS'],inline='SL-5')
+inputGroupSL5_Type          = input.string(group=inputGroupSL5, title='Type', defval='Trailing', options=['Fixed','Trailing'],inline='SL-5')
+inputGroupSL5_QtyPer        = input.float(group=inputGroupSL5, title='Pos%', defval=33.33,inline='SL-5')
+inputGroupSL5_Stick         = input.string(group=inputGroupSL5, title='Cdl', defval='Candle', options=['Candle','Heikin'], inline='SL-5-GP')
+inputGroupSL5_Src           = input.string(group=inputGroupSL5, title='Src', defval='close', options=['open','high','low','close','hl2','hlc3','ohlc4','hlcc4','HH','LL'], inline='SL-5-GP')
+inputGroupSL5_HL            = input.bool(group=inputGroupSL5, title='', defval=false, inline='SL-5-GP')
+inputGroupSL5_LB            = input.int(group=inputGroupSL5, title='HL', defval=10, inline='SL-5-GP')
+inputGroupSL5_Meth          = input.string(group=inputGroupSL5, title='Meth', defval='%', options=['%','PIPS','ATR'], inline='SL-5-DP')
+inputGroupSL5_Val           = input.float(group=inputGroupSL5, title='Val/x', defval=0.0, inline='SL-5-DP')
+inputGroupSL5_Len           = input.int(group=inputGroupSL5, title='Len', defval=10, inline='SL-5-DP')
+var inputGroupTP1           = '      🔸 🟢 ⛳ Target Profit | 🏁 1 - FIRST 🟢 🔸'
+inputGroupTP1_When          = input.string(group=inputGroupTP1, title='Trig', defval='OFF', options=['ON','OFF'],inline='TP-1')
+inputGroupTP1_Type          = input.string(group=inputGroupTP1, title='Type', defval='Trailing', options=['Fixed','Trailing'],inline='TP-1')
+inputGroupTP1_QtyPer        = input.float(group=inputGroupTP1, title='Pos%', defval=33.33,inline='TP-1')
+inputGroupTP1_Stick         = input.string(group=inputGroupTP1, title='Cdl', defval='Candle', options=['Candle','Heikin'], inline='TP-1-GP')
+inputGroupTP1_Src           = input.string(group=inputGroupTP1, title='Src', defval='close', options=['open','high','low','close','hl2','hlc3','ohlc4','hlcc4','HH','LL'], inline='TP-1-GP')
+inputGroupTP1_HL            = input.bool(group=inputGroupTP1, title='', defval=false, inline='TP-1-GP')
+inputGroupTP1_LB            = input.int(group=inputGroupTP1, title='HL', defval=10, inline='TP-1-GP')
+inputGroupTP1_Meth          = input.string(group=inputGroupTP1, title='Meth', defval='%', options=['%','PIPS','ATR'], inline='TP-1-DP')
+inputGroupTP1_Val           = input.float(group=inputGroupTP1, title='Val/x', defval=0.0, inline='TP-1-DP')
+inputGroupTP1_Len           = input.int(group=inputGroupTP1, title='Len', defval=10, inline='TP-1-DP')
+inputGroupTP1_Trail         = input.bool(group=inputGroupTP1, title='Trailing stop', defval=false ,inline='TP-T-1-DP')
+inputGroupTP1_TS_Meth       = input.string(group=inputGroupTP1, title='Meth', defval='%', options=['%','PIPS','ATR'], inline='TP-1-T-DP')
+inputGroupTP1_TS_Val        = input.float(group=inputGroupTP1, title='Val/x', defval=0.0, inline='TP-1-T-DP')
+inputGroupTP1_TS_Len        = input.int(group=inputGroupTP1, title='Len', defval=10, inline='TP-1-T-DP')
+var inputGroupTP2           = '      🔸 🟢 ⛳ Target Profit | 🏁 2 - SECOND 🟢 🔸'
+inputGroupTP2_When          = input.string(group=inputGroupTP2, title='Trig', defval='OFF', options=['ON','OFF'],inline='TP-2')
+inputGroupTP2_Type          = input.string(group=inputGroupTP2, title='Type', defval='Trailing', options=['Fixed','Trailing'],inline='TP-2')
+inputGroupTP2_QtyPer        = input.float(group=inputGroupTP2, title='Pos%', defval=33.33,inline='TP-2')
+inputGroupTP2_Stick         = input.string(group=inputGroupTP2, title='Cdl', defval='Candle', options=['Candle','Heikin'], inline='TP-2-GP')
+inputGroupTP2_Src           = input.string(group=inputGroupTP2, title='Src', defval='close', options=['open','high','low','close','hl2','hlc3','ohlc4','hlcc4','HH','LL'], inline='TP-2-GP')
+inputGroupTP2_HL            = input.bool(group=inputGroupTP2, title='', defval=false, inline='TP-2-GP')
+inputGroupTP2_LB            = input.int(group=inputGroupTP2, title='HL', defval=10, inline='TP-2-GP')
+inputGroupTP2_Meth          = input.string(group=inputGroupTP2, title='Meth', defval='%', options=['%','PIPS','ATR'], inline='TP-2-DP')
+inputGroupTP2_Val           = input.float(group=inputGroupTP2, title='Val/x', defval=0.0, inline='TP-2-DP')
+inputGroupTP2_Len           = input.int(group=inputGroupTP2, title='Len', defval=10, inline='TP-2-DP')
+inputGroupTP2_Trail         = input.bool(group=inputGroupTP2, title='Trailing stop', defval=false ,inline='TP-T-2-DP')
+inputGroupTP2_TS_Meth       = input.string(group=inputGroupTP2, title='Meth', defval='%', options=['%','PIPS','ATR'], inline='TP-2-T-DP')
+inputGroupTP2_TS_Val        = input.float(group=inputGroupTP2, title='Val/x', defval=0.0, inline='TP-2-T-DP')
+inputGroupTP2_TS_Len        = input.int(group=inputGroupTP2, title='Len', defval=10, inline='TP-2-T-DP')
+var inputGroupTP3           = '      🔸 🟢 ⛳ Target Profit | 🏁 3 - THIRD 🟢 🔸'
+inputGroupTP3_When          = input.string(group=inputGroupTP3, title='Trig', defval='OFF', options=['ON','OFF'],inline='TP-3')
+inputGroupTP3_Type          = input.string(group=inputGroupTP3, title='Type', defval='Trailing', options=['Fixed','Trailing'],inline='TP-3')
+inputGroupTP3_QtyPer        = input.float(group=inputGroupTP3, title='Pos%', defval=33.33,inline='TP-3')
+inputGroupTP3_Stick         = input.string(group=inputGroupTP3, title='Cdl', defval='Candle', options=['Candle','Heikin'], inline='TP-3-GP')
+inputGroupTP3_Src           = input.string(group=inputGroupTP3, title='Src', defval='close', options=['open','high','low','close','hl2','hlc3','ohlc4','hlcc4','HH','LL'], inline='TP-3-GP')
+inputGroupTP3_HL            = input.bool(group=inputGroupTP3, title='', defval=false, inline='TP-3-GP')
+inputGroupTP3_LB            = input.int(group=inputGroupTP3, title='HL', defval=10, inline='TP-3-GP')
+inputGroupTP3_Meth          = input.string(group=inputGroupTP3, title='Meth', defval='%', options=['%','PIPS','ATR'], inline='TP-3-DP')
+inputGroupTP3_Val           = input.float(group=inputGroupTP3, title='Val/x', defval=0.0, inline='TP-3-DP')
+inputGroupTP3_Len           = input.int(group=inputGroupTP3, title='Len', defval=10, inline='TP-3-DP')
+inputGroupTP3_Trail         = input.bool(group=inputGroupTP3, title='Trailing stop', defval=false ,inline='TP-T-3-DP')
+inputGroupTP3_TS_Meth       = input.string(group=inputGroupTP3, title='Meth', defval='%', options=['%','PIPS','ATR'], inline='TP-3-T-DP')
+inputGroupTP3_TS_Val        = input.float(group=inputGroupTP3, title='Val/x', defval=0.0, inline='TP-3-T-DP')
+inputGroupTP3_TS_Len        = input.int(group=inputGroupTP3, title='Len', defval=10, inline='TP-3-T-DP')
+var inputGroupTP4           = '      🔸 🟢 ⛳ Target Profit | 🏁 4 - FOURTH 🟢 🔸'
+inputGroupTP4_When          = input.string(group=inputGroupTP4, title='Trig', defval='OFF', options=['ON','OFF'],inline='TP-4')
+inputGroupTP4_Type          = input.string(group=inputGroupTP4, title='Type', defval='Trailing', options=['Fixed','Trailing'],inline='TP-4')
+inputGroupTP4_QtyPer        = input.float(group=inputGroupTP4, title='Pos%', defval=33.33,inline='TP-4')
+inputGroupTP4_Stick         = input.string(group=inputGroupTP4, title='Cdl', defval='Candle', options=['Candle','Heikin'], inline='TP-4-GP')
+inputGroupTP4_Src           = input.string(group=inputGroupTP4, title='Src', defval='close', options=['open','high','low','close','hl2','hlc3','ohlc4','hlcc4','HH','LL'], inline='TP-4-GP')
+inputGroupTP4_HL            = input.bool(group=inputGroupTP4, title='', defval=false, inline='TP-4-GP')
+inputGroupTP4_LB            = input.int(group=inputGroupTP4, title='HL', defval=10, inline='TP-4-GP')
+inputGroupTP4_Meth          = input.string(group=inputGroupTP4, title='Meth', defval='%', options=['%','PIPS','ATR'], inline='TP-4-DP')
+inputGroupTP4_Val           = input.float(group=inputGroupTP4, title='Val/x', defval=0.0, inline='TP-4-DP')
+inputGroupTP4_Len           = input.int(group=inputGroupTP4, title='Len', defval=10, inline='TP-4-DP')
+inputGroupTP4_Trail         = input.bool(group=inputGroupTP4, title='Trailing stop', defval=false ,inline='TP-T-4-DP')
+inputGroupTP4_TS_Meth       = input.string(group=inputGroupTP4, title='Meth', defval='%', options=['%','PIPS','ATR'], inline='TP-4-T-DP')
+inputGroupTP4_TS_Val        = input.float(group=inputGroupTP4, title='Val/x', defval=0.0, inline='TP-4-T-DP')
+inputGroupTP4_TS_Len        = input.int(group=inputGroupTP4, title='Len', defval=10, inline='TP-4-T-DP')
+var inputGroupTP5           = '      🔸 🟢 ⛳ Target Profit | 🏁 5 - FIFTH 🟢 🔸'
+inputGroupTP5_When          = input.string(group=inputGroupTP5, title='Trig', defval='OFF', options=['ON','OFF'],inline='TP-5')
+inputGroupTP5_Type          = input.string(group=inputGroupTP5, title='Type', defval='Trailing', options=['Fixed','Trailing'],inline='TP-5')
+inputGroupTP5_QtyPer        = input.float(group=inputGroupTP5, title='Pos%', defval=33.33,inline='TP-5')
+inputGroupTP5_Stick         = input.string(group=inputGroupTP5, title='Cdl', defval='Candle', options=['Candle','Heikin'], inline='TP-5-GP')
+inputGroupTP5_Src           = input.string(group=inputGroupTP5, title='Src', defval='close', options=['open','high','low','close','hl2','hlc3','ohlc4','hlcc4','HH','LL'], inline='TP-5-GP')
+inputGroupTP5_HL            = input.bool(group=inputGroupTP5, title='', defval=false, inline='TP-5-GP')
+inputGroupTP5_LB            = input.int(group=inputGroupTP5, title='HL', defval=10, inline='TP-5-GP')
+inputGroupTP5_Meth          = input.string(group=inputGroupTP5, title='Meth', defval='%', options=['%','PIPS','ATR'], inline='TP-5-DP')
+inputGroupTP5_Val           = input.float(group=inputGroupTP5, title='Val/x', defval=0.0, inline='TP-5-DP')
+inputGroupTP5_Len           = input.int(group=inputGroupTP5, title='Len', defval=10, inline='TP-5-DP')
+inputGroupTP5_Trail         = input.bool(group=inputGroupTP5, title='Trailing stop', defval=false ,inline='TP-T-5-DP')
+inputGroupTP5_TS_Meth       = input.string(group=inputGroupTP5, title='Meth', defval='%', options=['%','PIPS','ATR'], inline='TP-5-T-DP')
+inputGroupTP5_TS_Val        = input.float(group=inputGroupTP5, title='Val/x', defval=0.0, inline='TP-5-T-DP')
+inputGroupTP5_TS_Len        = input.int(group=inputGroupTP5, title='Len', defval=10, inline='TP-5-T-DP')
+// ================================== //
+// -----> Invariable Constants <----- //
+// ================================== //
+FLAT                        = strategy.position_size == 0
+LONG                        = strategy.position_size > 0
+SHORT                       = strategy.position_size < 0
+POSITION                    = strategy.position_size
+CONFIRMED                   = (tradeConfirm ? barstate.isconfirmed : true) 
+AVGPRICE                    = strategy.position_avg_price
+ISLONGWAY                   = wayTradeType == 'Short' ? false : true
+// ================================== //
+// ------------> Variable <---------- //
+// ================================== //
+validOpenCondition          = false
+validCloseCondition         = false
+// ================================== //
+// -----------> Functions <---------- //
+// ================================== //
+src(_isBelow, _source, _stick, _hl, _lookback) =>
+    isCandle  = _stick == 'Heikin' ? false : true
+    Close     = isCandle ? close : ohlc4
+    Open      = float(na)
+    Open      := isCandle ? open  : na(Open[1]) ? (open + close) / 2 : (nz(Open[1]) + nz(Close[1])) / 2
+    High      = isCandle ? high  : math.max(high, math.max(Open, Close))
+    Low       = isCandle ? low   : math.min(low,  math.min(Open, Close))
+    HL2       = isCandle ? hl2   : math.avg(High, Low) 
+    HLC3      = isCandle ? hlc3  : math.avg(High, Low, Close) 
+    OHLC4     = isCandle ? ohlc4 : math.avg(Open, High, Low, Close)
+    HH        = ta.highest(High,_lookback < 1 ? 1 : _lookback)
+    LL        = ta.lowest(Low,_lookback < 1 ? 1 : _lookback)
+    Price     = _source == 'close' ? Close : _source == 'open' ? Open : _source == 'high' ? High : _source == 'low' ? Low : _source == 'hl2' ?  +
+                 HL2 : _source == 'hlc3' ? HLC3 : _source == 'ohlc4' ? OHLC4 : na
+    if _hl
+        Price := _isBelow ? LL : HH
+    Source    = math.round(Price / syminfo.mintick) * syminfo.mintick  
+getPrice(_isBelow, _src, _method, _value, _len) =>
+    switch _method
+        '%'     => _isBelow ? _src * (1 - _value * 0.01) : _src * (1 + _value * 0.01)
+        'PIPS'  => _isBelow ? _src - _value : _src + _value
+        'ATR'   =>  _isBelow ? _src - ta.atr(_len) * _value : _src + ta.atr(_len) * _value 
+getTargetPrice(_isBelow, _currentPrice, _previousPrice, _isFix, _openCondition) =>
+    _openCondition ? _isFix ? nz(_previousPrice,_currentPrice) : _isBelow ? math.max(_currentPrice,nz(_previousPrice,_currentPrice)) : math.min(_currentPrice,nz(_previousPrice,_currentPrice)) : na
+            
+isPriceTargetted(_isBelow, _price) =>
+    (_isBelow and low<=_price and not na(_price)) or (not _isBelow and high>=_price and not na(_price)) 
+// ==================================================================================================================== //
+// ==================================================================================================================== //
+// ==================================================================================================================== //
+// ------------------------📌📌📌📌📌📌📌📌📌📌📌📌📌>  YOUR STRATEGY HERE <📌📌📌📌📌📌📌📌📌📌📌📌📌 ---------------- //
+// ------------------------------- Just set Entry and Exit depending and trading way --------------------------------- //
+// =================================================================================================================== //
+// ==================================================================================================================== //
+// ==================================================================================================================== //
+openCondition = ta.crossover(ta.sma(close, 14), ta.sma(close, 28))
+closeCondition = false
+// ==================================================================================================================== //
+// ==================================================================================================================== //
+// ==================================================================================================================== //
+// =================================================================================================================== //
+// ==================================================================================================================== //
+// ======================================================= //
+// ------------------->  Strategy Logic <----------------- //
+// ======================================================= //
+var canTrade = false
+canTrade := CONFIRMED
+canTrade := canTrade and (not startTimeEnable or time >= startTime) and (not endTimeEnable or time <= endTime)
+canTrade := canTrade and ((dayMonTrade and dayofweek==dayofweek.monday ? true : false) or (dayTueTrade and dayofweek==dayofweek.tuesday ? true : false) or (dayWedTrade and dayofweek==dayofweek.wednesday ? true : false) or (dayThuTrade and dayofweek==dayofweek.thursday ? true : false) or (dayFriTrade and dayofweek==dayofweek.friday ? true : false) or (daySatTrade and dayofweek==dayofweek.saturday ? true : false) or (daySunTrade and dayofweek==dayofweek.sunday ? true : false))
+canTrade := canTrade and (useSessionFilter ? time(timeframe.period, hoursToFilter) : true)
+validOpenCondition  := canTrade and openCondition and FLAT 
+validCloseCondition := CONFIRMED and closeCondition and not FLAT
+// ======================================================= //
+// ------------------>  Define TAKE PRODIT <-------------- //
+// ======================================================= //
+// --- Take Profit 1 ---
+varip takeProfit1_id          = 0
+string takeProfit1_Name       = 'Take Profit 1 -' + str.tostring(takeProfit1_id)
+float takeProfit1_Price       = na
+bool takeProfit1_Hit          = false
+takeProfit1_id                := (takeProfit1_Hit[1] and not inputGroupTP1_Trail) or (strategy.position_size[1]!=0 and FLAT) ? not takeProfit1_Hit[2] ? takeProfit1_id + 1 : takeProfit1_id : takeProfit1_id
+takeProfit1_Src               = src(not ISLONGWAY, inputGroupTP1_Src,inputGroupTP1_Stick,inputGroupTP1_HL, inputGroupTP1_LB)
+takeProfit1_CurrentPrice      = getPrice(not ISLONGWAY, takeProfit1_Src, inputGroupTP1_Meth, inputGroupTP1_Val, inputGroupTP1_Len)
+takeProfit1_ExecCondition     = not takeProfit1_Hit[1] and ((not FLAT) and CONFIRMED and (inputGroupTP1_When=="ON") )
+takeProfit1_Price             := getTargetPrice(not ISLONGWAY, takeProfit1_CurrentPrice, takeProfit1_Price[1]  , inputGroupTP1_Type=='Fixed', takeProfit1_ExecCondition) 
+takeProfit1_Hit               := inputGroupTP1_Trail ? takeProfit1_Hit[1] and not FLAT : (((strategy.closedtrades.exit_id(strategy.closedtrades-1) == takeProfit1_Name)) or takeProfit1_Hit[1]) and not FLAT
+takeProfit1_ExecCondition     := takeProfit1_ExecCondition and not takeProfit1_Hit
+// --- Take Profit 1 - Trailing Stop
+if (ISLONGWAY ? math.max(open,close,low,high)>=takeProfit1_Price[1] : math.min(open,close,low,high)<=takeProfit1_Price[1]) and takeProfit1_ExecCondition
+    takeProfit1_Hit             := true
+varip takeProfit1TS_id          = 0
+string takeProfit1TS_Name       = 'Take Profit 1 - Trailing Stop - ' + str.tostring(takeProfit1TS_id)
+float takeProfit1TS_Price       = na
+bool takeProfit1TS_Hit          = false
+takeProfit1TS_id                := takeProfit1TS_Hit[1] or (strategy.position_size[1]!=0 and FLAT) ? not takeProfit1TS_Hit[2] ? takeProfit1TS_id + 1 : takeProfit1TS_id : takeProfit1TS_id
+takeProfit1TS_CurrentPrice      = getPrice(ISLONGWAY, nz(takeProfit1_Price[1],close) , inputGroupTP1_TS_Meth, inputGroupTP1_TS_Val, inputGroupTP1_TS_Len) 
+takeProfit1TS_ExecCondition     = not takeProfit1TS_Hit[1] and ((not FLAT) and CONFIRMED and inputGroupTP1_Trail and takeProfit1_Hit)
+takeProfit1TS_Price             := getTargetPrice(ISLONGWAY, takeProfit1TS_CurrentPrice, takeProfit1TS_Price[1]  , false, takeProfit1TS_ExecCondition) 
+takeProfit1TS_Hit               := (((strategy.closedtrades.exit_id(strategy.closedtrades-1) == takeProfit1TS_Name)) or takeProfit1TS_Hit[1]) and not FLAT
+takeProfit1TS_ExecCondition     := takeProfit1TS_ExecCondition and not takeProfit1TS_Hit
+// --- Take Profit 2 ---
+varip takeProfit2_id          = 0
+string takeProfit2_Name       = 'Take Profit 2 -' + str.tostring(takeProfit2_id)
+float takeProfit2_Price       = na
+bool takeProfit2_Hit          = false
+takeProfit2_id                := (takeProfit2_Hit[1] and not inputGroupTP2_Trail) or (strategy.position_size[1]!=0 and FLAT) ? not takeProfit2_Hit[2] ? takeProfit2_id + 1 : takeProfit2_id : takeProfit2_id
+takeProfit2_Src               = src(not ISLONGWAY, inputGroupTP2_Src,inputGroupTP2_Stick,inputGroupTP2_HL, inputGroupTP2_LB)
+takeProfit2_CurrentPrice      = getPrice(not ISLONGWAY, takeProfit2_Src, inputGroupTP2_Meth, inputGroupTP2_Val, inputGroupTP2_Len)
+takeProfit2_ExecCondition     = not takeProfit2_Hit[1] and ((not FLAT) and CONFIRMED and (inputGroupTP2_When=="ON"))
+takeProfit2_Price             := getTargetPrice(not ISLONGWAY, takeProfit2_CurrentPrice, takeProfit2_Price[1]  , inputGroupTP2_Type=='Fixed', takeProfit2_ExecCondition) 
+takeProfit2_Hit               := inputGroupTP2_Trail ? takeProfit2_Hit[1] and not FLAT : (((strategy.closedtrades.exit_id(strategy.closedtrades-1) == takeProfit2_Name)) or takeProfit2_Hit[1]) and not FLAT
+takeProfit2_ExecCondition     := takeProfit2_ExecCondition and not takeProfit2_Hit
+// --- Take Profit 2 - Trailing Stop
+if (ISLONGWAY ? math.max(open,close,low,high)>=takeProfit2_Price[1] : math.min(open,close,low,high)<=takeProfit2_Price[1]) and takeProfit2_ExecCondition
+    takeProfit2_Hit             := true
+varip takeProfit2TS_id          = 0
+string takeProfit2TS_Name       = 'Take Profit 2 - Trailing Stop - ' + str.tostring(takeProfit2TS_id)
+float takeProfit2TS_Price       = na
+bool takeProfit2TS_Hit          = false
+takeProfit2TS_id                := takeProfit2TS_Hit[1] or (strategy.position_size[1]!=0 and FLAT) ? not takeProfit2TS_Hit[2] ? takeProfit2TS_id + 1 : takeProfit2TS_id : takeProfit2TS_id
+takeProfit2TS_CurrentPrice      = getPrice(ISLONGWAY, nz(takeProfit2_Price[1],close) , inputGroupTP2_TS_Meth, inputGroupTP2_TS_Val, inputGroupTP2_TS_Len) 
+takeProfit2TS_ExecCondition     = not takeProfit2TS_Hit[1] and ((not FLAT) and CONFIRMED and inputGroupTP2_Trail and takeProfit2_Hit)
+takeProfit2TS_Price             := getTargetPrice(ISLONGWAY, takeProfit2TS_CurrentPrice, takeProfit2TS_Price[1]  , false, takeProfit2TS_ExecCondition) 
+takeProfit2TS_Hit               := (((strategy.closedtrades.exit_id(strategy.closedtrades-1) == takeProfit2TS_Name)) or takeProfit2TS_Hit[1]) and not FLAT
+takeProfit2TS_ExecCondition     := takeProfit2TS_ExecCondition and not takeProfit2TS_Hit
+// --- Take Profit 3 ---
+varip takeProfit3_id          = 0
+string takeProfit3_Name       = 'Take Profit 3 -' + str.tostring(takeProfit3_id)
+float takeProfit3_Price       = na
+bool takeProfit3_Hit          = false
+takeProfit3_id                := (takeProfit3_Hit[1] and not inputGroupTP3_Trail) or (strategy.position_size[1]!=0 and FLAT) ? not takeProfit3_Hit[2] ? takeProfit3_id + 1 : takeProfit3_id : takeProfit3_id
+takeProfit3_Src               = src(not ISLONGWAY, inputGroupTP3_Src,inputGroupTP3_Stick,inputGroupTP3_HL, inputGroupTP3_LB)
+takeProfit3_CurrentPrice      = getPrice(not ISLONGWAY, takeProfit3_Src, inputGroupTP3_Meth, inputGroupTP3_Val, inputGroupTP3_Len)
+takeProfit3_ExecCondition     = not takeProfit3_Hit[1] and ((not FLAT) and CONFIRMED and (inputGroupTP3_When=="ON"))
+takeProfit3_Price             := getTargetPrice(not ISLONGWAY, takeProfit3_CurrentPrice, takeProfit3_Price[1]  , inputGroupTP3_Type=='Fixed', takeProfit3_ExecCondition) 
+takeProfit3_Hit               := inputGroupTP3_Trail ? takeProfit3_Hit[1] and not FLAT : (((strategy.closedtrades.exit_id(strategy.closedtrades-1) == takeProfit3_Name)) or takeProfit3_Hit[1]) and not FLAT
+takeProfit3_ExecCondition     := takeProfit3_ExecCondition and not takeProfit3_Hit
+// --- Take Profit 3 - Trailing Stop
+if (ISLONGWAY ? math.max(open,close,low,high)>=takeProfit3_Price[1] : math.min(open,close,low,high)<=takeProfit3_Price[1]) and takeProfit3_ExecCondition
+    takeProfit3_Hit             := true
+varip takeProfit3TS_id          = 0
+string takeProfit3TS_Name       = 'Take Profit 3 - Trailing Stop - ' + str.tostring(takeProfit3TS_id)
+float takeProfit3TS_Price       = na
+bool takeProfit3TS_Hit          = false
+takeProfit3TS_id                := takeProfit3TS_Hit[1] or (strategy.position_size[1]!=0 and FLAT) ? not takeProfit3TS_Hit[2] ? takeProfit3TS_id + 1 : takeProfit3TS_id : takeProfit3TS_id
+takeProfit3TS_CurrentPrice      = getPrice(ISLONGWAY, nz(takeProfit3_Price[1],close) , inputGroupTP3_TS_Meth, inputGroupTP3_TS_Val, inputGroupTP3_TS_Len) 
+takeProfit3TS_ExecCondition     = not takeProfit3TS_Hit[1] and ((not FLAT) and CONFIRMED and inputGroupTP3_Trail and takeProfit3_Hit)
+takeProfit3TS_Price             := getTargetPrice(ISLONGWAY, takeProfit3TS_CurrentPrice, takeProfit3TS_Price[1]  , false, takeProfit3TS_ExecCondition) 
+takeProfit3TS_Hit               := (((strategy.closedtrades.exit_id(strategy.closedtrades-1) == takeProfit3TS_Name)) or takeProfit3TS_Hit[1]) and not FLAT
+takeProfit3TS_ExecCondition     := takeProfit3TS_ExecCondition and not takeProfit3TS_Hit
+// --- Take Profit 4 ---
+varip takeProfit4_id          = 0
+string takeProfit4_Name       = 'Take Profit 4 -' + str.tostring(takeProfit4_id)
+float takeProfit4_Price       = na
+bool takeProfit4_Hit          = false
+takeProfit4_id                := (takeProfit4_Hit[1] and not inputGroupTP4_Trail) or (strategy.position_size[1]!=0 and FLAT) ? not takeProfit4_Hit[2] ? takeProfit4_id + 1 : takeProfit4_id : takeProfit4_id
+takeProfit4_Src               = src(not ISLONGWAY, inputGroupTP4_Src,inputGroupTP4_Stick,inputGroupTP4_HL, inputGroupTP4_LB)
+takeProfit4_CurrentPrice      = getPrice(not ISLONGWAY, takeProfit4_Src, inputGroupTP4_Meth, inputGroupTP4_Val, inputGroupTP4_Len)
+takeProfit4_ExecCondition     = not takeProfit4_Hit[1] and ((not FLAT) and CONFIRMED and (inputGroupTP4_When=="ON"))
+takeProfit4_Price             := getTargetPrice(not ISLONGWAY, takeProfit4_CurrentPrice, takeProfit4_Price[1]  , inputGroupTP4_Type=='Fixed', takeProfit4_ExecCondition) 
+takeProfit4_Hit               := inputGroupTP4_Trail ? takeProfit4_Hit[1] and not FLAT : (((strategy.closedtrades.exit_id(strategy.closedtrades-1) == takeProfit4_Name)) or takeProfit4_Hit[1]) and not FLAT
+takeProfit4_ExecCondition     := takeProfit4_ExecCondition and not takeProfit4_Hit
+// --- Take Profit 4 - Trailing Stop
+if (ISLONGWAY ? math.max(open,close,low,high)>=takeProfit4_Price[1] : math.min(open,close,low,high)<=takeProfit4_Price[1]) and takeProfit4_ExecCondition
+    takeProfit4_Hit             := true
+varip takeProfit4TS_id          = 0
+string takeProfit4TS_Name       = 'Take Profit 4 - Trailing Stop - ' + str.tostring(takeProfit4TS_id)
+float takeProfit4TS_Price       = na
+bool takeProfit4TS_Hit          = false
+takeProfit4TS_id                := takeProfit4TS_Hit[1] or (strategy.position_size[1]!=0 and FLAT) ? not takeProfit4TS_Hit[2] ? takeProfit4TS_id + 1 : takeProfit4TS_id : takeProfit4TS_id
+takeProfit4TS_CurrentPrice      = getPrice(ISLONGWAY, nz(takeProfit4_Price[1],close) , inputGroupTP4_TS_Meth, inputGroupTP4_TS_Val, inputGroupTP4_TS_Len) 
+takeProfit4TS_ExecCondition     = not takeProfit4TS_Hit[1] and ((not FLAT) and CONFIRMED and inputGroupTP4_Trail and takeProfit4_Hit)
+takeProfit4TS_Price             := getTargetPrice(ISLONGWAY, takeProfit4TS_CurrentPrice, takeProfit4TS_Price[1]  , false, takeProfit4TS_ExecCondition) 
+takeProfit4TS_Hit               := (((strategy.closedtrades.exit_id(strategy.closedtrades-1) == takeProfit4TS_Name)) or takeProfit4TS_Hit[1]) and not FLAT
+takeProfit4TS_ExecCondition     := takeProfit4TS_ExecCondition and not takeProfit4TS_Hit
+// --- Take Profit 5 ---
+varip takeProfit5_id          = 0
+string takeProfit5_Name       = 'Take Profit 5 -' + str.tostring(takeProfit5_id)
+float takeProfit5_Price       = na
+bool takeProfit5_Hit          = false
+takeProfit5_id                := (takeProfit5_Hit[1] and not inputGroupTP5_Trail) or (strategy.position_size[1]!=0 and FLAT) ? not takeProfit5_Hit[2] ? takeProfit5_id + 1 : takeProfit5_id : takeProfit5_id
+takeProfit5_Src               = src(not ISLONGWAY, inputGroupTP5_Src,inputGroupTP5_Stick,inputGroupTP5_HL, inputGroupTP5_LB)
+takeProfit5_CurrentPrice      = getPrice(not ISLONGWAY, takeProfit5_Src, inputGroupTP5_Meth, inputGroupTP5_Val, inputGroupTP5_Len)
+takeProfit5_ExecCondition     = not takeProfit5_Hit[1] and ((not FLAT) and CONFIRMED and (inputGroupTP5_When=="ON"))
+takeProfit5_Price             := getTargetPrice(not ISLONGWAY, takeProfit5_CurrentPrice, takeProfit5_Price[1]  , inputGroupTP5_Type=='Fixed', takeProfit5_ExecCondition) 
+takeProfit5_Hit               := inputGroupTP5_Trail ? takeProfit5_Hit[1] and not FLAT : (((strategy.closedtrades.exit_id(strategy.closedtrades-1) == takeProfit5_Name)) or takeProfit5_Hit[1]) and not FLAT
+takeProfit5_ExecCondition     := takeProfit5_ExecCondition and not takeProfit5_Hit
+// --- Take Profit 5 - Trailing Stop
+if (ISLONGWAY ? math.max(open,close,low,high)>=takeProfit5_Price[1] : math.min(open,close,low,high)<=takeProfit5_Price[1]) and takeProfit5_ExecCondition
+    takeProfit5_Hit             := true
+varip takeProfit5TS_id          = 0
+string takeProfit5TS_Name       = 'Take Profit 5 - Trailing Stop - ' + str.tostring(takeProfit5TS_id)
+float takeProfit5TS_Price       = na
+bool takeProfit5TS_Hit          = false
+takeProfit5TS_id                := takeProfit5TS_Hit[1] or (strategy.position_size[1]!=0 and FLAT) ? not takeProfit5TS_Hit[2] ? takeProfit5TS_id + 1 : takeProfit5TS_id : takeProfit5TS_id
+takeProfit5TS_CurrentPrice      = getPrice(ISLONGWAY, nz(takeProfit5_Price[1],close) , inputGroupTP5_TS_Meth, inputGroupTP5_TS_Val, inputGroupTP5_TS_Len) 
+takeProfit5TS_ExecCondition     = not takeProfit5TS_Hit[1] and ((not FLAT) and CONFIRMED and inputGroupTP5_Trail and takeProfit5_Hit)
+takeProfit5TS_Price             := getTargetPrice(ISLONGWAY, takeProfit5TS_CurrentPrice, takeProfit5TS_Price[1]  , false, takeProfit5TS_ExecCondition) 
+takeProfit5TS_Hit               := (((strategy.closedtrades.exit_id(strategy.closedtrades-1) == takeProfit5TS_Name)) or takeProfit5TS_Hit[1]) and not FLAT
+takeProfit5TS_ExecCondition     := takeProfit5TS_ExecCondition and not takeProfit5TS_Hit
+// ======================================================= //
+// ------------------>  Define STOP LOSS  <--------------- //
+// ======================================================= //
+// --- Stop Loss 1 ---
+varip stopLoss1_id          = 0
+string stopLoss1_Name       = 'Stop Loss 1 -' + str.tostring(stopLoss1_id)
+float stopLoss1_Price       = na
+bool stopLoss1_Hit          = false
+stopLoss1_id                := stopLoss1_Hit[1]  or (strategy.position_size[1]!=0 and FLAT) ? not stopLoss1_Hit[2] ? stopLoss1_id + 1 : stopLoss1_id : stopLoss1_id
+stopLoss1_Src               = src(ISLONGWAY, inputGroupSL1_Src,inputGroupSL1_Stick,inputGroupSL1_HL, inputGroupSL1_LB)
+stopLoss1_CurrentPrice      = getPrice(ISLONGWAY, stopLoss1_Src, inputGroupSL1_Meth, inputGroupSL1_Val, inputGroupSL1_Len)
+stopLoss1_ExecCondition     = not stopLoss1_Hit[1] and ((not FLAT) and CONFIRMED and (inputGroupSL1_When=="ON") or (inputGroupSL1_When=="TP1" and takeProfit1_Hit) or (inputGroupSL1_When=="TP1TS" and takeProfit1TS_Hit) or (inputGroupSL1_When=="TP2" and takeProfit2_Hit) or (inputGroupSL1_When=="TP2TS" and takeProfit2TS_Hit) or (inputGroupSL1_When=="TP3" and takeProfit3_Hit) or (inputGroupSL1_When=="TP3TS" and takeProfit3TS_Hit)  or (inputGroupSL1_When=="TP4" and takeProfit4_Hit) or (inputGroupSL1_When=="TP4TS" and takeProfit4TS_Hit) or (inputGroupSL1_When=="TP5" and takeProfit5_Hit) or (inputGroupSL1_When=="TP5TS" and takeProfit5TS_Hit)  )
+stopLoss1_Price             := getTargetPrice(ISLONGWAY, stopLoss1_CurrentPrice, stopLoss1_Price[1]  , inputGroupSL1_Type=='Fixed', stopLoss1_ExecCondition) 
+stopLoss1_Hit               := (((strategy.closedtrades.exit_id(strategy.closedtrades-1) == stopLoss1_Name)) or stopLoss1_Hit[1]) and not FLAT
+stopLoss1_ExecCondition     := stopLoss1_ExecCondition and not stopLoss1_Hit
+// --- Stop Loss 2 ---
+varip stopLoss2_id          = 0
+string stopLoss2_Name       = 'Stop Loss 2 -' + str.tostring(stopLoss2_id)
+float stopLoss2_Price       = na
+bool stopLoss2_Hit          = false
+stopLoss2_id                := stopLoss2_Hit[1] or (strategy.position_size[1]!=0 and FLAT) ? not stopLoss2_Hit[2] ? stopLoss2_id + 1 : stopLoss2_id : stopLoss2_id
+stopLoss2_Src               = src(ISLONGWAY, inputGroupSL2_Src,inputGroupSL2_Stick,inputGroupSL2_HL, inputGroupSL2_LB)
+stopLoss2_CurrentPrice      = getPrice(ISLONGWAY, stopLoss2_Src, inputGroupSL2_Meth, inputGroupSL2_Val, inputGroupSL2_Len)
+stopLoss2_ExecCondition     = not stopLoss2_Hit[1] and ((not FLAT) and CONFIRMED and (inputGroupSL2_When=="ON")  or (inputGroupSL2_When=="TP1" and takeProfit1_Hit) or (inputGroupSL2_When=="TP1TS" and takeProfit1TS_Hit) or (inputGroupSL2_When=="TP2" and takeProfit2_Hit) or (inputGroupSL2_When=="TP2TS" and takeProfit2TS_Hit) or (inputGroupSL2_When=="TP3" and takeProfit3_Hit) or (inputGroupSL2_When=="TP3TS" and takeProfit3TS_Hit)  or (inputGroupSL2_When=="TP4" and takeProfit4_Hit) or (inputGroupSL2_When=="TP4TS" and takeProfit4TS_Hit) or (inputGroupSL2_When=="TP5" and takeProfit5_Hit) or (inputGroupSL2_When=="TP5TS" and takeProfit5TS_Hit)  )
+stopLoss2_Price             := getTargetPrice(ISLONGWAY, stopLoss2_CurrentPrice, stopLoss2_Price[1]  , inputGroupSL2_Type=='Fixed', stopLoss2_ExecCondition) 
+stopLoss2_Hit               := (((strategy.closedtrades.exit_id(strategy.closedtrades-1) == stopLoss2_Name)) or stopLoss2_Hit[1]) and not FLAT
+stopLoss2_ExecCondition     := stopLoss2_ExecCondition and not stopLoss2_Hit
+// --- Stop Loss 3 ---
+varip stopLoss3_id          = 0
+string stopLoss3_Name       = 'Stop Loss 3 -' + str.tostring(stopLoss3_id)
+float stopLoss3_Price       = na
+bool stopLoss3_Hit          = false
+stopLoss3_id                := stopLoss3_Hit[1] or (strategy.position_size[1]!=0 and FLAT) ? not stopLoss3_Hit[2] ? stopLoss3_id + 1 : stopLoss3_id : stopLoss3_id
+stopLoss3_Src               = src(ISLONGWAY, inputGroupSL3_Src,inputGroupSL3_Stick, inputGroupSL3_HL, inputGroupSL3_LB)
+stopLoss3_CurrentPrice      = getPrice(ISLONGWAY, stopLoss3_Src, inputGroupSL3_Meth, inputGroupSL3_Val, inputGroupSL3_Len)
+stopLoss3_ExecCondition     = not stopLoss3_Hit[1] and ((not FLAT) and CONFIRMED and (inputGroupSL3_When=="ON")  or (inputGroupSL3_When=="TP1" and takeProfit1_Hit) or (inputGroupSL3_When=="TP1TS" and takeProfit1TS_Hit) or (inputGroupSL3_When=="TP2" and takeProfit2_Hit) or (inputGroupSL3_When=="TP2TS" and takeProfit2TS_Hit) or (inputGroupSL3_When=="TP3" and takeProfit3_Hit) or (inputGroupSL3_When=="TP3TS" and takeProfit3TS_Hit)  or (inputGroupSL3_When=="TP4" and takeProfit4_Hit) or (inputGroupSL3_When=="TP4TS" and takeProfit4TS_Hit) or (inputGroupSL3_When=="TP5" and takeProfit5_Hit) or (inputGroupSL3_When=="TP5TS" and takeProfit5TS_Hit)  ) 
+stopLoss3_Price             := getTargetPrice(ISLONGWAY, stopLoss3_CurrentPrice, stopLoss3_Price[1]  , inputGroupSL3_Type=='Fixed', stopLoss3_ExecCondition) 
+stopLoss3_Hit               := (((strategy.closedtrades.exit_id(strategy.closedtrades-1) == stopLoss3_Name)) or stopLoss3_Hit[1]) and not FLAT
+stopLoss3_ExecCondition     := stopLoss3_ExecCondition and not stopLoss3_Hit
+// --- Stop Loss 4 ---
+varip stopLoss4_id          = 0
+string stopLoss4_Name       = 'Stop Loss 4 -' + str.tostring(stopLoss4_id)
+float stopLoss4_Price       = na
+bool stopLoss4_Hit          = false
+stopLoss4_id                := stopLoss4_Hit[1] or (strategy.position_size[1]!=0 and FLAT) ? not stopLoss4_Hit[2] ? stopLoss4_id + 1 : stopLoss4_id : stopLoss4_id
+stopLoss4_Src               = src(ISLONGWAY, inputGroupSL4_Src,inputGroupSL4_Stick, inputGroupSL4_HL, inputGroupSL4_LB)
+stopLoss4_CurrentPrice      = getPrice(ISLONGWAY, stopLoss4_Src, inputGroupSL4_Meth, inputGroupSL4_Val, inputGroupSL4_Len)
+stopLoss4_ExecCondition     = not stopLoss4_Hit[1] and ((not FLAT) and CONFIRMED and (inputGroupSL4_When=="ON")  or (inputGroupSL4_When=="TP1" and takeProfit1_Hit) or (inputGroupSL4_When=="TP1TS" and takeProfit1TS_Hit) or (inputGroupSL4_When=="TP2" and takeProfit2_Hit) or (inputGroupSL4_When=="TP2TS" and takeProfit2TS_Hit) or (inputGroupSL4_When=="TP3" and takeProfit3_Hit) or (inputGroupSL4_When=="TP3TS" and takeProfit3TS_Hit)  or (inputGroupSL4_When=="TP4" and takeProfit4_Hit) or (inputGroupSL4_When=="TP4TS" and takeProfit4TS_Hit) or (inputGroupSL4_When=="TP5" and takeProfit5_Hit) or (inputGroupSL4_When=="TP5TS" and takeProfit5TS_Hit)  )
+stopLoss4_Price             := getTargetPrice(ISLONGWAY, stopLoss4_CurrentPrice, stopLoss4_Price[1]  , inputGroupSL4_Type=='Fixed', stopLoss4_ExecCondition) 
+stopLoss4_Hit               := (((strategy.closedtrades.exit_id(strategy.closedtrades-1) == stopLoss4_Name)) or stopLoss4_Hit[1]) and not FLAT
+stopLoss4_ExecCondition     := stopLoss4_ExecCondition and not stopLoss4_Hit
+// --- Stop Loss 5 ---
+varip stopLoss5_id          = 0
+string stopLoss5_Name       = 'Stop Loss 5 -' + str.tostring(stopLoss5_id)
+float stopLoss5_Price       = na
+bool stopLoss5_Hit          = false
+stopLoss5_id                := stopLoss5_Hit[1] or (strategy.position_size[1]!=0 and FLAT) ? not stopLoss5_Hit[2] ? stopLoss5_id + 1 : stopLoss5_id : stopLoss5_id
+stopLoss5_Src               = src(ISLONGWAY, inputGroupSL5_Src,inputGroupSL5_Stick, inputGroupSL5_HL, inputGroupSL5_LB)
+stopLoss5_CurrentPrice      = getPrice(ISLONGWAY, stopLoss5_Src, inputGroupSL5_Meth, inputGroupSL5_Val, inputGroupSL5_Len)
+stopLoss5_ExecCondition     = not stopLoss5_Hit[1] and ((not FLAT) and CONFIRMED and (inputGroupSL5_When=="ON") or (inputGroupSL5_When=="TP1" and takeProfit1_Hit) or (inputGroupSL5_When=="TP1TS" and takeProfit1TS_Hit) or (inputGroupSL5_When=="TP2" and takeProfit2_Hit) or (inputGroupSL5_When=="TP2TS" and takeProfit2TS_Hit) or (inputGroupSL5_When=="TP3" and takeProfit3_Hit) or (inputGroupSL5_When=="TP3TS" and takeProfit3TS_Hit)  or (inputGroupSL5_When=="TP4" and takeProfit4_Hit) or (inputGroupSL5_When=="TP4TS" and takeProfit4TS_Hit) or (inputGroupSL5_When=="TP5" and takeProfit5_Hit) or (inputGroupSL5_When=="TP5TS" and takeProfit5TS_Hit)  )
+stopLoss5_Price             := getTargetPrice(ISLONGWAY, stopLoss5_CurrentPrice, stopLoss5_Price[1]  , inputGroupSL5_Type=='Fixed', stopLoss5_ExecCondition) 
+stopLoss5_Hit               := (((strategy.closedtrades.exit_id(strategy.closedtrades-1) == stopLoss5_Name)) or stopLoss5_Hit[1]) and not FLAT
+stopLoss5_ExecCondition     := stopLoss5_ExecCondition and not stopLoss5_Hit
+// ======================================================= //
+// ----------------->  Strategy Execution <--------------- //
+// ======================================================= //
+strategy.cancel_all()
+strategy.close(id = 'Open', when = validCloseCondition)
+strategy.entry(id = 'Open', direction=ISLONGWAY ? strategy.long : strategy.short, when=validOpenCondition)
+if (LONG and ISLONGWAY)
+    strategy.order(takeProfit1_Name, strategy.short, oca_name='TPSL',oca_type=strategy.oca.cancel, when=takeProfit1_ExecCondition and not inputGroupTP1_Trail, limit=takeProfit1_Price, qty=inputGroupTP1_QtyPer*0.01*POSITION)
+    strategy.order(takeProfit1TS_Name, strategy.short, oca_name='TPSL',oca_type=strategy.oca.cancel, when=takeProfit1TS_ExecCondition and inputGroupTP1_Trail, stop=takeProfit1TS_Price, qty=inputGroupTP1_QtyPer*0.01*POSITION) 
+    strategy.order(takeProfit2_Name, strategy.short, oca_name='TPSL',oca_type=strategy.oca.cancel, when=takeProfit2_ExecCondition and not inputGroupTP2_Trail, limit=takeProfit2_Price, qty=inputGroupTP2_QtyPer*0.01*POSITION)
+    strategy.order(takeProfit2TS_Name, strategy.short, oca_name='TPSL',oca_type=strategy.oca.cancel, when=takeProfit2TS_ExecCondition and inputGroupTP2_Trail, stop=takeProfit2TS_Price, qty=inputGroupTP2_QtyPer*0.01*POSITION) 
+    strategy.order(takeProfit3_Name, strategy.short, oca_name='TPSL',oca_type=strategy.oca.cancel, when=takeProfit3_ExecCondition and not inputGroupTP3_Trail, limit=takeProfit3_Price, qty=inputGroupTP3_QtyPer*0.01*POSITION)
+    strategy.order(takeProfit3TS_Name, strategy.short, oca_name='TPSL',oca_type=strategy.oca.cancel, when=takeProfit3TS_ExecCondition and inputGroupTP3_Trail, stop=takeProfit3TS_Price, qty=inputGroupTP3_QtyPer*0.01*POSITION) 
+    strategy.order(takeProfit4_Name, strategy.short, oca_name='TPSL',oca_type=strategy.oca.cancel, when=takeProfit4_ExecCondition and not inputGroupTP4_Trail, limit=takeProfit4_Price, qty=inputGroupTP4_QtyPer*0.01*POSITION)
+    strategy.order(takeProfit4TS_Name, strategy.short, oca_name='TPSL',oca_type=strategy.oca.cancel, when=takeProfit4TS_ExecCondition and inputGroupTP4_Trail, stop=takeProfit4TS_Price, qty=inputGroupTP4_QtyPer*0.01*POSITION) 
+    strategy.order(takeProfit5_Name, strategy.short, oca_name='TPSL',oca_type=strategy.oca.cancel, when=takeProfit5_ExecCondition and not inputGroupTP5_Trail, limit=takeProfit5_Price, qty=inputGroupTP5_QtyPer*0.01*POSITION)
+    strategy.order(takeProfit5TS_Name, strategy.short, oca_name='TPSL',oca_type=strategy.oca.cancel, when=takeProfit5TS_ExecCondition and inputGroupTP5_Trail, stop=takeProfit5TS_Price, qty=inputGroupTP5_QtyPer*0.01*POSITION) 
+    strategy.order(stopLoss1_Name, strategy.short, oca_name='TPSL',oca_type=strategy.oca.cancel, when=stopLoss1_ExecCondition, stop=stopLoss1_Price, qty=inputGroupSL1_QtyPer*0.01*POSITION) 
+    strategy.order(stopLoss2_Name, strategy.short, oca_name='TPSL',oca_type=strategy.oca.cancel, when=stopLoss2_ExecCondition, stop=stopLoss2_Price, qty=inputGroupSL2_QtyPer*0.01*POSITION) 
+    strategy.order(stopLoss3_Name, strategy.short, oca_name='TPSL',oca_type=strategy.oca.cancel, when=stopLoss3_ExecCondition, stop=stopLoss3_Price, qty=inputGroupSL3_QtyPer*0.01*POSITION)
+    strategy.order(stopLoss4_Name, strategy.short, oca_name='TPSL',oca_type=strategy.oca.cancel, when=stopLoss4_ExecCondition, stop=stopLoss4_Price, qty=inputGroupSL4_QtyPer*0.01*POSITION) 
+    strategy.order(stopLoss5_Name, strategy.short, oca_name='TPSL',oca_type=strategy.oca.cancel, when=stopLoss5_ExecCondition, stop=stopLoss5_Price, qty=inputGroupSL5_QtyPer*0.01*POSITION) 
+if (SHORT and not ISLONGWAY)
+    strategy.order(takeProfit1_Name, strategy.long, oca_name='TPSL',oca_type=strategy.oca.cancel, when=takeProfit1_ExecCondition and not inputGroupTP1_Trail, limit=takeProfit1_Price, qty=-inputGroupTP1_QtyPer*0.01*POSITION)
+    strategy.order(takeProfit1TS_Name, strategy.long, oca_name='TPSL',oca_type=strategy.oca.cancel, when=takeProfit1TS_ExecCondition and inputGroupTP1_Trail, stop=takeProfit1TS_Price, qty=-inputGroupTP1_QtyPer*0.01*POSITION) 
+    strategy.order(takeProfit2_Name, strategy.long, oca_name='TPSL',oca_type=strategy.oca.cancel, when=takeProfit2_ExecCondition and not inputGroupTP2_Trail, limit=takeProfit2_Price, qty=-inputGroupTP2_QtyPer*0.01*POSITION)
+    strategy.order(takeProfit2TS_Name, strategy.long, oca_name='TPSL',oca_type=strategy.oca.cancel, when=takeProfit2TS_ExecCondition and inputGroupTP2_Trail, stop=takeProfit2TS_Price, qty=-inputGroupTP2_QtyPer*0.01*POSITION) 
+    strategy.order(takeProfit3_Name, strategy.long, oca_name='TPSL',oca_type=strategy.oca.cancel, when=takeProfit3_ExecCondition and not inputGroupTP3_Trail, limit=takeProfit3_Price, qty=-inputGroupTP3_QtyPer*0.01*POSITION)
+    strategy.order(takeProfit3TS_Name, strategy.long, oca_name='TPSL',oca_type=strategy.oca.cancel, when=takeProfit3TS_ExecCondition and inputGroupTP3_Trail, stop=takeProfit3TS_Price, qty=-inputGroupTP3_QtyPer*0.01*POSITION) 
+    strategy.order(takeProfit4_Name, strategy.long, oca_name='TPSL',oca_type=strategy.oca.cancel, when=takeProfit4_ExecCondition and not inputGroupTP4_Trail, limit=takeProfit4_Price, qty=-inputGroupTP4_QtyPer*0.01*POSITION)
+    strategy.order(takeProfit4TS_Name, strategy.long, oca_name='TPSL',oca_type=strategy.oca.cancel, when=takeProfit4TS_ExecCondition and inputGroupTP4_Trail, stop=takeProfit4TS_Price, qty=-inputGroupTP4_QtyPer*0.01*POSITION) 
+    strategy.order(takeProfit5_Name, strategy.long, oca_name='TPSL',oca_type=strategy.oca.cancel, when=takeProfit5_ExecCondition and not inputGroupTP5_Trail, limit=takeProfit5_Price, qty=-inputGroupTP5_QtyPer*0.01*POSITION)
+    strategy.order(takeProfit5TS_Name, strategy.long, oca_name='TPSL',oca_type=strategy.oca.cancel, when=takeProfit5TS_ExecCondition and inputGroupTP5_Trail, stop=takeProfit5TS_Price, qty=-inputGroupTP5_QtyPer*0.01*POSITION)
+    strategy.order(stopLoss1_Name, strategy.long, oca_name='TPSL',oca_type=strategy.oca.cancel, when=stopLoss1_ExecCondition, stop=stopLoss1_Price, qty=-inputGroupSL1_QtyPer*0.01*POSITION) 
+    strategy.order(stopLoss2_Name, strategy.long, oca_name='TPSL',oca_type=strategy.oca.cancel, when=stopLoss2_ExecCondition, stop=stopLoss2_Price, qty=-inputGroupSL2_QtyPer*0.01*POSITION) 
+    strategy.order(stopLoss3_Name, strategy.long, oca_name='TPSL',oca_type=strategy.oca.cancel, when=stopLoss3_ExecCondition, stop=stopLoss3_Price, qty=-inputGroupSL3_QtyPer*0.01*POSITION) 
+    strategy.order(stopLoss4_Name, strategy.long, oca_name='TPSL',oca_type=strategy.oca.cancel, when=stopLoss4_ExecCondition, stop=stopLoss4_Price, qty=-inputGroupSL4_QtyPer*0.01*POSITION)
+    strategy.order(stopLoss5_Name, strategy.long, oca_name='TPSL',oca_type=strategy.oca.cancel, when=stopLoss5_ExecCondition, stop=stopLoss5_Price, qty=-inputGroupSL5_QtyPer*0.01*POSITION)
+// ======================================================= //
+// -------------------->  Strategy Results <-------------- //
+// ======================================================= //
+varip realTrade_NB          = 0
+varip lastTrade_Bar         = 0
+varip realTrade_Profit      = 0.0
+varip realTrade_initialPS   = 0.0
+realTrade_NB                := (strategy.position_size[1]==0 and not FLAT) ? realTrade_NB + 1 : realTrade_NB
+lastTrade_Bar               := (strategy.position_size[1]==0 and not FLAT) ? bar_index + 1 : lastTrade_Bar
+realTrade_initialPS         := (strategy.position_size[1]==0 and not FLAT) ? strategy.position_size *  strategy.position_avg_price : realTrade_initialPS
+if (strategy.position_size[1]!=0 and FLAT)
+    realTrade_Profit := 0
+    for i=0 to strategy.closedtrades -1 
+        if strategy.closedtrades.exit_bar_index(i)>=lastTrade_Bar
+            realTrade_Profit := realTrade_Profit + strategy.closedtrades.profit(i) 
+// ======================================================= //
+// ------------------------>  Drawing <------------------- //
+// ======================================================= //
+// --- Stop Loss 1 ---
+close_PlotSL1=plot(stopLoss1_ExecCondition ? close : na,style=plot.style_linebr, color=color.new(color.gray,100),title='Stop Loss 1 - Base Line')
+stopLoss1_Plot=plot(stopLoss1_ExecCondition ? stopLoss1_Price : na,style=plot.style_linebr, color=color.new(color.red,10), title='Stop Loss 1 - Price')
+fill(close_PlotSL1,stopLoss1_Plot,color.new(#e0999a,50), title='Stop Loss 1 - Background')
+// --- Stop Loss 2 ---
+close_PlotSL2=plot(stopLoss2_ExecCondition ? close : na,style=plot.style_linebr, color=color.new(color.gray,100),title='Stop Loss 2 - Base Line')
+stopLoss2_Plot=plot(stopLoss2_ExecCondition ? stopLoss2_Price : na,style=plot.style_linebr, color=color.new(color.red,30),title='Stop Loss 2 - Price')
+fill(close_PlotSL2,stopLoss2_Plot,color.new(#e0999a,65),title='Stop Loss 2 - Background')
+// --- Stop Loss 3 ---
+close_PlotSL3=plot(stopLoss3_ExecCondition ? close : na,style=plot.style_linebr, color=color.new(color.gray,100),title='Stop Loss 3 - Base Line')
+stopLoss3_Plot=plot(stopLoss3_ExecCondition ? stopLoss3_Price : na,style=plot.style_linebr, color=color.new(color.red,50),title='Stop Loss 3 - Price')
+fill(close_PlotSL3,stopLoss3_Plot,color.new(#e0999a,80),title='Stop Loss 3 - Background')
+// --- Stop Loss 4 ---
+close_PlotSL4=plot(stopLoss4_ExecCondition ? close : na,style=plot.style_linebr, color=color.new(color.gray,100),title='Stop Loss 4 - Base Line')
+stopLoss4_Plot=plot(stopLoss4_ExecCondition ? stopLoss4_Price : na,style=plot.style_linebr, color=color.new(color.red,50),title='Stop Loss 4 - Price')
+fill(close_PlotSL4,stopLoss4_Plot,color.new(#e0999a,80),title='Stop Loss 4 - Background')
+// --- Stop Loss 5 ---
+close_PlotSL5=plot(stopLoss5_ExecCondition ? close : na,style=plot.style_linebr, color=color.new(color.gray,100),title='Stop Loss 5 - Base Line')
+stopLoss5_Plot=plot(stopLoss5_ExecCondition ? stopLoss5_Price : na,style=plot.style_linebr, color=color.new(color.red,50),title='Stop Loss 5 - Price')
+fill(close_PlotSL5,stopLoss5_Plot,color.new(#e0999a,80),title='Stop Loss 5 - Background')
+// --- Take Profit 1 ---
+close_PlotTP1=plot(takeProfit1_ExecCondition ? close : na ,style=plot.style_linebr, color=color.new(color.gray,100),title='Take Profit 1 - Base Line')
+takeProfit1_Plot=plot(takeProfit1_ExecCondition ? takeProfit1_Price : na,style=plot.style_linebr, color=color.new(color.green,10),title='Take Profit 1 - Price')
+fill(close_PlotTP1,takeProfit1_Plot,color.new(#99e0ac,50),title='Take Profit 1 - Background')
+// --- Take Profit Trail TP 1 ---
+close_PlotTPT1=plot( takeProfit1TS_ExecCondition ? close : na ,style=plot.style_linebr, color=color.new(color.gray,100),title='Take Profit 1 - Trailing Stop - Base Line')
+takeProfitTP1_Plot=plot(takeProfit1TS_ExecCondition ?  takeProfit1TS_Price : na ,style=plot.style_linebr, color=color.new(color.silver,50),title='Take Profit 1 - Trailing Stop - Price')
+fill(close_PlotTPT1,takeProfitTP1_Plot,color.new(#b22833,50),title='Take Profit 1 - Trailing Stop - Background')
+// --- Take Profit 2 ---
+close_PlotTP2=plot(takeProfit2_ExecCondition ? close : na ,style=plot.style_linebr, color=color.new(color.gray,100),title='Take Profit 2 - Base Line')
+takeProfit2_Plot=plot(takeProfit2_ExecCondition ? takeProfit2_Price : na,style=plot.style_linebr, color=color.new(color.green,20),title='Take Profit 2 - Price')
+fill(close_PlotTP2,takeProfit2_Plot,color.new(#99e0ac,50),title='Take Profit 2 - Background')
+// --- Take Profit Trail TP 2 ---
+close_PlotTPT2=plot( takeProfit2TS_ExecCondition ? close : na ,style=plot.style_linebr, color=color.new(color.gray,100),title='Take Profit 2 - Trailing Stop - Base Line')
+takeProfitTP2_Plot=plot(takeProfit2TS_ExecCondition ?  takeProfit2TS_Price : na ,style=plot.style_linebr, color=color.new(color.silver,50),title='Take Profit 2 - Trailing Stop - Price')
+fill(close_PlotTPT2,takeProfitTP2_Plot,color.new(#b22833,50),title='Take Profit 2 - Trailing Stop - Background')
+// --- Take Profit 3 ---
+close_PlotTP3=plot(takeProfit3_ExecCondition ? close : na ,style=plot.style_linebr, color=color.new(color.gray,100),title='Take Profit 3 - Base Line')
+takeProfit3_Plot=plot(takeProfit3_ExecCondition ? takeProfit3_Price : na,style=plot.style_linebr, color=color.new(color.green,30),title='Take Profit 3 - Price')
+fill(close_PlotTP3,takeProfit3_Plot,color.new(#99e0ac,50),title='Take Profit 3 - Background')
+// --- Take Profit Trail TP 3 ---
+close_PlotTPT3=plot( takeProfit3TS_ExecCondition ? close : na ,style=plot.style_linebr, color=color.new(color.gray,100),title='Take Profit 3 - Trailing Stop - Base Line')
+takeProfitTP3_Plot=plot(takeProfit3TS_ExecCondition ?  takeProfit3TS_Price : na ,style=plot.style_linebr, color=color.new(color.silver,50),title='Take Profit 3 - Trailing Stop - Price')
+fill(close_PlotTPT3,takeProfitTP3_Plot,color.new(#b33833,50),title='Take Profit 3 - Trailing Stop - Background')
+// --- Take Profit 4 ---
+close_PlotTP4=plot(takeProfit4_ExecCondition ? close : na ,style=plot.style_linebr, color=color.new(color.gray,100),title='Take Profit 4 - Base Line')
+takeProfit4_Plot=plot(takeProfit4_ExecCondition ? takeProfit4_Price : na,style=plot.style_linebr, color=color.new(color.green,40),title='Take Profit 4 - Price')
+fill(close_PlotTP4,takeProfit4_Plot,color.new(#99e0ac,50),title='Take Profit 4 - Background')
+// --- Take Profit Trail TP 4 ---
+close_PlotTPT4=plot( takeProfit4TS_ExecCondition ? close : na ,style=plot.style_linebr, color=color.new(color.gray,100),title='Take Profit 4 - Trailing Stop - Base Line')
+takeProfitTP4_Plot=plot(takeProfit4TS_ExecCondition ?  takeProfit4TS_Price : na ,style=plot.style_linebr, color=color.new(color.silver,50),title='Take Profit 4 - Trailing Stop - Price')
+fill(close_PlotTPT4,takeProfitTP4_Plot,color.new(#b44844,50),title='Take Profit 4 - Trailing Stop - Background')
+// --- Take Profit 5 ---
+close_PlotTP5=plot(takeProfit5_ExecCondition ? close : na ,style=plot.style_linebr, color=color.new(color.gray,100),title='Take Profit 5 - Base Line')
+takeProfit5_Plot=plot(takeProfit5_ExecCondition ? takeProfit5_Price : na,style=plot.style_linebr, color=color.new(color.green,50),title='Take Profit 5 - Price')
+fill(close_PlotTP5,takeProfit5_Plot,color.new(#99e0ac,50),title='Take Profit 5 - Background')
+// --- Take Profit Trail TP 5 ---
+close_PlotTPT5=plot( takeProfit5TS_ExecCondition ? close : na ,style=plot.style_linebr, color=color.new(color.gray,100),title='Take Profit 5 - Trailing Stop - Base Line')
+takeProfitTP5_Plot=plot(takeProfit5TS_ExecCondition ?  takeProfit5TS_Price : na ,style=plot.style_linebr, color=color.new(color.silver,50),title='Take Profit 5 - Trailing Stop - Price')
+fill(close_PlotTPT5,takeProfitTP5_Plot,color.new(#b55855,50),title='Take Profit 5 - Trailing Stop - Background')
+// --- Show last real trade ---
+if (strategy.position_size[1]!=0 and FLAT) and showTradeResult
+    label.new(bar_index+1, na,  size=size.normal, textalign=text.align_right, text=str.tostring(math.round(realTrade_Profit,2))+"\n"+str.tostring((math.round(100*(realTrade_Profit/realTrade_initialPS),2))) + "%", color=realTrade_Profit>0 ? color.green : color.red, style=label.style_label_upper_left, yloc=yloc.belowbar, textcolor=color.black)
+// ---- Show Winning Trades ---
+if strategy.wintrades != strategy.wintrades[1] and showWinOrder
+    label.new(bar_index+1, na,  size=size.tiny, textalign=text.align_right, text=str.tostring(math.round(strategy.closedtrades.profit(strategy.closedtrades-1),2))+"\n"+str.tostring((ISLONGWAY ? -1 : 1) * (100-math.round(100*(strategy.closedtrades.exit_price(strategy.closedtrades-1)/strategy.closedtrades.entry_price(strategy.closedtrades-1)),2))) + "%", color=color.green, style=label.style_xcross, yloc=yloc.belowbar, textcolor=ISLONGWAY ? color.green : color.red)
+// ---- Show Losing Trades ---
+if strategy.losstrades != strategy.losstrades[1] and showLoosOrder
+    label.new(bar_index+1, na,  size=size.tiny, textalign=text.align_right, text=str.tostring(math.round(strategy.closedtrades.profit(strategy.closedtrades-1),2))+"\n"+str.tostring((ISLONGWAY ? -1 : 1) * (100-math.round(100*(strategy.closedtrades.exit_price(strategy.closedtrades-1)/strategy.closedtrades.entry_price(strategy.closedtrades-1)),2))) + "%", color=color.red, style=label.style_xcross, yloc=yloc.belowbar ,textcolor=not ISLONGWAY ? color.green : color.red)
+// ---- Show Table Results
+tableBgcolor=#696969
+if barstate.islastconfirmedhistory and showTableResult
+    var tbl = table.new(position.top_center, 4, 2, bgcolor = tableBgcolor, frame_width = 2, frame_color = color.black,border_width=2,border_color=color.black)
+    table.cell(tbl, 0, 0, "Total Trades : " + str.tostring(strategy.closedtrades),bgcolor=strategy.netprofit>strategy.initial_capital?color.green:color.red,text_size=size.small,text_color=strategy.netprofit>strategy.initial_capital?color.black:color.white,text_valign=text.align_center,width=10,height=8)
+    table.cell(tbl, 0, 1, "Win Rate : " +  str.tostring(math.round(strategy.wintrades / strategy.closedtrades * 100,2)) + "%",bgcolor=strategy.netprofit>strategy.initial_capital?color.green:color.red,text_size=size.small,text_color=strategy.netprofit>strategy.initial_capital?color.black:color.white,text_valign=text.align_center,width=10,height=8)
+    table.cell(tbl, 1, 0, "Starting : " + str.tostring(strategy.initial_capital),bgcolor=strategy.netprofit>strategy.initial_capital?color.green:color.red,text_size=size.small,text_color=strategy.netprofit>strategy.initial_capital?color.black:color.white,text_valign=text.align_center,width=10,height=8)
+    table.cell(tbl, 1, 1, "Ending : "  + str.tostring(math.round(strategy.netprofit,2)),bgcolor=strategy.netprofit>strategy.initial_capital?color.green:color.red,text_size=size.small,text_color=strategy.netprofit>strategy.initial_capital?color.black:color.white,text_valign=text.align_center,width=10,height=8)
+    table.cell(tbl, 2, 0, "Net Profit : " +  str.tostring(math.round(strategy.netprofit / strategy.initial_capital * 100,2)) + "%",bgcolor=strategy.netprofit>strategy.initial_capital?color.green:color.red,text_size=size.small,text_color=strategy.netprofit>strategy.initial_capital?color.black:color.white,text_valign=text.align_center,width=10,height=8)
+    table.cell(tbl, 2, 1, "Max DD : "+ str.tostring(math.round(strategy.max_drawdown/ strategy.initial_capital * 100,2))+"%",bgcolor=strategy.netprofit>strategy.initial_capital?color.green:color.red,text_size=size.small,text_color=strategy.netprofit>strategy.initial_capital?color.black:color.white,text_valign=text.align_center,width=10,height=8)
+Expand (591 lines)

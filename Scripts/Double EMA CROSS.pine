@@ -1,0 +1,147 @@
+Script Name: Double EMA CROSS
+Author: EmreErturk_
+Description: Double EMA CROSS (DEC)
+
+Useful for identifying and receiving alerts about uptrends and downtrends.
+
+This script uses two Exponential Moving Averages (EMAs) to find price uptrends and downtrends. 
+An Exponential Moving Average ( EMA ) is a type of moving average that places a greater weight and significance on the most recent data points. 
+The script produces...
+PineScript code:
+
+Pine Script™ strategy
+Double EMA CROSS
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// Double EMA CROSS By © EmreE (Emre Ertürk) Also thx for KivancOzbilgic color based bars
+//@version=4
+strategy(title="Double EMA CROSS", shorttitle="DEC", overlay=true)
+matype = input("ema")
+hidema = input(false)
+sourcetype = input(close, title="Source Type")
+source=close
+ 
+// STEP 1:
+// Configure backtest start date with inputs
+startDate = input(title="Start Date", type=input.integer,
+     defval=1, minval=1, maxval=231)
+startMonth = input(title="Start Month", type=input.integer,
+     defval=1, minval=1, maxval=12) 
+startYear = input(title="Start Year", type=input.integer,
+     defval=2020, minval=1800, maxval=2100)
+// STEP 2:
+// See if this bar's time happened on/after start date
+afterStartDate = (time >= timestamp(syminfo.timezone,
+     startYear, startMonth, startDate, 0, 0))
+fast = input(25, title="Fast")
+slow = input(75, title="Slow")
+matype1=ema(source, fast)
+matype2=ema(source, slow)
+signalcolor = source > matype2 ? color.blue : color.red
+signal = cross(fast, slow) 
+hizliema=plot(hidema ? na : matype1, color=color.green, linewidth=2,transp=0, title="Fast EMA")
+yavasema=plot(hidema ? na : matype2, color=color.red, linewidth=2,transp=0, title="Slow EMA")
+//kesisme=plot(signal, style=cross, color=signalcolor, linewidth=5, title="Kesişme")
+ 
+longCondition = crossover(matype1, matype2)
+if (afterStartDate and longCondition)
+    strategy.entry("Long", strategy.long)
+shortCondition = crossunder(matype1, matype2)
+if (afterStartDate and shortCondition)
+    strategy.entry("Short", strategy.short)
+    
+//--------------------------------------------------------
+//volume based color bars
+length=input(21, "length", minval=1)
+avrg=sma(volume,length)
+vold1 = volume > avrg*1.5 and close<open
+vold2 = volume >= avrg*0.5 and volume<=avrg*1.5 and close<open
+vold3 = volume < avrg *0.5 and close<open
+volu1 = volume > avrg*1.5 and close>open
+volu2 = volume >= avrg*0.5 and volume<=avrg*1.5 and close>open
+volu3 = volume< avrg*0.5 and close>open
+cold1=#800000
+cold2=#FF0000
+cold3=color.orange
+colu1=#006400
+colu2=color.lime
+colu3=#7FFFD4
+ac = vold1 ? cold1 : vold2 ? cold2 : vold3 ? cold3 : volu1 ? colu1 : volu2 ? colu2 : volu3 ? colu3 : na
+barcolor(ac)
+Expand (76 lines)

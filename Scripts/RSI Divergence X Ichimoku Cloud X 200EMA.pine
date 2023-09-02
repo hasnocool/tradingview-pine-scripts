@@ -1,0 +1,173 @@
+Script Name: RSI Divergence X Ichimoku Cloud X 200EMA
+Author: tradethrills
+Description: Hi all,
+
+This script is a combination of the RSI Divergence Strategy combined with Ichimoku Cloud and 200 EMA .
+
+A long position is entered only when the RSI identifies a bullish divergence (either regular or hidden), and that the Ichimoku Cloud is above the 200 EMA . This is to ensure that there is a confirmation of a bullish trend before an entry.
+
+Similarly, a...
+PineScript code:
+
+Pine Script™ strategy
+RSI Divergence X Ichimoku Cloud X 200EMA
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © tradethrills
+//@version=4
+strategy("RSI Divergence X Ichimoku Cloud X 200EMA", overlay=true)
+//RSI Indicator
+len = input(defval=14, minval=1)
+src = input(defval=close)
+lbR = input(defval=5)
+lbL = input(defval=5)
+takeProfitLevellong = input(minval = 70, defval = 75)
+takeProfitLevelshort = input(minval = 30, defval = 25)
+rangeUpper = input(defval=60)
+rangeLower = input(defval=5)
+//200 EMA
+ema200 = ema(close, 200)
+//Ichimoku Cloud Indicator
+conversionPeriods = input(9, minval=1)
+basePeriods = input(26, minval=1)
+laggingSpan2Periods = input(52, minval=1)
+displacement = input(26, minval=1)
+donchian(len) => avg(lowest(len), highest(len))
+conversionLine = donchian(conversionPeriods)
+baseLine = donchian(basePeriods)
+leadLine1 = avg(conversionLine, baseLine)
+leadLine2 = donchian(laggingSpan2Periods)
+abovecloud =  max(leadLine1, leadLine2)
+belowcloud = min(leadLine1, leadLine2)
+//RSI Divergence Strategy
+osc = rsi(src, len)
+_inrange(cond) =>
+    bars = barssince(cond == true)
+    rangeLower <= bars and bars <= rangeUpper
+pricelowfound = na(pivotlow(osc, lbL, lbR)) ? false : true
+pricehighfound = na(pivothigh(osc, lbL, lbR)) ? false : true
+//Regular Bullish
+osc_higherlow = osc[lbR] > valuewhen(pricelowfound, osc[lbR], 1) and _inrange(pricelowfound[1])
+price_lowerlow = low[lbR] < valuewhen(pricelowfound, low[lbR], 1)
+bullCond = price_lowerlow and osc_higherlow and pricelowfound
+//Hidden Bullish
+osc_lowerlow = osc[lbR] < valuewhen(pricelowfound, osc[lbR], 1) and _inrange(pricelowfound[1])
+price_higherlow = low[lbR] > valuewhen(pricelowfound, low[lbR], 1)
+hiddenbullCond = price_higherlow and osc_lowerlow and pricelowfound
+//Regular Bearish
+osc_lowerhigh = osc[lbR] < valuewhen(pricehighfound, osc[lbR], 1) and _inrange(pricehighfound[1])
+price_higherhigh = high[lbR] > valuewhen(pricehighfound, high[lbR], 1)
+bearCond = price_higherhigh and osc_lowerhigh and pricehighfound
+//Hidden Bearish
+osc_higherhigh = osc[lbR] > valuewhen(pricehighfound, osc[lbR], 1) and _inrange(pricehighfound[1])
+price_lowerhigh = high[lbR] < valuewhen(pricehighfound, high[lbR], 1)
+hiddenbearCond = price_lowerhigh and osc_higherhigh and pricehighfound
+//Entry and Exit
+longCondition = (bullCond or hiddenbullCond) and (abovecloud > ema200)
+closelongCondition = crossover(osc, takeProfitLevellong) 
+shortCondition = (bearCond or hiddenbearCond) and (ema200 > belowcloud)
+closeshortCondition = crossover(osc, takeProfitLevelshort)
+strategy.entry("Long", strategy.long, 10000.0, when=longCondition)
+strategy.close("Long", when=closelongCondition)
+strategy.entry("Short", strategy.short, 10000.0, when=shortCondition)
+strategy.close("Short", when=closeshortCondition)
+Expand (99 lines)

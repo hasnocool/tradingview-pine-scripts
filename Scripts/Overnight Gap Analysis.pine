@@ -1,0 +1,70 @@
+Script Name: Overnight Gap Analysis
+Author: TradeAutomation
+Description: There is a wide range of opinion on holding positions overnight due to gap risk. So, out of curiosity, I coded this analysis as a strategy to see what the result of only holding a position overnight on an asset would be. The results really surprised me. The script backtests 10+ years, and here are the findings:
+
+ 
+ Holding a position for 1 hour bar overnight on...
+PineScript code:
+
+Pine Script™ strategy
+Overnight Gap Analysis
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// @version = 5
+// Author = TradeAutomation
+strategy(title="Overnight Gap Analysis", shorttitle="Overnight Gap Analysis", process_orders_on_close=true, calc_on_every_tick=false, overlay=true, commission_type=strategy.commission.cash_per_order, commission_value=1, slippage=0, initial_capital = 100000, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+// Default settings are for a 1 hour chart in a market that has 7 bars per day. The number of bars on the chart per day must be adjusted with an input for the script to work on other types of charts/markets. 
+ 
+// Script Date Range Inputs  
+StartTime = input.time(defval=timestamp('01 Jan 2010 05:00 +0000'), group="Script Date Range Settings", title='Start Time')
+EndTime = input.time(defval=timestamp('01 Jan 2099 00:00 +0000'), group="Script Date Range Settings", title='End Time')
+InDateRange = time>=StartTime and time<=EndTime
+// Identifies the Last Bar of the Day
+var todaybarcount = 0
+todaybarcount := close and not ta.change(time_tradingday) ? todaybarcount + 1 : ta.change(time_tradingday) ? 1 : todaybarcount[1]
+// Calculates Trigger and Filter Criteria
+LongTrigger = todaybarcount==input.int(7, "Number of Bars on Your Chart Per Day", tooltip="This is used to identify the last bar of the day. A Long order is placed on the close of this bar")
+EMAFilterInput = input.bool(false, "Only Enter Trade if Above EMA?")
+EMAFilter = close>ta.ema(close, input.int(1400, "EMA Qual Length")) 
+EnteredLastBar = ta.crossover(strategy.position_size, 0.5) ? 1 : 0
+// Entry and Exit Functions
+if (InDateRange and EMAFilterInput==true)
+    strategy.entry("Long", strategy.long, when = LongTrigger and EMAFilter, alert_message="Buy")
+if (InDateRange and EMAFilterInput==false)
+    strategy.entry("Long", strategy.long, when = LongTrigger, alert_message="Buy")
+if (InDateRange)
+    strategy.close("Long", when = EnteredLastBar==1)
+    
+Expand (32 lines)

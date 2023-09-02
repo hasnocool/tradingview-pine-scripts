@@ -1,0 +1,908 @@
+Script Name: Elliot Wave - Impulse Strategy
+Author: UnknownUnicorn36161431
+Description: The WHAT
+=============>
+A strategy based on combination of 3 indicators.
+1) "Elliot Wave - Impulse" indicator from @HeWhoMustNotBeNamed () .
+2) "Cyclic RSI High Low With Noise Filter" from @RozaniGhani-RG ().
+3) "Mesa Advanced Triggers" from @jordanfung ()
+
+By using these 3 indicators together, I was able to project and backtrack some very nice return values even...
+PineScript code:
+
+Pine Script™ strategy
+Elliot Wave - Impulse Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HeWhoMustNotBeNamed
+//@version=5
+strategy("Elliot Wave - Impulse Strategy", shorttitle="EW - Impulse Strategy", overlay=true, process_orders_on_close = true, calc_on_order_fills = true, calc_on_every_tick = true, pyramiding = 0, default_qty_type = strategy.percent_of_equity, default_qty_value = 75, commission_type = strategy.commission.percent, commission_value = 0.04, initial_capital = 100, max_lines_count=500, max_labels_count=500)
+show_sl_invalidation_labels = input.bool( true, "Show 'invalidated at SL' Labels", group = "General" )
+i_use_time_limited_backtesting = input.bool( false, "Use Time-Limited Backtesting", group = "Time-Limit BackTesting (0 = disable)" )
+startDay = input.int(0, "Start Day", minval = 0, maxval = 31, group = "Time-Limit BackTesting (0 = disable)")
+startMonth = input.int(0, "Start Month", minval = 0, maxval = 12, group = "Time-Limit BackTesting (0 = disable)")
+startYear = input.int(0, "Start Year", minval = 0, maxval = 2100, group = "Time-Limit BackTesting (0 = disable)")
+endDay = input.int(0, "End Day", minval = 0, maxval = 31, group = "Time-Limit BackTesting (0 = disable)")
+endMonth = input.int(0, "End Month", minval = 0, maxval = 12, group = "Time-Limit BackTesting (0 = disable)")
+endYear = input.int(0, "End Year", minval = 0, maxval = 2100, group = "Time-Limit BackTesting (0 = disable)")
+//source = input(close, group = "Elliot Waves Options")
+source = close
+zigzagLength = input.int(2, minval=2, step=1, group = "Elliot Waves Options")
+errorPercent = input.int(10, minval=2, step=1, maxval=20, group = "Elliot Waves Options")
+entryPercent = input.int(10, minval=10, step=1, maxval=100, group = "Elliot Waves Options")
+zigzagWidth = input.int(2, step=1, minval=1, group = "Elliot Waves Options")
+zigzagStyle = input.string(line.style_solid, options=[line.style_dashed, line.style_dotted, line.style_solid], group = "Elliot Waves Options")
+target2reach = input.string("TP4 (3.236 fibo)", options=["TP1 (1.618 fibo)", "TP2 (2.0 fibo)", "TP3 (2.618 fibo)", "TP4 (3.236 fibo)"], group = "Elliot Waves Options")
+waitForConfirmation = true
+i_use_crsi = input.bool( true, "Trade by cRSI direction", group = "cRSI Options" )
+i_show_crsi = input.bool( false, "Show cRSI Pivots", group = "cRSI Options" )
+i_i_len   = input( 1, "cRSI EMA period", group = "cRSI Options" )
+i_src     = input.source( close, 'cRSI Source',  group = "cRSI Options" )
+i_use_mesa = input.bool( true, "Open trades by MESA Pivots", group = "MESA Pivots Options" )
+i_show_mesa = input.bool( false, "Show MESA Pivots", group = "MESA Pivots Options" )
+offsetNum = input( 0, "MESA offset", group = "MESA Pivots Options")
+pivot_zone_upper = input( 0.4, "MESA pivot zone upper", group = "MESA Pivots Options" )
+pivot_zone_lower = input( -0.4, "MESA pivot zone lower", group = "MESA Pivots Options" )
+var cRSI_high_extreme_found = 0.0
+var cRSI_high_extreme_valid = true
+var cRSI_low_extreme_found = 0.0
+var cRSI_low_extreme_valid = true
+var last_cRSI_extreme = ""
+var cRSI_trend_direction = ""
+var last_trade_ts = time
+var min_trade_gap_minutes = 2 
+inDateRange = true
+// Look if the close time of the current bar falls inside the date range
+if i_use_time_limited_backtesting and startDay != 0 and startMonth != 0 and startYear != 0 and endDay != 0 and endMonth != 0 and endYear != 0
+    inDateRange := ( time >= timestamp( syminfo.timezone, startYear, startMonth, startDay, 0, 0 ) ) and ( time < timestamp( syminfo.timezone, endYear, endMonth, endDay, 0, 0 ) )
+//------------------------------------------------------------------------------
+// MESA calculations from the MESA indicator
+//------------------------------------------------------------------------------
+// Basic
+//------------------------------------------------------------------------------
+DomCycle = 15
+RealPart = 0.0
+ImagPart = 0.0
+for J = 0 to DomCycle - 1
+    Weight = (close[J] + close[J] + high[J] + low[J]) * 10000
+    if DomCycle != 0
+        RealPart := RealPart + math.cos(90 * J / DomCycle) * Weight * 2
+        ImagPart := ((ImagPart + math.sin(90 * J / DomCycle) * Weight) + (ImagPart + math.sin(180 * J / DomCycle) * Weight)) / 2
+Phase = ((math.atan(ImagPart / RealPart)) - 0.685) * 100
+//------------------------------------------------------------------------------
+//Pivot
+//------------------------------------------------------------------------------
+ph_mesa = ta.pivothigh(Phase, 1, 1)
+pl_mesa = ta.pivotlow(Phase, 1, 1)
+out_zone = Phase[2] < pivot_zone_lower or Phase[2] > pivot_zone_upper
+plotshape(i_show_mesa and ph_mesa and out_zone ? ph_mesa : na, title = "Pivot High", color=#f23737, style = shape.circle, location = location.abovebar, offset = -1, size = size.tiny)
+plotshape(i_show_mesa and pl_mesa and out_zone ? pl_mesa : na, title = "Pivot Low", color=#169788, style = shape.circle, location = location.belowbar, offset = -1, size = size.tiny)
+//------------------------------------------------------------------------------
+// cRSI indicator code
+//------------------------------------------------------------------------------
+crsi       = 0.0
+vibration  = 10
+torque     = 0.618 / (vibration + 1)
+phasingLag = (vibration - 1) / 0.618
+rsi        = ta.rsi(i_src, i_i_len)
+crsi      := torque * (2 * rsi - rsi[phasingLag]) + (1 - torque) * nz(crsi[1])
+float osc = crsi
+float ph = ta.highestbars(high, i_i_len) == 0 ? osc : na
+float pl = ta.lowestbars(low,   i_i_len) == 0 ? osc : na
+var int dir = 0
+dir := ph and na(pl) ? 1 : pl and na(ph) ? -1 : dir
+var max_array_size = 10
+var arr_zz         = array.new_float(0)
+older_zz           = array.copy(arr_zz)
+dirchanged         = ta.change(dir)
+add_to_zigzag(_id, float value, int bindex) =>
+    array.unshift(_id, bindex)
+    array.unshift(_id, value)
+    if array.size(_id) > max_array_size
+        array.pop(_id)
+        array.pop(_id)
+update_zigzag(_id, float value, int bindex, int dir) =>
+    if array.size(_id) == 0
+        add_to_zigzag(_id, value, bindex)
+    else
+        if dir == 1 and value > array.get(_id, 0) or dir == -1 and value < array.get(_id, 0)
+            array.set(_id, 0, value)
+            array.set(_id, 1, bindex)
+        0.
+if ph or pl
+    if dirchanged
+        add_to_zigzag(arr_zz, dir == 1 ? ph : pl, bar_index)
+    else
+        update_zigzag(arr_zz, dir == 1 ? ph : pl, bar_index, dir)
+if array.size(arr_zz) >= 6
+    // Variables
+    var label label_zz = na
+    // Bools for or
+    bool bool_or_1 = array.get(arr_zz, 0) != array.get(older_zz, 0)
+    bool bool_or_2 = array.get(arr_zz, 1) != array.get(older_zz, 1)
+    
+    // Bools for and
+    bool bool_n_1 = array.get(arr_zz, 2) == array.get(older_zz, 2)
+    bool bool_n_2 = array.get(arr_zz, 3) == array.get(older_zz, 3)
+    
+    // Bools for more than and less than
+    bool bool_0_mt_4 = array.get(arr_zz, 0) > array.get(arr_zz, 4)
+    bool bool_0_lt_4 = array.get(arr_zz, 0) < array.get(arr_zz, 4)
+    
+    if bool_or_1 or bool_or_2
+        if bool_n_1 and bool_n_2
+            label.delete(label_zz)
+        str_label = dir == 1 ?   bool_0_mt_4 ? '▼'     : '◍' :
+                                 bool_0_lt_4 ? '▲'     : '◍'
+        col_label = dir == 1 ?   bool_0_mt_4 ? color.red  : color.teal :
+                                 bool_0_lt_4 ? color.teal : color.red
+        if i_show_crsi
+            label_zz := label.new(bar_index, high, text = str_label, color = color.new(color.blue, 100), textcolor = col_label, style=dir == 1 ? label.style_label_down : label.style_label_up )
+        if dir == 1
+            cRSI_high_extreme_found := close
+            cRSI_low_extreme_found := 0.0
+            last_cRSI_extreme := "high"
+        else
+            cRSI_low_extreme_found := close
+            cRSI_high_extreme_found := 0.0
+            last_cRSI_extreme := "low"
+if i_use_crsi and last_cRSI_extreme == "high" and cRSI_high_extreme_found > 0.0
+    cRSI_trend_direction := "sell"
+if i_use_crsi and last_cRSI_extreme == "low" and cRSI_low_extreme_found > 0.0
+    cRSI_trend_direction := "buy"
+var order_prices = array.new_float(3, 0.0) // entry price
+array.push(order_prices, 0.0) // exit price
+array.push(order_prices, 0.0) // stop price
+var order_types = array.new_string(1, "") // order type
+var our_active_orders_count = array.new_int(1, 0)
+max_pivot_size = 10
+zigzagColor = color.black
+showZigZag = true
+var zigzagpivots = array.new_float(0)
+var zigzagpivotbars = array.new_int(0)
+var zigzagpivotdirs = array.new_int(0)
+var waveLinesArray = array.new_line(2)
+var targetLabels = array.new_label(0)
+var targetLines = array.new_line(0)
+var wavelines = array.new_line(0)
+transparent = color.new(#FFFFFF, 100)
+err_min = (100-errorPercent)/100
+err_max = (100+errorPercent)/100
+entry_range = (entryPercent)/100
+var patterncount = array.new_int(2,0)
+pivots(length)=>
+    float phigh = ta.highestbars(high, length) == 0 ? high : na
+    float plow = ta.lowestbars(low, length) == 0 ? low : na
+    dir = 0
+    dir := phigh and na(plow) ? 1 : plow and na(phigh) ? -1 : dir[1]
+    [dir, phigh, plow]
+zigzag(length, zigzagpivots, zigzagpivotbars, zigzagpivotdirs)=>
+    [dir, phigh, plow] = pivots(length)
+    dirchanged = ta.change(dir)
+    
+    if(phigh or plow)
+        value = (dir == 1? phigh : plow)
+        bar = bar_index
+        if(not dirchanged and array.size(zigzagpivots) >=1)
+            pivot = array.shift(zigzagpivots)
+            pivotbar = array.shift(zigzagpivotbars)
+            pivotdir = array.shift(zigzagpivotdirs)
+            value:= value*pivotdir < pivot*pivotdir? pivot : value
+            bar:= value*pivotdir < pivot*pivotdir? pivotbar : bar
+        
+        if(array.size(zigzagpivots) >=2)
+            LastPoint = array.get(zigzagpivots,1)
+            dir := dir*value > dir*LastPoint? dir*2 : dir
+        
+        array.unshift(zigzagpivots, value = value)
+        array.unshift(zigzagpivotbars, bar)
+        array.unshift(zigzagpivotdirs, dir)
+        
+        if(array.size(zigzagpivots) > max_pivot_size)
+            array.pop(zigzagpivots)
+            array.pop(zigzagpivotbars)
+            array.pop(zigzagpivotdirs)
+draw_zigzag(zigzagpivots, zigzagpivotbars, zigzagcolor, zigzagwidth, zigzagstyle, showZigZag)=>
+    if(array.size(zigzagpivots) > 2 and showZigZag)
+        for i=0 to array.size(zigzagpivots)-2
+            y1 = array.get(zigzagpivots, i)
+            y2 = array.get(zigzagpivots, i+1)
+            x1 = array.get(zigzagpivotbars, i)
+            x2 = array.get(zigzagpivotbars, i+1)
+            zline = line.new(x1=x1, y1=y1, 
+                         x2 = x2, y2=y2,
+                         color=zigzagcolor, width=zigzagwidth, style=zigzagstyle)
+//////////////////////////////////// Draw Lines with labels //////////////////////////////////////////////////
+f_drawLinesWithLabels(target, lbl, linecolor)=>
+    timeDiffEnd = time - time[10]
+    timeDiffLabel = time - time[5]
+    
+    line_x1 = time
+    line_x2 = time+timeDiffEnd
+    label_x = time+timeDiffLabel
+    targetLine = line.new(x1=line_x1, y1=target, x2=line_x2, y2=target, color=linecolor, xloc=xloc.bar_time)
+    targetLabel = label.new(x=label_x, y=target, text=lbl + " : "+str.tostring(target), xloc=xloc.bar_time, style=label.style_none, textcolor=color.black, size=size.normal)
+    [targetLine,targetLabel]
+//////////////////////////////////// Delete Lines with labels //////////////////////////////////////////////////
+f_deleteLinesWithLabels(targetLine, targetLabel)=>
+    line.delete(targetLine)
+    label.delete(targetLabel)
+    
+ew_impulse(zigzagpivots, zigzagpivotbars, zigzagpivotdirs, zigzagWidth, zigzagStyle, showZigZag, waveLinesArray, targetLines, targetLabels)=>
+    start = waitForConfirmation? 1: 0
+    waveFound = false
+    if(array.size(zigzagpivots) >= 3+start and showZigZag)
+        Point2 = array.get(zigzagpivots, start)
+        Point2Bar = array.get(zigzagpivotbars, start)
+        Point2Dir = array.get(zigzagpivotdirs, start)
+        
+        Point1 = array.get(zigzagpivots, start+1)
+        Point1Bar = array.get(zigzagpivotbars, start+1)
+        Point1Dir = array.get(zigzagpivotdirs, start+1)
+        
+        Point0 = array.get(zigzagpivots, start+2)
+        Point0Bar = array.get(zigzagpivotbars, start+2)
+        Point0Dir = array.get(zigzagpivotdirs, start+2)
+        
+        W1Length = math.abs(Point1-Point0)
+        W2Length = math.abs(Point2-Point1)
+        r2 = W2Length/W1Length
+            
+        existingW1 = array.get(waveLinesArray, 0)
+        existingW2 = array.get(waveLinesArray, 1)
+            
+        existing0 = line.get_y1(existingW1)
+        existing1 = line.get_y1(existingW2)
+        existing2 = line.get_y2(existingW2)
+        dir_crsi = 0
+        if i_use_crsi
+            if cRSI_trend_direction != ""
+                if cRSI_trend_direction == "buy"
+                    dir_crsi := 1
+                else if cRSI_trend_direction == "sell"
+                    dir_crsi := -1
+                else 
+                    dir_crsi := Point0 > Point1 ? -1 : 1
+            else
+                dir_crsi := Point0 > Point1 ? -1 : 1
+        else
+            dir_crsi := Point0 > Point1? -1 : 1
+        dir = Point0 > Point1? -1 : 1
+        //label.new(bar_index, high, cRSI_trend_direction + ", " + str.tostring( dir_crsi ) + " / " + str.tostring( dir ) )
+        if dir_crsi == dir
+            entry = Point2 + dir*entry_range*W2Length
+            stop = Point0
+            tstop = Point2 - dir*entry_range*W2Length
+            
+            target1 = Point2 + dir*1.618*W2Length
+            target2 = Point2 + dir*2.0*W2Length
+            target3 = Point2 + dir*2.618*W2Length
+            target4 = Point2 + dir*3.236*W2Length
+        
+            stopColor = dir == 1? color.red : color.green
+            targetColor = dir == 1? color.green : color.red
+            
+            ignore = false
+            patternMatched = false
+            dirMatched = false
+            if(existing0 == Point0 or existing1 == Point1 or existing2 == Point2)
+                ignore := true
+    
+            if(r2 > 0.50*err_min and r2 < 0.50*err_max) or (r2 > 0.618*err_min and r2 < 0.618*err_max) or
+                     (r2 > 0.764*err_min and r2 < 0.764*err_max) or (r2 > 0.854*err_min and r2 < 0.854*err_max)
+                patternMatched := true
+    
+            if(Point1Dir == 2 and Point2Dir == -1) or (Point1Dir == -2 and Point2Dir == 1)
+                dirMatched := true
+            directionColor = Point1 > Point2 ? color.green : color.red
+            if(not ignore and patternMatched and dirMatched)
+                w1 = line.new(y1=Point0, y2=Point1, x1=Point0Bar, x2=Point1Bar, color=directionColor, width=zigzagWidth, style=zigzagStyle)
+                w2 = line.new(y1=Point1, y2=Point2, x1=Point1Bar, x2=Point2Bar, color=directionColor, width=zigzagWidth, style=zigzagStyle)
+                array.set(waveLinesArray,0,w1)
+                array.set(waveLinesArray,1,w2)
+                
+                if(array.size(targetLines) > 0)
+                    for i=0 to array.size(targetLines)-1
+                        line.delete(array.shift(targetLines))
+                    for i=0 to array.size(targetLabels)-1
+                        label.delete(array.shift(targetLabels))
+                
+                [entryLine,entryLabel] = f_drawLinesWithLabels(entry, "Entry", color.blue)
+                [stopLine,stopLabel] = f_drawLinesWithLabels(stop, "Stop", stopColor)
+                [tstopLine,tstopLabel] = f_drawLinesWithLabels(tstop, "T.Stop", stopColor)
+                [t1Line,t1Label] = f_drawLinesWithLabels(target1, "Target - 1", targetColor)
+                [t2Line,t2Label] = f_drawLinesWithLabels(target2, "Target - 2", targetColor)
+                [t3Line,t3Label] = f_drawLinesWithLabels(target3, "Target - 3", targetColor)
+                [t4Line,t4Label] = f_drawLinesWithLabels(target4, "Target - 4", targetColor)
+    
+                // store info for a new trade and also cancel any old ones, since we found a new wave here
+                if strategy.opentrades > 0
+                    if strategy.opentrades.entry_id( strategy.opentrades - 1 ) == "Buy"
+                        if close >= strategy.opentrades.entry_price( strategy.opentrades - 1 )
+                            strategy.close( "Buy", comment = "close buy (new wave), profit" )
+                        else
+                            strategy.close( "Buy", comment = "close buy (new wave), loss" )
+    
+                    if strategy.opentrades.entry_id( strategy.opentrades - 1 ) == "Sell"
+                        if close <= strategy.opentrades.entry_price( strategy.opentrades - 1 )
+                            strategy.close( "Sell", comment = "close sell (new wave), profit" )
+                        else
+                            strategy.close( "Sell", comment = "close sell (new wave), loss" )
+    
+                tradeType = ( Point1 > Point2 ? "Buy" : "Sell" )
+                array.set(order_prices, 0, entry)
+                
+                target_real = switch target2reach
+                    "TP1 (1.618 fibo)" => target1
+                    "TP2 (2.0 fibo)" => target2
+                    "TP3 (2.618 fibo)" => target3
+                    "TP4 (3.236 fibo)" => target4
+                array.set(order_prices, 1, target_real)
+                array.set(order_prices, 2, stop)
+                array.set(order_types, 0, tradeType)
+                array.set( our_active_orders_count, 0, 0 )
+    
+                array.unshift(targetLines, entryLine)
+                array.unshift(targetLines, stopLine)
+                array.unshift(targetLines, tstopLine)
+                array.unshift(targetLines, t1Line)
+                array.unshift(targetLines, t2Line)
+                array.unshift(targetLines, t3Line)
+                array.unshift(targetLines, t4Line)
+                
+                array.unshift(targetLabels, entryLabel)
+                array.unshift(targetLabels, stopLabel)
+                array.unshift(targetLabels, tstopLabel)
+                array.unshift(targetLabels, t1Label)
+                array.unshift(targetLabels, t2Label)
+                array.unshift(targetLabels, t3Label)
+                array.unshift(targetLabels, t4Label)
+                
+                count_index = dir==1?0:1
+                array.set(patterncount, count_index, array.get(patterncount, count_index)+1)
+                waveFound := true
+                if(existing0 == Point0 and existing1 == Point1 and existing2 == Point2) and waveFound[1]
+                    line.delete(existingW1)
+                    line.delete(existingW2)
+                    array.set(patterncount, count_index, array.get(patterncount, count_index)-1)
+    waveFound
+zigzag(zigzagLength, zigzagpivots, zigzagpivotbars, zigzagpivotdirs)
+waveFormed = ew_impulse(zigzagpivots, zigzagpivotbars, zigzagpivotdirs, zigzagWidth, zigzagStyle, showZigZag, waveLinesArray, targetLines, targetLabels)
+var stats = table.new(position = position.top_right, columns = 3, rows = max_pivot_size+2, border_width = 1)
+trade_type = array.get(order_types, 0)
+entry_price = array.get(order_prices, 0)
+exit_price = array.get(order_prices, 1)
+stop_price = array.get(order_prices, 2)
+// close trades when price reaches our target
+exit_bool = array.get( our_active_orders_count, 0 ) > 0 and (trade_type == "Buy" ? close >= exit_price : close <= exit_price )
+//label.new(bar_index, high, trade_type + ", " + str.tostring( close ) + " / " + str.tostring( exit_price ) )
+if exit_price > 0 and strategy.opentrades > 0 and exit_bool
+    strategy.close( trade_type, comment = trade_type + " TP reached" )
+    array.set(order_prices, 0, 0.0)
+    array.set(order_prices, 1, 0.0)
+    array.set(order_prices, 2, 0.0)
+    array.set(order_types, 0, "")
+    array.set( our_active_orders_count, 0, 0 )
+// remove trades from internal cache when they reach SL
+sl_bool = array.get( our_active_orders_count, 0 ) > 0 and (trade_type == "Buy" ? close <= stop_price : close >= stop_price )
+//label.new(bar_index, high, trade_type + ", " + str.tostring( close ) + " / " + str.tostring( exit_price ) )
+if stop_price > 0 and strategy.opentrades > 0 and sl_bool
+    array.set(order_prices, 0, 0.0)
+    array.set(order_prices, 1, 0.0)
+    array.set(order_prices, 2, 0.0)
+    array.set(order_types, 0, "")
+    array.set( our_active_orders_count, 0, 0 )
+// open trades when the price reached our entry
+entry_bool = array.get( our_active_orders_count, 0 ) == 0 and (trade_type == "Buy" ? close <= entry_price : close >= entry_price )
+if entry_price > 0 and ( strategy.opentrades == 0 or strategy.opentrades.entry_id( strategy.opentrades - 1 ) != trade_type ) and entry_bool
+    // check if we're also using MESA to wait for a better entry
+    // first check that we've not beyond our SL...
+    if i_use_mesa and (trade_type == "Buy" ? close <= stop_price : close >= stop_price )
+        // SL reached, invalidate this trade and mark it on chart
+        array.set(order_prices, 0, 0.0)
+        array.set(order_prices, 1, 0.0)
+        array.set(order_prices, 2, 0.0)
+        array.set(order_types, 0, "")
+        array.set( our_active_orders_count, 0, 0 )
+        if inDateRange and show_sl_invalidation_labels
+            label.new(bar_index, high, trade_type + " invalidated at SL", color = color.white, textcolor = color.black )
+    // now check that we have a better entry through MESa
+    if ( inDateRange and ( time - last_trade_ts ) / 1000 >= ( 60 * min_trade_gap_minutes ) and ( not i_use_mesa or ( trade_type == "Buy" and ( ( ph_mesa and out_zone ) ? ph_mesa : na ) ) or ( trade_type == "Sell" and ( ( pl_mesa and out_zone ) ? pl_mesa : na ) ) ) )
+        label.new(bar_index, high, str.tostring(( time - last_trade_ts ) / 1000) + " / " + str.tostring( 60 * min_trade_gap_minutes ) )
+        strategy.entry( trade_type, trade_type == "Buy" ? strategy.long : strategy.short )
+        strategy.exit( trade_type, stop = stop_price, comment = "closed by SL" )
+        array.set( our_active_orders_count, 0, 1 )
+        last_trade_ts := time
+        if trade_type == "Buy"
+            cRSI_low_extreme_found := 0.0
+        else
+            cRSI_high_extreme_found := 0.0
+if(barstate.islast)
+    table.cell(table_id = stats, column = 1, row = 0 , text = "Bullish", bgcolor=color.black, text_color=color.white)
+    table.cell(table_id = stats, column = 2, row = 0 , text = "Bearish", bgcolor=color.black, text_color=color.white)
+    dtColor = color.white
+    for type = 1 to (array.size(patterncount)/2)
+        for direction = 0 to 1
+            count_index = (type*2 - 2) + direction
+            row = type
+            column = direction+1
+            txt = str.tostring(array.get(patterncount, count_index))
+            table.cell(table_id = stats, column = column, row = row, text = txt, bgcolor=dtColor)
+// Exit open market position when date range ends
+if (not inDateRange)
+    strategy.close_all()
+Expand (474 lines)

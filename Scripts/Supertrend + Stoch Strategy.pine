@@ -1,0 +1,173 @@
+Script Name: Supertrend + Stoch Strategy
+Author: Nyaichi
+Description: A strategy using ema , supertrend and stochastic .
+
+Long entry conditions:
+1. EMA 25 > EMA 50 and EMA 100 > EMA 100.
+2. Supertrend indicator is green.
+3. Stochastic k line cross over d line.
+Long stop: the lowest price of the last k<d interval.
+Long take: 1.5 times of stop.
+
+The short conditions are opposite.
+
+This strategy performed well in 1D timeframe of lots...
+PineScript code:
+
+Pine Script™ strategy
+Supertrend + Stoch Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+//@version=4
+strategy(title="Supertrend + Stoch Strategy", overlay=true)
+// ---inputs---
+pl = input(1.5, title="P/L", minval=0.1)
+lossPercentage = input(1, title="Loss Percentage", minval=1, maxval=100)
+atrPeriod = input(10, "ATR Length")
+factor = input(3, "Supertrend Factor")
+periodK = input(8, title="%K Length", minval=1)
+smoothK = input(3, title="%K Smoothing", minval=1)
+periodD = input(3, title="%D Smoothing", minval=1)
+ema1l = input(25, title="EMA 1 Length", minval=1)
+ema2l = input(50, title="EMA 2 Length", minval=1)
+ema3l = input(100, title="EMA 3 Length", minval=1)
+ema4l = input(200, title="EMA 4 Length", minval=1)
+// ---lines---
+ema1 = ema(close, ema1l)
+ema2 = ema(close, ema2l)
+ema3 = ema(close, ema3l)
+ema4 = ema(close, ema4l)
+trendUpper = ema1 > ema2 and ema3 > ema4
+trendLower = ema1 < ema2 and ema3 < ema4
+[supertrend, direction] = supertrend(factor, atrPeriod)
+supertrendUpper = direction < 0
+supertrendLower = direction > 0
+k = sma(stoch(close, high, low, periodK), smoothK)
+d = sma(k, periodD)
+stochCrossOver = crossover(k, d)
+stochCrossUnder = crossunder(k, d)
+// ---plot---
+plot(ema1, color=color.green)
+plot(ema2, color=color.orange)
+plot(ema3, color=color.blue)
+plot(ema4, color=color.purple)
+bodyMiddle = plot((open + close) / 2, display=display.none)
+upTrend = plot(direction < 0 ? supertrend : na, "Up Trend", color = color.green, style=plot.style_linebr)
+downTrend = plot(direction < 0 ? na : supertrend, "Down Trend", color = color.red, style=plot.style_linebr)
+fill(bodyMiddle, upTrend, color.new(color.green, 95), fillgaps=false)
+fill(bodyMiddle, downTrend, color.new(color.red, 95), fillgaps=false)
+// ---stop place compute---
+edge = 0.  // periodly high/low
+edge := stochCrossOver ? high : stochCrossUnder ? low : k > d ? max(edge[1], high) : k < d ? min(edge[1], low) : edge[1]
+// plot(edge)
+// ---trade condition---
+// longCond = trendUpper and supertrendUpper and stochCrossOver
+// shortCond = trendLower and supertrendLower and stochCrossUnder
+longCond = trendUpper and supertrendUpper and stochCrossOver and strategy.position_size == 0
+shortCond = trendLower and supertrendLower and stochCrossUnder and strategy.position_size == 0
+// ---stop & take---
+stop = 0.
+stop := nz(stop[1], stop)
+take = 0.
+take := nz(take[1], take)
+if longCond
+    stop := edge[1]
+    take := close + (close - stop) * pl
+if shortCond
+    stop := edge[1]
+    take := close - (stop - close) * pl
+// ---trade---
+qty = strategy.equity / abs(stop - close) / 100 * lossPercentage
+strategy.entry("Buy", strategy.long, when=longCond, qty=qty)
+strategy.exit("Close Buy","Buy", limit=take, stop=stop)
+strategy.entry("Sell", strategy.short, when=shortCond, qty=qty)
+strategy.exit("Close Sell","Sell", limit=take, stop=stop)
+stopLine = plot(strategy.position_size != 0 ? stop : na, color=color.red, style=plot.style_linebr)
+takeLine = plot(strategy.position_size != 0 ? take : na, color=color.green, style=plot.style_linebr)
+entryLine = plot(strategy.position_size != 0 ? strategy.position_avg_price : na, color=color.blue, style=plot.style_linebr)
+fill(entryLine, stopLine, color.new(color.red, 90), fillgaps=false)
+fill(entryLine, takeLine, color.new(color.green, 90), fillgaps=false)
+Expand (84 lines)

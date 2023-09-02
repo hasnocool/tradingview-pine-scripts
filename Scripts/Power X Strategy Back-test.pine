@@ -1,0 +1,400 @@
+Script Name: Power X Strategy Back-test
+Author: therealhaolu
+Description: This script back-test the Power X Strategy developed by Markus Heitkoetter and Rockwell Trading. For more detail about the strategy, please refer to "The PowerX Strategy: How to Trade Stocks and Options in Only 15 Minutes a Day" written by Markus Heitkoetter. Note that this script is not publish, develop or maintain by Rockwell Trading, and may have different...
+PineScript code:
+
+Pine Script™ strategy
+Power X Strategy Back-test
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+// @version=4
+// Backtest the power x strategy. The power x strategy is develop by Markus Heitkoetter and Rockwell Trading.
+// This script shows the return for a given stock for with the defined date range with a fixed captial of $10,000
+strategy("PowerX Test", overlay=true, initial_capital=10000)
+// ####################### Start of User Inputs #######################
+// From Date Inputs
+fromDay = input(defval = 30, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 8, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2019, title = "From Year", minval = 1970)
+ 
+// To Date Inputs
+toDay = input(defval = 1, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 1, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2021, title = "To Year", minval = 1970)
+// Calculate start/end date and time condition
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate
+// Risk/Reward Inputs
+riskFactor = input(defval = 1.5, title = "risk", minval = 0.1)
+rewardFactor = input(defval = 3.0, title = "reward", minval = 0.1)
+risk = input(defval = 100, title = "acount risk", minval = 1, maxval = 100)
+// Days to ignore due to specail market conditon (ie. covid-19 market crash)
+// Calculate start/end skip date and time condition
+ignore_skip = input(defval = true, title = "Skip 2020 Crash")
+startSkipDate = timestamp(2020, 2, 20, 00, 00)
+finishSkipDate = timestamp(2020, 3, 26, 00, 00)
+time_cond_skip = ignore_skip ? time >= startSkipDate and time <= finishSkipDate : false
+// Gap-up 2% rule
+skip_gapup = input(defval = false, title = "Skip stock that opens x% higher than open price")
+gapPercent = input(defval = 2, title = "Max open gap %", minval = 0, maxval = 10)/100 + 1
+    
+// ####################### End of User Inputs #######################
+// ####################### Start of Indicators #######################
+[macdLine, signalLine, histLine] = macd(close, 12, 26, 9)
+rsiLine = rsi(close, 7)
+stochLine = sma(sma(stoch(close, high, low, 14),3),3)
+signal = macdLine > signalLine and rsiLine > 50 and stochLine > 50 ? "buy" : macdLine <= signalLine and rsiLine <= 50 and stochLine <= 50 ? "sell" : "none"
+// Average daily range for 7 days
+thishigh = security(syminfo.tickerid, '', high)
+thislow  = security(syminfo.tickerid, '', low)
+length = 7
+adr = (sma(thishigh,length)-sma(thislow,length))
+plotchar(adr, "ADR", "")
+// ####################### End of Indicators #######################
+// First day the stock changed momentum.
+long = signal == "buy" and signal[1] != "buy"
+short = signal == "sell" and signal[1] != "sell"
+sideway = signal == "none" and signal[1] != "none"
+if (time_cond and not time_cond_skip)
+    // ####################### Start of Long Entry #######################
+    // Calculate how many shares to buy based on captial
+    qty = round(strategy.initial_capital * risk / 100 / high)
+    // Note: TradingView uses a broker emulator when running strategies. Order are only filled on the next bar.
+    // Enter long on the day after first green bar
+    if (skip_gapup)
+        strategy.entry("Long entry", strategy.long, qty = qty, stop = high, limit = high * gapPercent, when = long)
+    else
+        strategy.entry("Long entry", strategy.long, qty = qty, stop = high, when = long)
+    strategy.cancel("Long entry", when = not long)
+    
+    // TODO: Improve the crazy if statments...
+    // Handle the case where first green hgih is reached after 2nd green, up to 5 days after
+    if (not long and signal == "buy" and strategy.opentrades == 0)
+        // reach first green high 5 days after first green
+        if (signal[5] != "buy" and signal[4] == "buy" and signal[3] == "buy" and signal[2] == "buy" and signal[1] == "buy" and high[1] < high[4] and high[2] < high[4] and high [3] < high[4])
+            if (skip_gapup)
+                strategy.entry("Long entry", strategy.long, qty = strategy.initial_capital / high[4], stop = high[4], limit = high[4] * gapPercent)
+            else
+                strategy.entry("Long entry", strategy.long, qty = strategy.initial_capital / high[4], stop = high[4])
+        // reach first green high 4 days after first green
+        else if (signal[4] != "buy" and signal[3] == "buy" and signal[2] == "buy" and signal[1] == "buy" and high[1] < high[3] and high[2] < high[3])
+            if (skip_gapup)
+                strategy.entry("Long entry", strategy.long, qty = strategy.initial_capital / high[3], stop = high[3], limit = high[3] * gapPercent)
+            else
+                strategy.entry("Long entry", strategy.long, qty = strategy.initial_capital / high[3], stop = high[3])
+        // reach first green high 3 days after first green
+        else if (signal[3] != "buy" and signal[2] == "buy" and signal[1] == "buy" and high[1] < high[2])
+            if (skip_gapup)
+                strategy.entry("Long entry", strategy.long, qty = strategy.initial_capital / high[2], stop = high[2], limit = high[2] * gapPercent)
+            else
+                strategy.entry("Long entry", strategy.long, qty = strategy.initial_capital / high[2], stop = high[2])
+        // reach first green high 2 days after first green
+        else if (signal[2] != "buy" and signal[1] == "buy")
+            if (skip_gapup)
+                strategy.entry("Long entry", strategy.long, qty = strategy.initial_capital / high[1], stop = high[1], limit = high[1] * gapPercent)
+            else
+                strategy.entry("Long entry", strategy.long, qty = strategy.initial_capital / high[1], stop = high[1])
+            
+    // Exit when stopped out or hitted profit target
+    // Bracket order for entry 1 day after 1st green
+    if (signal == "buy" and signal[1] == "buy" and signal[2] != "buy")
+        long_stop_level = strategy.position_avg_price - (adr[1] * riskFactor)
+        long_profit_level = strategy.position_avg_price + (adr[1] * rewardFactor)
+        strategy.exit("TP/SL", "Long entry", stop=long_stop_level, limit=long_profit_level)
+    // Bracket order for entry 2 day after 1st green
+    if (signal == "buy" and signal[1] == "buy" and signal[2] == "buy" and signal[3] != "buy")
+        long_stop_level = strategy.position_avg_price - (adr[2] * riskFactor)
+        long_profit_level = strategy.position_avg_price + (adr[2] * rewardFactor)
+        strategy.exit("TP/SL", "Long entry", stop=long_stop_level, limit=long_profit_level)
+    // Bracket order for entry 3 day after 1st green
+    if (signal == "buy" and signal[1] == "buy" and signal[2] == "buy" and signal[3] == "buy" and signal[4] != "buy")
+        long_stop_level = strategy.position_avg_price - (adr[3] * riskFactor)
+        long_profit_level = strategy.position_avg_price + (adr[3] * rewardFactor)
+        strategy.exit("TP/SL", "Long entry", stop=long_stop_level, limit=long_profit_level)
+    // Bracket order for entry 4 day after 1st green
+    if (signal == "buy" and signal[1] == "buy" and signal[2] == "buy" and signal[3] == "buy" and signal[4] == "buy" and signal[5] != "buy")
+        long_stop_level = strategy.position_avg_price - (adr[4] * riskFactor)
+        long_profit_level = strategy.position_avg_price + (adr[4] * rewardFactor)
+        strategy.exit("TP/SL", "Long entry", stop=long_stop_level, limit=long_profit_level)
+    // Bracket order for entry 5 day after 1st green
+    if (signal == "buy" and signal[1] == "buy" and signal[2] == "buy" and signal[3] == "buy" and signal[4] == "buy" and signal[5] == "buy" and signal[6] != "buy")
+        long_stop_level = strategy.position_avg_price - (adr[5] * riskFactor)
+        long_profit_level = strategy.position_avg_price + (adr[5] * rewardFactor)
+        strategy.exit("TP/SL", "Long entry", stop=long_stop_level, limit=long_profit_level)
+    // ####################### End of Long Entry #######################
+    // ####################### Start of Short Entry #######################
+    // Enter short on the day after first red bar
+    qty_short = strategy.initial_capital / low
+    if (skip_gapup)
+        strategy.entry("Short entry", strategy.short, qty = qty_short, stop = low, limit = low * (2 - gapPercent), when = short)
+    else
+        strategy.entry("Short entry", strategy.short, qty = qty_short, stop = low, when = short)
+    strategy.cancel("Short entry", when = not short)
+    
+    // TODO: Improve the crazy if statments...
+    // Handle the case where first red low is reached after 2nd red, up to 5 days after
+    if (not short and signal == "sell" and strategy.opentrades == 0)
+        // reach first red low 5 days after
+        if (signal[5] != "sell" and signal[4] == "sell" and signal[3] == "sell" and signal[2] == "sell" and signal[1] == "sell" and low[1] > low[4] and low[2] > low[4] and low[3] > low[4])
+            if (skip_gapup)
+                strategy.entry("Short entry", strategy.short, qty = strategy.initial_capital / low[4], stop = low[4], limit = low[4] * (2 - gapPercent))
+            else
+                strategy.entry("Short entry", strategy.short, qty = strategy.initial_capital / low[4], stop = low[4])
+        // reach first red low 4 days after
+        if (signal[4] != "sell" and signal[3] == "sell" and signal[2] == "sell" and signal[1] == "sell" and low[1] > low[3] and low[2] > low[3])
+            if (skip_gapup)
+                strategy.entry("Short entry", strategy.short, qty = strategy.initial_capital / low[3], stop = low[3], limit = low[3] * (2 - gapPercent))
+            else
+                strategy.entry("Short entry", strategy.short, qty = strategy.initial_capital / low[3], stop = low[3])
+        // reach first red low 3 days after
+        if (signal[3] != "sell" and signal[2] == "sell" and signal[1] == "sell" and low[1] > low[2])
+            if (skip_gapup)
+                strategy.entry("Short entry", strategy.short, qty = strategy.initial_capital / low[2], stop = low[2], limit = low[2] * (2 - gapPercent))
+            else
+                strategy.entry("Short entry", strategy.short, qty = strategy.initial_capital / low[2], stop = low[2])
+        // reach first red low 2 days after
+        if (signal[2] != "sell" and signal[1] == "sell")
+            if (skip_gapup)
+                strategy.entry("Short entry", strategy.short, qty = strategy.initial_capital / low[1], stop = low[1], limit = low[1] * (2 - gapPercent))
+            else
+                strategy.entry("Short entry", strategy.short, qty = strategy.initial_capital / low[1], stop = low[1])
+            
+    // Exit when stop out or profit target is hit
+    // Bracket order for entry 1 day after 1st red
+    if (signal == "sell" and signal[1] == "sell" and signal[2] != "sell")
+        long_stop_level = strategy.position_avg_price + (adr[1] * riskFactor)
+        long_profit_level = strategy.position_avg_price - (adr[1] * rewardFactor)
+        strategy.exit("TP/SL", "Short entry", stop=long_stop_level, limit=long_profit_level)
+    // Bracket order for entry 2 day after 1st red
+    if (signal == "sell" and signal[1] == "sell" and signal[2] == "sell" and signal[3] != "sell")
+        long_stop_level = strategy.position_avg_price + (adr[2] * riskFactor)
+        long_profit_level = strategy.position_avg_price - (adr[2] * rewardFactor)
+        strategy.exit("TP/SL", "Short entry", stop=long_stop_level, limit=long_profit_level)
+    // Bracket order for entry 3 day after 1st red
+    if (signal == "sell" and signal[1] == "sell" and signal[2] == "sell" and signal[3] == "sell" and signal[4] != "sell")
+        long_stop_level = strategy.position_avg_price + (adr[3] * riskFactor)
+        long_profit_level = strategy.position_avg_price - (adr[3] * rewardFactor)
+        strategy.exit("TP/SL", "Short entry", stop=long_stop_level, limit=long_profit_level)
+    // Bracket order for entry 4 day after 1st red
+    if (signal == "sell" and signal[1] == "sell" and signal[2] == "sell" and signal[3] == "sell" and signal[4] == "sell" and signal[5] != "sell")
+        long_stop_level = strategy.position_avg_price + (adr[4] * riskFactor)
+        long_profit_level = strategy.position_avg_price - (adr[4] * rewardFactor)
+        strategy.exit("TP/SL", "Short entry", stop=long_stop_level, limit=long_profit_level)
+    // Bracket order for entry 5 day after 1st red
+    if (signal == "sell" and signal[1] == "sell" and signal[2] == "sell" and signal[3] == "sell" and signal[4] == "sell" and signal[5] == "sell" and signal[6] != "sell")
+        long_stop_level = strategy.position_avg_price + (adr[5] * riskFactor)
+        long_profit_level = strategy.position_avg_price - (adr[5] * rewardFactor)
+        strategy.exit("TP/SL", "Short entry", stop=long_stop_level, limit=long_profit_level)
+    // ####################### End of Short Entry #######################
+// Enxit the day after the trend is lost
+if (time_cond and sideway)
+    strategy.close("Long entry")
+    strategy.close("Short entry")
+// Close any open order out side of date range
+if (not time_cond)
+    strategy.close_all()
+if (time_cond_skip)
+    strategy.close_all()
+Expand (202 lines)

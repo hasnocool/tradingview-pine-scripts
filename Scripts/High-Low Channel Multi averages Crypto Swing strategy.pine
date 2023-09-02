@@ -1,0 +1,156 @@
+Script Name: High-Low Channel Multi averages Crypto Swing strategy
+Author: exlux99
+Description: This is a swing strategy designed for trending markets such as crypto and stock, with big timeframes , like 8h.
+
+For this strategy we take  SMA, EMA, VWMA, ALMA, SMMA, LSMA and VWMA  and make an apply them all to both HIGH and LOW separately and make 2 averages, 1 applied to high and the other applied to low.
+With them we make a channel.
+
+Rules for entry
+For long:...
+PineScript code:
+
+Pine Script™ strategy
+High/Low Channel Multi averages Crypto Swing strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © exlux99
+//@version=4
+strategy(title="High/Low channel swing", shorttitle="Multi MA swing", overlay=true)
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2000, title = "From Year", minval = 1970)
+ //monday and session 
+// To Date Inputs
+toDay = input(defval = 31, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 12, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2021, title = "To Year", minval = 1970)
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate 
+//////
+length_ma= input(defval=12, title="Length Moving averages", minval=1)
+////////////////////////////////SETUP///////////////////////////////////////////
+sma_high   = sma(high, length_ma)
+ema_high   = ema(high, length_ma)
+wma_high   = wma(high, length_ma)
+alma_high  = alma(high,length_ma, 0.85, 6)
+smma_high = rma(high,length_ma)
+lsma_high = linreg(high, length_ma, 0)
+vwma_high = vwma(high,length_ma)
+avg_high = (sma_high+ema_high+wma_high+alma_high+smma_high+lsma_high+vwma_high)/7
+///////////////////////////////////////////
+sma_low   = sma(low, length_ma)
+ema_low   = ema(low, length_ma)
+wma_low   = wma(low, length_ma)
+alma_low  = alma(low,length_ma, 0.85, 6)
+smma_low = rma(low,length_ma)
+lsma_low = linreg(low, length_ma, 0)
+vwma_low = vwma(low,length_ma)
+avg_low = (sma_low+ema_low+wma_low+alma_low+smma_low+lsma_low+vwma_low)/7
+////////////////////////////PLOTTING////////////////////////////////////////////
+plot(avg_high , title="avg", color=color.green, linewidth = 4)
+plot(avg_low , title="avg", color=color.red, linewidth = 4)
+long= close > avg_high
+short = close < avg_low
+tplong=input(0.06, title="TP Long", step=0.01)
+sllong=input(0.05, title="SL Long", step=0.01)
+tpshort=input(0.045, title="TP Short", step=0.01)
+slshort=input(0.05, title="SL Short", step=0.01)
+if(time_cond)
+    strategy.entry("long",1,when=long)
+    strategy.exit("closelong", "long" , profit = close * tplong / syminfo.mintick, loss = close * sllong / syminfo.mintick, alert_message = "closelong")
+    strategy.close("long", when=crossunder(low,avg_low))
+    
+    
+    strategy.entry("short",0,when=short)
+    strategy.exit("closeshort", "short" , profit = close * tpshort / syminfo.mintick, loss = close * slshort / syminfo.mintick, alert_message = "closeshort")
+    strategy.close("short",when=crossover(high,avg_high))
+    
+    
+    
+Expand (85 lines)

@@ -1,0 +1,617 @@
+Script Name: Supertrend Strategy
+Author: REV0LUTI0N
+Description: This Supertrend strategy will allow you to enter a long or short from a supertrend trend change. Both ATR period and ATR multiplier are adjustable. If you check off "Change ATR Calculation Method" it will base the calculation off the sma and give you slightly different results, which may work better depending on the asset. Be sure to enter slippage and commission...
+PineScript code:
+
+Pine Script™ strategy
+Supertrend Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © REV0LUTI0N
+//@version=4
+//------------------------------------------------------------------------------  
+// Strategy
+strategy("Supertrend Strategy", overlay=true, initial_capital = 10000, default_qty_value = 10000, default_qty_type = strategy.cash)
+notes = input("", title="Note For Your Reference Only")
+//------------------------------------------------------------------------------  
+// Strategy Backtesting
+startDate  = input(timestamp("2021-10-01T00:00:00"), type = input.time, title='Backtesting Start Date', group="Backtesting")
+finishDate = input(timestamp("9999-12-31T00:00:00"), type = input.time, title='Backtesting End Date', group="Backtesting")
+time_cond  = time >= startDate and time <= finishDate
+//------------------------------------------------------------------------------  
+//Time Restriction Settings
+startendtime = input("", title='Time Frame To Enter Trades', group="Time Restriction")
+endtime = input("", title='Time Frame To Exit Trades', group="Time Restriction")
+enableclose = input(false, title='Enable Close Trade At End Of Exit Time Frame', group="Time Restriction")
+timetobuy = (time(timeframe.period, startendtime))
+timetoclose = na(time(timeframe.period, endtime))
+enableentry = input(true, title="Enter Supertrend ASAP", inline="1", group="Time Restriction")
+waitentry = input(false, title="Wait To Enter Supertrend", inline="1", group="Time Restriction")
+//------------------------------------------------------------------------------  
+// Contrarian Settings
+nocontrarian = input(true, title="Trade Regular Signals", inline="1", group="Contrarian Settings")
+usecontrarian = input(false, title="Trade Contrarian Signals", inline="1", group="Contrarian Settings")
+//------------------------------------------------------------------------------  
+// Supertrend Code
+nosupertrend = input(false, title="No Supertrend", inline="1", group="Supertrend Settings")
+usesupertrend = input(true, title="Use Supertrend", inline="1", group="Supertrend Settings")
+Periods = input(title="ATR Period", type=input.integer, defval=10, group="Supertrend Settings")
+src = input(hl2, title="ATR Source", group="Supertrend Settings")
+Multiplier = input(title="ATR Multiplier", type=input.float, step=0.1, defval=3.0, group="Supertrend Settings")
+changeATR= input(title="Change ATR Calculation Method ?", type=input.bool, defval=true, group="Supertrend Settings")
+atr2 = sma(tr, Periods)
+atr= changeATR ? atr(Periods) : atr2
+up=src-(Multiplier*atr)
+up1 = nz(up[1],up)
+up := close[1] > up1 ? max(up,up1) : up
+dn=src+(Multiplier*atr)
+dn1 = nz(dn[1], dn)
+dn := close[1] < dn1 ? min(dn, dn1) : dn
+trend = 1
+trend := nz(trend[1], trend)
+trend := trend == -1 and close > dn1 ? 1 : trend == 1 and close < up1 ? -1 : trend
+upPlot = plot(trend == 1 ? up : na, title="Up Trend", style=plot.style_linebr, linewidth=2, color=color.green)
+Long = (trend == 1 ? up : na)
+buySignal = trend == 1 and trend[1] == -1
+dnPlot = plot(trend == 1 ? na : dn, title="Down Trend", style=plot.style_linebr, linewidth=2, color=color.red)
+Short = (trend == 1 ? na : dn)
+sellSignal = trend == -1 and trend[1] == 1
+//------------------------------------------------------------------------------  
+// EMA Filter
+noemafilter = input(true, title="No EMA Filter", inline="1", group="EMA Filter")
+useemafilter = input(false, title="Use EMA Filter", inline="1", group="EMA Filter")
+ema_length = input(defval=15, minval=1, title="EMA Length", group="EMA Filter")
+emasrc = input(close, title="EMA Source", group="EMA Filter")
+emapricesrc = input(close, title="EMA Price Source", group="EMA Filter")
+ema = ema(emasrc, ema_length)
+plot(useemafilter ? ema : na, "EMA", style=plot.style_linebr, color=#cad850, linewidth=2)
+//------------------------------------------------------------------------------  
+// CMF Filter
+nocmffilter = input(true, title="No CMF Filter", inline="1", group="CMF Filter")
+usecmffilter = input(false, title="Use CMF Filter", inline="1", group="CMF Filter")
+mflength = input(title="CMF length", group="CMF Filter", type=input.integer, defval=20)
+mfsrc = input(close, title="CMF Source", group="CMF Filter")
+ad = mfsrc==high and mfsrc==low or high==low ? 0 : ((2*mfsrc-low-high)/(high-low))*volume
+mf = sum(ad, mflength) / sum(volume, mflength)
+//------------------------------------------------------------------------------  
+// Stop Loss & Take Profit % Based
+enablesltp = input(false, title='Enable Stop Loss & Take Profit', group="% Stop Loss & Take Profit")
+stopTick = input(2.0, title='Stop Loss %', group="% Stop Loss & Take Profit", type=input.float, step=0.1) / 100
+takeTick = input(4.0, title='Take Profit %', group="% Stop Loss & Take Profit", type=input.float, step=0.1) / 100
+longStop = strategy.position_avg_price * (1 - stopTick)
+shortStop = strategy.position_avg_price * (1 + stopTick)
+shortTake = strategy.position_avg_price * (1 - takeTick)
+longTake = strategy.position_avg_price * (1 + takeTick)
+plot(strategy.position_size > 0 and enablesltp and nocontrarian ? longStop : na, style=plot.style_linebr, color=color.red, linewidth=1, title="Long Stop Loss")
+plot(strategy.position_size < 0 and enablesltp and nocontrarian ? shortStop : na, style=plot.style_linebr, color=color.red, linewidth=1, title="Short Stop Loss")
+plot(strategy.position_size > 0 and enablesltp and nocontrarian ? longTake : na, style=plot.style_linebr, color=color.green, linewidth=1, title="Long Take Profit")
+plot(strategy.position_size < 0 and enablesltp and nocontrarian ? shortTake : na, style=plot.style_linebr, color=color.green, linewidth=1, title="Short Take Profit")
+plot(strategy.position_size > 0 and enablesltp and usecontrarian ? longStop : na, style=plot.style_linebr, color=color.red, linewidth=1, title="Contrarian Long Stop Loss")
+plot(strategy.position_size < 0 and enablesltp and usecontrarian ? shortStop : na, style=plot.style_linebr, color=color.red, linewidth=1, title="Contrarian Short Stop Loss")
+plot(strategy.position_size > 0 and enablesltp and usecontrarian ? longTake : na, style=plot.style_linebr, color=color.green, linewidth=1, title="Contrarian Long Take Profit")
+plot(strategy.position_size < 0 and enablesltp and usecontrarian ? shortTake : na, style=plot.style_linebr, color=color.green, linewidth=1, title="Contrarian Short Take Profit")
+//------------------------------------------------------------------------------  
+// Alert messages
+message_enterlong  = input("", title="Long Entry message", group="Alert Messages")
+message_entershort = input("", title="Short Entry message", group="Alert Messages")
+message_closelong = input("", title="Close Long message", group="Alert Messages")
+message_closeshort = input("", title="Close Short message", group="Alert Messages")
+//------------------------------------------------------------------------------  
+// Strategy Execution
+//------------------------------------------------------------------------------  
+// No EMA or CMF Entry
+if Long and time_cond and timetobuy and enableentry and noemafilter and nocmffilter and usesupertrend and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if Short and time_cond and timetobuy and enableentry and noemafilter and nocmffilter and usesupertrend and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if buySignal and time_cond and timetobuy and waitentry and noemafilter and nocmffilter and usesupertrend and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if sellSignal and time_cond and timetobuy and waitentry and noemafilter and nocmffilter and usesupertrend and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+// Contrarian - No EMA or CMF Entry
+if Long and time_cond and timetobuy and enableentry and noemafilter and nocmffilter and usesupertrend and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if Short and time_cond and timetobuy and enableentry and noemafilter and nocmffilter and usesupertrend and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if buySignal and time_cond and timetobuy and waitentry and noemafilter and nocmffilter and usesupertrend and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if sellSignal and time_cond and timetobuy and waitentry and noemafilter and nocmffilter and usesupertrend and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+//------------------------------------------------------------------------------  
+// Use EMA but No CMF Entry with supertrend
+if Long  and emapricesrc > ema and time_cond and timetobuy and enableentry and useemafilter and nocmffilter and usesupertrend and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if Short and emapricesrc < ema and time_cond and timetobuy and enableentry and useemafilter and nocmffilter and usesupertrend and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if buySignal and emapricesrc > ema and time_cond and timetobuy and waitentry and useemafilter and nocmffilter and usesupertrend and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if sellSignal and emapricesrc < ema and time_cond and timetobuy and waitentry and useemafilter and nocmffilter and usesupertrend and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+// Use EMA but No CMF Entry no supertrend
+if emapricesrc > ema and time_cond and timetobuy and enableentry and useemafilter and nocmffilter and nosupertrend and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if emapricesrc < ema and time_cond and timetobuy and enableentry and useemafilter and nocmffilter and nosupertrend and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if emapricesrc > ema and time_cond and timetobuy and waitentry and useemafilter and nocmffilter and nosupertrend and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if emapricesrc < ema and time_cond and timetobuy and waitentry and useemafilter and nocmffilter and nosupertrend and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+// Contrarian - Use EMA but No CMF Entry with supertrend
+if Long  and emapricesrc > ema and time_cond and timetobuy and enableentry and useemafilter and nocmffilter and usesupertrend and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if Short and emapricesrc < ema and time_cond and timetobuy and enableentry and useemafilter and nocmffilter and usesupertrend and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if buySignal and emapricesrc > ema and time_cond and timetobuy and waitentry and useemafilter and nocmffilter and usesupertrend and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if sellSignal and emapricesrc < ema and time_cond and timetobuy and waitentry and useemafilter and nocmffilter and usesupertrend and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+// Contrarian - Use EMA but No CMF Entry no supertrend
+if emapricesrc > ema and time_cond and timetobuy and enableentry and useemafilter and nocmffilter and nosupertrend and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if emapricesrc < ema and time_cond and timetobuy and enableentry and useemafilter and nocmffilter and nosupertrend and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if emapricesrc > ema and time_cond and timetobuy and waitentry and useemafilter and nocmffilter and nosupertrend and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if emapricesrc < ema and time_cond and timetobuy and waitentry and useemafilter and nocmffilter and nosupertrend and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+//------------------------------------------------------------------------------      
+// Use CMF but No EMA Entry with supertrend
+if Long  and mf > 0 and time_cond and timetobuy and enableentry and noemafilter and usecmffilter and usesupertrend and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if Short and mf < 0 and time_cond and timetobuy and enableentry and noemafilter and usecmffilter and usesupertrend and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if buySignal and mf > 0 and time_cond and timetobuy and waitentry and noemafilter and usecmffilter and usesupertrend and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if sellSignal and mf < 0 and time_cond and timetobuy and waitentry and noemafilter and usecmffilter and usesupertrend and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+// Use CMF but No EMA Entry no supertrend
+if mf > 0 and time_cond and timetobuy and enableentry and noemafilter and usecmffilter and nosupertrend and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if mf < 0 and time_cond and timetobuy and enableentry and noemafilter and usecmffilter and nosupertrend and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if mf > 0 and time_cond and timetobuy and waitentry and noemafilter and usecmffilter and nosupertrend and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if mf < 0 and time_cond and timetobuy and waitentry and noemafilter and usecmffilter and nosupertrend and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+// Contrarian - Use CMF but No EMA Entry with supertrend
+if Long  and mf > 0 and time_cond and timetobuy and enableentry and noemafilter and usecmffilter and usesupertrend and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if Short and mf < 0 and time_cond and timetobuy and enableentry and noemafilter and usecmffilter and usesupertrend and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if buySignal and mf > 0 and time_cond and timetobuy and waitentry and noemafilter and usecmffilter and usesupertrend and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if sellSignal and mf < 0 and time_cond and timetobuy and waitentry and noemafilter and usecmffilter and usesupertrend and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+// Contrarian - Use CMF but No EMA Entry no supertrend
+if mf > 0 and time_cond and timetobuy and enableentry and noemafilter and usecmffilter and nosupertrend and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if mf < 0 and time_cond and timetobuy and enableentry and noemafilter and usecmffilter and nosupertrend and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if mf > 0 and time_cond and timetobuy and waitentry and noemafilter and usecmffilter and nosupertrend and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if mf < 0 and time_cond and timetobuy and waitentry and noemafilter and usecmffilter and nosupertrend and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+//------------------------------------------------------------------------------  
+// Use EMA and CMF Entry with supertrend
+if Long  and emapricesrc > ema and mf > 0 and time_cond and timetobuy and enableentry and useemafilter and usecmffilter and usesupertrend and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if Short and emapricesrc < ema and mf < 0 and time_cond and timetobuy and enableentry and useemafilter and usecmffilter and usesupertrend and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if buySignal and emapricesrc > ema and mf > 0 and time_cond and timetobuy and waitentry and useemafilter and usecmffilter and usesupertrend and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if sellSignal and emapricesrc < ema and mf < 0 and time_cond and timetobuy and waitentry and useemafilter and usecmffilter and usesupertrend and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+// Use EMA and CMF Entry no supertrend
+if emapricesrc > ema and mf > 0 and time_cond and timetobuy and enableentry and useemafilter and usecmffilter and nosupertrend and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if emapricesrc < ema and mf < 0 and time_cond and timetobuy and enableentry and useemafilter and usecmffilter and nosupertrend and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if emapricesrc > ema and mf > 0 and time_cond and timetobuy and waitentry and useemafilter and usecmffilter and nosupertrend and nocontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if emapricesrc < ema and mf < 0 and time_cond and timetobuy and waitentry and useemafilter and usecmffilter and nosupertrend and nocontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+// Contrarian - Use EMA and CMF Entry with supertrend
+if Long  and emapricesrc > ema and mf > 0 and time_cond and timetobuy and enableentry and useemafilter and usecmffilter and usesupertrend and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if Short and emapricesrc < ema and mf < 0 and time_cond and timetobuy and enableentry and useemafilter and usecmffilter and usesupertrend and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if buySignal and emapricesrc > ema and mf > 0 and time_cond and timetobuy and waitentry and useemafilter and usecmffilter and usesupertrend and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if sellSignal and emapricesrc < ema and mf < 0 and time_cond and timetobuy and waitentry and useemafilter and usecmffilter and usesupertrend and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+// Contrarian - Use EMA and CMF Entry no supertrend
+if emapricesrc > ema and mf > 0 and time_cond and timetobuy and enableentry and useemafilter and usecmffilter and nosupertrend and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if emapricesrc < ema and mf < 0 and time_cond and timetobuy and enableentry and useemafilter and usecmffilter and nosupertrend and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+if emapricesrc > ema and mf > 0 and time_cond and timetobuy and waitentry and useemafilter and usecmffilter and nosupertrend and usecontrarian
+    strategy.entry("Short", strategy.short, alert_message = message_entershort)
+    
+if emapricesrc < ema and mf < 0 and time_cond and timetobuy and waitentry and useemafilter and usecmffilter and nosupertrend and usecontrarian
+    strategy.entry("Long", strategy.long, alert_message = message_enterlong)
+    
+//------------------------------------------------------------------------------  
+// Hours exits
+if strategy.position_size > 0 and timetoclose and enableclose
+    strategy.close_all(alert_message = message_closelong)
+if strategy.position_size < 0 and timetoclose and enableclose
+    strategy.close_all(alert_message = message_closeshort)
+//------------------------------------------------------------------------------      
+// % TP and SL exits    
+if strategy.position_size > 0 and enablesltp and time_cond and nocontrarian
+    strategy.exit(id="Close Long", stop=longStop, limit=longTake, alert_message = message_closelong)
+if strategy.position_size < 0 and enablesltp and time_cond and nocontrarian
+    strategy.exit(id="Close Short", stop=shortStop, limit=shortTake, alert_message = message_closeshort)
+// Contrarian - % TP and SL exits    
+if strategy.position_size > 0 and enablesltp and time_cond and usecontrarian
+    strategy.exit(id="Close Long", stop=longStop, limit=longTake, alert_message = message_closelong)
+if strategy.position_size < 0 and enablesltp and time_cond and usecontrarian
+    strategy.exit(id="Close Short", stop=shortStop, limit=shortTake, alert_message = message_closeshort)
+Expand (317 lines)

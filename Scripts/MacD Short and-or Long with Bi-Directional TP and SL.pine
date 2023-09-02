@@ -1,0 +1,297 @@
+Script Name: MacD Short and-or Long with Bi-Directional TP and SL
+Author: Gentleman-Goat
+Description: This tool allows you to test any variable value for MacD and Signal for going Long or Short with each market direction having customizable values for stop loss and take profit.
+
+For example, sometimes the MacD and Signal values are better with different lengths between Short and Long.  You can use this tool to see them overlaid and determine the best settings for...
+PineScript code:
+
+Pine Script™ strategy
+MacD Short and/or Long with Bi-Directional TP and SL
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+//@version=5
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Gentleman-Goat & TradingTools.Software/Optimizer
+strategy(title="MACD Short/Long Strategy for TradingView Input Optimizer", shorttitle="MACD Short/Long TVIO", initial_capital=1000, default_qty_value=100, default_qty_type=strategy.percent_of_equity)
+// Get Inputs Long
+allow_long                  = input.bool(title="Allow Long", defval=true, group="inputs long")
+fast_length_long            = input.int(title="Fast Length Long", defval=13, group="inputs long")
+slow_length_long            = input.int(title="Slow Length Long", defval=19, group="inputs long")
+src_long                    = input.source(title="Source Long", defval=close, group="inputs long")
+signal_length_long          = input.int(title="Signal Smoothing Long", minval = 1, maxval = 50, defval = 9, group="inputs long")
+sma_source_long             = input.string(title="Oscillator MA Type Long", defval="EMA", options=["SMA", "EMA"], group="inputs long")
+sma_signal_long             = input.string(title="Signal Line MA Type Long", defval="EMA", options=["SMA", "EMA"], group="inputs long")
+cross_point_long            = input.int(title="Cross Point Long", defval=0, group="inputs long")
+cross_delay_macd_long       = input.int(title="MacD Cross Delay Long", defval=0, group="inputs long")
+signal_must_cross_long      = input.bool(title="Signal Must Also Cross Long", defval=false, group="inputs long")
+cross_delay_signal_long     = input.int(title="Signal Cross Delay Long", defval=0, group="inputs long")
+//Get Inputs Short
+allow_short                 = input.bool(title="Allow Short", defval=true, group="inputs short")
+fast_length_short           = input.int(title="Fast Length Short", defval=11, group="inputs short")
+slow_length_short           = input.int(title="Slow Length Short", defval=20, group="inputs short")
+src_short                   = input.source(title="Source Short", defval=close, group="inputs short")
+signal_length_short         = input.int(title="Signal Smoothing Short", minval = 1, maxval = 50, defval = 9, group="inputs short")
+sma_source_short            = input.string(title="Oscillator MA Type Short", defval="EMA", options=["SMA", "EMA"], group="inputs short")
+sma_signal_short            = input.string(title="Signal Line MA Type Short", defval="EMA", options=["SMA", "EMA"], group="inputs short")
+cross_point_short           = input.int(title="Cross Point Short", defval=0, group="inputs short")
+cross_delay_macd_short      = input.int(title="MacD Cross Delay Short", defval=1, group="inputs short")
+signal_must_cross_short     = input.bool(title="Signal Must Also Cross Short", defval=false, group="inputs short")
+cross_delay_signal_short    = input.int(title="Signal Cross Delay Short", defval=0, group="inputs short")
+use_stop_loss_long          = input.bool(defval=false,title="Use Stop Loss Long", group="Stop/Profit Long")
+stop_loss_long_percentage   = input.float(defval=1,title="Stop Loss % Long",minval=0.0,step=0.1, group="Stop/Profit Long") * .01
+use_take_profit_long        = input.bool(defval=false,title="Use Take Profit Long", group="Stop/Profit Long")
+take_profit_long_percentage = input.float(defval=1,title="Take Profit % Long",minval=0.0,step=0.1, group="Stop/Profit Long") * .01
+use_stop_loss_short         = input.bool(defval=true,title="Use Stop Loss Short", group="Stop/Profit Short")
+stop_loss_short_percentage  = input.float(defval=21,title="Stop Loss % Short",minval=0.0,step=0.1, group="Stop/Profit Short") * .01
+use_take_profit_short       = input.bool(defval=true,title="Use Take Profit Short", group="Stop/Profit Short")
+take_profit_short_percentage= input.float(defval=20,title="Take Profit % Short",minval=0.0,step=0.1, group="Stop/Profit Short") * .01
+//------------------------------------------------------------------------------
+// Plot colors Long
+col_macd_long        = input.color(#2962FF, "MACD Line Long", group="Color Settings", inline="MACD")
+col_signal_long      = input.color(#FF6D00, "Signal Line Long", group="Color Settings", inline="Signal")
+col_grow_above_long  = input.color(#26A69A, "Grow Above Long", group="Histogram Color Settings", inline="Above Long")
+col_fall_above_long  = input.color(#B2DFDB, "Fall Above Long", group="Histogram Color Settings", inline="Above Long")
+col_grow_below_long  = input.color(#FFCDD2, "Grow Below Long", group="Histogram Color Settings", inline="Below Long")
+col_fall_below_long  = input.color(#FF5252, "Fall Below Long", group="Histogram Color Settings", inline="Below Long")
+// Plot colors Short
+col_macd_short        = input.color(#B03DFF, "MACD Line Short", group="Color Settings", inline="MACD")
+col_signal_short      = input.color(#00FFE8, "Signal Line Short", group="Color Settings", inline="Signal")
+col_grow_above_short  = input.color(#D95965, "Grow Above Short", group="Histogram Color Settings", inline="Above Short")
+col_fall_above_short  = input.color(#4D2024, "Fall Above Short", group="Histogram Color Settings", inline="Above Short")
+col_grow_below_short  = input.color(#00322D, "Grow Below Short", group="Histogram Color Settings", inline="Below Short")
+col_fall_below_short  = input.color(#00ADAD, "Fall Below Short", group="Histogram Color Settings", inline="Below Short")
+// Calculate Long
+fast_ma_long = sma_source_long == "SMA" ? ta.sma(src_long, fast_length_long) : ta.ema(src_long, fast_length_long)
+slow_ma_long = sma_source_long == "SMA" ? ta.sma(src_long, slow_length_long) : ta.ema(src_long, slow_length_long)
+macd_long    = fast_ma_long - slow_ma_long
+signal_long  = sma_signal_long == "SMA" ? ta.sma(macd_long, signal_length_long) : ta.ema(macd_long, signal_length_long)
+hist_long    = macd_long - signal_long
+// Calculate Short
+fast_ma_short = sma_source_short == "SMA" ? ta.sma(src_short, fast_length_short) : ta.ema(src_short, fast_length_short)
+slow_ma_short = sma_source_short == "SMA" ? ta.sma(src_short, slow_length_short) : ta.ema(src_short, slow_length_short)
+macd_short    = fast_ma_short - slow_ma_short
+signal_short  = sma_signal_short == "SMA" ? ta.sma(macd_short, signal_length_short) : ta.ema(macd_short, signal_length_short)
+hist_short    = macd_short - signal_short
+//Plot Long
+plot(hist_long, title="Histogram Long", style=plot.style_columns, color=(hist_long>=0 ? (hist_long[1] < hist_long ? col_grow_above_long : col_fall_above_long) : (hist_long[1] < hist_long ? col_grow_below_long : col_fall_below_long)))
+plot(macd_long, title="MACD Long", color=col_macd_long)
+plot(signal_long, title="Signal Long", color=col_signal_long)
+//Plot Short
+plot(hist_short, title="Histogram Short", style=plot.style_columns, color=(hist_short>=0 ? (hist_short[1] < hist_short ? col_grow_above_short : col_fall_above_short) : (hist_short[1] < hist_short ? col_grow_below_short : col_fall_below_short)))
+plot(macd_short, title="MACD Short", color=col_macd_short)
+plot(signal_short, title="Signal Short", color=col_signal_short)
+var detectedLongCrossOver = false
+var detectedShortCrossUnder = false
+if(ta.crossunder(macd_short,cross_point_short))
+    detectedShortCrossUnder := true
+if(ta.crossover(macd_short,cross_point_short))
+    detectedShortCrossUnder := false
+                
+if(ta.crossover(macd_long,cross_point_long))
+    detectedLongCrossOver := true
+if(ta.crossunder(macd_long,cross_point_long))
+    detectedLongCrossOver := false
+crossover_signal_long = ta.crossover(signal_long,cross_point_long)
+crossunder_signal_long = ta.crossunder(signal_long,cross_point_long)
+crossunder_signal_short = ta.crossunder(signal_short,cross_point_short)
+crossover_signal_short = ta.crossover(signal_short,cross_point_short)
+crossover_macd_long = ta.crossover(macd_long,cross_point_long)
+crossunder_macd_long = ta.crossunder(macd_long,cross_point_long)
+crossunder_macd_short = ta.crossunder(macd_short,cross_point_short)
+crossover_macd_short = ta.crossover(macd_short,cross_point_short)
+inEntry = false
+//Strategy Entries
+if (strategy.equity > 0) //This is required for the input optimizer to work since it will fail if the strategy fails to succeed by not having enough equity.
+    
+    if (strategy.position_size <= 0 and allow_long==true and inEntry==false)
+        if(signal_must_cross_long==true)
+            longSignalCondition = detectedLongCrossOver==true and crossover_signal_long[cross_delay_signal_long]
+            strategy.entry(id="long", direction=strategy.long, when=longSignalCondition)
+            if(longSignalCondition)
+                inEntry:=true
+        else
+            longMacDCondition = crossover_macd_long[cross_delay_macd_long]
+            strategy.entry(id="long", direction=strategy.long, when=longMacDCondition)
+            if(longMacDCondition)
+                inEntry:=true
+    if (strategy.position_size >= 0 and allow_short==true and inEntry==false)
+        if(signal_must_cross_short==true)
+            shortSignalCondition = detectedShortCrossUnder and crossunder_signal_short[cross_delay_signal_short]
+            strategy.entry(id="short", direction=strategy.short, when=shortSignalCondition)
+            if(shortSignalCondition)
+                inEntry:=true
+        else
+            shortMacDCondition = crossunder_macd_short[cross_delay_macd_short]
+            strategy.entry(id="short", direction=strategy.short, when=shortMacDCondition)
+            if(shortMacDCondition)
+                inEntry:=true
+    if(strategy.position_size > 0 and allow_long==true and allow_short==false)
+        if(signal_must_cross_long==true)
+            strategy.close(id="long", when=detectedLongCrossOver==false and crossunder_signal_long)
+        else
+            strategy.close(id="long", when=crossunder_macd_long)
+    if(strategy.position_size < 0 and allow_short==true and allow_long==false)
+        if(signal_must_cross_short==true)
+            strategy.close(id="short", when=detectedShortCrossUnder==false and crossover_signal_short)
+        else
+            strategy.close(id="short", when=crossover_macd_short)
+stop_loss_value_long    = strategy.position_avg_price*(1 - stop_loss_long_percentage)
+take_profit_value_long  = strategy.position_avg_price*(1 + take_profit_long_percentage)
+stop_loss_value_short   = strategy.position_avg_price*(1 + stop_loss_short_percentage)
+take_profit_value_short = strategy.position_avg_price*(1 - take_profit_short_percentage)
+if(strategy.position_size>0) //Long positions only
+    strategy.exit(id="TP/SL Long",from_entry="long", limit=use_take_profit_long ? take_profit_value_long : na, stop=use_stop_loss_long ? stop_loss_value_long : na)
+if(strategy.position_size<0) //Short positions only
+    strategy.exit(id="TP/SL Short",from_entry="short", limit=use_take_profit_short ? take_profit_value_short : na, stop=use_stop_loss_short ? stop_loss_value_short : na)
+Expand (152 lines)

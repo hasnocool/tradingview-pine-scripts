@@ -1,0 +1,99 @@
+Script Name: Long Term Breakout entry + 25- Trailing stop
+Author: adrianjreid123
+Description: This script enters on a long term breakout and exits using a 25% trailing stop
+PineScript code:
+
+Pine Script™ strategy
+Long Term Breakout entry + 25% Trailing stop
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+//@version=3
+strategy(title="Trailing stop loss (% of instrument price)",
+     overlay=true, pyramiding=1)
+// STEP 1:
+// Configure trail stop level with input options (optional)
+longTrailPerc = input(title="Trail Long Loss (%)",
+     type=float, minval=0.0, step=0.1, defval=25) * 0.01
+// Calculate moving average
+slowSMA = sma(close, 200)
+// Calculate the highest Close
+numberofbars = 500
+previoushigh = highest(close,numberofbars)[1]
+// Calculate trading conditions
+enterLong  = crossover(close,previoushigh) and sma(close,30)*sma(volume,30)>500000
+exitLong = crossunder(close,slowSMA)
+buy = enterLong
+sell = exitLong
+// Plot moving averages
+plot(series=slowSMA, color=black)
+// STEP 2:
+// Determine trail stop loss prices
+longStopPrice = 0.0
+longStopPrice := if (strategy.position_size > 0)
+    stopValue = close * (1 - longTrailPerc)
+    max(stopValue, longStopPrice[1])
+else
+    0
+// Plot stop loss values for confirmation
+plot(series=(strategy.position_size > 0) ? longStopPrice : na,
+     color=fuchsia, style=line,
+     linewidth=2, title="Long Trail Stop")
+     
+// Submit entry orders
+if (enterLong)
+    strategy.entry(id="EL", long=true)
+// STEP 3:
+// Submit exit orders for trail stop loss price
+if (strategy.position_size > 0)
+    strategy.exit(id="XL TRL STP", stop=longStopPrice)
+Expand (51 lines)

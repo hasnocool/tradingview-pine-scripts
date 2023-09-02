@@ -1,0 +1,1083 @@
+Script Name: Strategy Multiple Orders + Statistics Template - Educational
+Author: Daveatt
+Description: Hello traders
+
+It's been a while
+We're back in a bear market so I have a bit more time to publish new Pine scripts for the TradingView community
+
+ Special thanks  to @fikira for his Multiple Orders script () and to @carnagecain for allowing me to publish this script we worked together on
+
+I got widely inspired by @fikira's script for that one
+
+This script is for...
+PineScript code:
+
+Pine Script™ strategy
+Strategy Multiple Orders + Statistics Template - Educational
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+540
+541
+542
+543
+544
+545
+546
+547
+548
+549
+550
+551
+552
+553
+554
+555
+556
+557
+558
+559
+560
+561
+562
+563
+564
+565
+566
+567
+568
+569
+570
+571
+572
+573
+574
+575
+576
+577
+578
+579
+580
+581
+582
+583
+584
+585
+586
+587
+588
+589
+590
+591
+592
+593
+594
+//@version=5
+// # ========================================================================= #
+// #                   |   Strategy  |
+// # ========================================================================= #
+SystemName = "Strategy Multiple Orders Template"
+TradeId = "V"
+// These values are used both in the strategy() header and in the script's relevant inputs as default values so they match.
+// Unless these values match in the script's Inputs and the TV backtesting Properties, results between them cannot be compared.
+InitCapital = 1000000
+InitPosition = 1
+InitCommission = 0.075
+InitPyramidMax = 4
+CalcOnorderFills = false
+ProcessOrdersOnClose = true
+CalcOnEveryTick = false
+CloseEntriesRule = "ANY"
+strategy(title=SystemName, shorttitle=SystemName, 
+ overlay=true, pyramiding=InitPyramidMax, initial_capital=InitCapital, default_qty_type=strategy.percent_of_equity, process_orders_on_close=ProcessOrdersOnClose,
+ default_qty_value=InitPosition, commission_type=strategy.commission.percent, commission_value=InitCommission, calc_on_order_fills=CalcOnorderFills, 
+ calc_on_every_tick=CalcOnEveryTick, close_entries_rule=CloseEntriesRule,
+ precision=6, max_lines_count=500, max_labels_count=500)
+// # ========================================================================= #
+// # ========================================================================= #
+// #                   ||   Alerts  ||
+// # ========================================================================= #
+// # ========================================================================= #
+i_alert_txt_entry_long = input.text_area(defval = "", title = "Long Entry Message", group = "Alerts")
+i_alert_txt_entry_short = input.text_area(defval = "", title = "Short Entry Message", group = "Alerts")
+i_alert_txt_exit_long = input.text_area(defval = "", title = "Long Exit Message", group = "Alerts")
+i_alert_txt_exit_short = input.text_area(defval = "", title = "Short Exit Message", group = "Alerts")
+// # ========================================================================= #
+// # ========================================================================= #
+// #                   ||   General  ||
+// # ========================================================================= #
+// # ========================================================================= #
+OpenDirection    = input.string(defval="ALL", title="Direction", options=["ALL", "LONG", "SHORT"], group="General")
+clrBars          = input.bool(true, title="Colour Candles to Trade Order state", group="General")
+//closeOnOpposite  = input.bool(true, title="Invert on Opposite signal: ON/OFF", group="―――――――― General ――――――――")
+// # ========================================================================= #
+// # ========================================================================= #
+// #                   ||   Table  ||
+// # ========================================================================= #
+// # ========================================================================= #
+showTable      = input.bool(true , title='Show trade data table'  , group = "Table")
+pos_table      = input.string(defval = position.top_right, title = "Position on Chart", options=[position.top_left, position.top_center, position.top_right, position.middle_left, position.middle_center, position.middle_right, position.bottom_left, position.bottom_center, position.bottom_right], group = "Table")
+// # ========================================================================= #
+// # ========================================================================= #
+// #                   ||   Dates Range Filtering  ||
+// # ========================================================================= #
+// # ========================================================================= #
+DateFilter = input(false, "Date Range Filtering", group="Date")
+// ————— Syntax coming from https://www.tradingview.com/blog/en/new-parameter-for-date-input-added-to-pine-21812/
+i_startTime = input.time(defval = timestamp("01 Jan 2019 13:30 +0000"), title = "Start Time", group="Date")
+i_endTime = input.time(defval = timestamp("30 Dec 2021 23:30 +0000"), title = "End Time", group="Date")
+TradeDateIsAllowed() => DateFilter ? time >= i_startTime and time <= i_endTime : true
+// # ========================================================================= #
+// #                   |   Stop Loss |
+// # ========================================================================= #
+sl1_input_perc = input.float(2, minval = 0, title = "Stop Loss 1 (%)", group = "Stop Loss 1", inline = "SL1") * 0.01
+sl1_color      = input.color(color.new(color.blue, 50), title = "Color", group = "Stop Loss 1", inline = "SL1")
+sl2_input_perc = input.float(3, minval = 0, title = "Stop Loss 2 (%)", group = "Stop Loss 2", inline = "SL2") * 0.01
+sl2_color      = input.color(color.new(color.orange, 50), title = "Color", group = "Stop Loss 2", inline = "SL2")
+sl3_input_perc = input.float(4, minval = 0, title = "Stop Loss 3 (%)", group = "Stop Loss 3", inline = "SL3") * 0.01
+sl3_color      = input.color(color.new(color.red, 50), title = "Color", group = "Stop Loss 3", inline = "SL3")
+sl4_input_perc = input.float(5, minval = 0, title = "Stop Loss 4 (%)", group = "Stop Loss 4", inline = "SL4") * 0.01
+sl4_color      = input.color(color.new(color.purple, 50), title = "Color", group = "Stop Loss 4", inline = "SL4")
+// # ========================================================================= #
+// #                   |   Take Profit |
+// # ========================================================================= #
+tp1_input_perc = input.float(1, minval = 0, title = "Take Profit 1 (%)", group = "Take Profit 1", inline = "TP1") * 0.01
+tp1_color      = input.color(color.new(color.maroon, 50), title = "Color", group = "Take Profit 1", inline = "TP1")
+tp2_input_perc = input.float(2, minval = 0, title = "Take Profit 2 (%)", group = "Take Profit 2", inline = "TP2") * 0.01
+tp2_color      = input.color(color.new(color.green, 50), title = "Color", group = "Take Profit 2", inline = "TP2")
+tp3_input_perc = input.float(3, minval = 0, title = "Take Profit 3 (%)", group = "Take Profit 3", inline = "TP3") * 0.01
+tp3_color      = input.color(color.new(color.lime, 50), title = "Color", group = "Take Profit 3", inline = "TP3")
+tp4_input_perc = input.float(4, minval = 0, title = "Take Profit 4 (%)", group = "Take Profit 4", inline = "TP4") * 0.01
+tp4_color      = input.color(color.new(color.black, 50), title = "Color", group = "Take Profit 4", inline = "TP4")
+// # ========================================================================= #
+// #                   |   General Functions |
+// # ========================================================================= #
+donchian(len) => math.avg(ta.lowest(len), ta.highest(len))
+f_security(_sym, _res, _src) => request.security(_sym, _res, _src[barstate.isrealtime ? 1 : 0])[barstate.isrealtime ? 0 : 1]
+//f_security(_sym, _res, _src) => request.security(_sym, _res, _src)//[1], barmerge.gaps_off, barmerge.lookahead_on)
+// # ========================================================================= #
+// #                   |   Entry conditions |
+// # ========================================================================= #
+bull = close > open and close > math.max(close[2], open[2]) and low[1] < low[2] and high[1] < high[2] // low < low[1] and low[1] < low[2] 
+bear = close < open and close < math.min(close[2], open[2]) and low[1] > low[2] and high[1] > high[2] // low < low[1] and low[1] < low[2] 
+open_all        = OpenDirection == "ALL"
+open_all_longs  = OpenDirection != "SHORT"
+open_all_shorts = OpenDirection != "LONG"
+// # ========================================================================= #
+// #                   |   Plot Entries |
+// # ========================================================================= #
+plotshape(
+ series     = bull and not bull[1],
+ title      = "Buy Signal",
+ style      =  shape.triangleup,
+ location   =  location.bottom,
+ color      = color.new(color = color.green, transp = 0),
+ size       = size.normal
+ )
+plotshape(
+ series     = bear and not bear[1],
+ title      = "Sell Signal",
+ style      =  shape.triangledown,
+ location   =  location.top,
+ color      = color.new(color = color.red, transp = 0),
+ size       = size.normal
+ )
+// # ========================================================================= #
+// #                   |   TPs and SLs arrays |
+// # ========================================================================= #
+var L_array  = array.from(0 , 0 , 0 , 0)
+var S_array  = array.from(0 , 0 , 0 , 0)
+var L_SLline = array.from(0., 0., 0., 0.)
+var L_TPline = array.from(0., 0., 0., 0.)
+var S_SLline = array.from(0., 0., 0., 0.)
+var S_TPline = array.from(0., 0., 0., 0.)
+var trades     = 4
+var isFirst    = 0
+// ———————[ entry and array set ]———————
+// {
+if bull and TradeDateIsAllowed() and open_all_longs
+    switch
+        array.get(L_array, 0) == 0 =>
+            SL = low  * (1 - sl1_input_perc) 
+            TP = high * (1 + tp1_input_perc)
+            strategy.entry('L1', strategy.long)
+            array.set(L_SLline, 0, SL)
+            array.set(L_TPline, 0, TP)
+            array.set(L_array , 0,  1) 
+            if isFirst == 0
+                isFirst := 1
+        array.get(L_array, 1) == 0 =>
+            SL = low  * (1 - sl2_input_perc) 
+            TP = high * (1 + tp2_input_perc)
+            strategy.entry('L2', strategy.long)
+            array.set(L_SLline, 1, SL)
+            array.set(L_TPline, 1, TP)
+            array.set(L_array , 1,  1) 
+        array.get(L_array, 2) == 0 =>
+            SL = low  * (1 - sl3_input_perc) 
+            TP = high * (1 + tp3_input_perc)
+            strategy.entry('L3', strategy.long)
+            array.set(L_SLline, 2, SL)
+            array.set(L_TPline, 2, TP)
+            array.set(L_array , 2,  1) 
+        array.get(L_array, 3) == 0 =>
+            strategy.entry('L4', strategy.long)
+            SL = low  * (1 - sl4_input_perc) 
+            TP = high * (1 + tp4_input_perc)
+            array.set(L_SLline, 3, SL)
+            array.set(L_TPline, 3, TP)
+            array.set(L_array , 3,  1) 
+else if bear and TradeDateIsAllowed() and open_all_shorts
+    switch
+        array.get(S_array, 0) == 0 =>
+            SL = high * (1 + sl1_input_perc) 
+            TP = low * (1 - tp1_input_perc)
+            strategy.entry('S1', strategy.short)
+            array.set(S_SLline, 0, SL)
+            array.set(S_TPline, 0, TP)
+            array.set(S_array , 0,  1) 
+            if isFirst == 0
+                isFirst := 1
+        array.get(S_array, 1) == 0 =>
+            SL = high * (1 + sl2_input_perc) 
+            TP = low * (1 - tp2_input_perc)
+            strategy.entry('S2', strategy.short)
+            array.set(S_SLline, 1, SL)
+            array.set(S_TPline, 1, TP)
+            array.set(S_array , 1,  1) 
+        array.get(S_array, 2) == 0 =>
+            SL = high * (1 + sl3_input_perc) 
+            TP = low * (1 - tp3_input_perc)
+            strategy.entry('S3', strategy.short)
+            array.set(S_SLline, 2, SL)
+            array.set(S_TPline, 2, TP)
+            array.set(S_array , 2,  1) 
+        array.get(S_array, 3) == 0 =>
+            strategy.entry('S4', strategy.short)
+            SL = high * (1 + sl4_input_perc) 
+            TP = low  * (1 - tp4_input_perc)
+            array.set(S_array , 3,  1) 
+            array.set(S_SLline, 3, SL)
+            array.set(S_TPline, 3, TP)
+// # ========================================================================= #
+// #                   |   Strategy Exit Calls |
+// # ========================================================================= #
+// Longs
+strategy.exit('xL1', from_entry = 'L1', limit = array.get(L_TPline, 0), stop = array.get(L_SLline, 0), when=array.get(L_array , 0) == 1)
+strategy.exit('xL2', from_entry = 'L2', limit = array.get(L_TPline, 1), stop = array.get(L_SLline, 1), when=array.get(L_array , 1) == 1)
+strategy.exit('xL3', from_entry = 'L3', limit = array.get(L_TPline, 2), stop = array.get(L_SLline, 2), when=array.get(L_array , 2) == 1)
+strategy.exit('xL4', from_entry = 'L4', limit = array.get(L_TPline, 3), stop = array.get(L_SLline, 3), when=array.get(L_array , 3) == 1)
+// Shorts
+strategy.exit('xS1', from_entry = 'S1', limit = array.get(S_TPline, 0), stop = array.get(S_SLline, 0), when=array.get(S_array , 0) == 1)
+strategy.exit('xS2', from_entry = 'S2', limit = array.get(S_TPline, 1), stop = array.get(S_SLline, 1), when=array.get(S_array , 1) == 1)
+strategy.exit('xS3', from_entry = 'S3', limit = array.get(S_TPline, 2), stop = array.get(S_SLline, 2), when=array.get(S_array , 2) == 1)
+strategy.exit('xS4', from_entry = 'S4', limit = array.get(S_TPline, 3), stop = array.get(S_SLline, 3), when=array.get(S_array , 3) == 1)
+// # ========================================================================= #
+// #                   |   Reset Array values |
+// # ========================================================================= #
+// # |   LONGS |
+var int L_nb_sl_hit  = 0
+var int L_nb_tp1_hit = 0
+var int L_nb_tp2_hit = 0
+var int L_nb_tp3_hit = 0
+var int L_nb_tp4_hit = 0
+// Increment SL Longs counter
+if array.get(L_array , 0) == 1 and low < array.get(L_SLline, 0)   
+    L_nb_sl_hit += 1
+else if array.get(L_array , 1) == 1 and low < array.get(L_SLline, 1)   
+    L_nb_sl_hit += 1
+else if array.get(L_array , 2) == 1 and low < array.get(L_SLline, 2)   
+    L_nb_sl_hit += 1
+else if array.get(L_array , 3) == 1 and low < array.get(L_SLline, 3)   
+    L_nb_sl_hit += 1
+// Increment TP Longs counter
+if array.get(L_array , 0) == 1 and high > array.get(L_TPline, 0)
+    L_nb_tp1_hit += 1
+else if array.get(L_array , 1) == 1 and high > array.get(L_TPline, 1) 
+    L_nb_tp2_hit += 1
+else if array.get(L_array , 2) == 1 and high > array.get(L_TPline, 2)  
+    L_nb_tp3_hit += 1
+else if array.get(L_array , 3) == 1 and high > array.get(L_TPline, 3) 
+    L_nb_tp4_hit += 1
+// Reset Longs arrays
+if array.get(L_array , 0) == 1 and high > array.get(L_TPline, 0) or low < array.get(L_SLline, 0)   
+    array.set(L_array , 0   , 0)
+else if array.get(L_array , 1) == 1 and high > array.get(L_TPline, 1) or low < array.get(L_SLline, 1)   
+    array.set(L_array , 1   , 0)
+else if array.get(L_array , 2) == 1 and high > array.get(L_TPline, 2) or low < array.get(L_SLline, 2)   
+    array.set(L_array , 2   , 0)
+else if array.get(L_array , 3) == 1 and high > array.get(L_TPline, 3) or low < array.get(L_SLline, 3)   
+    array.set(L_array , 3   , 0) 
+// # |   Shorts |
+var int S_nb_sl_hit  = 0
+var int S_nb_tp1_hit = 0
+var int S_nb_tp2_hit = 0
+var int S_nb_tp3_hit = 0
+var int S_nb_tp4_hit = 0
+// Increment SL Shorts counter
+if array.get(S_array , 0) == 1 and high > array.get(S_SLline, 0)   
+    S_nb_sl_hit += 1
+else if array.get(S_array , 1) == 1 and high > array.get(S_SLline, 1)   
+    S_nb_sl_hit += 1
+else if array.get(S_array , 2) == 1 and high > array.get(S_SLline, 2)   
+    S_nb_sl_hit += 1
+else if array.get(S_array , 3) == 1 and high > array.get(S_SLline, 3)   
+    S_nb_sl_hit += 1
+// Increment TP Shorts counter
+if array.get(S_array , 0) == 1 and low < array.get(S_TPline, 0) 
+    S_nb_tp1_hit += 1
+else if array.get(S_array , 1) == 1 and low < array.get(S_TPline, 1) 
+    S_nb_tp2_hit += 1
+else if array.get(S_array , 2) == 1 and low < array.get(S_TPline, 2)
+    S_nb_tp3_hit += 1
+else if array.get(S_array , 3) == 1 and low < array.get(S_TPline, 3) 
+    S_nb_tp4_hit += 1
+// Reset Shorts arrays
+if array.get(S_array , 0) == 1 and low < array.get(S_TPline, 0) or high > array.get(S_SLline, 0)   
+    array.set(S_array , 0   , 0)
+else if array.get(S_array , 1) == 1 and low < array.get(S_TPline, 1) or high > array.get(S_SLline, 1)   
+    array.set(S_array , 1   , 0)
+else if array.get(S_array , 2) == 1 and low < array.get(S_TPline, 2) or high > array.get(S_SLline, 2)   
+    array.set(S_array , 2   , 0)
+else if array.get(S_array , 3) == 1 and low < array.get(S_TPline, 3) or high > array.get(S_SLline, 3)   
+    array.set(S_array , 3   , 0) 
+// # ========================================================================= #
+// #                   |   Plots |
+// # ========================================================================= #
+// Longs
+plot(array.get(L_array , 0) == 1 ? array.get(L_TPline, 0) : na, color=tp1_color, style=plot.style_linebr, linewidth = 3)
+plot(array.get(L_array , 0) == 1 ? array.get(L_SLline, 0) : na, color=sl1_color, style=plot.style_linebr, linewidth = 3)
+plot(array.get(L_array , 1) == 1 ? array.get(L_TPline, 1) : na, color=tp2_color, style=plot.style_linebr, linewidth = 3)
+plot(array.get(L_array , 1) == 1 ? array.get(L_SLline, 1) : na, color=sl2_color, style=plot.style_linebr, linewidth = 3)
+plot(array.get(L_array , 2) == 1 ? array.get(L_TPline, 2) : na, color=tp3_color, style=plot.style_linebr, linewidth = 3)
+plot(array.get(L_array , 2) == 1 ? array.get(L_SLline, 2) : na, color=sl3_color, style=plot.style_linebr, linewidth = 3)
+plot(array.get(L_array , 3) == 1 ? array.get(L_TPline, 3) : na, color=tp4_color, style=plot.style_linebr, linewidth = 3)
+plot(array.get(L_array , 3) == 1 ? array.get(L_SLline, 3) : na, color=sl4_color, style=plot.style_linebr, linewidth = 3)
+// Shorts
+plot(array.get(S_array , 0) == 1 ? array.get(S_TPline, 0) : na, color=tp1_color, style=plot.style_linebr, linewidth = 3)
+plot(array.get(S_array , 0) == 1 ? array.get(S_SLline, 0) : na, color=sl1_color, style=plot.style_linebr, linewidth = 3)
+plot(array.get(S_array , 1) == 1 ? array.get(S_TPline, 1) : na, color=tp2_color, style=plot.style_linebr, linewidth = 3)
+plot(array.get(S_array , 1) == 1 ? array.get(S_SLline, 1) : na, color=sl2_color, style=plot.style_linebr, linewidth = 3)
+plot(array.get(S_array , 2) == 1 ? array.get(S_TPline, 2) : na, color=tp3_color, style=plot.style_linebr, linewidth = 3)
+plot(array.get(S_array , 2) == 1 ? array.get(S_SLline, 2) : na, color=sl3_color, style=plot.style_linebr, linewidth = 3)
+plot(array.get(S_array , 3) == 1 ? array.get(S_TPline, 3) : na, color=tp4_color, style=plot.style_linebr, linewidth = 3)
+plot(array.get(S_array , 3) == 1 ? array.get(S_SLline, 3) : na, color=sl4_color, style=plot.style_linebr, linewidth = 3)
+// # ========================================================================= #
+// #                   |   Calculations |
+// # ========================================================================= #
+// Calculate average gross profit by adding the difference between gross profit and commission.
+L_avgGrossProfit() =>
+    L_sumGrossProfit = 0.0
+    for tradeNo = 0 to strategy.closedtrades - 1
+        
+        if (strategy.closedtrades.profit(tradeNo) - strategy.closedtrades.commission(tradeNo)) > 0 and strategy.closedtrades.size(tradeNo) > 0
+            L_sumGrossProfit += strategy.closedtrades.profit(tradeNo) - strategy.closedtrades.commission(tradeNo)
+    result = nz(L_sumGrossProfit / strategy.closedtrades)
+S_avgGrossProfit() =>
+    S_sumGrossProfit = 0.0
+    for tradeNo = 0 to strategy.closedtrades - 1
+        
+        if (strategy.closedtrades.profit(tradeNo) - strategy.closedtrades.commission(tradeNo)) > 0 and strategy.closedtrades.size(tradeNo) < 0
+            S_sumGrossProfit += strategy.closedtrades.profit(tradeNo) - strategy.closedtrades.commission(tradeNo)
+    result = nz(S_sumGrossProfit / strategy.closedtrades)
+avgGrossProfit() =>
+    sumGrossProfit = 0.0
+    for tradeNo = 0 to strategy.closedtrades - 1
+        if (strategy.closedtrades.profit(tradeNo) - strategy.closedtrades.commission(tradeNo)) > 0
+            sumGrossProfit += strategy.closedtrades.profit(tradeNo) - strategy.closedtrades.commission(tradeNo)
+    result = nz(sumGrossProfit / strategy.closedtrades)
+// Calculate average gross loss by adding the difference between gross profit and commission.
+L_avgGrossLoss() =>
+    L_sumGrossLoss = 0.0
+    for tradeNo = 0 to strategy.closedtrades - 1
+        
+        if (strategy.closedtrades.profit(tradeNo) - strategy.closedtrades.commission(tradeNo)) < 0 and strategy.closedtrades.size(tradeNo) > 0
+            L_sumGrossLoss += strategy.closedtrades.profit(tradeNo) - strategy.closedtrades.commission(tradeNo)
+    result = nz(L_sumGrossLoss / strategy.closedtrades)
+S_avgGrossLoss() =>
+    S_sumGrossLoss = 0.0
+    for tradeNo = 0 to strategy.closedtrades - 1
+        
+        if (strategy.closedtrades.profit(tradeNo) - strategy.closedtrades.commission(tradeNo)) < 0 and strategy.closedtrades.size(tradeNo) < 0
+            S_sumGrossLoss += strategy.closedtrades.profit(tradeNo) - strategy.closedtrades.commission(tradeNo)
+    result = nz(S_sumGrossLoss / strategy.closedtrades)
+avgGrossLoss() =>
+    sumGrossLoss = 0.0
+    for tradeNo = 0 to strategy.closedtrades - 1
+        if (strategy.closedtrades.profit(tradeNo) - strategy.closedtrades.commission(tradeNo)) < 0
+            sumGrossLoss += strategy.closedtrades.profit(tradeNo) - strategy.closedtrades.commission(tradeNo)
+    result = nz(sumGrossLoss / strategy.closedtrades)
+// Calculate probability of win
+L_probabilityWin() =>
+    L_nb_winners = 0.0
+    for tradeNo = 0 to strategy.closedtrades - 1
+        if (strategy.closedtrades.profit(tradeNo) - strategy.closedtrades.commission(tradeNo)) > 0 and strategy.closedtrades.size(tradeNo) > 0
+            L_nb_winners += 1
+    result = nz(L_nb_winners / strategy.closedtrades) * 100
+S_probabilityWin() =>
+    S_nb_winners = 0.0
+    for tradeNo = 0 to strategy.closedtrades - 1
+        if (strategy.closedtrades.profit(tradeNo) - strategy.closedtrades.commission(tradeNo)) > 0 and strategy.closedtrades.size(tradeNo) < 0
+            S_nb_winners += 1
+            
+    result = nz(S_nb_winners / strategy.closedtrades) * 100
+probabilityWin() =>
+    nb_winners = 0.0
+    for tradeNo = 0 to strategy.closedtrades - 1
+        if (strategy.closedtrades.profit(tradeNo) - strategy.closedtrades.commission(tradeNo)) > 0  
+            nb_winners += 1
+    result = nz(nb_winners / strategy.closedtrades) * 100
+// Calculate probability of loss
+L_probabilityLoss() =>
+    L_nb_losers = 0.0
+    for tradeNo = 0 to strategy.closedtrades - 1
+        if (strategy.closedtrades.profit(tradeNo) - strategy.closedtrades.commission(tradeNo)) < 0 and strategy.closedtrades.size(tradeNo) > 0
+            L_nb_losers += 1
+    result = nz(L_nb_losers / strategy.closedtrades) * 100
+S_probabilityLoss() =>
+    S_nb_losers = 0.0
+    for tradeNo = 0 to strategy.closedtrades - 1
+    
+        if (strategy.closedtrades.profit(tradeNo) - strategy.closedtrades.commission(tradeNo)) < 0 and strategy.closedtrades.size(tradeNo) < 0
+            S_nb_losers += 1
+    result = nz(S_nb_losers / strategy.closedtrades) * 100
+probabilityLoss() =>
+    nb_losers = 0.0
+    for tradeNo = 0 to strategy.closedtrades - 1
+        if (strategy.closedtrades.profit(tradeNo) - strategy.closedtrades.commission(tradeNo)) < 0  
+            nb_losers += 1
+    result = nz(nb_losers / strategy.closedtrades) * 100
+// Calculate APPT
+L_appt() =>
+    PW = L_probabilityWin()
+    PL = L_probabilityLoss()
+    AW = L_avgGrossProfit()
+    AL = L_avgGrossLoss()
+    result = (PW * AW) - (PL * AL)
+S_appt() =>
+    PW = S_probabilityWin()
+    PL = S_probabilityLoss()
+    AW = S_avgGrossProfit()
+    AL = S_avgGrossLoss()
+    result = (PW * AW) - (PL * AL)
+APPT() =>
+    PW = probabilityWin()
+    PL = probabilityLoss()
+    AW = avgGrossProfit()
+    AL = avgGrossLoss()
+    result = (PW * AW) - (PL * AL)
+// Calculate number of times TP1 was hit
+// # ========================================================================= #
+// #                   |   Table |
+// # ========================================================================= #
+if barstate.islastconfirmedhistory and showTable
+    L_PW = str.tostring(math.round(L_probabilityWin())) + "%"
+    L_PL = str.tostring(math.round(L_probabilityLoss())) + "%"
+    L_AW = str.tostring(math.round(L_avgGrossProfit()))
+    L_AL = str.tostring(math.round(L_avgGrossLoss()))
+    L_APPT = str.tostring(math.round(L_appt()))
+    S_PW = str.tostring(math.round(S_probabilityWin())) + "%"
+    S_PL = str.tostring(math.round(S_probabilityLoss())) + "%"
+    S_AW = str.tostring(math.round(S_avgGrossProfit()))
+    S_AL = str.tostring(math.round(S_avgGrossLoss()))
+    S_APPT = str.tostring(math.round(S_appt()))
+    T_PW = str.tostring(math.round(L_probabilityWin() + S_probabilityWin())) + "%"
+    T_PL = str.tostring(math.round(L_probabilityLoss() + S_probabilityLoss())) + "%"
+    T_AW = str.tostring(math.round(L_avgGrossProfit() + S_avgGrossProfit()))
+    T_AL = str.tostring(math.round(L_avgGrossLoss() + S_avgGrossLoss()))
+    T_APPT = str.tostring(math.round(L_appt() + S_appt()))
+    var table  = table.new(position = pos_table, columns = 11, rows = 4, bgcolor = color.new(color.yellow, 100), border_width = 1)
+    // Headers
+    table.cell(table_id = table, column = 0, row = 0, text = 'Statistics (' + str.tostring(strategy.closedtrades) + ' trades)' , text_color = color.new(color.white , 10), bgcolor=color.new(color.black, 20))
+    table.cell(table_id = table, column = 1, row = 0, text = 'TP1' , text_color = color.new(color.black , 10), bgcolor=color.new(color.gray, 20))
+    table.cell(table_id = table, column = 2, row = 0, text = 'TP2' , text_color = color.new(color.black , 10), bgcolor=color.new(color.gray, 20))
+    table.cell(table_id = table, column = 3, row = 0, text = 'TP3' , text_color = color.new(color.black , 10), bgcolor=color.new(color.gray, 20))
+    table.cell(table_id = table, column = 4, row = 0, text = 'TP4' , text_color = color.new(color.black , 10), bgcolor=color.new(color.gray, 20))
+    table.cell(table_id = table, column = 5, row = 0, text = 'SL' , text_color = color.new(color.black , 10), bgcolor=color.new(color.gray, 20))
+    table.cell(table_id = table, column = 6, row = 0, text = 'PW' , text_color = color.new(color.black , 10), bgcolor=color.new(color.gray, 20))
+    table.cell(table_id = table, column = 7, row = 0, text = 'AW' , text_color = color.new(color.black , 10), bgcolor=color.new(color.gray, 20))
+    table.cell(table_id = table, column = 8, row = 0, text = 'PL' , text_color = color.new(color.black , 10), bgcolor=color.new(color.gray, 20))
+    table.cell(table_id = table, column = 9, row = 0, text = 'AL' , text_color = color.new(color.black , 10), bgcolor=color.new(color.gray, 20))
+    table.cell(table_id = table, column = 10, row = 0, text = 'APPT' , text_color = color.new(color.black , 10), bgcolor=color.new(color.gray, 20))
+    table.cell(table_id = table, column = 0, row = 1, text = 'L O N G' , text_color = color.new(color.black , 10), bgcolor=color.new(color.green, 20))
+    table.cell(table_id = table, column = 0, row = 2, text = 'S H O R T' , text_color = color.new(color.black , 10), bgcolor=color.new(color.red, 20))
+    table.cell(table_id = table, column = 0, row = 3, text = 'T O T A L' , text_color = color.new(color.black , 10), bgcolor=color.new(color.blue, 40))
+    // Longs
+    table.cell(table_id = table, column = 1, row = 1, text = str.tostring(L_nb_tp1_hit) , text_color = color.new(color.black , 10), bgcolor=color.new(color.green, 20))
+    table.cell(table_id = table, column = 2, row = 1, text = str.tostring(L_nb_tp2_hit) , text_color = color.new(color.black , 10), bgcolor=color.new(color.green, 20))
+    table.cell(table_id = table, column = 3, row = 1, text = str.tostring(L_nb_tp3_hit) , text_color = color.new(color.black , 10), bgcolor=color.new(color.green, 20))
+    table.cell(table_id = table, column = 4, row = 1, text = str.tostring(L_nb_tp4_hit) , text_color = color.new(color.black , 10), bgcolor=color.new(color.green, 20))
+    table.cell(table_id = table, column = 5, row = 1, text = str.tostring(L_nb_sl_hit) , text_color = color.new(color.black , 10), bgcolor=color.new(color.green, 20))
+    table.cell(table_id = table, column = 6, row = 1, text = L_PW , text_color = color.new(color.black , 10), bgcolor=color.new(color.green, 20))
+    table.cell(table_id = table, column = 7, row = 1, text = L_AW , text_color = color.new(color.black , 10), bgcolor=color.new(color.green, 20))
+    table.cell(table_id = table, column = 8, row = 1, text = L_PL, text_color = color.new(color.black , 10), bgcolor=color.new(color.green, 20))
+    table.cell(table_id = table, column = 9, row = 1, text = L_AL, text_color = color.new(color.black , 10), bgcolor=color.new(color.green, 20))
+    table.cell(table_id = table, column = 10, row = 1, text = L_APPT, text_color = color.new(color.black , 10), bgcolor=color.new(color.green, 20))
+    // Shorts
+    table.cell(table_id = table, column = 1, row = 2, text = str.tostring(S_nb_tp1_hit) , text_color = color.new(color.black , 10), bgcolor=color.new(color.red, 20))
+    table.cell(table_id = table, column = 2, row = 2, text = str.tostring(S_nb_tp2_hit) , text_color = color.new(color.black , 10), bgcolor=color.new(color.red, 20))
+    table.cell(table_id = table, column = 3, row = 2, text = str.tostring(S_nb_tp3_hit) , text_color = color.new(color.black , 10), bgcolor=color.new(color.red, 20))
+    table.cell(table_id = table, column = 4, row = 2, text = str.tostring(S_nb_tp4_hit) , text_color = color.new(color.black , 10), bgcolor=color.new(color.red, 20))
+    table.cell(table_id = table, column = 5, row = 2, text = str.tostring(S_nb_sl_hit) , text_color = color.new(color.black , 10), bgcolor=color.new(color.red, 20))
+    table.cell(table_id = table, column = 6, row = 2, text = S_PW , text_color = color.new(color.black , 10), bgcolor=color.new(color.red, 20))
+    table.cell(table_id = table, column = 7, row = 2, text = S_AW , text_color = color.new(color.black , 10), bgcolor=color.new(color.red, 20))
+    table.cell(table_id = table, column = 8, row = 2, text = S_PL, text_color = color.new(color.black , 10), bgcolor=color.new(color.red, 20))
+    table.cell(table_id = table, column = 9, row = 2, text = S_AL, text_color = color.new(color.black , 10), bgcolor=color.new(color.red, 20))
+    table.cell(table_id = table, column = 10, row = 2, text = S_APPT, text_color = color.new(color.black , 10), bgcolor=color.new(color.red, 20))
+    // Total
+    table.cell(table_id = table, column = 1, row = 3, text = str.tostring(L_nb_tp1_hit + S_nb_tp1_hit) , text_color = color.new(color.black , 10), bgcolor=color.new(color.blue, 40))
+    table.cell(table_id = table, column = 2, row = 3, text = str.tostring(L_nb_tp2_hit + S_nb_tp2_hit) , text_color = color.new(color.black , 10), bgcolor=color.new(color.blue, 40))
+    table.cell(table_id = table, column = 3, row = 3, text = str.tostring(L_nb_tp3_hit + S_nb_tp3_hit) , text_color = color.new(color.black , 10), bgcolor=color.new(color.blue, 40))
+    table.cell(table_id = table, column = 4, row = 3, text = str.tostring(L_nb_tp4_hit + S_nb_tp4_hit) , text_color = color.new(color.black , 10), bgcolor=color.new(color.blue, 40))
+    table.cell(table_id = table, column = 5, row = 3, text = str.tostring(L_nb_sl_hit + S_nb_sl_hit) , text_color = color.new(color.black , 10), bgcolor=color.new(color.blue, 40))
+    table.cell(table_id = table, column = 6, row = 3, text = T_PW , text_color = color.new(color.black , 10), bgcolor=color.new(color.blue, 40))
+    table.cell(table_id = table, column = 7, row = 3, text = T_AW , text_color = color.new(color.black , 10), bgcolor=color.new(color.blue, 40))
+    table.cell(table_id = table, column = 8, row = 3, text = T_PL , text_color = color.new(color.black , 10), bgcolor=color.new(color.blue, 40))
+    table.cell(table_id = table, column = 9, row = 3, text = T_AL , text_color = color.new(color.black , 10), bgcolor=color.new(color.blue, 40))
+    table.cell(table_id = table, column = 10, row = 3, text = T_APPT , text_color = color.new(color.black , 10), bgcolor=color.new(color.blue, 40))
+// # ========================================================================= #
+// #                   |   Bars Coloring |
+// # ========================================================================= #
+// Colour code the candles
+bclr = not clrBars ? na : strategy.position_size == 0 ? #dbd5d5 : 
+ strategy.position_size > 0  ? color.lime :
+ strategy.position_size < 0 ? color.red : color.gray
+barcolor(bclr, title="Trade State Bar Colouring")
+Expand (594 lines)

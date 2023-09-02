@@ -1,0 +1,225 @@
+Script Name: Custom Triple Moving Average Strategy - Auto Backtesting
+Author: Meesemoo
+Description: Create your own MA Strategy set of up to three moving averages!
+
+Auto Backtesting.
+Cloud between MA1 and MA2.
+Many different MA types to choose from.
+Totally Custom!
+
+Happy Trading, and algorithm analysis!
+PineScript code:
+
+Pine Script™ strategy
+Custom Triple Moving Average Strategy | Auto Backtesting
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Meesemoo
+//@version=4
+strategy("Custom MA Strategy Tester", overlay = true)
+MA1Period = input(13, title="MA1 Period")
+MA1Type = input(title="MA1 Type", defval="SMA", options=["RMA", "SMA", "EMA", "WMA", "HMA", "DEMA", "TEMA"])
+MA1Source = input(title="MA1 Source", type=input.source, defval=close)
+MA1Visible = input(title="MA1 Visible", type=input.bool, defval=true)
+MA2Period = input(50, title="MA2 Period")
+MA2Type = input(title="MA2 Type", defval="SMA", options=["RMA", "SMA", "EMA", "WMA", "HMA", "DEMA", "TEMA"])
+MA2Source = input(title="MA2 Source", type=input.source, defval=close)
+MA2Visible = input(title="MA2 Visible", type=input.bool, defval=true) 
+MA3Period = input(200, title="MA3 Period")
+MA3Type = input(title="MA3 Type", defval="SMA", options=["RMA", "SMA", "EMA", "WMA", "HMA", "DEMA", "TEMA"])
+MA3Source = input(title="MA3 Source", type=input.source, defval=close)
+MA3Visible = input(title="MA3 Visible", type=input.bool, defval=true)
+ShowCrosses = input(title="Show Crosses", type=input.bool, defval=true)
+MA1 = if MA1Type == "SMA"
+    sma(MA1Source, MA1Period)
+else
+    if MA1Type == "EMA"
+        ema(MA1Source, MA1Period)
+    else
+        if MA1Type == "WMA"
+            wma(MA1Source, MA1Period)
+        else
+            if MA1Type == "RMA"
+                rma(MA1Source, MA1Period)
+            else
+                if MA1Type == "HMA"
+                    wma(2*wma(MA1Source, MA1Period/2)-wma(MA1Source, MA1Period), round(sqrt(MA1Period)))
+                else
+                    if MA1Type == "DEMA"
+                        e = ema(MA1Source, MA1Period)
+                        2 * e - ema(e, MA1Period)
+                    else
+                        if MA1Type == "TEMA"
+                            e = ema(MA1Source, MA1Period)
+                            3 * (e - ema(e, MA1Period)) + ema(ema(e, MA1Period), MA1Period)
+                    
+MA2 = if MA2Type == "SMA"
+    sma(MA2Source, MA2Period)
+else
+    if MA2Type == "EMA"
+        ema(MA2Source, MA2Period)
+    else
+        if MA2Type == "WMA"
+            wma(MA2Source, MA2Period)
+        else
+            if MA2Type == "RMA"
+                rma(MA2Source, MA2Period)
+            else
+                if MA2Type == "HMA"
+                    wma(2*wma(MA2Source, MA2Period/2)-wma(MA2Source, MA2Period), round(sqrt(MA2Period)))
+                else
+                    if MA2Type == "DEMA"
+                        e = ema(MA2Source, MA2Period)
+                        2 * e - ema(e, MA2Period)
+                    else
+                        if MA2Type == "TEMA"
+                            e = ema(MA2Source, MA2Period)
+                            3 * (e - ema(e, MA2Period)) + ema(ema(e, MA2Period), MA2Period)
+                    
+MA3 = if MA3Type == "SMA"
+    sma(MA3Source, MA3Period)
+else
+    if MA3Type == "EMA"
+        ema(MA3Source, MA3Period)
+    else
+        if MA3Type == "WMA"
+            wma(MA3Source, MA3Period)
+        else
+            if MA3Type == "RMA"
+                rma(MA3Source, MA3Period)
+            else
+                if MA3Type == "HMA"
+                    wma(2*wma(MA3Source, MA3Period/2)-wma(MA3Source, MA3Period), round(sqrt(MA3Period)))
+                else
+                    if MA3Type == "DEMA"
+                        e = ema(MA3Source, MA3Period)
+                        2 * e - ema(e, MA3Period)
+                    else
+                        if MA3Type == "TEMA"
+                            e = ema(MA3Source, MA3Period)
+                            3 * (e - ema(e, MA3Period)) + ema(ema(e, MA3Period), MA3Period)
+                    
+p1 = plot(MA1Visible ? MA1 : na, color=color.green, linewidth=1)
+p2 = plot(MA2Visible ? MA2 : na, color=color.yellow, linewidth=1)
+p3 = plot(MA3Visible ? MA3 : na, color=color.red, linewidth=2)
+fill(p1, p2, color.silver, transp=80, title="Fill")
+start = timestamp(2019, 1, 1, 1, 0)
+end = timestamp(2025, 1, 1, 1, 0)
+if time >= start and time <= end
+    longCondition = crossover(MA1, MA2) and close > MA3
+    if (longCondition)
+        strategy.entry("Long", strategy.long)
+        
+    shortCondition = crossunder(MA1, MA2) and close < MA3
+    if (shortCondition)
+        strategy.entry("Short", strategy.short)
+Expand (109 lines)

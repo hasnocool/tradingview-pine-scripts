@@ -1,0 +1,139 @@
+Script Name: Gab EMA + rsi + bb
+Author: Wicked-Pro
+Description: scrypt I made for a friend
+you are welcome bro ;)
+
+simple strategy
+BB Default
+RSI 3
+200 ema
+
+
+200 EMA gives the trend direction. 
+if RSI is over bought and candle touch BB upper band then there will be buy entry. (Price must be above 200 ema)
+
+If RSI is over sold and price touch bb lower band then there will be sell entry. (Price must be below the 200 ema)
+
+
+SL...
+PineScript code:
+
+Pine Script™ strategy
+Gab EMA + rsi + bb
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+//@version=5
+strategy("Gab EMA + rsi + bb", overlay=true)
+// Custom RSI
+RSIlength = input.int(3, minval=1 , title="lookback length of RSI")
+RSIOverBought = input.float(70, title="RSI OB")
+RSIOverSold = input(30, title="RSI OS")
+RSIprice = close
+rsi = ta.rsi(RSIprice, RSIlength)
+//ATR
+atr = ta.atr(14)
+//Bollinger Bands
+BBlength = input.int(20, minval=1,title="Bollinger Period Length")
+BBmult = input.float(2.0, minval=0.001, maxval=50, title="Bollinger Bands Standard Deviation")
+BBbasis = ta.sma(close, BBlength)
+BBdev = BBmult * ta.stdev(close, BBlength)
+BBupper = BBbasis + BBdev
+BBlower = BBbasis - BBdev
+source = close
+//EMA
+emaLength=input(200)
+ema = ta.ema(close,emaLength)
+//Set TP and SL values
+sl_shortprice = close + atr
+tp_shortprice = close - (2*atr)
+sl_longprice = close - atr
+tp_longprice = close + (2*atr)
+// Save stops & targets for the current trade
+var tp_long = 0.0
+var sl_long = 0.0
+var tp_short = 0.0
+var sl_short = 0.0
+var entry = 0.0
+//Condition for Sl and TP
+if (strategy.position_size[1] != strategy.position_size) and barstate.isconfirmed
+    entry := strategy.opentrades.entry_price(0)
+    tp_short := entry - (2*atr)
+    sl_short := entry + atr
+    tp_long := entry + (2*atr)
+    sl_long := entry - atr
+    
+//Strategy Entry and Exit
+strategy.entry("sell", strategy.short, when = close < ema and rsi < RSIOverSold and close < BBlower and barstate.isconfirmed)
+strategy.exit("closeshort", from_entry="sell", limit=tp_short, stop=sl_short, when=strategy.position_size != 0 and barstate.isconfirmed)
+strategy.entry("buy", strategy.long, when = close > ema and rsi > RSIOverBought and close > BBupper)
+strategy.exit("closelong", from_entry="buy", limit=tp_long, stop=sl_long, when=strategy.position_size != 0)
+//Plot
+upper = plot(BBupper, "Upper", color.blue)
+lower = plot(BBlower, "Lower", color.blue)
+EMA = plot(ema, "EMA", color.orange)
+plot(strategy.position_size < 0 ? tp_short : na, color=color.red, style=plot.style_linebr, title="SL Short")
+plot(strategy.position_size < 0 ? sl_short : na, color=color.green, style=plot.style_linebr, title="TP Short")
+plot(strategy.position_size > 0 ? tp_long : na, color=color.red, style=plot.style_linebr, title="SL Long")
+plot(strategy.position_size > 0 ? sl_long : na, color=color.green, style=plot.style_linebr, title="TP Long")
+Expand (62 lines)

@@ -1,0 +1,182 @@
+Script Name: MACD oscillator with EMA  strategy 4H
+Author: SoftKill21
+Description: This is a simple, yet efficient strategy, which is made from a combination of an oscillator and a moving average.
+
+Its setup for 4h candles with the current settings, however it can be adapted to other different timeframes.
+
+It works nicely ,beating the buy and hold for both BTC and ETH over the last 3 years. 
+As well with some optimizations and modifications it...
+PineScript code:
+
+Pine Script™ strategy
+MACD oscillator with EMA strategy 4H
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © SoftKill21
+//@version=4
+strategy("MACD+EMA 4H STRATEGY", overlay=true)
+//heiking ashi calculation
+UseHAcandles    = input(false, title="Use Heikin Ashi Candles in Algo Calculations")
+////
+// === /INPUTS ===
+// === BASE FUNCTIONS ===
+haClose = UseHAcandles ? security(heikinashi(syminfo.tickerid), timeframe.period, close) : close
+haOpen  = UseHAcandles ? security(heikinashi(syminfo.tickerid), timeframe.period, open) : open
+haHigh  = UseHAcandles ? security(heikinashi(syminfo.tickerid), timeframe.period, high) : high
+haLow   = UseHAcandles ? security(heikinashi(syminfo.tickerid), timeframe.period, low) : low
+//timecondition
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2020, title = "From Year", minval = 1970)
+ //monday and session 
+ 
+// To Date Inputs
+toDay = input(defval = 31, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 12, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2021, title = "To Year", minval = 1970)
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate
+//ema data  -- moving average
+len = input(9, minval=1, title="Length")
+src = input(hl2, title="Source")
+out = ema(src, len)
+//plot(out, title="EMA", color=color.blue)
+//histogram
+fast_length = input(title="Fast Length", type=input.integer, defval=12)
+slow_length = input(title="Slow Length", type=input.integer, defval=26)
+signal_length = input(title="Signal Smoothing", type=input.integer, minval = 1, maxval = 50, defval = 9)
+sma_source = input(title="Simple MA (Oscillator)", type=input.bool, defval=false)
+sma_signal = input(title="Simple MA (Signal Line)", type=input.bool, defval=false)
+// Calculating
+fast_ma = sma_source ? sma(src, fast_length) : ema(src, fast_length)
+slow_ma = sma_source ? sma(src, slow_length) : ema(src, slow_length)
+macd = fast_ma - slow_ma
+signal = sma_signal ? sma(macd, signal_length) : ema(macd, signal_length)
+hist = macd - signal
+//main variables to apply conditions are going to be out(moving avg) and hist(macd)
+long = haClose > out and haClose > haClose[1] and out > out[1] and hist> 0 and hist[1] < 0 and time_cond
+short = haClose < out and haClose < haClose[1] and out < out[1] and hist < 0 and hist[1] > 0 and time_cond
+//limit to 1 entry
+var longOpeneda = false
+var shortOpeneda = false
+var int timeOfBuya = na
+longCondition= long and not longOpeneda 
+if longCondition
+    longOpeneda := true
+    timeOfBuya := time
+longExitSignala = short
+exitLongCondition = longOpeneda[1] and longExitSignala
+if exitLongCondition
+    longOpeneda := false
+    timeOfBuya := na
+plotshape(longCondition, style=shape.labelup, location=location.belowbar, color=color.green, size=size.tiny, title="BUY", text="BUY", textcolor=color.white)
+plotshape(exitLongCondition, style=shape.labeldown, location=location.abovebar, color=color.red, size=size.tiny, title="SELL", text="SELL", textcolor=color.white)
+//automatization
+longEntry= input(true)
+shortEntry=input(false)
+if(longEntry)
+    strategy.entry("long",strategy.long,when=longCondition)
+    strategy.close("long",when=exitLongCondition)
+if(shortEntry)
+    strategy.entry("short",strategy.short,when=exitLongCondition)
+    strategy.close("short",when=longCondition)
+Expand (98 lines)

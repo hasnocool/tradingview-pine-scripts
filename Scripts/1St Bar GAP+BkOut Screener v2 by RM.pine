@@ -1,0 +1,598 @@
+Script Name: 1St Bar GAP+BkOut Screener v2 by RM
+Author: raul3429
+Description: First Bar Gap and subsequent conditions are used as one of the several  strategies for Day traders.
+This script runs on first bar and checks if the stocks has an initial Gap (up or down), then checks for next bars to be inside the boundaries of the first candle
+you can customize this screener according to your requirement.   There are a number of very clever...
+PineScript code:
+
+Pine Script™ strategy
+1St Bar GAP+BkOut Screener v2 by RM
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © raul3429 
+// 1St Bar GAP/BkOut/Screener v2 by RM Sun21Aug 
+// This is type of custom screener has a list of predefined stock - In the US MArket- that can be modified to suit. 
+// Generally in TV a maximum of 40 stocks can be used at a time. THis script uses 20 entries for stock called s01, s02 ... to s20.
+// In some cases there may be other TV automatic calls that may produce an excessive number of calls.
+//
+// This code runs on each bar and checks if the stocks has an initial Gap, then checks for next bars to be inside the boundaries of the first candle
+// you can customize this screener according to your requirement.
+// There are a number of very clever people I have taken bits of code and ideas, thanks to you all :)
+//Outline: 
+//  gap up/ gap down on 1 min first candle -> good
+//  2nd candle inside 1st candle -> good
+//  3rd to nth candle to break out from first candle range -> good /alert/ Plot flag
+//   //M code to load watchlist from txt format
+//   //s01 = input( "ADS " , type=input.string)
+//let 
+//    // replace [my directory] and [my Watchlist.txt] for the correspondign values in your computer
+//    Source = Csv.Document(File.Contents("C:\[my directory]\[my Watchlist.txt]"),[Delimiter=",", Columns=108, Encoding=1252, QuoteStyle=QuoteStyle.None]),
+//    #"Transposed Table" = Table.Transpose(Source),
+//    #"Sorted Rows" = Table.Sort(#"Transposed Table",{{"Column1", Order.Ascending}}),
+//    #"Added Index" = Table.AddIndexColumn(#"Sorted Rows", "Index", 1, 1, Int64.Type),
+//    #"Changed Type1" = Table.TransformColumnTypes(#"Added Index",{{"Index", type text}}),
+//    #"Inserted Merged Column1" = Table.AddColumn(#"Changed Type1", "Merged", each Text.Combine({"0", [Index]}), type text),
+//    #"Inserted First Characters" = Table.AddColumn(#"Inserted Merged Column1", "Two Characters", each Text.End([Merged], 2), type text),
+//    #"Removed Columns" = Table.RemoveColumns(#"Inserted First Characters",{"Index", "Merged"}),
+//    #"Inserted Merged Column" = Table.AddColumn(#"Removed Columns", "Merged", each Text.Combine({"s", [Two Characters], " = input( '", [Column1], "' , type=input.string)"}), type text)
+//in
+//    #"Inserted Merged Column"
+//    //--> once input string is created Copy&Paste in this code after // Symbols _ Use Power Query in Excel
+//
+//@version=4
+strategy("1St Bar GAP+BkOut Screener v2 by RM", shorttitle = '1Bar Gap+BkOut v2 by RM ', overlay = true)
+res         = input("", title="input timeframe for the screener" , type = input.resolution)
+high_show   = input(defval = true  , title = "Show 1st Bar High" , type = input.bool)
+low_show    = input(defval = true  , title = "Show 1st Bar Low"  , type = input.bool)
+barNumber   = input(defval = false , title = "Show Bar Numbers", type = input.bool)
+input_font  = input("Normal", "Font size", options = ["Large" ,"Normal", "Small"])
+font        = input_font == "Small"  ? size.small : input_font == "Large"  ? size.large : size.normal
+input_pos   = input("top_right", "Table Position", options = ["top_right", "middle_right", "bottom_right", "bottom_center", "bottom_left", "middle_left"])
+pos = input_pos == "top_right" ? position.top_right: input_pos == "middle_right" ? position.middle_right : input_pos == "middle_left" ? position.middle_left : input_pos == "bottom_right" ? position.bottom_right : input_pos == "bottom_center" ? position.bottom_center : position.bottom_left
+//calc_on_every_tick = true We are waiting to close the bar
+// ---------   Colors
+c_black     = #000000 // Black
+c_maroon    = #800000 // Maroon
+c_green     = #008000 // Green
+c_green90   = #00800090 //Green 90%
+c_green100  = #008000FF //Green 100%
+c_olive     = #808000 // Olive
+c_navy      = #000080 // Navy
+c_purple    = #800080 // Purple
+c_teal      = #008080 // Teal
+c_silver    = #c0c0c0 // Silver
+c_grey      = #808080 // Grey
+c_red       = #8B0000   //Red
+c_red100    = #8B0000FF//Red 100%
+c_red90     = #8B0000FF//Red 90%
+c_redLight  = #b71c1c   //Red Light
+c_lime      = #00ff00 // Lime
+c_yellow    = #ffff00 // Yellow
+c_yellowTr  = #FFFF0090  //YellowTransp
+c_blue      = #0000ff // Blue
+c_fuchsia   = #ff00ff // Fuchsia
+c_aqua      = #00ffff // Aqua
+c_white     = #ffffff // White
+c_darkcyan  = #00af87 // DarkCyan
+c_orange    = #f57f17   //Orange
+// Symbols _ Use Power Query in Excel
+s01 = input( "AAPL" , type=input.string)
+s02 = input( "BIDU" , type=input.string)
+s03 = input( "AMD " , type=input.string)
+s04 = input( "TAN  " , type=input.string)
+s05 = input( "BABA" , type=input.string)
+s06 = input( "BILL" , type=input.string)
+s07 = input( "MSFT" , type=input.string)
+s08 = input( "PFE" , type=input.string)
+s09 = input( "BHVN" , type=input.string)
+s10 = input( "T   " , type=input.string)
+s11 = input( "NVAX" , type=input.string)
+s12 = input( "NVDA" , type=input.string)
+s13 = input( "FB  " , type=input.string)
+s14 = input( "PTON" , type=input.string)
+s15 = input( "RIOT" , type=input.string)
+s16 = input( "QCOM" , type=input.string)
+s17 = input( "ROKU" , type=input.string)
+s18 = input( "FUBO" , type=input.string)
+s19 = input( "WISH" , type=input.string)
+s20 = input( "WKHS" , type=input.string)
+// FUNCTIONS //
+is_newday(sess) =>
+    d = time("W", sess)
+    change(d) != 0 ? true : na
+    
+is_newbar(res) =>
+    t = time(res)
+    change(t) != 0 ? true : na
+    
+adopt(r, s) => security(syminfo.tickerid, r, s)
+f_get_h(back, res) => O = security(symbol = syminfo.tickerid, 
+     resolution = res, 
+     expression = high[back], gaps = barmerge.gaps_off, lookahead = barmerge.lookahead_on)
+f_get_l(back, res) => O = security(symbol = syminfo.tickerid, 
+     resolution = res, 
+     expression = low[back], gaps = barmerge.gaps_off, lookahead = barmerge.lookahead_on)
+// 1st Bar Limits Function
+gapScreenerFunc() => 
+    high_rangeL = valuewhen(is_newbar('D'),high,0) 
+    low_rangeL = valuewhen(is_newbar('D'),low,0) 
+    upGap = low >  high[1] 
+    downGap = high < low[1] 
+    gap = upGap or downGap
+    breakUp = close > high_rangeL
+    breakDN = close < low_rangeL
+    insideBand = high < high_rangeL and low > low_rangeL
+    
+    [insideBand, gap, upGap, downGap, breakUp, breakDN]
+outcomeIs(upGap, downGap, insideBand) =>
+    result = upGap ? "upGap" : downGap ? "downGap" : insideBand ? "insideB" : na
+    [result]
+// first bar 
+bar_date_ts = timestamp(year(time),month(time),dayofmonth(time),0,0,0)
+is_new_date = change(bar_date_ts)   
+high_1st = valuewhen(is_newbar('D'),high,0) 
+low_1st = valuewhen(is_newbar('D'),low,0) 
+RoundCounter = 0
+up1 = plot(high_show ? adopt(res, high_1st): na, color = c_teal, linewidth=1) 
+down1 = plot(low_show ? adopt(res, low_1st): na, color = c_teal,  linewidth=1) 
+trans1 = high_show or low_show ?  95 : 100
+fill(up1, down1, color.new (c_white, transp=trans1))  
+// bar counter
+is_new_day() => 
+    d=dayofweek
+    na(d[1]) or d != d[1]
+vLine(BarIndex, Color, LineStyle) =>
+    Line = line.new(x1= BarIndex, y1= low - tr * 5, x2= BarIndex, y2= high + tr * 5, xloc= xloc.bar_index, color=Color, style= LineStyle)
+    
+if (is_new_date)
+    fisrtDayline = vLine(bar_index,color.new(c_white,95) , line.style_dashed)
+// Running gapScreenerFunc for all sybmols get InsideBands, Gaps and BreakOuts
+    
+[insB01, Gap01, upG_01, dnG_01, c_Up01, c_Dn01] = security(s01, res,gapScreenerFunc())
+[insB02, Gap02, upG_02, dnG_02, c_Up02, c_Dn02] = security(s02, res,gapScreenerFunc())
+[insB03, Gap03, upG_03, dnG_03, c_Up03, c_Dn03] = security(s03, res,gapScreenerFunc())
+[insB04, Gap04, upG_04, dnG_04, c_Up04, c_Dn04] = security(s04, res,gapScreenerFunc())
+[insB05, Gap05, upG_05, dnG_05, c_Up05, c_Dn05] = security(s05, res,gapScreenerFunc())
+[insB06, Gap06, upG_06, dnG_06, c_Up06, c_Dn06] = security(s06, res,gapScreenerFunc())
+[insB07, Gap07, upG_07, dnG_07, c_Up07, c_Dn07] = security(s07, res,gapScreenerFunc())
+[insB08, Gap08, upG_08, dnG_08, c_Up08, c_Dn08] = security(s08, res,gapScreenerFunc())
+[insB09, Gap09, upG_09, dnG_09, c_Up09, c_Dn09] = security(s09, res,gapScreenerFunc())
+[insB10, Gap10, upG_10, dnG_10, c_Up10, c_Dn10] = security(s10, res,gapScreenerFunc())
+[insB11, Gap11, upG_11, dnG_11, c_Up11, c_Dn11] = security(s11, res,gapScreenerFunc())
+[insB12, Gap12, upG_12, dnG_12, c_Up12, c_Dn12] = security(s12, res,gapScreenerFunc())
+[insB13, Gap13, upG_13, dnG_13, c_Up13, c_Dn13] = security(s13, res,gapScreenerFunc())
+[insB14, Gap14, upG_14, dnG_14, c_Up14, c_Dn14] = security(s14, res,gapScreenerFunc())
+[insB15, Gap15, upG_15, dnG_15, c_Up15, c_Dn15] = security(s15, res,gapScreenerFunc())
+[insB16, Gap16, upG_16, dnG_16, c_Up16, c_Dn16] = security(s16, res,gapScreenerFunc())
+[insB17, Gap17, upG_17, dnG_17, c_Up17, c_Dn17] = security(s17, res,gapScreenerFunc())
+[insB18, Gap18, upG_18, dnG_18, c_Up18, c_Dn18] = security(s18, res,gapScreenerFunc())
+[insB19, Gap19, upG_19, dnG_19, c_Up19, c_Dn19] = security(s19, res,gapScreenerFunc())
+[insB20, Gap20, upG_20, dnG_20, c_Up20, c_Dn20] = security(s20, res,gapScreenerFunc())
+    
+var UpTabl = table.new(position = pos, columns = 1, rows = 4, bgcolor = c_black, border_width = 2, frame_color= c_yellowTr, frame_width = 2)
+table.cell_set_text_size(UpTabl, column = 0, row = 0, text_size= font)
+// Running gapScreenerFunc for first Candle: check for gaps only
+if (is_new_date)
+// Screener label //  ↑ → ↓ 
+    var s_1 = ""
+    RoundCounter := 1
+    s_1 := ' Opening(' + tostring(timeframe.period) + ') Gap: \n'
+    s_1 := upG_01 ? s_1 +s01 +' =Gap UP  ↑ \n' : dnG_01 ? s_1 +s01 +' =Gap Down  ↓ \n': s_1
+    s_1 := upG_02 ? s_1 +s02 +' =Gap UP  ↑ \n' : dnG_02 ? s_1 +s02 +' =Gap Down  ↓ \n': s_1
+    s_1 := upG_03 ? s_1 +s03 +' =Gap UP  ↑ \n' : dnG_03 ? s_1 +s03 +' =Gap Down  ↓ \n': s_1
+    s_1 := upG_04 ? s_1 +s04 +' =Gap UP  ↑ \n' : dnG_04 ? s_1 +s04 +' =Gap Down  ↓ \n': s_1
+    s_1 := upG_05 ? s_1 +s05 +' =Gap UP  ↑ \n' : dnG_05 ? s_1 +s05 +' =Gap Down  ↓ \n': s_1
+    s_1 := upG_06 ? s_1 +s06 +' =Gap UP  ↑ \n' : dnG_06 ? s_1 +s06 +' =Gap Down  ↓ \n': s_1
+    s_1 := upG_07 ? s_1 +s07 +' =Gap UP  ↑ \n' : dnG_07 ? s_1 +s07 +' =Gap Down  ↓ \n': s_1
+    s_1 := upG_08 ? s_1 +s08 +' =Gap UP  ↑ \n' : dnG_08 ? s_1 +s08 +' =Gap Down  ↓ \n': s_1
+    s_1 := upG_09 ? s_1 +s09 +' =Gap UP  ↑ \n' : dnG_09 ? s_1 +s09 +' =Gap Down  ↓ \n': s_1
+    s_1 := upG_10 ? s_1 +s10 +' =Gap UP  ↑ \n' : dnG_10 ? s_1 +s10 +' =Gap Down  ↓ \n': s_1
+    s_1 := upG_11 ? s_1 +s11 +' =Gap UP  ↑ \n' : dnG_11 ? s_1 +s11 +' =Gap Down  ↓ \n': s_1
+    s_1 := upG_12 ? s_1 +s12 +' =Gap UP  ↑ \n' : dnG_12 ? s_1 +s12 +' =Gap Down  ↓ \n': s_1
+    s_1 := upG_13 ? s_1 +s13 +' =Gap UP  ↑ \n' : dnG_13 ? s_1 +s13 +' =Gap Down  ↓ \n': s_1
+    s_1 := upG_14 ? s_1 +s14 +' =Gap UP  ↑ \n' : dnG_14 ? s_1 +s14 +' =Gap Down  ↓ \n': s_1
+    s_1 := upG_15 ? s_1 +s15 +' =Gap UP  ↑ \n' : dnG_15 ? s_1 +s15 +' =Gap Down  ↓ \n': s_1
+    s_1 := upG_16 ? s_1 +s16 +' =Gap UP  ↑ \n' : dnG_16 ? s_1 +s16 +' =Gap Down  ↓ \n': s_1
+    s_1 := upG_17 ? s_1 +s17 +' =Gap UP  ↑ \n' : dnG_17 ? s_1 +s17 +' =Gap Down  ↓ \n': s_1
+    s_1 := upG_18 ? s_1 +s18 +' =Gap UP  ↑ \n' : dnG_18 ? s_1 +s18 +' =Gap Down  ↓ \n': s_1
+    s_1 := upG_19 ? s_1 +s19 +' =Gap UP  ↑ \n' : dnG_19 ? s_1 +s19 +' =Gap Down  ↓ \n': s_1
+    s_1 := upG_20 ? s_1 +s20 +' =Gap UP  ↑ \n' : dnG_20 ? s_1 +s20 +' =Gap Down  ↓ \n': s_1
+    table.cell(table_id = UpTabl, column = 0, row = 0, text_color = c_white, text = s_1)
+    table.cell_set_text_size(UpTabl, column = 0, row = 0, text_size = font)
+plotchar(barNumber and (barssince(is_new_day())+1)==1,char=' ',text="1",color=color.white,location=location.belowbar,editable=false)  
+  
+// Second Candle: check for gaps in first candle and Inside Bands 
+if (barssince(is_new_day())+1)==2
+    var s_2 = ""
+    RoundCounter := RoundCounter + 1
+    s_2 := 'Second Candle: \n'
+    s_2 := Gap01[1] and insB01 ? s_2 +s01 +' =InsB \n' : s_2
+    s_2 := Gap02[1] and insB02 ? s_2 +s02 +' =InsB \n' : s_2
+    s_2 := Gap03[1] and insB03 ? s_2 +s03 +' =InsB \n' : s_2
+    s_2 := Gap04[1] and insB04 ? s_2 +s04 +' =InsB \n' : s_2
+    s_2 := Gap05[1] and insB05 ? s_2 +s05 +' =InsB \n' : s_2
+    s_2 := Gap06[1] and insB06 ? s_2 +s06 +' =InsB \n' : s_2
+    s_2 := Gap07[1] and insB07 ? s_2 +s07 +' =InsB \n' : s_2
+    s_2 := Gap08[1] and insB08 ? s_2 +s08 +' =InsB \n' : s_2
+    s_2 := Gap09[1] and insB09 ? s_2 +s09 +' =InsB \n' : s_2
+    s_2 := Gap10[1] and insB10 ? s_2 +s10 +' =InsB \n' : s_2
+    s_2 := Gap11[1] and insB11 ? s_2 +s11 +' =InsB \n' : s_2
+    s_2 := Gap12[1] and insB12 ? s_2 +s12 +' =InsB \n' : s_2
+    s_2 := Gap13[1] and insB13 ? s_2 +s13 +' =InsB \n' : s_2
+    s_2 := Gap14[1] and insB14 ? s_2 +s14 +' =InsB \n' : s_2
+    s_2 := Gap15[1] and insB15 ? s_2 +s15 +' =InsB \n' : s_2
+    s_2 := Gap16[1] and insB16 ? s_2 +s16 +' =InsB \n' : s_2
+    s_2 := Gap17[1] and insB17 ? s_2 +s17 +' =InsB \n' : s_2
+    s_2 := Gap18[1] and insB18 ? s_2 +s18 +' =InsB \n' : s_2
+    s_2 := Gap19[1] and insB19 ? s_2 +s19 +' =InsB \n' : s_2
+    s_2 := Gap20[1] and insB20 ? s_2 +s20 +' =InsB \n' : s_2
+    table.cell(table_id = UpTabl, column = 0, row = 1, text_color = c_white, text = s_2)
+    table.cell_set_text_size(UpTabl, column = 0, row = 1, text_size= font)
+plotchar(barNumber and (barssince(is_new_day())+1)==2,char=' ',text="2",color=color.white,location=location.belowbar,editable=false)
+// Third Candle: check for gaps in first candle and Inside Bands in previous, then for inside or break outs
+if (barssince(is_new_day())+1)==3
+    var s_3 = ""
+    RoundCounter :=  RoundCounter + 1
+    s_3 := 'Third Candle: \n'
+    s_3 := Gap01[2] and insB01[1] and insB01 ? s_3 +s01 +' =InsB \n' : Gap01[2] and insB01[1] and c_Up01 ? s_3 +s01 +' =BrkUp \n' : Gap01[2] and insB01[1] and c_Dn01 ? s_3 +s01 +' =BrkDn \n': s_3
+    s_3 := Gap02[2] and insB02[1] and insB02 ? s_3 +s02 +' =InsB \n' : Gap02[2] and insB02[1] and c_Up02 ? s_3 +s02 +' =BrkUp \n' : Gap02[2] and insB02[1] and c_Dn02 ? s_3 +s02 +' =BrkDn \n': s_3
+    s_3 := Gap03[2] and insB03[1] and insB03 ? s_3 +s03 +' =InsB \n' : Gap03[2] and insB03[1] and c_Up03 ? s_3 +s03 +' =BrkUp \n' : Gap03[2] and insB03[1] and c_Dn03 ? s_3 +s03 +' =BrkDn \n': s_3
+    s_3 := Gap04[2] and insB04[1] and insB04 ? s_3 +s04 +' =InsB \n' : Gap04[2] and insB04[1] and c_Up04 ? s_3 +s04 +' =BrkUp \n' : Gap04[2] and insB04[1] and c_Dn04 ? s_3 +s04 +' =BrkDn \n': s_3
+    s_3 := Gap05[2] and insB05[1] and insB05 ? s_3 +s05 +' =InsB \n' : Gap05[2] and insB05[1] and c_Up05 ? s_3 +s05 +' =BrkUp \n' : Gap05[2] and insB05[1] and c_Dn05 ? s_3 +s05 +' =BrkDn \n': s_3
+    s_3 := Gap06[2] and insB06[1] and insB06 ? s_3 +s06 +' =InsB \n' : Gap06[2] and insB06[1] and c_Up06 ? s_3 +s06 +' =BrkUp \n' : Gap06[2] and insB06[1] and c_Dn06 ? s_3 +s06 +' =BrkDn \n': s_3
+    s_3 := Gap07[2] and insB07[1] and insB07 ? s_3 +s07 +' =InsB \n' : Gap07[2] and insB07[1] and c_Up07 ? s_3 +s07 +' =BrkUp \n' : Gap07[2] and insB07[1] and c_Dn07 ? s_3 +s07 +' =BrkDn \n': s_3
+    s_3 := Gap08[2] and insB08[1] and insB08 ? s_3 +s08 +' =InsB \n' : Gap08[2] and insB08[1] and c_Up08 ? s_3 +s08 +' =BrkUp \n' : Gap08[2] and insB08[1] and c_Dn08 ? s_3 +s08 +' =BrkDn \n': s_3
+    s_3 := Gap09[2] and insB09[1] and insB09 ? s_3 +s09 +' =InsB \n' : Gap09[2] and insB09[1] and c_Up09 ? s_3 +s09 +' =BrkUp \n' : Gap09[2] and insB09[1] and c_Dn09 ? s_3 +s09 +' =BrkDn \n': s_3
+    s_3 := Gap10[2] and insB10[1] and insB10 ? s_3 +s10 +' =InsB \n' : Gap10[2] and insB10[1] and c_Up10 ? s_3 +s10 +' =BrkUp \n' : Gap10[2] and insB10[1] and c_Dn10 ? s_3 +s10 +' =BrkDn \n': s_3
+    s_3 := Gap11[2] and insB11[1] and insB11 ? s_3 +s11 +' =InsB \n' : Gap11[2] and insB11[1] and c_Up11 ? s_3 +s11 +' =BrkUp \n' : Gap11[2] and insB11[1] and c_Dn11 ? s_3 +s11 +' =BrkDn \n': s_3
+    s_3 := Gap12[2] and insB12[1] and insB12 ? s_3 +s12 +' =InsB \n' : Gap12[2] and insB12[1] and c_Up12 ? s_3 +s12 +' =BrkUp \n' : Gap12[2] and insB12[1] and c_Dn12 ? s_3 +s12 +' =BrkDn \n': s_3
+    s_3 := Gap13[2] and insB13[1] and insB13 ? s_3 +s13 +' =InsB \n' : Gap13[2] and insB13[1] and c_Up13 ? s_3 +s13 +' =BrkUp \n' : Gap13[2] and insB13[1] and c_Dn13 ? s_3 +s13 +' =BrkDn \n': s_3
+    s_3 := Gap14[2] and insB14[1] and insB14 ? s_3 +s14 +' =InsB \n' : Gap14[2] and insB14[1] and c_Up14 ? s_3 +s14 +' =BrkUp \n' : Gap14[2] and insB14[1] and c_Dn14 ? s_3 +s14 +' =BrkDn \n': s_3
+    s_3 := Gap15[2] and insB15[1] and insB15 ? s_3 +s15 +' =InsB \n' : Gap15[2] and insB15[1] and c_Up15 ? s_3 +s15 +' =BrkUp \n' : Gap15[2] and insB15[1] and c_Dn15 ? s_3 +s15 +' =BrkDn \n': s_3
+    s_3 := Gap16[2] and insB16[1] and insB16 ? s_3 +s16 +' =InsB \n' : Gap16[2] and insB16[1] and c_Up16 ? s_3 +s16 +' =BrkUp \n' : Gap16[2] and insB16[1] and c_Dn16 ? s_3 +s16 +' =BrkDn \n': s_3
+    s_3 := Gap17[2] and insB17[1] and insB17 ? s_3 +s17 +' =InsB \n' : Gap17[2] and insB17[1] and c_Up17 ? s_3 +s17 +' =BrkUp \n' : Gap17[2] and insB17[1] and c_Dn17 ? s_3 +s17 +' =BrkDn \n': s_3
+    s_3 := Gap18[2] and insB18[1] and insB18 ? s_3 +s18 +' =InsB \n' : Gap18[2] and insB18[1] and c_Up18 ? s_3 +s18 +' =BrkUp \n' : Gap18[2] and insB18[1] and c_Dn18 ? s_3 +s18 +' =BrkDn \n': s_3
+    s_3 := Gap19[2] and insB19[1] and insB19 ? s_3 +s19 +' =InsB \n' : Gap19[2] and insB19[1] and c_Up19 ? s_3 +s19 +' =BrkUp \n' : Gap19[2] and insB19[1] and c_Dn19 ? s_3 +s19 +' =BrkDn \n': s_3
+    s_3 := Gap20[2] and insB20[1] and insB20 ? s_3 +s20 +' =InsB \n' : Gap20[2] and insB20[1] and c_Up20 ? s_3 +s20 +' =BrkUp \n' : Gap20[2] and insB20[1] and c_Dn20 ? s_3 +s20 +' =BrkDn \n': s_3
+    table.cell(table_id = UpTabl, column = 0, row = 2, text_color = c_white, text = s_3)
+    table.cell_set_text_size(UpTabl, column = 0, row = 2, text_size= font)
+plotchar(barNumber and (barssince(is_new_day())+1)==3,char=' ',text="3",color=color.white,location=location.belowbar,editable=false)
+if (barssince(is_new_day())+1)==4
+    var s_4 = ""
+    RoundCounter :=  RoundCounter + 1
+    s_4 := 'Fourth Candle: \n'
+    s_4 := Gap01[3] and insB01[2] and insB01[1] and insB01 ? s_4 +s01 +' =InsB \n' : Gap01[3] and insB01[2] and insB01[1] and c_Up01 ? s_4 +s01 +' =BrkUp \n' : Gap01[3] and insB01[2] and insB01[1] and c_Dn01 ? s_4 +s01 +' =BrkDn \n': s_4
+    s_4 := Gap02[3] and insB02[2] and insB02[1] and insB02 ? s_4 +s02 +' =InsB \n' : Gap02[3] and insB02[2] and insB02[1] and c_Up02 ? s_4 +s02 +' =BrkUp \n' : Gap02[3] and insB02[2] and insB02[1] and c_Dn02 ? s_4 +s02 +' =BrkDn \n': s_4
+    s_4 := Gap03[3] and insB03[2] and insB03[1] and insB03 ? s_4 +s03 +' =InsB \n' : Gap03[3] and insB03[2] and insB03[1] and c_Up03 ? s_4 +s03 +' =BrkUp \n' : Gap03[3] and insB03[2] and insB03[1] and c_Up03 ? s_4 +s03 +' =BrkUp \n': s_4
+    s_4 := Gap04[3] and insB04[2] and insB04[1] and insB04 ? s_4 +s04 +' =InsB \n' : Gap04[3] and insB04[2] and insB04[1] and c_Up04 ? s_4 +s04 +' =BrkUp \n' : Gap04[3] and insB04[2] and insB04[1] and c_Up04 ? s_4 +s04 +' =BrkUp \n': s_4
+    s_4 := Gap05[3] and insB05[2] and insB05[1] and insB05 ? s_4 +s05 +' =InsB \n' : Gap05[3] and insB05[2] and insB05[1] and c_Up05 ? s_4 +s05 +' =BrkUp \n' : Gap05[3] and insB05[2] and insB05[1] and c_Up05 ? s_4 +s05 +' =BrkUp \n': s_4
+    s_4 := Gap06[3] and insB06[2] and insB06[1] and insB06 ? s_4 +s06 +' =InsB \n' : Gap06[3] and insB06[2] and insB06[1] and c_Up06 ? s_4 +s06 +' =BrkUp \n' : Gap06[3] and insB06[2] and insB06[1] and c_Up06 ? s_4 +s06 +' =BrkUp \n': s_4
+    s_4 := Gap07[3] and insB07[2] and insB07[1] and insB07 ? s_4 +s07 +' =InsB \n' : Gap07[3] and insB07[2] and insB07[1] and c_Up07 ? s_4 +s07 +' =BrkUp \n' : Gap07[3] and insB07[2] and insB07[1] and c_Up07 ? s_4 +s07 +' =BrkUp \n': s_4
+    s_4 := Gap08[3] and insB08[2] and insB08[1] and insB08 ? s_4 +s08 +' =InsB \n' : Gap08[3] and insB08[2] and insB08[1] and c_Up08 ? s_4 +s08 +' =BrkUp \n' : Gap08[3] and insB08[2] and insB08[1] and c_Up08 ? s_4 +s08 +' =BrkUp \n': s_4
+    s_4 := Gap09[3] and insB09[2] and insB09[1] and insB09 ? s_4 +s09 +' =InsB \n' : Gap09[3] and insB09[2] and insB09[1] and c_Up09 ? s_4 +s09 +' =BrkUp \n' : Gap09[3] and insB09[2] and insB09[1] and c_Up09 ? s_4 +s09 +' =BrkUp \n': s_4
+    s_4 := Gap10[3] and insB10[2] and insB10[1] and insB10 ? s_4 +s10 +' =InsB \n' : Gap10[3] and insB10[2] and insB10[1] and c_Up10 ? s_4 +s10 +' =BrkUp \n' : Gap10[3] and insB10[2] and insB10[1] and c_Up10 ? s_4 +s10 +' =BrkUp \n': s_4
+    s_4 := Gap11[3] and insB11[2] and insB11[1] and insB11 ? s_4 +s11 +' =InsB \n' : Gap11[3] and insB11[2] and insB11[1] and c_Up11 ? s_4 +s11 +' =BrkUp \n' : Gap11[3] and insB11[2] and insB11[1] and c_Up11 ? s_4 +s11 +' =BrkUp \n': s_4
+    s_4 := Gap12[3] and insB12[2] and insB12[1] and insB12 ? s_4 +s12 +' =InsB \n' : Gap12[3] and insB12[2] and insB12[1] and c_Up12 ? s_4 +s12 +' =BrkUp \n' : Gap12[3] and insB12[2] and insB12[1] and c_Up12 ? s_4 +s12 +' =BrkUp \n': s_4
+    s_4 := Gap13[3] and insB13[2] and insB13[1] and insB13 ? s_4 +s13 +' =InsB \n' : Gap13[3] and insB13[2] and insB13[1] and c_Up13 ? s_4 +s13 +' =BrkUp \n' : Gap13[3] and insB13[2] and insB13[1] and c_Up13 ? s_4 +s13 +' =BrkUp \n': s_4
+    s_4 := Gap14[3] and insB14[2] and insB14[1] and insB14 ? s_4 +s14 +' =InsB \n' : Gap14[3] and insB14[2] and insB14[1] and c_Up14 ? s_4 +s14 +' =BrkUp \n' : Gap14[3] and insB14[2] and insB14[1] and c_Up14 ? s_4 +s14 +' =BrkUp \n': s_4
+    s_4 := Gap15[3] and insB15[2] and insB15[1] and insB15 ? s_4 +s15 +' =InsB \n' : Gap15[3] and insB15[2] and insB15[1] and c_Up15 ? s_4 +s15 +' =BrkUp \n' : Gap15[3] and insB15[2] and insB15[1] and c_Up15 ? s_4 +s15 +' =BrkUp \n': s_4
+    s_4 := Gap16[3] and insB16[2] and insB16[1] and insB16 ? s_4 +s16 +' =InsB \n' : Gap16[3] and insB16[2] and insB16[1] and c_Up16 ? s_4 +s16 +' =BrkUp \n' : Gap16[3] and insB16[2] and insB16[1] and c_Up16 ? s_4 +s16 +' =BrkUp \n': s_4
+    s_4 := Gap17[3] and insB17[2] and insB17[1] and insB17 ? s_4 +s17 +' =InsB \n' : Gap17[3] and insB17[2] and insB17[1] and c_Up17 ? s_4 +s17 +' =BrkUp \n' : Gap17[3] and insB17[2] and insB17[1] and c_Up17 ? s_4 +s17 +' =BrkUp \n': s_4
+    s_4 := Gap18[3] and insB18[2] and insB18[1] and insB18 ? s_4 +s18 +' =InsB \n' : Gap18[3] and insB18[2] and insB18[1] and c_Up18 ? s_4 +s18 +' =BrkUp \n' : Gap18[3] and insB18[2] and insB18[1] and c_Up18 ? s_4 +s18 +' =BrkUp \n': s_4
+    s_4 := Gap19[3] and insB19[2] and insB19[1] and insB19 ? s_4 +s19 +' =InsB \n' : Gap19[3] and insB19[2] and insB19[1] and c_Up19 ? s_4 +s19 +' =BrkUp \n' : Gap19[3] and insB19[2] and insB19[1] and c_Up19 ? s_4 +s19 +' =BrkUp \n': s_4
+    s_4 := Gap20[3] and insB20[2] and insB20[1] and insB20 ? s_4 +s20 +' =InsB \n' : Gap20[3] and insB20[2] and insB20[1] and c_Up20 ? s_4 +s20 +' =BrkUp \n' : Gap20[3] and insB20[2] and insB20[1] and c_Up20 ? s_4 +s20 +' =BrkUp \n': s_4
+    table.cell(table_id = UpTabl, column = 0, row = 3, text_color = c_white, text = s_4)
+    table.cell_set_text_size(UpTabl, column = 0, row = 3, text_size= font)
+plotchar(barNumber and (barssince(is_new_day())+1)==4,char=' ',text="4",color=color.white,location=location.belowbar,editable=false)
+//plotchar(barNumber and (barssince(is_new_day())+1)==5,char=' ',text="5",color=color.white,location=location.belowbar,editable=false)
+//plotchar(barNumber and (barssince(is_new_day())+1)==6,char=' ',text="6",color=color.white,location=location.belowbar,editable=false)
+//plotchar(barNumber and (barssince(is_new_day())+1)==7,char=' ',text="7",color=color.white,location=location.belowbar,editable=false)
+//plotchar(barNumber and (barssince(is_new_day())+1)==8,char=' ',text="8",color=color.white,location=location.belowbar,editable=false)
+Expand (307 lines)

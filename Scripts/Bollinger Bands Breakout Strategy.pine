@@ -1,0 +1,196 @@
+Script Name: Bollinger Bands Breakout Strategy
+Author: TradeChartist
+Description: Bollinger Bands Breakout Strategy  is the strategy version of  Bollinger Bands Filter  study version, which can be found under my scripts page. The strategy goes long when price closes above the upper band and goes short signal when price closes below the lower band.
+
+Bollinger Bands is a classic indicator that uses a simple moving average of 20 periods, along...
+PineScript code:
+
+Pine Script™ strategy
+Bollinger Bands Breakout Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+//@version=4
+//┌───── •••• ─────┐//
+//   TradeChartist  //
+//└───── •••• ─────┘//
+//Bollinger Bands is a classic indicator that uses a simple moving average of 20 periods along with upper and lower bands that are 2 standard deviations away from the basis line. 
+//These bands help visualize price volatility and trend based on where the price is in relation to the bands.
+//This Bollinger Bands filter plots a long signal when price closes above the upper band and plots a short signal when price closes below the lower band. 
+//It doesn't take into account any other parameters such as Volume/RSI/fundamentals etc, so user must use discretion based on confirmations from another indicator or based on fundamentals.
+//This filter's default is 55 SMA and 1 standard deviation, but can be changed based on asset type
+//It is definitely worth reading the 22 rules of Bollinger Bands written by John Bollinger. 
+strategy(shorttitle="BB Breakout Strategy", title="Bollinger Bands Filter", overlay=true, 
+             pyramiding=1, currency=currency.NONE , 
+             initial_capital = 100000, default_qty_type = strategy.percent_of_equity, 
+             default_qty_value=100)
+src         = input(close, title = "Source")
+length      = input(55, minval=1, title = "SMA length")// 20 for classis Bollinger Bands SMA line (basis)
+mult        = input(1., minval=0.236, maxval=2, title="Standard Deviation")//2 for Classic Bollinger Bands //Maxval = 2 as higher the deviation, higher the risk
+basis       = sma(src, length)
+dev         = mult * stdev(src,length)
+Show        = input("Both", options = ["Longs Only", "Shorts Only", "Both"], title = "Trade Type")
+CC          = input(true, "Color Bars")
+upper       = basis + dev
+lower       = basis - dev
+//Conditions for Long and Short - Extra filter condition can be used such as RSI or CCI etc.
+short       = src<lower// and rsi(close,14)<40
+long        = src>upper// and rsi(close,14)>60
+L1          = barssince(long)
+S1          = barssince(short)
+longSignal  = L1<S1 and not (L1<S1)[1]
+shortSignal = S1<L1 and not (S1<L1)[1]
+//Plots and Fills
+////Long/Short shapes with text
+// plotshape(S1<L1 and not (S1<L1)[1]?close:na, text = "sᴇʟʟ", textcolor=#ff0100, color=#ff0100, style=shape.triangledown, size=size.small, location=location.abovebar, transp=0, title = "SELL", editable = true)
+// plotshape(L1<S1 and not (L1<S1)[1]?close:na, text = "ʙᴜʏ", textcolor = #008000, color=#008000, style=shape.triangleup, size=size.small, location=location.belowbar, transp=0, title = "BUY", editable = true)  
+// plotshape(shortSignal?close:na, color=#ff0100, style=shape.triangledown, size=size.small, location=location.abovebar, transp=0, title = "Short Signal", editable = true)
+// plotshape(longSignal?close:na, color=#008000, style=shape.triangleup, size=size.small, location=location.belowbar, transp=0, title = "Long Signal", editable = true)  
+p1          = plot(upper, color=#ff0000, display=display.all, transp=75, title = "Upper Band")
+p2          = plot(lower, color=#008000, display=display.all, transp=75, title = "Lower Band")
+p           = plot(basis, color=L1<S1?#008000:S1<L1?#ff0000:na, linewidth=2, editable=false, title="Basis")
+fill(p,p1, color=color.teal, transp=85, title = "Top Fill") //fill for basis-upper
+fill(p,p2, color=color.orange, transp=85, title = "Bottom Fill")//fill for basis-lower
+//Barcolor
+bcol        = src>upper?color.new(#8ceb07,0): 
+             src<lower?color.new(#ff0000,0):
+             src>basis?color.green:
+             src<basis?color.red:na
+barcolor(CC?bcol:na, editable=false, title = "Color Bars")
+// //Alerts ----  // Use 'Once per bar close'
+// alertcondition(condition=longSignal, title="Long - BB Filter", message='BB Filter Long @ {{close}}') // Use 'Once per bar close'
+// alertcondition(condition=shortSignal, title="Short - BB Filter", message='BB Filter Short @ {{close}}')  // Use 'Once per bar close'
+Notestart1 = input(true, "╔═══ Time Range to BackTest ═══╗") 
+// === INPUT BACKTEST RANGE ===
+FromMonth = input(defval=1, title="From Month", minval=1, maxval=12)
+FromDay = input(defval=1, title="From Day", minval=1, maxval=31)
+FromYear = input(defval=2018, title="From Year", minval=2015)
+ToMonth = input(defval=1, title="To Month", minval=1, maxval=12)
+ToDay = input(defval=1, title="To Day", minval=1, maxval=31)
+ToYear = input(defval=9999, title="To Year", minval=2010)
+// === FUNCTION EXAMPLE === 
+start = timestamp(FromYear, FromMonth, FromDay, 00, 00)  // backtest start window
+finish = timestamp(ToYear, ToMonth, ToDay, 23, 59)  // backtest finish window
+window() => 
+    time >= start and time <= finish ? true : false 
+if(window() and (Show == "Longs Only" or Show == "Both"))
+    strategy.entry("Long", long=true, when =  longSignal)
+    strategy.close("Long", when = shortSignal, comment = "Close Long")
+if(window() and (Show == "Shorts Only" or Show == "Both"))
+    strategy.entry("Short", long=false, when = shortSignal)
+    strategy.close("Short", when = longSignal, comment = "Close Short")
+Expand (116 lines)

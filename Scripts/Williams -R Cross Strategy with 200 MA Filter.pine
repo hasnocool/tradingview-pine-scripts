@@ -1,0 +1,80 @@
+Script Name: Williams -R Cross Strategy with 200 MA Filter
+Author: peterb1234
+Description: 1. The script is a trading strategy based on the Williams %R indicator and a 200-period moving average (MA) filter.
+
+2. The user can input the length of the Williams %R indicator (`wrLength`), the threshold for %R crossing (`crossPips`), the take profit level in pips (`takeProfitPips`), and the stop loss level in pips (`stopLossPips`).
+
+3. The script calculates...
+PineScript code:
+
+Pine Script™ strategy
+Williams %R Cross Strategy with 200 MA Filter
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+//@version=5
+strategy("Williams %R Cross Strategy with MA Filter", overlay=true)
+// User Inputs
+wrLength = input(14, title="Williams %R Length")
+crossPips = input(10, title="Cross Threshold (Pips)")
+takeProfitPips = input(30, title="Take Profit (Pips)")
+stopLossPips = input(20, title="Stop Loss (Pips)")
+// Calculate Williams %R
+wrHigh = ta.highest(high, wrLength)
+wrLow = ta.lowest(low, wrLength)
+wr = (wrHigh - close) / (wrHigh - wrLow) * -100
+// Calculate 200-period Simple Moving Average
+ma200 = ta.sma(close, 200)
+// Entry Conditions
+enterLong = ta.crossover(wr, -50 - crossPips) and close > ma200
+enterShort = ta.crossunder(wr, -50 + crossPips) and close < ma200
+// Exit Conditions
+exitLong = close >= (strategy.position_avg_price + (takeProfitPips / syminfo.mintick)) or close <= (strategy.position_avg_price - (stopLossPips / syminfo.mintick))
+exitShort = close <= (strategy.position_avg_price - (takeProfitPips / syminfo.mintick)) or close >= (strategy.position_avg_price + (stopLossPips / syminfo.mintick))
+// Order Management
+if enterLong
+    strategy.entry("Long", strategy.long)
+    
+if enterShort
+    strategy.entry("Short", strategy.short)
+if exitLong
+    strategy.close("Long")
+if exitShort
+    strategy.close("Short")
+Expand (38 lines)

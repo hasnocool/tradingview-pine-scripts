@@ -1,0 +1,304 @@
+Script Name: J2S Backtest- Steven Primo`s Big Trend Strategy
+Author: julianossilva
+Description: Is it possible to benefit from big trend moves?  In this study I present you a strategy that aims to capture big trend moves.
+
+Created by trader Steven Primo, The Big Trend strategy is advocates and shared through his YouTube channel without restrictions.
+
+ Note: 
+This is not an investment recommendation. The purpose of this study is only to share knowledge with...
+PineScript code:
+
+Pine Script™ strategy
+J2S Backtest: Steven Primo`s Big Trend Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © julianossilva
+//@version=5
+strategy(title="J2S Backtest: Steven Primo`s Big Trend Strategy", shorttitle="J2S Backtest: Steven Primo`s Big Trend Strategy", overlay=true, initial_capital=1000, default_qty_value=10, default_qty_type=strategy.percent_of_equity, pyramiding=0)
+// Variables to control open orders
+var myLongOrders  = array.new_int(0)
+var myShortOrders = array.new_int(0)
+// Initial Backtest Date Range
+useStartDate = timestamp("01 Jan 2020 21:00:00")
+useEndDate   = timestamp("01 Jan 2023 21:00:00")
+// User Inputs
+SIGNAL_CONFIG          = "BACKTEST: STEVEN PRIMO'S BIG TREND STRATEGY"
+longEntryInput         = input.bool(defval=true,          group=SIGNAL_CONFIG, title="Long entry")
+shortEntryInput        = input.bool(defval=true,          group=SIGNAL_CONFIG, title="Short entry")
+METHOD_CONFIG          = "BACKTEST: METHOD"
+maturityIndexInput     = input.int(defval=5,              group=METHOD_CONFIG, title="Bar indicating trend maturity", tooltip="Entries are made from the bar that indicates the trend maturity.", minval=1)
+barsLimitForEntryInput = input.int(defval=5,              group=METHOD_CONFIG, title="Bar limit for trading entry", tooltip="Given a signal, entry must be reached within how many bars?", minval=1)
+barLimitForCloseInput  = input.int(defval=30,             group=METHOD_CONFIG, title="Bar limit for trading close", tooltip="Once a position is opened, close when it reaches the number of bars in trading.", minval=1)
+profitOverRiskInput    = input.float(defval=15,           group=METHOD_CONFIG, title="Profit over risk", tooltip="Multiplication factor based on the risk assumed in trading.", minval=1, step=0.5)
+BB_CONFIG              = "BACKTEST: BOLLINGER BANDS"
+smaLengthInput         = input.int(defval=20,             group=BB_CONFIG,     inline="01", title="Length", minval=1)
+smaColorInput          = input.color(defval=color.orange, group=BB_CONFIG,     inline="01", title="")
+sourceInput            = input.source(defval=close,       group=BB_CONFIG,     inline="02", title="Source")
+bbFactorInput          = input.float(defval=0.382,        group=BB_CONFIG,     inline="03", title="Factor", minval=0.001, maxval=50, step=0.05)
+bbColorInput           = input.color(defval=color.blue,   group=BB_CONFIG,     inline="03", title="")
+offsetInput            = input.int(defval=1,              group=BB_CONFIG,     inline="04", title="Offset")
+PERIOD_CONFIG          = "BACKTEST: TIME PERIOD"
+useDateFilterInput     = input.bool(defval=true,          group=PERIOD_CONFIG, title="Filter date range of backtest")
+backtestStartDateInput = input.time(defval=useStartDate,  group=PERIOD_CONFIG, title="Start date")
+backtestEndDateInput   = input.time(defval=useEndDate,    group=PERIOD_CONFIG, title="End date")
+// Colors
+bbBackgroundColor  = color.rgb(33, 150, 243, 90)
+candleColorDown    = color.rgb(239, 83, 80, 80)
+candleColorUp      = color.rgb(38, 166, 154, 70)
+insideBarColorDown = color.rgb(239, 83, 80, 40)
+insideBarColorUp   = color.rgb(38, 166, 154, 20)
+downTrendColor     = color.rgb(239, 83, 80, 80)
+sidewaysTrendColor = color.rgb(252, 232, 131, 80)
+upTrendColor       = color.rgb(38, 166, 154, 80)
+buySignalColor     = color.lime
+sellSignalColor    = color.orange
+// Candles
+isCandleUp()   => close > open
+isCandleDown() => close <= open
+barcolor(isCandleUp() ? candleColorUp : isCandleDown() ? candleColorDown : na)
+// Bollinger Bands and Simple Moving Average
+sma     = ta.sma(sourceInput, smaLengthInput)
+bbWidth = ta.stdev(sourceInput, smaLengthInput) * bbFactorInput
+bbHigh  = sma + bbWidth
+bbLow   = sma - bbWidth
+plot(sma, title="SMA", color=smaColorInput, offset=offsetInput)
+bbUpper = plot(bbHigh, title="BB High", color=bbColorInput, offset=offsetInput)
+bbLower = plot(bbLow,  title="BB Low",  color=bbColorInput, offset=offsetInput)
+fill(bbUpper, bbLower, title="BB Background", color=bbBackgroundColor)
+// Backtest Time Period
+inTradeWindow = not useDateFilterInput or (time >= backtestStartDateInput and time < backtestEndDateInput)
+isInTradeWindow() => inTradeWindow
+isBacktestDateRangeOver() => not inTradeWindow and inTradeWindow[1]
+// Rule that indicates maturity of trend to buy
+isPrimoBuy() =>
+    result = true
+    barIndex = 0
+    while result and barIndex < maturityIndexInput
+        result := close[barIndex] >= bbHigh[barIndex]
+        barIndex += 1
+    result := result and close[maturityIndexInput] < bbHigh[maturityIndexInput]
+// Rule that indicates maturity of trend to sell
+isPrimoSell() =>
+    result = true
+    barIndex = 0
+    while result and barIndex < maturityIndexInput
+        result := close[barIndex] <= bbLow[barIndex]
+        barIndex += 1
+    result := result and close[maturityIndexInput] > bbLow[maturityIndexInput]
+// Entry signals
+longEntryHasBeenMet()  => longEntryInput  and isInTradeWindow() and isPrimoBuy()
+shortEntryHasBeenMet() => shortEntryInput and isInTradeWindow() and isPrimoSell()
+// Scheduling LONG entry
+if longEntryHasBeenMet()
+    array.push(myLongOrders, bar_index)
+    longEntryID = "Long Entry:\n" + str.tostring(bar_index)
+    longExitID  = "Long Exit:\n"  + str.tostring(bar_index)
+    longEntryTrigger = high + 1 * syminfo.mintick
+    stopLossInLong   = low[maturityIndexInput - 1]  - 1 * syminfo.mintick
+    takeProfitInLong = high + (high - low) * profitOverRiskInput
+    strategy.order(longEntryID, strategy.long, stop=longEntryTrigger)
+    strategy.exit(longExitID, longEntryID, stop=stopLossInLong, limit=takeProfitInLong)
+// In pine script, any order scheduled but not yet filled can be canceled.
+// Once a order is filled, the trade is only finished with use of close or exit functions.
+// As scheduled orders are not stored in the strategy.opentrades array, manual control is required.
+int myLongOrderIndex = 0
+while myLongOrderIndex < array.size(myLongOrders) and array.size(myLongOrders) > 0 
+    myLongOrder = array.get(myLongOrders, myLongOrderIndex)
+    if bar_index - myLongOrder == barsLimitForEntryInput
+        longEntryID = "Long Entry:\n" + str.tostring(myLongOrder)
+        strategy.cancel(longEntryID)
+        array.remove(myLongOrders, myLongOrderIndex)
+        continue
+    myLongOrderIndex += 1
+// Scheduling SHORT entry
+if shortEntryHasBeenMet()
+    array.push(myShortOrders, bar_index)
+    shortEntryID = "Short Entry:\n" + str.tostring(bar_index)
+    shortExitID  = "Short Exit:\n"  + str.tostring(bar_index)
+    shortEntryTrigger = low  - 1 * syminfo.mintick
+    stopLossInShort   = high[maturityIndexInput - 1] + 1 * syminfo.mintick
+    takeProfitInShort = low - (high - low) * profitOverRiskInput
+    strategy.order(shortEntryID, strategy.short, stop=shortEntryTrigger)
+    strategy.exit(shortExitID, shortEntryID, stop=stopLossInShort, limit=takeProfitInShort)
+// In pine script, any order scheduled but not yet filled can be canceled.
+// Once a order is filled, the trade is only finished with use of close or exit functions.
+// As scheduled orders are not stored in the strategy.opentrades array, manual control is required.
+int myShortOrderIndex = 0
+while myShortOrderIndex < array.size(myShortOrders) and array.size(myShortOrders) > 0 
+    myShortOrder = array.get(myShortOrders, myShortOrderIndex)
+    if bar_index - myShortOrder == barsLimitForEntryInput
+        shortEntryID = "Short Entry:\n" + str.tostring(myShortOrder)
+        strategy.cancel(shortEntryID)
+        array.remove(myShortOrders, myShortOrderIndex)
+        continue
+    myShortOrderIndex += 1
+// Trading must be stopped when candlestick limit reached in a trading
+for tradeNumber = 0 to strategy.opentrades - 1
+    tradeEntryID  = strategy.opentrades.entry_id(tradeNumber)
+    splitPosition = str.pos(tradeEntryID, ":")
+    entryBar      = str.tonumber(str.substring(tradeEntryID, splitPosition + 1))
+    if bar_index - entryBar == barLimitForCloseInput
+        closeID = "Close Position:\n" + str.tostring(entryBar)
+        strategy.close(id=tradeEntryID, comment=closeID, immediately=true)
+// Close all positions at the end of the backtest period
+if isBacktestDateRangeOver()
+    strategy.cancel_all()
+    strategy.close_all(comment="Date Range Exit")
+// Display Signals
+plotshape(series=longEntryHasBeenMet(),  title="Primo Buy",  style=shape.triangleup,   location=location.abovebar, color=buySignalColor,  text="Buy",  textcolor=buySignalColor)
+plotshape(series=shortEntryHasBeenMet(), title="Primo Sell", style=shape.triangledown, location=location.belowbar, color=sellSignalColor, text="Sell", textcolor=sellSignalColor)
+Expand (154 lines)

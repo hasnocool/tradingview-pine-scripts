@@ -1,0 +1,225 @@
+Script Name: EMA Cross + Divergence strategy (Div. signals by The Divergent)
+Author: WhiteboxSoftware
+Description: A sample strategy demonstrating the usage of  The Divergent  divergence indicator and  The Divergent Library .
+
+ The Divergent  is an advanced divergence indicator which you can easily incorporate into your own strategies.
+
+In order to use this strategy (and to use the signals in your own strategy), you need to have the Pro version of  The Divergent  applied to...
+PineScript code:
+
+Pine Script™ strategy
+EMA Cross + Divergence strategy (Div. signals by The Divergent)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+// @version=5
+//
+// A sample strategy demonstrating the usage of "The Divergent (Pro)" indicator and the "The Divergent Library" Pine Library.
+//
+// To receive the divergence signals from The Divergent, you need to use the Pro version. The Basic (free) version does not send divergence signals.
+//
+// Usage instructions:
+//
+// 1. Add The Divergent (Pro) to your chart
+// 2. Add this strategy to your chart
+// 3. Open the settings of the strategy, and select "The Divergent (Pro): Divergence Signal" in the dropdown under "The Divergent" section
+//    This will link The Divergent indicator's divergence signals to the strategy
+//
+// This strategy is not something you should trade with, as it is in no way optimized for any market!
+//
+// It was simply created to give an example on how to consume the divergence signals from The Divergent indicator.
+strategy("EMA Cross + Divergence strategy (using The Divergent and The Divergent Library)", overlay=true, margin_long=100, margin_short=100)
+// First you need to import TheDivergentLibrary
+import WhiteboxSoftware/TheDivergentLibrary/1 as tdl
+// This float series variable will hold the divergence signals from The Divergent.
+// Note: In order to receive the divergence signals, you will need to use the Pro version of the indicator
+float i_divSignal = input.source(title = "The Divergent: Divergence Signal", defval = close, group = "The Divergent")
+// EMA Settings
+int i_fastEmaLength = input.int(title = "Fast EMA Length", defval = 20, group = "EMA Settings")
+int i_slowEmaLength = input.int(title = "Slow EMA Length", defval = 40, group = "EMA Settings")
+// Position Settings
+float i_takeProfitPercentage = input.float(title = "Take Profit %", defval = 3.0, group = "Position Settings")
+float i_stopLossPercentage = input.float(title = "Stop Loss %", defval = 1.0, group = "Position Settings")
+// Here we initialise the library. 
+//
+// Note that it is important to use `var` here, as we don't want the library reinitialised on every calculation of the script!
+//
+// The 3 arguments passed to this function are the following:
+//     1. The signal received from the divergent
+//     2. The displayLinkStatus boolean which controls whether the Link Status should be displayed in the bottom left corner of the screen
+//     3. The debug boolean which controls whether debug information should be display inside the Link Status panel
+var bool[] tdlContext = tdl.init(i_divSignal, displayLinkStatus = true, debug = false)
+// Once the library is initialised, we can use the `processSignal()` function on the library to process the signal from The Divergent
+//
+// The function will return a 5-tuple with the following values:
+//
+// - divergence is the type of detected divergence, and it can have one of the following values:
+//     na → No divergence was detected
+//     1 → Regular Bullish
+//     2 → Regular Bullish early
+//     3 → Hidden Bullish
+//     4 → Hidden Bullish early
+//     5 → Regular Bearish
+//     6 → Regular Bearish early
+//     7 → Hidden Bearish
+//     8 → Hidden Bearish early
+// - priceStart is the bar_index on which the divergence line starts on the price chart
+// - priceEnd is the bar_index on which the divergence line ends on the price chart
+// - oscStart is the bar_index on which the divergence line starts on the oscillator
+// - oscEnd is the bar_index on which the divergence line ends on the oscillator
+[divergence, priceStart, priceEnd, oscStart, oscEnd] = tdl.processSignal(i_divSignal)
+// These 3 variables just store the entry price, the take profit and the stop loss, for the purposes of plotting the TP / SL areas on the chart
+var float entry = na
+var float takeProfit = na
+var float stopLoss = na
+// This series bool variable will be true on the bar on which a regular bullish divergence was signalled, and it remains true for 10 bars thereafter
+// The idea behind these variables, is that we can use them as part of the entry condition to say: Enter into a position if a regular bullish divergence was detected at most 10 bars ago
+bool regularBullSignalledRecently = ta.barssince(divergence == 1) < 10
+// This series bool variable will be true on the bar on which a regular bearish divergence was signalled, and it remains true for 10 bars thereafter
+bool regularBearSignalledRecently = ta.barssince(divergence == 5) < 10
+float slowEma = ta.ema(close, i_slowEmaLength)
+float fastEma = ta.ema(close, i_fastEmaLength)
+// After our position got closed, reset the entry, takeProfit and stopLoss variables, so we stop plotting the areas on the chart
+if strategy.position_size == 0 and not na(entry)
+    entry := na
+    takeProfit := na
+    stopLoss := na
+// This bool series variable will be true on bars on which the Fast EMA crosses above the Slow EMA, and a regular bullish divergence was signalled at most 10 bars ago
+bool longCondition = ta.crossover(fastEma, slowEma) and regularBullSignalledRecently
+if (barstate.isconfirmed and longCondition and strategy.position_size == 0)
+    entry := close
+    takeProfit := close + ((close / 100) * i_takeProfitPercentage)
+    stopLoss := close - ((close / 100) * i_stopLossPercentage)
+    
+    strategy.entry("Enter Long", strategy.long)
+    strategy.exit("Exit Long", "Enter Long", limit = takeProfit, stop = stopLoss)
+// This bool series variable will be true on bars on which the Fast EMA crosses below the Slow EMA, and a regular bearish divergence was signalled at most 10 bars ago
+bool shortCondition = ta.crossunder(fastEma, slowEma) and regularBearSignalledRecently
+if (barstate.isconfirmed and shortCondition and strategy.position_size == 0)
+    entry := close
+    takeProfit := close - ((close / 100) * i_takeProfitPercentage)
+    stopLoss := close + ((close / 100) * i_stopLossPercentage)
+    
+    strategy.entry("Enter Short", strategy.short)
+    strategy.exit("Exit Short", "Enter Short", limit = takeProfit, stop = stopLoss)
+plot(slowEma, color = color.white)
+plot(fastEma, color = color.orange)
+p_entry = plot(strategy.position_size != 0 ? entry : na, "Entry price", linewidth = 1, color = color.teal, style = plot.style_linebr)
+p_takeProfit = plot(strategy.position_size != 0 ? takeProfit : na, "Take profit", linewidth = 1, color = color.green, style = plot.style_linebr)
+p_stopLoss = plot(strategy.position_size != 0 ? stopLoss : na, "Stop loss", linewidth = 1, color = color.red, style = plot.style_linebr)
+fill(p_entry, p_takeProfit, color = color.new(color.green, 90), title = "Profit area")
+fill(p_entry, p_stopLoss, color = color.new(color.red, 90), title = "Loss area")
+Expand (115 lines)

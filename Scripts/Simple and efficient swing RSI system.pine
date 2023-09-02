@@ -1,0 +1,140 @@
+Script Name: Simple and efficient swing RSI system
+Author: SoftKill21
+Description: Hello there,
+
+I am glad to bring you another simple and efficient algorithm.
+
+Its made purely from RSI which can be used directly or inversed. Its suited for swing trading 15 min chart or more minimum.
+
+Can be adapted to all types of financial markets.
+
+Rules for entry are easy : First we have the stop loss and take profits levels. Based on SL , we have the risk %...
+PineScript code:
+
+Pine Script™ strategy
+Simple and efficient swing RSI system
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+//@version=4
+strategy("RSI Algo", overlay=true)
+// Calculate start/end date and time condition
+DST = 1 //day light saving for usa
+//--- Europe
+London = iff(DST==0,"0000-0900","0100-1000")
+//--- America
+NewYork = iff(DST==0,"0400-1500","0500-1600")
+//--- Pacific
+Sydney = iff(DST==0,"1300-2200","1400-2300")
+//--- Asia
+Tokyo = iff(DST==0,"1500-2400","1600-0100")
+//-- Time In Range
+timeinrange(res, sess) => time(res, sess) != 0
+london = timeinrange(timeframe.period, London)
+newyork = timeinrange(timeframe.period, NewYork)
+time_cond = london or newyork
+myPeriod = input(defval=14, type=input.integer, title="Period")
+myThresholdUp = input(defval=75, type=input.float, title="Upper Threshold")
+myThresholdDn = input(defval=25, type=input.float, title="Lower Threshold")
+myAlgoFlipToggle = input(defval=false, type=input.bool, title="Imverse Algorthim")
+myLineToggle = input(defval=true, type=input.bool, title="Show Lines")
+myLabelToggle = input(defval=true, type=input.bool, title="Show Labels")
+myRSI=rsi(close, myPeriod)
+buy = myAlgoFlipToggle ? falling(myRSI,1) and cross(myRSI, myThresholdDn) : rising(myRSI, 1) and cross(myRSI,myThresholdUp) //and time_cond
+sell = myAlgoFlipToggle ? rising(myRSI, 1) and cross(myRSI,myThresholdUp) : falling(myRSI,1) and cross(myRSI, myThresholdDn) //and time_cond
+myPosition = 0
+myPosition := buy==1 ? 0 : sell==1 or myPosition[1]==1 ? 1 : 0
+trendColor = buy ? color.red : sell ? color.green : na
+plot(myLineToggle ? buy and myPosition[1]==1 ? low - 0.004: sell and myPosition[1]==0 ? high + 0.004 : na : na, color=trendColor, style=plot.style_line, linewidth=4, editable=false)
+plotshape(myLabelToggle ? buy and myPosition[1]==1 ? low - 0.005 : na : na, style=shape.labelup, location=location.absolute, text="Buy", transp=0, textcolor = color.white, color=color.black, editable=false)
+plotshape(myLabelToggle ? sell and myPosition[1]==0 ? high + 0.005 : na : na, style=shape.labeldown, location=location.absolute, text="Sell", transp=0, textcolor = color.white, color=color.black, editable=false)
+    //Calculate the size of the next trade
+balance = strategy.netprofit + strategy.initial_capital //current balance
+floating = strategy.openprofit          //floating profit/loss
+risk = input(2,type=input.float,title="Risk %")/100           //risk % per trade
+isTwoDigit = input(false,"Is this a 2 digit pair? (JPY, XAU, XPD...")
+stop = input(250, title="stop loss pips")
+tp = input(2500, title="take profit pips")
+if(isTwoDigit)
+    stop := stop/100
+    
+temp01 = balance * risk     //Risk in USD
+temp02 = temp01/stop        //Risk in lots
+temp03 = temp02*100000      //Convert to contracts
+size = temp03 - temp03%1000 //Normalize to 1000s (Trade size)
+if(size < 10000)
+    size := 10000           //Set min. lot size
+    
+    
+strategy.entry("long",1,size,when=buy and myPosition[1]==1 )
+strategy.entry("short",0,size,when=sell and myPosition[1]==0)
+strategy.exit("exit_long","long",loss=stop, profit=tp)      //Long exit (stop loss)
+strategy.exit("exit_short","short",loss=stop, profit=tp)      //Short exit (stop loss)
+//strategy.close_all(when= not time_cond)
+Expand (68 lines)

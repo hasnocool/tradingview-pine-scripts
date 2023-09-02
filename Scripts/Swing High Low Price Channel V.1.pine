@@ -1,0 +1,122 @@
+Script Name: Swing High Low Price Channel V.1
+Author: ZoomerXeus
+Description: You should buy/sell small order at small plot zone or after small plot. And, Buy/sell big order at big plot zone or after big plot.
+
+Recommended, You should use this with Fibonacci Retracement, Price Action or Graph Pattern.
+PineScript code:
+
+Pine Script™ strategy
+Swing High Low Price Channel V.1
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ZoomerXeus
+//@version=4
+strategy("Swing High Low Price Channel V.1", overlay=true)
+//========================= variable =================================//
+dead_channel_source = input(title="Main swing channel source", defval="H/L", options=["H/L"])
+fast_signal_length = input(title="Fast Slow Length", type=input.integer, defval=7, maxval=49, minval=1)
+slow_signal_length = input(title="Slow Slow Length", type=input.integer, defval=20, maxval=49, minval=1)
+is_show_only_dead_channel = input(title="Show main channel only", defval=true)
+main_channel_width = input(title="Main line width", defval=2, minval=1)
+signal_channel_width = input(title="Signal line width", defval=1, minval=1)
+//========================= indicator function =================================//
+dead_cross_high_50 = highest(high, 50) 
+dead_cross_high_200 = highest(high, 200) 
+//========================================
+dead_cross_low_50 = lowest(low, 50) 
+dead_cross_low_200 = lowest(low, 200) 
+//========================================
+medain_dead_cross_50 = ((dead_cross_high_50-dead_cross_low_50)*0.5)+dead_cross_low_50
+medain_dead_cross_200 = ((dead_cross_high_200-dead_cross_low_200)*0.5)+dead_cross_low_200
+//========================================
+fasthighest = highest(high, fast_signal_length)
+fastlowest = lowest(low, fast_signal_length)
+//========================================
+slowhighest = highest(high, slow_signal_length)
+slowlowest = lowest(low, slow_signal_length)
+//========================================
+    
+//========================= plot =================================//
+plot(dead_channel_source == "H/L" ? dead_cross_high_50 : na,title="50 bar highest", color=color.red, linewidth=main_channel_width)
+plot(dead_channel_source == "H/L" ? dead_cross_high_200 : na,title="200 bar highest", color=color.aqua, linewidth=main_channel_width)
+plot(dead_channel_source == "H/L" ? dead_cross_low_50 : na,title="50 bar lowest", color=color.red, linewidth=main_channel_width)
+plot(dead_channel_source == "H/L" ? dead_cross_low_200 : na,title="200 bar lowest", color=color.aqua, linewidth=main_channel_width)
+plot(dead_channel_source == "H/L" ? medain_dead_cross_200 : na,title="200 bar middle lowest", color=color.orange, linewidth=main_channel_width)
+plot(dead_channel_source == "H/L" ? medain_dead_cross_50 : na,title="50 bar middle lowest", color=color.lime, linewidth=main_channel_width)
+//===========================================
+plot(is_show_only_dead_channel == false ? fasthighest : na,title="fast signal highest", color=#ff00f9, linewidth=signal_channel_width)
+plot(is_show_only_dead_channel == false ? fastlowest : na,title="fast signal lowest", color=#ff00f9, linewidth=signal_channel_width)
+plot(is_show_only_dead_channel == false ? slowhighest : na,title="slow signal highest", color=color.white, linewidth=signal_channel_width)
+plot(is_show_only_dead_channel == false ? slowlowest : na,title="slow signal lowest", color=color.white, linewidth=signal_channel_width)
+//===========================================
+plot(crossover(medain_dead_cross_50, medain_dead_cross_200) ? medain_dead_cross_200 : na, title="Dead cross buy plot", style=plot.style_circles, linewidth=6, color=color.lime)
+plot(crossunder(medain_dead_cross_50, medain_dead_cross_200) ? medain_dead_cross_200 : na, title="Dead cross sell plot", style=plot.style_circles, linewidth=6, color=color.red)
+plot(is_show_only_dead_channel and (medain_dead_cross_50 < medain_dead_cross_200) and high == slowhighest ? high : na, title="Follow trend short term  sell plot zone", style=plot.style_circles, linewidth=3, color=color.orange)
+plot(is_show_only_dead_channel and (medain_dead_cross_50 > medain_dead_cross_200) and low == slowlowest ? low : na, title="Follow trend short term buy plot zone", style=plot.style_circles, linewidth=3, color=color.green)
+plot(is_show_only_dead_channel and high == slowhighest and (high == dead_cross_high_200) ? high : na, title="Not follow trend short term  sell plot zone", style=plot.style_circles, linewidth=3, color=color.orange)
+plot(is_show_only_dead_channel and low == slowlowest and (low == dead_cross_low_200) ? low : na, title="Not follow trend short term buy plot zone", style=plot.style_circles, linewidth=3, color=color.green)
+//===================== open close order condition =========================================================//
+//strategy.entry("strong buy", true, 1000, when=low == dead_cross_low_200)
+//strategy.exit("close strong buy 50%", "strong buy", qty_percent=50, when=high==slowhighest)
+//strategy.entry("strong sell", false, 1000, when=high == dead_cross_high_200)
+//strategy.exit("close strong sell 50%", "strong sell", qty_percent=50, when=low==slowlowest)
+Expand (59 lines)

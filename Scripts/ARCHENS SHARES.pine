@@ -1,0 +1,60 @@
+Script Name: ARCHENS SHARES
+Author: snehal_choudhari
+Description: This script marks the high and low of 9.45 to 10.15 price. When the price breaks high, then gives Buy signal. When the price breaks low, then it gives Sell Signal. These buy and sell signals are given with labels "ARCHENS BUY" or "ARCHENS SELL". With my observation in stock market, I have made this strategy.
+
+This strategy works in normal candle pattern but i...
+PineScript code:
+
+Pine Script™ strategy
+ARCHENS SHARES
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+// Copyright (c) 2019-present
+//@version=5
+strategy("ARCHENS SHARES", overlay=true)
+timeframe = input.timeframe(defval = "30", title = "timeframe")
+session = input.session(defval="0945-1015", title = "session")
+tradein = time(timeframe, session)
+half_high = request.security(syminfo.tickerid, "30", high)
+half_low = request.security(syminfo.tickerid, "30", low)
+HH = ta.valuewhen(tradein, half_high, 0 )
+HL = ta.valuewhen(tradein, half_low, 0 )
+buy = ta.crossover(close,HH)
+sell = ta.crossunder(close,HL)
+// Reset strategy at the start of each day
+if dayofweek != dayofweek[1]
+    buy := false
+    sell := false
+plot(HH, style=plot.style_circles, color = color.orange, linewidth = 2)
+plot(HL, style=plot.style_circles, color = color.orange, linewidth = 2)
+strategy.entry("long", direction = strategy.long, when = buy, comment = "ARCHENS BUY")
+strategy.entry("short", direction = strategy.short, when = sell, comment = "ARCHENS SELL")
+Expand (29 lines)

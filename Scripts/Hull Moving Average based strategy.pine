@@ -1,0 +1,171 @@
+Script Name: Hull Moving Average based strategy
+Author: bauhaus28
+Description: This is a simple Hull Moving Average based strategy using a short term HMA for signal generation and a long term HMA for filtering purposes.
+
+A  long entry  is generated if the short term HMA changes direction from decreasing to increasing values and if the long term HMA indicates an uptrend (i.e. previous value < current value)
+A  short entry  is generated if the...
+PineScript code:
+
+Pine Script™ strategy
+Hull Moving Average based strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+//@version=4
+strategy("Hull Filtered Strategy", overlay=true, pyramiding=0, default_qty_type= strategy.percent_of_equity, default_qty_value = 10, calc_on_order_fills=false, slippage=0,commission_type=strategy.commission.percent,commission_value=0)
+// Parameters for Hull Moving Averages
+src = input(close, title="Source")
+signal_period = input(50, title="Period of signal HMA")
+filter_period = input(200, title="Period of filter HMA")
+strat_dir_input = input(title="Strategy Direction", defval="all", options=["long", "short", "all"])
+// Set allowed trading directions
+strat_dir_value = strat_dir_input == "long" ? strategy.direction.long : strat_dir_input == "short" ? strategy.direction.short : strategy.direction.all
+strategy.risk.allow_entry_in(strat_dir_value)
+// stop loss and take profit
+sl_factor = input(2,title="Stop Loss Factor")
+tp_factor = input(3,title="Take Profit Factor")
+atr_period = input(14, title="ATR Period (SL/TP)")
+// Testing Start dates
+testStartYear = input(2010, "Backtest Start Year")
+testStartMonth = input(1, "Backtest Start Month")
+testStartDay = input(1, "Backtest Start Day")
+testPeriodStart = timestamp(testStartYear,testStartMonth,testStartDay,0,0)
+//Stop date if you want to use a specific range of dates
+testStopYear = input(2030, "Backtest Stop Year")
+testStopMonth = input(12, "Backtest Stop Month")
+testStopDay = input(31, "Backtest Stop Day")
+testPeriodStop = timestamp(testStopYear,testStopMonth,testStopDay,0,0)
+// -----------------------------------------------------------------------------
+// Global variables
+// -----------------------------------------------------------------------------
+var float tp = na
+var float sl = na
+var float position = na
+// -----------------------------------------------------------------------------
+// Functions
+// -----------------------------------------------------------------------------
+testWindow() =>
+    time >= testPeriodStart and time <= testPeriodStop ? true : false
+// -----------------------------------------------------------------------------
+// The engine
+// -----------------------------------------------------------------------------
+hma_signal = hma(src, signal_period)
+hma_filter = hma(src, filter_period)
+// Used to determine exits and stop losses
+atr_e = atr(atr_period)
+// if hma_filter increases hma_trend is set to 1, if it decreases hma_trend is set to -1. If no trend is available, hma_trend is set to ß0
+trend = hma_filter > hma_filter[1]  ?  1 : hma_filter < hma_filter[1] ? -1 : 0
+signal = hma_signal > hma_signal[1] ? 1 : hma_signal  < hma_signal[1] ? -1 : 0
+// -----------------------------------------------------------------------------
+// signals
+// -----------------------------------------------------------------------------
+if signal[0] == 1 and signal[1] != 1 and trend == 1 and testWindow()
+    sl := close - sl_factor*atr_e
+    tp := close + tp_factor*atr_e
+    strategy.entry("HMA_LNG", strategy.long)
+    strategy.exit("LE", "HMA_LNG", profit=100*tp_factor*atr_e, loss=100*sl_factor*atr_e)
+    
+if signal[0] == -1 and signal[1] != -1 and trend == -1 and testWindow()
+    sl := close + sl_factor*atr_e
+    tp := close - tp_factor*atr_e
+    strategy.entry("HMA_SHRT", strategy.short)
+    strategy.exit("SE", "HMA_SHRT", profit=100*tp_factor*atr_e, loss=100*sl_factor*atr_e)
+if strategy.position_size != 0
+    sl := sl[1]
+    tp := tp[1]
+// -----------------------------------------------------------------------------
+// PLOT
+// -----------------------------------------------------------------------------
+hma_s = plot(hma_signal, title="SIGNAL", color = signal == 1 ? color.green : color.red)
+hma_l = plot(hma_filter, title="TREND", color = trend == 1 ? color.green : color.red)
+plot(tp, title="TAKE PROFIT", color= strategy.position_size != 0 ? color.blue: na, linewidth=1)  
+plot(sl, title="STOP LOSS", color= strategy.position_size != 0 ? color.red: na, linewidth = 1)
+Expand (90 lines)

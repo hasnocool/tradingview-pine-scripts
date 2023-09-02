@@ -1,0 +1,306 @@
+Script Name: Trailing Take Profit
+Author: jason5480
+Description: This script demonstrates how to do trailing take profit. With this approach instead of setting a limit order, when you hit the target you just follow the price upwards (for long positions) and you sell when the price drops by a small percentage. This approach will increase the profits (slightly) in every strategy! Be aware that the simulated data may produce...
+PineScript code:
+
+Pine Script™ strategy
+Trailing Take Profit
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+//@version=5
+//#region PREAMBLE
+// ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+//  Copyright © 2022-2023 Iason Nikolas | jason5480
+//  The "Trailing Take Profit" script may be freely distributed under the MIT license.
+//  
+//  Permission is hereby granted, free of charge,
+//  to any person obtaining a copy of this software and associated documentation files (the "Software"),
+//  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge,
+//  publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+//  is furnished to do so, subject to the following conditions:
+//  
+//  The above copyright notice and this permission notice shall be included in ALL COPIES or substantial portions of
+//  the Software.
+//  
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+//  WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS
+//  OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT
+//  OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//  
+//  Description
+//  -----------------------------------------------------------------------------------------------------------------
+//  This strategy will go long if fast MA crosses over slow MA.
+//  The strategy will exit from long position when the price increases by a fixed percentage.
+//  If the trailing take profit is checked then the strategy instead of setting a limit order in a predefined price
+//  (based on the percentage) it will follow the price with small steps (percentagewise)
+//  If the price drops by this percentage then the exit order will be executed
+//  
+//  -----------------------------------------------------------------------------------------------------------------
+//  Disclaimer:
+//    1. I am not licensed financial advisors or broker-dealer. I do not tell you when or what to buy or sell.
+//       I developed this software which enables you execute manual or automated trades using TradingView.
+//       The software allows you to set the criteria you want for entering and exiting trades.
+//    2. Do not trade with money you cannot afford to lose.
+//    3. I do not guarantee consistent profits or that anyone can make money with no effort.
+//       And I am not selling the holy grail.
+//    4. Every system can have winning and losing streaks.
+//    5. Money management plays a large role in the results of your trading. For example: lot size, account size,
+//       broker leverage, and broker margin call rules all affect on results. Also, your Take Profit and Stop Loss
+//       settings for individual pair trades and for overall account equity have a major impact on results.
+//       If you are new to trading and do not understand these items, then I recommend you seek educational materials
+//       to further your knowledge.
+//    
+//  YOU NEED TO FIND AND USE THE TRADING SYSTEM THAT WORKS BEST FOR YOU AND YOUR TRADING TOLERANCE.
+//  I HAVE PROVIDED NOTHING MORE THAN A TOOL WITH OPTIONS FOR YOU TO TRADE WITH THIS PROGRAM ON TRADINGVIEW.
+//  
+//  I accept suggestions to improve the script.
+//  If you encounter any problems I will be happy to share with me.
+//  -----------------------------------------------------------------------------------------------------------------
+//#endregion ========================================================================================================
+//#region SETUP
+// ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+strategy(title = 'Trailing Take Profit',
+         shorttitle = 'TTP',
+         overlay = true,
+         pyramiding = 0,
+         default_qty_type = strategy.percent_of_equity,
+         default_qty_value = 100,
+         initial_capital = 100000,
+         max_lines_count = 150,
+         max_labels_count = 150)
+//#endregion ========================================================================================================
+//#region FILTERS
+// ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+import jason5480/time_filters/9 as tif
+// INPUT ============================================================================================================
+sourceTimezone = input.string(defval = 'Exchange', title = 'Timezones Src->Dst', options = ['Exchange', 'UTC', 'America/Los_Angeles', 'America/Phoenix', 'America/Vancouver', 'America/El_Salvador', 'America/Bogota', 'America/Chicago', 'America/New_York', 'America/Toronto', 'America/Argentina/Buenos_Aires', 'America/Sao_Paulo', 'Etc/UTC', 'Europe/London', 'Europe/Berlin', 'Europe/Madrid', 'Europe/Paris', 'Europe/Warsaw', 'Europe/Athens', 'Europe/Moscow', 'Asia/Tehran', 'Asia/Dubai', 'Asia/Ashkhabad', 'Asia/Kolkata', 'Asia/Almaty', 'Asia/Bangkok', 'Asia/Hong_Kong', 'Asia/Shanghai', 'Asia/Singapore', 'Asia/Taipei', 'Asia/Seoul', 'Asia/Tokyo', 'Australia/ACT', 'Australia/Adelaide', 'Australia/Brisbane', 'Australia/Sydney', 'Pacific/Auckland', 'Pacific/Fakaofo', 'Pacific/Chatham', 'Pacific/Honolulu'], inline = 'Timezone', group = 'Filters')
+destinationTimezone = input.string(defval = 'Exchange', title = '->', options = ['Exchange', 'UTC', 'America/Los_Angeles', 'America/Phoenix', 'America/Vancouver', 'America/El_Salvador', 'America/Bogota', 'America/Chicago', 'America/New_York', 'America/Toronto', 'America/Argentina/Buenos_Aires', 'America/Sao_Paulo', 'Etc/UTC', 'Europe/London', 'Europe/Berlin', 'Europe/Madrid', 'Europe/Paris', 'Europe/Warsaw', 'Europe/Athens', 'Europe/Moscow', 'Asia/Tehran', 'Asia/Dubai', 'Asia/Ashkhabad', 'Asia/Kolkata', 'Asia/Almaty', 'Asia/Bangkok', 'Asia/Hong_Kong', 'Asia/Shanghai', 'Asia/Singapore', 'Asia/Taipei', 'Asia/Seoul', 'Asia/Tokyo', 'Australia/ACT', 'Australia/Adelaide', 'Australia/Brisbane', 'Australia/Sydney', 'Pacific/Auckland', 'Pacific/Fakaofo', 'Pacific/Chatham', 'Pacific/Honolulu'], tooltip = 'The Src is the source timezone to be used as a reference for the time settings. The Dst is the destination timezone to convert into (e.g. the charts\' timezone)', inline = 'Timezone', group = 'Filters')
+var dateTimeWindow = tif.DateTimeWindow.new(
+  fromDateTime = input.bool(defval = true, title = 'From', inline = 'From Date', group = 'Filters') ? input.time(defval = timestamp('01 Jan 2022 00:00'), title = '', inline = 'From Date', group = 'Filters') : na,
+  toDateTime = input.bool(defval = false, title = 'To ', inline = 'To Date', group = 'Filters') ? input.time(defval = timestamp('01 Jan 2023 00:00'), title = '', inline = 'To Date', group = 'Filters') : na)
+// LOGIC ============================================================================================================
+bool dateFilterApproval = dateTimeWindow.is_in_range(srcTimezone = sourceTimezone, dstTimezone = destinationTimezone)
+// PLOT =============================================================================================================
+bgcolor(color = dateFilterApproval ? na : color.new(color.gray, 90), title = 'Time Window')
+//#endregion ========================================================================================================
+//#region STRATEGY
+// ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+// INPUT ============================================================================================================
+fastMALen = input.int(defval = 21, title = 'Fast/Slow SMA Length', minval = 1, inline = 'MA Length', group = 'Strategy')
+slowMALen = input.int(defval = 49, title = '', minval = 1, tooltip = 'How many candles back to calculte the fast/slow SMA.', inline = 'MA Length', group = 'Strategy')
+// LOGIC ============================================================================================================
+float fastMA = ta.sma(close, fastMALen)
+float slowMA = ta.sma(close, slowMALen)
+bool openLongPosition = dateFilterApproval and ta.crossover(fastMA, slowMA)
+// PLOT =============================================================================================================
+var fastColor = color.new(color.yellow, 0)
+plot(series = fastMA, title = 'Fast SMA', color = fastColor, linewidth = 1, style = plot.style_line)
+var slowColor = color.new(color.orange, 0)
+plot(series = slowMA, title = 'Slow SMA', color = slowColor, linewidth = 1, style = plot.style_line)
+//#endregion ========================================================================================================
+//#region ENTRY
+// ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+// LOGIC ============================================================================================================
+// the open signal when not already into a position
+bool validOpenLongPosition = openLongPosition and strategy.opentrades.size(strategy.opentrades - 1) <= 0
+bool longIsActive = validOpenLongPosition or strategy.opentrades.size(strategy.opentrades - 1) > 0
+// PLOT =============================================================================================================
+var longEntryColor = color.new(#2962FF, 0)
+var textColor = color.new(color.white, 0)
+if (validOpenLongPosition)
+    label.new(x = bar_index, y = na, text = 'Open', yloc = yloc.belowbar, color = longEntryColor, style = label.style_label_up, textcolor = textColor)
+//#endregion ========================================================================================================
+//#region TAKE PROFIT
+// ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+// INPUT ============================================================================================================
+longTakeProfitPerc = input.float(defval = 7.0, title = 'Take Profit %', minval = 0.05, step = 0.05, tooltip = 'The percentage of the price increase to set the take profit price target.', group = 'Take Profit') / 100
+takeProfitTrailingEnabled = input.bool(defval = true, title = 'Enable Trailing', tooltip = 'Enable or disable the trailing for take profit. WARNING! This feature will repaint. Make sure you use it with "Bar Magnifier" and "Deep Backtesting" for realistic backtest results', group = 'Take Profit')
+trailingTakeProfitDistancePerc = input.float(defval = 1.0, title = '  Trailing Distance %', minval = 0.01, maxval = 100, step = 0.01, tooltip = 'The distance as a percentage of the take profit price to keep from the high price after the target is reached when trailing.', group = 'Take Profit') / 100
+// LOGIC ============================================================================================================
+var float longTakeProfitPrice = na
+longTakeProfitPrice := if (validOpenLongPosition)
+    close * (1 + longTakeProfitPerc)
+else if (longIsActive)
+    nz(longTakeProfitPrice[1], close * (1 + longTakeProfitPerc))
+else
+    na
+longTrailingTakeProfitStepTicks = longTakeProfitPrice * trailingTakeProfitDistancePerc / syminfo.mintick
+// PLOT =============================================================================================================
+var takeProfitColor = color.new(color.teal, 0)
+plot(series = longTakeProfitPrice, title = 'Long Take Profit', color = takeProfitColor, linewidth = 1, style = plot.style_linebr, offset = 1)
+//#endregion ========================================================================================================
+//#region POSITION ORDERS
+// ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+// LOGIC ============================================================================================================
+// getting into LONG position
+if (validOpenLongPosition)
+    strategy.entry(id = 'Long Entry', direction = strategy.long, alert_message = 'Long(' + syminfo.ticker + '): Started')
+// submit exit orders for trailing take profit price
+if (longIsActive)
+    strategy.exit(id = 'Long Take Profit', from_entry = 'Long Entry', limit = takeProfitTrailingEnabled ? na : longTakeProfitPrice, trail_price = takeProfitTrailingEnabled ? longTakeProfitPrice : na, trail_offset = takeProfitTrailingEnabled ? longTrailingTakeProfitStepTicks : na, alert_message = 'Long(' + syminfo.ticker + '): Take Profit activated')
+// PLOT =============================================================================================================
+var posColor = color.new(color.gray, 0)
+plot(series = strategy.opentrades.entry_price(strategy.opentrades - 1), title = 'Position', color = posColor, linewidth = 1, style = plot.style_linebr)
+//#endregion ========================================================================================================
+Expand (162 lines)

@@ -1,0 +1,151 @@
+Script Name: MavilimW Strategy MTF EMA with HA Candles
+Author: SoftKill21
+Description: This is a strategy adapted initially for Mavilim moving average indicator, based on WMA MA.
+
+It seems to works amazingly on long term markets, like stocks, some futures, some comodities and so on.
+
+
+In this strategy, I form initially the candle, using EMA values, so I take the EMA of last 50 closes, open, highs and lows and form the candle
+
+After this I take...
+PineScript code:
+
+Pine Script™ strategy
+MavilimW Strategy MTF EMA with HA Candles
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+//@version=4
+strategy("MavilimW Strategy MTF", overlay=true)
+ma1_len = input(50)
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2020, title = "From Year", minval = 1970)
+ //monday and session 
+// To Date Inputs
+toDay = input(defval = 31, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 12, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2020, title = "To Year", minval = 1970)
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate 
+//First Moving Average data
+o = ema(open, ma1_len)
+c = ema(close, ma1_len)
+h = ema(high, ma1_len)
+l = ema(low, ma1_len)
+// === HA calculator ===
+ha_t = heikinashi(syminfo.tickerid)
+ha_o = security(ha_t, timeframe.period, o)
+ha_c = security(ha_t, timeframe.period, c)
+ha_h = security(ha_t, timeframe.period, h)
+ha_l = security(ha_t, timeframe.period, l)
+res = input(title="Time Frame", type=input.resolution, defval="D")
+res2 = input(title="Time Frame", type=input.resolution, defval="W")
+res3 = input(title="Time Frame", type=input.resolution, defval="M")
+fmal = input(1, "First Moving Average length")
+smal = input(1, "Second Moving Average length")
+tmal = fmal + smal
+Fmal = smal + tmal
+Ftmal = tmal + Fmal
+Smal = Fmal + Ftmal
+M1 = wma(ha_c, fmal)
+M2 = wma(M1, smal)
+M3 = wma(M2, tmal)
+M4 = wma(M3, Fmal)
+M5 = wma(M4, Ftmal)
+M6 = wma(M5, Smal)
+MAVWD = security(syminfo.tickerid, res, M6)
+MAVWW = security(syminfo.tickerid, res2, M6)
+MAVWM = security(syminfo.tickerid, res3, M6)
+plot(MAVWD, color=color.blue, linewidth=2, title="D")
+plot(MAVWW, color=color.white, linewidth=3, title="W")
+plot(MAVWM, color=color.purple, linewidth=4, title="M")
+long = close > MAVWD and close > MAVWW and close > MAVWM
+short = close < MAVWD and close < MAVWW and close < MAVWM
+exitlong = crossunder(MAVWD,MAVWW) or crossunder(MAVWD,MAVWM) //or crossunder(MAVWW,MAVWM)
+exitshort = crossover(MAVWD,MAVWW) or crossover(MAVWD,MAVWM) //or crossover(MAVWW,MAVWM) 
+longA=input(true)
+shortA=input(false)
+if(longA)
+    strategy.entry("long",1,when=long)
+    strategy.close("long",when=exitlong)
+if(shortA)
+    strategy.entry("long2",1,when=short)
+    strategy.close("long2",when=exitshort)
+Expand (77 lines)

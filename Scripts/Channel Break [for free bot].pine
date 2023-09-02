@@ -1,0 +1,149 @@
+Script Name: Channel Break [for free bot]
+Author: AlgoTrading_CC
+Description: I present to you a script for testing the channel breakout strategy for the Bitmex exchange.
+Cryptocurrency itself is a trending tool, which is why breakout strategies generate the largest profits, and the channel breakout strategy is one of the most effective trend strategies.
+
+The optimization result shows the result of trading on a volume of 20% of the deposit....
+PineScript code:
+
+Pine Script™ strategy
+Channel Break [for free bot]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// Strategy testing and optimisation for free Bitmex trading bot 
+// © algotradingcc 
+//@version=4
+strategy("Channel Break [for free bot]", overlay=true, default_qty_type= strategy.percent_of_equity, initial_capital = 1000, default_qty_value = 20, commission_type=strategy.commission.percent, commission_value=0.075)
+//Options
+buyPeriod = input(13, "Channel Period for Long position")
+sellPeriod = input(18, "Channel Period for Short position")
+isMiddleExit = input(true, "Is exit on Base Line?")
+takeProfit = input(46, "Take Profit (%) for position")
+stopLoss = input(9, "Stop Loss (%) for position")
+// Test Start
+startYear = input(2005, "Test Start Year")
+startMonth = input(1, "Test Start Month")
+startDay = input(1, "Test Start Day")
+startTest = timestamp(startYear,startMonth,startDay,0,0)
+//Test End
+endYear = input(2050, "Test End Year")
+endMonth = input(12, "Test End Month")
+endDay = input(30, "Test End Day")
+endTest = timestamp(endYear,endMonth,endDay,23,59)
+timeRange = time > startTest and time < endTest ? true : false
+// Long&Short Levels
+BuyEnter = highest(buyPeriod)
+BuyExit = isMiddleExit ? (highest(buyPeriod) + lowest(buyPeriod)) / 2: lowest(buyPeriod)
+SellEnter = lowest(sellPeriod)
+SellExit = isMiddleExit ? (highest(sellPeriod) + lowest(sellPeriod)) / 2: highest(sellPeriod)
+// Plot Data
+plot(BuyEnter, style=plot.style_line, linewidth=2, color=color.blue, title="Buy Enter")
+plot(BuyExit, style=plot.style_line, linewidth=1, color=color.blue, title="Buy Exit", transp=50)
+plot(SellEnter, style=plot.style_line, linewidth=2, color=color.red, title="Sell Enter")
+plot(SellExit, style=plot.style_line, linewidth=1, color=color.red, title="Sell Exit", transp=50)
+// Calc Take Profits & Stop Loss
+TP = 0.0
+SL = 0.0
+if strategy.position_size > 0
+    TP := strategy.position_avg_price*(1 + takeProfit/100)
+    SL := strategy.position_avg_price*(1 - stopLoss/100)
+if strategy.position_size > 0 and SL > BuyExit
+    BuyExit := SL
+    
+if strategy.position_size < 0
+    TP := strategy.position_avg_price*(1 - takeProfit/100)
+    SL := strategy.position_avg_price*(1 + stopLoss/100)
+if strategy.position_size < 0 and SL < SellExit
+    SellExit := SL
+    
+    
+// Long Position    
+if timeRange and strategy.position_size <= 0
+    strategy.entry("Long", strategy.long, stop = BuyEnter)
+strategy.exit("Long Exit", "Long", stop=BuyExit, limit = TP, when = strategy.position_size > 0)
+// Short Position
+if timeRange and strategy.position_size >= 0
+    strategy.entry("Short", strategy.short, stop = SellEnter)
+    
+strategy.exit("Short Exit", "Short", stop=SellExit, limit = TP, when = strategy.position_size < 0)
+// Close & Cancel when over End of the Test
+if time > endTest
+    strategy.close_all()
+    strategy.cancel_all()
+Expand (76 lines)

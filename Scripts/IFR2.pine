@@ -1,0 +1,86 @@
+Script Name: IFR2
+Author: EduardoMattje
+Description: The IFR2 strategy is based on the RSI indicator.
+
+If the two period RSI is less than the overbought level (25 is the default, but you can configure it to be lower), a long position is placed at the close of the candle. If you are doing it live, you'd have to enter the market ~ 10 minutes before it closes, check the RSI, and buy if it is lower than your overbought...
+PineScript code:
+
+Pine Script™ strategy
+IFR2
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Coded by Eduardo Mattje
+strategy("IFR2", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=50000, process_orders_on_close=true)
+// Inputs
+var I_OVERSOLD = input(25, "RSI oversold level", minval=1, maxval=100, tooltip="The entry will occur when the RSI is bellow this value.", group="Basic settings")
+var I_CANDLE_LOOKBACK = input(2, "Exit lookback", minval=1, tooltip="If you leave it at 2, the target will be calculated using the highest of the last 2 candles.", group="Basic settings")
+var I_CLOSE_AFTER = input(5, "Close after X candles", tooltip="Leave 0 if you want this to be disabled.", group="Basic settings")
+var I_ATR_EXIT_MULTIPLIER = input(0.0, "ATR exit multiplier", step=0.1, inline="ATR settings", group="ATR settings")
+var I_ATR_PERIOD = input(20, "ATR period", minval=2, inline="ATR settings", group="ATR settings")
+var I_INITIAL_DATE = input(0, "Initial date", input.time, tooltip="Leave this value as it is to disable.", inline="Date selection", group="Date selection")
+var I_FINAL_DATE = input(0, "Final date", input.time, tooltip="Leave this value as it is to disable.", inline="Date selection", group="Date selection")
+// Calculation
+ifr2 = rsi(close, 2)
+inMarket = strategy.opentrades != 0
+opened = strategy.opentrades[0] > strategy.opentrades[1]
+// Range check
+inRange = (I_INITIAL_DATE == 0 ? true : time >= I_INITIAL_DATE) and (I_FINAL_DATE == 0 ? true : time <= I_FINAL_DATE)
+// Entry order
+longCondition = crossunder(ifr2, I_OVERSOLD) and inRange
+strategy.entry("Long", true, comment="Entry", when=longCondition)
+    
+// Exit order
+exitPrice = highest(I_CANDLE_LOOKBACK) + atr(I_ATR_PERIOD) * I_ATR_EXIT_MULTIPLIER
+strategy.exit("Long", "Long", limit=exitPrice, comment="Exit")
+plot(longCondition or inMarket ? exitPrice : na, "Exit price", color.teal, 2, plot.style_linebr, offset=1)
+// Exit after X candles
+if I_CLOSE_AFTER and barssince(opened) >= I_CLOSE_AFTER
+    strategy.close_all(comment="It has been " + tostring(I_CLOSE_AFTER) + " candle" + (I_CLOSE_AFTER > 1 ? "s" : "")  + " since you entered")
+Expand (46 lines)

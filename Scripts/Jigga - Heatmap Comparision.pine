@@ -1,0 +1,212 @@
+Script Name: Jigga - Heatmap Comparision
+Author: jigneshjc
+Description: Hi All,
+
+I always have a question on how to know which sector is performing. I have created this Heatmap comparison to know strength of sector.
+
+I have used RSI and MACD calculation and put it across 5 different index. Color shows bullishness and Gray shows weakness.
+
+You can select RSI or MACD or Both to have calculation. And you can also compare stocks if you...
+PineScript code:
+
+Pine Script™ strategy
+Jigga - Heatmap Comparision
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © jigneshjc
+//@version=5
+strategy('Jigga - Heatmap Comparision', overlay=false)
+checkRSI = input(true, title='------------------------   RSI     ------------------------')
+length_RSI = input.int(14, title='Signal', inline='RSI')
+upperValueRSI = input.int(55, title='Upper', inline='RSI')
+lowerValueRSI = input.int(45, title='Lower', inline='RSI')
+checkMA = input(false, title='------------------------   EMA CrossOver     ------------------------')
+fastMA = input.int(20, title='Fast', inline='EMA Crossover')
+slowMA = input.int(50, title='Slow', inline='EMA Crossover')
+includeIndex = input(false, title='------------------------   INDEX     ------------------------')
+symbol1 = input.symbol(title='1', defval='NSE:CNXMETAL', inline='Symbol')
+symbol2 = input.symbol(title='2', defval='NSE:CNXFMCG', inline='Symbol')
+symbol3 = input.symbol(title='3', defval='NSE:CNXIT', inline='Symbol')
+symbol4 = input.symbol(title='4', defval='NSE:CNXPHARMA', inline='Symbol')
+symbol5 = input.symbol(title='5', defval='NSE:CNXAUTO', inline='Symbol')
+doBackTesting = input(false, title='------------------------   Do BackTesting     ------------------------')
+refSector = input.int(title='Buy sell based on sector #', defval=1, options=[1, 2, 3, 4, 5])
+updown(price) =>
+    closePrice = price
+    vrsi = ta.rsi(closePrice, length_RSI)
+    up = false
+    down = false
+    if checkRSI and checkMA
+        up := vrsi > upperValueRSI and ta.ema(closePrice, fastMA) > ta.ema(closePrice, slowMA) ? true : vrsi < lowerValueRSI and ta.ema(closePrice, fastMA) < ta.ema(closePrice, slowMA) ? false : up[1]
+        up
+    else if checkRSI
+        up := vrsi > upperValueRSI ? true : vrsi < lowerValueRSI ? false : up[1]
+        up
+    else if checkMA
+        up := ta.ema(closePrice, fastMA) > ta.ema(closePrice, slowMA) ? true : false
+        up
+    up
+s1Close = request.security(symbol1, timeframe.period, close)
+s2Close = request.security(symbol2, timeframe.period, close)
+s3Close = request.security(symbol3, timeframe.period, close)
+s4Close = request.security(symbol4, timeframe.period, close)
+s5Close = request.security(symbol5, timeframe.period, close)
+s1RSIup = updown(s1Close)
+s2RSIup = updown(s2Close)
+s3RSIup = updown(s3Close)
+s4RSIup = updown(s4Close)
+s5RSIup = updown(s5Close)
+refSectorup = refSector == 1 ? s1RSIup : refSector == 2 ? s2RSIup : refSector == 3 ? s2RSIup : refSector == 4 ? s4RSIup : s5RSIup
+h0 = hline(1, color=color.new(color.black, 10), linewidth=2, linestyle=hline.style_solid)
+h1 = hline(2, color=color.new(color.black, 10), linewidth=2, linestyle=hline.style_solid)
+h2 = hline(3, color=color.new(color.black, 10), linewidth=2, linestyle=hline.style_solid)
+h3 = hline(4, color=color.new(color.black, 10), linewidth=2, linestyle=hline.style_solid)
+h4 = hline(5, color=color.new(color.black, 10), linewidth=2, linestyle=hline.style_solid)
+h5 = hline(6, color=color.new(color.black, 10), linewidth=2, linestyle=hline.style_solid)
+lapos_x = timenow + math.round(ta.change(time) * 20)
+lapos_y = ta.highest(5)  // + (0.15 * highest(20))
+get_bars(Trend) =>
+    since_st_buy = ta.barssince(Trend == true)
+    since_st_sell = ta.barssince(Trend == false)
+    [since_st_buy, since_st_sell]
+[since_st_1_buy, since_st_1_sell] = get_bars(s5RSIup)
+[since_st_2_buy, since_st_2_sell] = get_bars(s4RSIup)
+[since_st_3_buy, since_st_3_sell] = get_bars(s3RSIup)
+[since_st_4_buy, since_st_4_sell] = get_bars(s2RSIup)
+[since_st_5_buy, since_st_5_sell] = get_bars(s1RSIup)
+heatmap_color(cond1, cond2, colorValue) =>
+    cond1 ? colorValue : cond2 ? color.new(color.silver, 20) : na
+f_draw_label(x, y, _text, _textcolor, _size) =>
+    var label Label = na
+    label.delete(Label)
+    Label := label.new(x, y, _text, color=color.new(color.white, 20), textcolor=_textcolor, style=label.style_none, yloc=yloc.price, xloc=xloc.bar_time, size=_size)
+    Label
+f_draw_label(lapos_x, 1, symbol5, color.black, size.large)
+f_draw_label(lapos_x, 2, symbol4, color.black, size.large)
+f_draw_label(lapos_x, 3, symbol3, color.black, size.large)
+f_draw_label(lapos_x, 4, symbol2, color.black, size.large)
+f_draw_label(lapos_x, 5, symbol1, color.black, size.large)
+fill(h0, h1, color=heatmap_color(since_st_1_sell > since_st_1_buy, since_st_1_sell < since_st_1_buy, color.new(color.fuchsia, 20)), title='Sector5', transp=90)
+fill(h1, h2, color=heatmap_color(since_st_2_sell > since_st_2_buy, since_st_2_sell < since_st_2_buy, color.new(color.yellow, 20)), title='Sector4', transp=90)
+fill(h2, h3, color=heatmap_color(since_st_3_sell > since_st_3_buy, since_st_3_sell < since_st_3_buy, color.new(color.lime, 20)), title='Sector3', transp=90)
+fill(h3, h4, color=heatmap_color(since_st_4_sell > since_st_4_buy, since_st_4_sell < since_st_4_buy, color.new(color.orange, 20)), title='Sector2', transp=90)
+fill(h4, h5, color=heatmap_color(since_st_5_sell > since_st_5_buy, since_st_5_sell < since_st_5_buy, color.new(color.blue, 20)), title='Sector1', transp=90)
+if strategy.position_size == 0 and refSectorup and doBackTesting
+    strategy.entry(id='In', direction=strategy.long)
+if not refSectorup and doBackTesting
+    strategy.close('In')
+Expand (114 lines)

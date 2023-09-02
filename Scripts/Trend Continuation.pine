@@ -1,0 +1,148 @@
+Script Name: Trend Continuation
+Author: juanchodeespada
+Description: Go long in a positive trend after a correction below a given EMA
+PineScript code:
+
+Pine Script™ strategy
+Trend Continuation
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+//@version=5
+strategy('Trend Continuation', shorttitle='Trend_Continuation', overlay=true)
+// Input
+price = input(close)
+MA1_Length = input.int(50, step=1, title='EMA 1 Length')
+MA2_Length = input.int(80, step=1, title='EMA 2 Length')
+MA3_Length = input.int(200, step=1, title='EMA 3 Length')
+numberOfCandles = input(0)
+slATRFactor = input(3.5)
+tpATRFactor = input(3.5)
+ATRLength = input(14)
+// switch1=input(true, title="Show Bar Color?")
+// switch2=input(true, title="Show Moving Averages?")
+// Calculation
+MA1 = ta.ema(price, MA1_Length)
+MA2 = ta.ema(price, MA2_Length)
+MA3 = ta.ema(price, MA3_Length)
+prev_price = close[numberOfCandles]
+// Strategy
+allPositive = true
+for i = 0 to numberOfCandles by 1
+    if close[i] < close[i + 1] or close[i] < MA1
+        allPositive := false
+        break
+long = MA2 > MA3 and ta.crossover(prev_price, MA1[numberOfCandles]) and allPositive
+// short = crossover(price, MA3) or ( change(price)>0 and change(MA1)>0 and crossover(price,MA1)  and change(MA2)<0 ) 
+if long
+    strategy.entry('Long', strategy.long, comment='Long')
+bought = strategy.position_size[0] > strategy.position_size[1]
+atrAtLong = ta.valuewhen(bought, ta.atr(ATRLength), 0)
+// Stop loss and take profit
+slPrice = strategy.position_avg_price - slATRFactor * atrAtLong
+tpPrice = strategy.position_avg_price + tpATRFactor * atrAtLong
+SL = plot(slPrice, title='SL', style=plot.style_linebr, linewidth=1, color=color.new(color.red, 0))
+if price >= tpPrice and price < MA1
+    strategy.close('Long')
+if price < strategy.position_avg_price
+    strategy.exit('Stop Loss', 'Long', stop=slPrice)
+// MA trend bar color
+// up =  change(MA2)>0 and change(MA3)>0
+// dn =  change(MA2)<0 and change(MA3)<0
+// bar_color = up?green:dn?red:blue
+// barcolor(switch1?bar_color:na)
+// MA trend output color
+change_1 = ta.change(MA2)
+MA2_color = ta.change(MA2) > 0 ? color.lime : change_1 < 0 ? color.red : color.blue
+change_2 = ta.change(MA3)
+MA3_color = ta.change(MA3) > 0 ? color.lime : change_2 < 0 ? color.red : color.blue
+// MA output
+// EMA2 = plot(switch2?MA2:na, title="EMA 2", style=linebr, linewidth=2, color=MA2_color)
+// EMA3 = plot(switch2?MA3:na, title="EMA 3", style=linebr, linewidth=4, color=MA3_color)
+// fill(EMA2, EMA3, color=silver, transp=50)
+color_1 = MA2 > MA3 ? color.green : color.red
+EMA1 = plot(MA1, title='EMA 1', style=plot.style_linebr, linewidth=1, color=color_1)
+// EMA2 = plot(MA2, title="EMA 2", style=linebr, linewidth=2, color=blue)
+// EMA3 = plot(MA3, title="EMA 3", style=linebr, linewidth=3, color=red)
+//plot(strategy.equity, title="equity", color=red, linewidth=2, style=areabr)
+Expand (82 lines)

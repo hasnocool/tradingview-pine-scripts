@@ -1,0 +1,318 @@
+Script Name: RSI Mean Reversion Bot Strategy
+Author: Solutions1978
+Description: I started developing this strategy as a way to plug in and test values before defining them in the bots on 3Commas, Coinrule, and Quadency. None of those bots performed the same way my script did and I kept working on it until the strategy finally yielded the same simulated results when paired with the Tradingview bot on Quadency. I looked at all the different RSI...
+PineScript code:
+
+Pine Script™ strategy
+RSI Mean Reversion Bot Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//@version=4
+// ██████╗██████╗ ███████╗ █████╗ ████████╗███████╗██████╗     ██████╗ ██╗   ██╗    
+//██╔════╝██╔══██╗██╔════╝██╔══██╗╚══██╔══╝██╔════╝██╔══██╗    ██╔══██╗╚██╗ ██╔╝                       
+//██║     ██████╔╝█████╗  ███████║   ██║   █████╗  ██║  ██║    ██████╔╝ ╚████╔╝                        
+//██║     ██╔══██╗██╔══╝  ██╔══██║   ██║   ██╔══╝  ██║  ██║    ██╔══██╗  ╚██╔╝                         
+//╚██████╗██║  ██║███████╗██║  ██║   ██║   ███████╗██████╔╝    ██████╔╝   ██║                          
+// ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═════╝     ╚═════╝    ╚═╝                          
+                                                                                                     
+//███████╗ ██████╗ ██╗     ██╗   ██╗████████╗██╗ ██████╗ ███╗   ██╗███████╗ ██╗ █████╗ ███████╗ █████╗ 
+//██╔════╝██╔═══██╗██║     ██║   ██║╚══██╔══╝██║██╔═══██╗████╗  ██║██╔════╝███║██╔══██╗╚════██║██╔══██╗
+//███████╗██║   ██║██║     ██║   ██║   ██║   ██║██║   ██║██╔██╗ ██║███████╗╚██║╚██████║    ██╔╝╚█████╔╝
+//╚════██║██║   ██║██║     ██║   ██║   ██║   ██║██║   ██║██║╚██╗██║╚════██║ ██║ ╚═══██║   ██╔╝ ██╔══██╗
+//███████║╚██████╔╝███████╗╚██████╔╝   ██║   ██║╚██████╔╝██║ ╚████║███████║ ██║ █████╔╝   ██║  ╚█████╔╝
+//╚══════╝ ╚═════╝ ╚══════╝ ╚═════╝    ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝ ╚═╝ ╚════╝    ╚═╝   ╚════╝ 
+                                                                                                     
+strategy(shorttitle='RSI Bot Strategy v3',title='Holy Grail RSI Strategy', overlay=true, scale=scale.left, initial_capital = 1000, process_orders_on_close=true, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type=strategy.commission.percent, commission_value=0.18, calc_on_every_tick=true)
+kcolor = color.new(#0094FF, 60)
+dcolor = color.new(#FF6A00, 60)
+// -----------------  Strategy Inputs -------------------------------------------------------------
+//Backtest dates with auto finish date of today
+start       = input(defval = timestamp("01 April 2021 00:00 -0500"), title = "Start Time", type = input.time)
+finish      = input(defval = timestamp("31 December 2021 00:00 -0600"), title = "End Time", type = input.time)
+window()    => time >= start and time <= finish ? true : false       // create function "within window of time"
+// Strategy Selection - Long, Short, or Both
+stratinfo   = input(true, "Long/Short for Mixed Market, Long for Bull, Short for Bear")
+strat       = input(title="Trade Types", defval="Long/Short", options=["Long Only", "Long/Short", "Short Only"])
+strat_val   = strat == "Long Only" ? 1 : strat == "Long/Short" ? 0 : -1
+// Risk Management Inputs
+sl  = input(10.0, "Stop Loss %", minval = 0, maxval = 100, step = 0.01)
+tp  = input(20.0, "Target Profit %", minval = 0, maxval = 100, step = 0.01)
+stoploss     = sl/100
+TargetProfit = tp/100
+// RSI Inputs
+RSIinfo     = input(true, "RSI Strategy Inputs")
+length      = input(14, minval=1)
+source      = input(title="Source", type=input.source, defval=close)
+overbought  = input(60, "Overbought")
+oversold    = input(30, "Oversold")
+// Stochastic Inputs
+Stochinfo   = input(true, "Stochastic Overlay Inputs")
+smoothK     = input(3, "K", minval=1)
+smoothD     = input(3, "D", minval=1)
+k_mode      = input("SMA", "K Mode", options=["SMA", "EMA", "WMA"])
+//EMA Inputs
+EMAInfo     = input(true, "EMA Fast and Slow Length Inputs")
+fastLength  = input(5, minval=1, title="EMA Fast Length")
+slowLength  = input(10, minval=1, title="EMA Slow Length")
+VWAPSource  = input(title="VWAP Source", type=input.source, defval=close)
+// Selections to show or hide the overlays
+showZones = input(true, title="Show Bullish/Bearish Zones")
+showStoch = input(true, title="Show Stochastic Overlays")
+// ------------------ Background Colors based on EMA Indicators -----------------------------------
+haClose(gap) => (open[gap] + high[gap] + low[gap] + close[gap]) / 4
+rsi_ema = rsi(haClose(0), length)
+v2 = ema(rsi_ema, length)                                                
+v3 = 2 * v2 - ema(v2, length)  
+emaA = ema(rsi_ema, fastLength)                                     
+emaFast = 2 * emaA - ema(emaA, fastLength)
+emaB = ema(rsi_ema, slowLength)                                     
+emaSlow = 2 * emaB - ema(emaB, slowLength)  
+vwapVal = vwap(VWAPSource)
+// bullish signal rule: 
+bullishRule =emaFast > emaSlow and close>open and close>vwapVal
+// bearish signal rule: 
+bearishRule =emaFast < emaSlow and close<open and close<vwapVal
+// current trading State
+ruleState = 0
+ruleState := bullishRule ? 1 : bearishRule ? -1 : nz(ruleState[1])
+ruleColor = ruleState==1 ? color.new(color.blue, 90) : ruleState == -1 ? color.new(color.red, 90) : ruleState == 0 ? color.new(color.gray, 90) : na
+bgcolor(showZones ? ruleColor : na, title="Bullish/Bearish Zones")
+// ------------------  Stochastic Indicator Overlay -----------------------------------------------
+// Calculation
+rsi1 = rsi(source, length)
+stoch = stoch(rsi1, rsi1, rsi1, length)
+k =
+ k_mode=="EMA" ? ema(stoch, smoothK) :
+ k_mode=="WMA" ? wma(stoch, smoothK) :
+ sma(stoch, smoothK)
+d = sma(k, smoothD)
+k_c = change(k)
+d_c = change(d)
+kd = k - d
+// Plot
+signalColor = k>oversold and d<overbought and k>d and k_c>0 and d_c>0 ? kcolor : 
+ k<overbought and d>oversold and k<d and k_c<0 and d_c<0 ? dcolor : na
+kp = plot(showStoch ? k : na, "K", color=kcolor)
+dp = plot(showStoch ? d : na, "D", color=dcolor)
+fill(kp, dp, color = signalColor, title="K-D")
+signalUp = showStoch ? not na(signalColor) and kd>0 : na
+signalDown = showStoch ? not na(signalColor) and kd<0 : na
+plot(signalUp ? kd : na, "Signal Up", color=kcolor, style=plot.style_columns)
+plot(signalDown ? (kd+100) : na , "Signal Down", color=dcolor, style=plot.style_columns, histbase=100)
+// Add RSI Candle Plot to Strategy for better visualization
+//overlay RSI
+h0 = hline(oversold, title="Oversold", color=color.green)
+h1 = hline(overbought, title="Overbought", color=color.red)
+RSIFill = color.new(#9915FF, 95)
+fill(h0, h1, RSIFill, title="Band Background")
+plot(rsi1, title="RSI", color=color.yellow, linewidth=3)
+// End Plot Code
+// -------------------------------- Entry and Exit Logic ------------------------------------
+// Entry Logic
+GoLong = strat_val>-1 and crossover(rsi1, oversold) and strategy.position_size==0 and window()
+GoShort = strat_val<1 and crossunder(rsi1, overbought) and strategy.position_size==0 and window()
+// Strategy Entry and Exit with built in Risk Management
+if (GoLong)
+    strategy.entry("LONG", strategy.long)
+if (GoShort) 
+    strategy.entry("SHORT", strategy.short)
+CloseLong = strat_val > -1 and strategy.position_size > 0 and crossover(rsi1, overbought) and window()
+CloseShort = strat_val < 1 and strategy.position_size < 0 and crossunder(rsi1, oversold) and window()
+if(CloseLong)
+    strategy.close("LONG")
+if(CloseShort)
+    strategy.close("SHORT")
+        
+// Determine where you've entered and in what direction
+longStopPrice  = strategy.position_avg_price * (1 - stoploss)
+longTakePrice  = strategy.position_avg_price * (1 + TargetProfit)
+shortStopPrice = strategy.position_avg_price * (1 + stoploss)
+shortTakePrice = strategy.position_avg_price * (1 - TargetProfit)
+if (strategy.position_size > 0)
+    strategy.exit(id="Exit Long", from_entry = "LONG", stop = longStopPrice, limit = longTakePrice)
+    
+if (strategy.position_size < 0)
+    strategy.exit(id="Exit Short", from_entry = "SHORT", stop = shortStopPrice, limit = shortTakePrice)
+//PLOT FIXED SLTP LINE
+plot(strategy.position_size > 0 ? longStopPrice : na, style=plot.style_linebr, color=color.red, linewidth=1, title="Long Fixed SL")
+plot(strategy.position_size < 0 ? shortStopPrice : na, style=plot.style_linebr, color=color.red, linewidth=1, title="Short Fixed SL")
+plot(strategy.position_size > 0 ? longTakePrice : na, style=plot.style_linebr, color=color.green, linewidth=1, title="Long Take Profit")
+plot(strategy.position_size < 0 ? shortTakePrice : na, style=plot.style_linebr, color=color.green, linewidth=1, title="Short Take Profit")
+Expand (177 lines)

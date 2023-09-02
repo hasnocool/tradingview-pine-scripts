@@ -1,0 +1,206 @@
+Script Name: [KL] Bollinger bands + RSI Strategy
+Author: DojiEmoji
+Description: This strategy is based on two of my previous scripts, one called “RSI14 + 10”; the other one called “Bollinger Bands Consolidation”. At its core, it combines the main setups from each of those two scripts but excludes the auxiliary features that were considered as experimental. This strategy will identify periods of squeeze, and then enter long during...
+PineScript code:
+
+Pine Script™ strategy
+[KL] Bollinger bands + RSI Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © DojiEmoji
+// 
+//@version=4
+strategy("[KL] BOLL + RSI Strategy",overlay=true,pyramiding=1)
+// Timeframe {
+backtest_timeframe_start = input(defval = timestamp("01 Apr 2016 13:30 +0000"), title = "Backtest Start Time", type = input.time)
+USE_ENDTIME = input(false,title="Define backtest end-time (If false, will test up to most recent candle)")
+backtest_timeframe_end = input(defval = timestamp("01 May 2021 19:30 +0000"), title = "Backtest End Time (if checked above)", type = input.time)
+within_timeframe = time >= backtest_timeframe_start and (time <= backtest_timeframe_end or not USE_ENDTIME)
+// }
+// Bollinger bands (sdv=2, len=20) {
+BOLL_length = 20, BOLL_src = close, SMA20 = sma(BOLL_src, BOLL_length), BOLL_sDEV_x2 = 2 * stdev(BOLL_src, BOLL_length)
+BOLL_upper = SMA20 + BOLL_sDEV_x2, BOLL_lower = SMA20 - BOLL_sDEV_x2
+plot(SMA20, "Basis", color=#872323, offset = 0)
+BOLL_p1 = plot(BOLL_upper, "BOLL Upper", color=color.navy, offset = 0, transp=50)
+BOLL_p2 = plot(BOLL_lower, "BOLL Lower", color=color.navy, offset = 0, transp=50)
+fill(BOLL_p1, BOLL_p2, title = "Background", color=#198787, transp=85)
+// }
+// Volatility Indicators {
+ATR_x2 = atr(BOLL_length) * 2 // multiplier aligns with BOLL
+avg_atr = sma(ATR_x2, input(1,title="No. of candles to lookback when determining ATR is decreasing"))
+plot(SMA20+ATR_x2, "SMA20 + ATR_x2", color=color.gray, offset = 0, transp=50)
+plot(SMA20-ATR_x2, "SMA20 - ATR_x2", color=color.gray, offset = 0, transp=50)
+plotchar(ATR_x2, "ATR_x2", "", location = location.bottom)
+//}
+// Trailing stop loss {
+TSL_source = low
+var entry_price = float(0), var stop_loss_price = float(0)
+trail_profit_line_color = color.green
+if strategy.position_size == 0 or not within_timeframe
+    trail_profit_line_color := color.black
+    stop_loss_price := TSL_source - ATR_x2
+else if strategy.position_size > 0
+    stop_loss_price := max(stop_loss_price, TSL_source - ATR_x2)
+plot(stop_loss_price, color=trail_profit_line_color)
+if strategy.position_size > 0 and stop_loss_price > stop_loss_price[1]
+    alert("Stop loss limit raised", alert.freq_once_per_bar)
+// } end of Trailing stop loss
+//Buy setup - Long positions {
+is_squeezing = ATR_x2 > BOLL_sDEV_x2
+if is_squeezing and within_timeframe and not is_squeezing[1]
+    alert("BOLL bands are squeezing", alert.freq_once_per_bar)
+else if not is_squeezing and within_timeframe and is_squeezing[1]
+    alert("BOLL bands stopped squeezing", alert.freq_once_per_bar)
+ema_trend = ema(close, 20)
+concat(a, b) =>
+    concat = a
+    if a != ""
+        concat := concat + ", "
+    concat := concat + b
+    concat
+// }
+// Sell setup - Long position {
+rsi_10 = rsi(close, 10), rsi_14 = rsi(close, 14)
+overbought = rsi_14 > input(70,title="[Exit] RSI(14) value considered as overbought") and rsi_10 > rsi_14
+// } end of Sell setup - Long position
+// MAIN: {
+if within_timeframe
+    entry_msg = ""
+    exit_msg = ""
+    // ENTRY {
+    conf_count = 0  
+    volat_decr = avg_atr <= avg_atr[1]
+    rsi_upslope = rsi_10 > rsi_10[1] and rsi_14 > rsi_14[1]
+    if volat_decr and rsi_upslope and is_squeezing and strategy.position_size == 0
+        strategy.entry("Long",strategy.long, comment=entry_msg)
+        entry_price := close
+        stop_loss_price := TSL_source - ATR_x2
+    // }
+    // EXIT {
+    if strategy.position_size > 0
+        bExit = false
+        if close <= entry_price and TSL_source <= stop_loss_price
+            exit_msg := concat(exit_msg, "stop loss [TSL]")
+            bExit := true
+        else if close > entry_price and TSL_source <= stop_loss_price
+            exit_msg := concat(exit_msg, "take profit [TSL]")
+            bExit := true
+        else if overbought
+            exit_msg := concat(exit_msg, "overbought")
+            bExit := true
+        strategy.close("Long", when=bExit, comment=exit_msg)
+    // }
+// }
+// CLEAN UP:
+if strategy.position_size == 0 and not is_squeezing
+    entry_price := 0
+    stop_loss_price := float(0)
+Expand (108 lines)

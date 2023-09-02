@@ -1,0 +1,116 @@
+Script Name: Volume Advanced
+Author: TradingAmmo
+Description: I have found out this script some time ago. In fact it is not my code (just have modified a little) and I don't know the author (couldn't find). So now I would like to share with the community, maybe somebody would have some idea how to make it better. The script itself is modified volatility oscillator (like ATR)  based on volume, making a deal at the moment of...
+PineScript code:
+
+Pine Script™ strategy
+Volume Advanced
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+//@version=4
+strategy('Volume Advanced', default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent, commission_value=0.075, currency='USD')
+startP = timestamp(input(2017, "Start Year"), input(12, "Start Month"), input(17, "Start Day"), 0, 0)
+end    = timestamp(input(9999, "End Year"),   input(1, "End Month"),   input(1, "End Day"),   0, 0)
+_testPeriod() =>
+    iff(time >= startP and time <= end, true, false)
+source = close 
+vol_length  = input(34, title = "Volume - Length")
+vol_smooth  = input(200,title = "Volume - Smoothing")
+volriselen  = input(21,  title = "Volume - Risinglength")
+volfalllen  = input(13, title = "Volume - Fallinglength")
+threshold   = input(1,"threshold")
+threshold2  = input(1.2,step=0.1, title="Threshold 2")
+direction = input(13,"amount of bars")
+volsum  = sum(volume, vol_length) / (sum(volume, vol_smooth) / (vol_smooth / vol_length))
+LongEntry  = (rising(volsum, volriselen) or crossover (volsum, threshold)) and close > close[direction]
+ShortEntry = (rising(volsum, volriselen) or crossover (volsum, threshold)) and close < close[direction]
+LongExit1  = falling (volsum,volfalllen)
+ShortExit1 = falling (volsum,volfalllen)
+LongExit2= (crossover(volsum, threshold2) and close < close[direction])
+_state = 0
+_prev = nz(_state[1])
+_state := _prev
+if _prev == 0
+    if LongEntry
+        _state := 1
+        _state
+    if ShortEntry
+        _state := 2
+        _state
+if _prev == 1
+    if ShortEntry or LongExit1
+        _state := 0
+        _state
+if _prev == 2
+    if LongEntry or ShortExit1
+        _state := 0
+        _state
+_bLongEntry = _state == 1 
+_bLongClose = _state == 0 
+long_condition = _bLongEntry and close > close[direction] and _testPeriod()
+strategy.entry('BUY', strategy.long, when=long_condition)  
+ 
+short_condition =  _bLongClose or LongExit2
+strategy.close('BUY', when=short_condition)
+plot(volsum,      color = color.green,    title="Vol_Sum")
+plot(threshold, color = color.fuchsia, transp=50, title="Threshold")
+plot(threshold2, color=color.white, transp = 50, title="Threshold 2")
+Expand (59 lines)

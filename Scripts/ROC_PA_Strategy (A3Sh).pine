@@ -1,0 +1,381 @@
+Script Name: ROC_PA_Strategy (A3Sh)
+Author: A3Sh
+Description: Hi there,
+
+An experiment with rate of price change in combination with price averaging. The strategy is inspired by  Price Change Scalping Strategy  developed by Prosum Solutions and  Scalping Dips On Trend Strategy  developed by Coinrule. Both strategies look at the percentage of price change to open orders.
+
+When the price drops beyond a specified percentage, a...
+PineScript code:
+
+Pine Script™ strategy
+ROC_PA_Strategy (A3Sh)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+//@version=5
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © A3Sh
+// Rate of price change / Price averaging strategy //
+// When the price drops to a specified percentage, a Long Entry Threshold is setup.
+// The Long Entry Threshold is only active for a specified number of bars and will de-activate when not crossed. 
+// When the price drops further and crosses the Entry Threshold with a minimum of a specified percentage, a Long Position is entered. 
+// The same reverse logic used to close the Long Position.
+// Stop loss and take profit are active by default. With proper tweaking of the settings it is possible to de-activate SL and TP.
+// The strategy is inspired by the following strategies:
+// Price Change Scalping Strategy developed by Prosum Solutions, https://www.tradingview.com/script/ue7Uc3sN-Price-Change-Scalping-Strategy-v1-0-0/
+// Scalping Dips On Trend Strategy developed by Coinrule, https://www.tradingview.com/script/iHHO0PJA-Scalping-Dips-On-Trend-by-Coinrule/
+strategy(title='ROC_PA_Strategy_@A3Sh', overlay=true, pyramiding=4, initial_capital=1000, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent, commission_value=0.075)
+// Portfolio & Leverage Example
+// credit: @RafaelZioni, https://www.tradingview.com/script/xGk5K4DE-BTC-15-min/
+ge(value, precision) =>
+    math.round(value * math.pow(10, precision)) / math.pow(10, precision)
+port     = input.float(25,  group='Risk', title='Portfolio Percentage', step=0.1, minval=0.1, maxval=200)
+leverage = input.int(3,     group='Risk', title='Leverage',                       minval=1,   maxval=100)
+c = ge(strategy.equity * leverage / open * (port / 100), 4)
+// Take Profit
+tpa = input.bool(true, title='Take Profit', group='Risk', inline='Take Profit')
+tpp = input.float(3.5, title='Percentage',  group='Risk', step=0.1, minval=0.1, inline='Take Profit')
+tp = strategy.position_avg_price + strategy.position_avg_price / 100 * tpp
+plot(tpa and strategy.position_size > 0 ? tp : na, color=color.new(color.gray, 0), title='take profit', style=plot.style_linebr, linewidth=1)
+// Stop Loss
+sla = input.bool(true, title='Stop Lossss ', group='Risk',                       inline='Stop Loss')
+slp = input.float(8.0, title='Percentage',   group='Risk', step=0.1, minval=0.1, inline='Stop Loss')
+sl = strategy.position_avg_price - strategy.position_avg_price / 100 * slp
+plot(sla and strategy.position_size > 0 ? sl : na, color=color.new(color.red, 0), title='stopp loss', style=plot.style_linebr, linewidth=1)
+stopLoss = sla ? sl : na
+// Long position entry layers. Percentage from the entry price of the the first long
+ps2 = input.float(3,  group='Price Averaging Layers', title='2nd Layer Long Entry %', step=0.1)
+ps3 = input.float(7,  group='Price Averaging Layers', title='3rd Layer Long Entry %', step=0.1)
+ps4 = input.float(15, group='Price Averaging Layers', title='4th Layer Long Entry %', step=0.1)
+// ROC_Trigger Logic to open Long Position
+rocLookBack =  input.int(3,     group='ROC Logic to OPEN Long Entry', title='Rate of Change bar lookback')
+rocThreshold = input.float(2.2, group='ROC Logic to OPEN Long Entry', title='ROC Threshold % to Setup Long Entry',       step=0.1)
+entryLimit =   input.float(0.4, group='ROC Logic to OPEN Long Entry', title='Price Drop Threshold % to OPEN Long Entry', step=0.1)
+entryTime =    input.int(6,     group='ROC Logic to OPEN Long Entry', title='Duration of Long Entry Threshold Line in bars')
+minLimit =     input.float(0.4, group='ROC Logic to OPEN Long Entry', title='Min % of Price Drop to OPEN Long Entry',    step=0.1)
+//ROC calculation based to the price level of previous X bars
+roc = close[rocLookBack] - close / 100 * rocThreshold
+plot(roc, color=color.new(color.gray, 20), title='roc threshold', linewidth=1)
+rocT1 = open > roc and close < roc ? 1 : 0  // When the price CROSSES the Entry Limit
+rocT2 = open < roc and close < roc ? 1 : 0  // When the price is BELOW the Entry Limit
+rocTrigger = rocT1 or rocT2
+// Condition for Setting Up a Long Entry Thershold Line
+rocCrossed    = false
+var SetUpLong = false
+if rocTrigger and not SetUpLong
+    rocCrossed := true
+    SetUpLong  := true
+    SetUpLong
+// Defining the Value of the Long Entry Thershold
+condforValue = rocCrossed and (open - low) / (open / 100) > 0 or open < roc and close < roc ? low - close / 100 * entryLimit : roc - close / 100 * entryLimit
+openValue    = ta.valuewhen(rocCrossed, condforValue, 0)
+// Defining the length of the Long Entry Thershold in bars, specified with an input parameter
+sincerocCrossed = ta.barssince(rocCrossed)
+plotLineOpen    = sincerocCrossed <= entryTime ? openValue : na
+endLineOpen     = sincerocCrossed == entryTime ? 1 : 0
+// Set the conditions back to false when the Entry Limit Threshold Line ends after specied number of bars
+if endLineOpen and SetUpLong
+    rocCrossed := false
+    SetUpLong  := false
+    SetUpLong
+// Set minimum percentage of price drop to open a Long Position.
+minThres = (open - close) / (open / 100) > minLimit ? 1 : 0
+// Open Long Trigger
+openLong = ta.crossunder(close, plotLineOpen) and strategy.position_size == 0 and minThres
+plot(strategy.position_size == 0 ? plotLineOpen : na, title='Long Entry Threshold', color=color.new(color.yellow, 0), style=plot.style_linebr, linewidth=2)
+// Show vertical dashed line when long condition is triggered 
+// credit: @midtownsk8rguy, https://www.tradingview.com/script/EmTkvfCM-vline-Function-for-Pine-Script-v4-0/
+vline(BarIndex, Color, LineStyle, LineWidth) =>
+    return_1 = line.new(BarIndex, low - ta.tr, BarIndex, high + ta.tr, xloc.bar_index, extend.both, Color, LineStyle, LineWidth)
+    return_1
+if openLong
+    vline(bar_index, color.blue, line.style_dashed, 1)
+// ROC_Trigger Logic to close Long Position
+rocLookBackL    = input.int(3,      group='ROC Logic to CLOSE Long Entry', title='Rate of Change bar lookback')
+entryThresholdL = input.float(0.4,  group='ROC Logic to CLOSE Long Entry', title='ROC Threshold % to Setup Close Threshold',  step=0.1)  // Percentage from close price
+entryLimit_CL   = input.float(1.0,  group='ROC Logic to CLOSE Long Entry', title='Price Rise Threshold % to CLOSE Long Entry', step=0.1)  // Percentage from roc threshold
+entryTime_CL    = input.int(3,      group='ROC Logic to CLOSE Long Entry', title='Duration of Entry Limit in bars')
+changeLogic     = input.bool(false, group='ROC Logic to CLOSE Long Entry', title='Activate Continues Close Limit Line')
+roc_CL = close[rocLookBackL] + close / 100 * entryThresholdL
+//plot(rocL, color=color.gray, linewidth=1, transp=20)
+rocT1_CL = open < roc_CL and close > roc_CL ? 1 : 0
+rocT2_CL = open > roc_CL and close > roc_CL ? 1 : 0
+rocTrigger_CL = rocT1_CL or rocT2_CL
+// Condition for Setting Up a Long CLOSE Thershold Line
+rocCrossed_CL  = false
+var SetUpClose = false
+if rocTrigger_CL and not SetUpClose
+    // The trigger for condA occurs and the last condition set was condB.
+    rocCrossed_CL := true
+    SetUpClose    := true
+    SetUpClose
+// Defining the Value of the Long CLOSE Thershold
+condforValue_CL = rocCrossed_CL and (high - open) / (open / 100) > 0 or open > roc_CL and close > roc_CL ? high + close / 100 * entryLimit_CL : roc_CL + close / 100 * entryLimit_CL
+closeValue      = ta.valuewhen(rocCrossed_CL, condforValue_CL, 0)
+// Defining the length of the Long CLOSE Thershold in bars, specified with an input parameter
+sincerocCrossed_CL = ta.barssince(rocCrossed_CL)
+plotLineClose      = sincerocCrossed_CL <= entryTime_CL ? closeValue : na
+endLineClose       = sincerocCrossed_CL == entryTime_CL ? 1 : 0
+// Set the conditions back to false when the CLOSE Limit Threshold Line ends after specied number of bars
+if endLineClose and SetUpClose
+    rocCrossed_CL := false
+    SetUpClose    := false
+    SetUpClose
+// ROC Close + Take Profit combined
+closeCondition = close < tp ? plotLineClose : tpa ? tp : plotLineClose
+plot(changeLogic and strategy.position_size > 0 ? closeValue : strategy.position_size > 0 ? plotLineClose : na, color=color.new(color.white, 0), title='Close Long Threshold', style=plot.style_linebr, linewidth=2)
+// Store values to create and plot the different PA layers
+long1 = ta.valuewhen(openLong, close, 0)
+long2 = ta.valuewhen(openLong, close - close / 100 * ps2, 0)
+long3 = ta.valuewhen(openLong, close - close / 100 * ps3, 0)
+long4 = ta.valuewhen(openLong, close - close / 100 * ps4, 0)
+eps1 = 0.00
+eps1 := na(eps1[1]) ? na : eps1[1]
+eps2 = 0.00
+eps2 := na(eps2[1]) ? na : eps2[1]
+eps3 = 0.00
+eps3 := na(eps3[1]) ? na : eps3[1]
+eps4 = 0.00
+eps4 := na(eps4[1]) ? na : eps4[1]
+plot(strategy.position_size > 0 ? eps1 : na, title='Long 1 Layer', style=plot.style_linebr)
+plot(strategy.position_size > 0 ? eps2 : na, title='Long 2 Layer', style=plot.style_linebr)
+plot(strategy.position_size > 0 ? eps3 : na, title='Long 3 Layer', style=plot.style_linebr)
+plot(strategy.position_size > 0 ? eps4 : na, title='Long 4 Layer', style=plot.style_linebr)
+// Option to choose between old and new logic
+// There was a flaw in the original script that caused positions to close even after the close limit line ended. 
+// Now you can choose between a logic where the line is continues(the orginal script) and one where the close limit is active an X amount of bars(the inteded logic)
+whenCondition = changeLogic ? rocTrigger_CL and strategy.position_size > 0 : strategy.position_size > 0 and close > eps2
+// Ener Long Positions
+if openLong and strategy.opentrades == 0
+    eps1 := long1
+    eps2 := long2
+    eps3 := long3
+    eps4 := long4
+    strategy.entry('Long1', strategy.long, c, comment='Enter Long1')
+if strategy.opentrades == 1
+    strategy.entry('Long2', strategy.long, c, limit=eps2, comment='Enter Long2')
+if strategy.opentrades == 2
+    strategy.entry('Long3', strategy.long, c, limit=eps3, comment='Enter Long3')
+if strategy.opentrades == 3
+    strategy.entry('Long4', strategy.long, c, limit=eps4, comment='Enter Long4')
+// Setup Limit Close / Take Profit / Stop Loss order 
+strategy.exit('Exit', stop=stopLoss, limit=closeCondition, when=whenCondition, comment='Close All')
+// Make sure that all open limit orders are canceled after exiting all the positions 
+longClose = strategy.position_size[1] > 0 and strategy.position_size == 0 ? 1 : 0
+if longClose
+    strategy.cancel_all()
+Expand (216 lines)

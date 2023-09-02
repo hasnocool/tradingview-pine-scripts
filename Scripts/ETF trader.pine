@@ -1,0 +1,205 @@
+Script Name: ETF trader
+Author: FX_minds
+Description: simple breakout system that uses an ATR based SL and an ATR based trailing SL
+PineScript code:
+
+Pine Script™ strategy
+ETF trader
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © FX_minds
+//@version=4
+strategy("ETF trader", overlay=true, pyramiding=100, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+//------------------------------ get user input
+lookback                   = input(title="HH LL lookback", type=input.integer, defval=20)
+ATR_periode                = input(title="ATR period", type=input.integer, defval=14)
+ATR_SL_multiplier          = input(title="ATR SL multiplier", type=input.float, defval=2)
+ATR_TP_multiplier          = input(title="ATR TP multiplier", type=input.float, defval=1)
+trailing_SL_ATR_multiplier = input(title="ATR trailing SL multiplier", type=input.float, defval=3.5)
+lookback_trailing_SL       = input(title="trailing SL lookback", type=input.integer, defval=4)
+max_sequel_trades          = input(title="max sequel trades", type=input.float, defval=1)
+trade_long                 = input(title= "trade long ?", type=input.bool, defval=true)
+trade_short                = input(title= "trade short ?", type=input.bool, defval=false)
+//------------------------------ determine entry conditions
+long_condition   = barstate.isconfirmed and crossover(high, highest(high, lookback)[1])
+short_condition  = barstate.isconfirmed and crossunder(low, lowest(low, lookback)[1])
+//------------------------------ count open long trades
+count_open_longs = 0
+count_open_longs := nz(count_open_longs[1])
+if (long_condition) 
+    count_open_longs := count_open_longs +1
+    //label.new(bar_index, low, tostring(count_open_longs, "#"), xloc.bar_index, yloc.belowbar, color.green, label.style_none, color.green, size.large)
+if (short_condition)
+    count_open_longs := 0
+//------------------------------ count open short trades
+count_open_shorts = 0
+count_open_shorts := nz(count_open_shorts[1])
+if (short_condition)
+    count_open_shorts := count_open_shorts +1
+    //label.new(bar_index, low, tostring(count_open_shorts, "#"), xloc.bar_index, yloc.belowbar, color.red, label.style_none, color.red, size.large)
+if (long_condition)
+    count_open_shorts := 0
+//------------------------------ calculate entryprice
+entryprice_long = long_condition ? close : na
+entryprice_short = short_condition ? close : na
+//------------------------------ calculate SL & TP
+SL_distance = atr(ATR_periode) * ATR_SL_multiplier
+TP_distance  = atr(ATR_periode) * ATR_TP_multiplier
+trailing_SL_distance = atr(ATR_periode) * trailing_SL_ATR_multiplier
+SL_long = entryprice_long - SL_distance
+SL_short = entryprice_short + SL_distance
+trailing_SL_short = lowest(close, lookback_trailing_SL) + trailing_SL_distance
+trailing_SL_long  = highest(close, lookback_trailing_SL) - trailing_SL_distance
+trailing_SL_short_signal = crossover(high, trailing_SL_short[1])
+trailing_SL_long_signal = crossunder(low, trailing_SL_long[1])
+//------------------------------ plot entry price & SL  
+plot(entryprice_long, style=plot.style_linebr, color=color.white)
+plot(SL_long, style=plot.style_linebr, color=color.red)
+plot(SL_short, style=plot.style_linebr, color=color.green)
+plot(trailing_SL_short, style=plot.style_linebr, color=color.red)
+plot(trailing_SL_long, style=plot.style_linebr, color=color.green)
+//------------------------------ submit entry orders
+if (long_condition) and (count_open_longs <= max_sequel_trades) and (trade_long == true)
+    strategy.entry("Long" + tostring(count_open_longs, "#"), strategy.long)
+    strategy.exit("SL Long"+ tostring(count_open_longs, "#"), 
+     from_entry="Long" + tostring(count_open_longs, "#"), stop=SL_long)
+if (short_condition) and (count_open_shorts <= max_sequel_trades) and (trade_short == true)
+    strategy.entry("Short" + tostring(count_open_shorts, "#"), strategy.short)
+    strategy.exit("SL Short" + tostring(count_open_shorts, "#"), 
+     from_entry="Short" + tostring(count_open_shorts, "#"), stop=SL_short)
+    
+//------------------------------ submit exit conditions
+if (trailing_SL_long_signal)
+    strategy.close("Long" + tostring(count_open_longs, "#"))
+    strategy.close("Long" + tostring(count_open_longs-1, "#"))
+    strategy.close("Long" + tostring(count_open_longs-2, "#"))
+    strategy.close("Long" + tostring(count_open_longs-4, "#"))
+    strategy.close("Long" + tostring(count_open_longs-5, "#"))
+    strategy.close("Long" + tostring(count_open_longs-6, "#"))
+    strategy.close("Long" + tostring(count_open_longs-7, "#"))
+    strategy.close("Long" + tostring(count_open_longs-8, "#"))
+    strategy.close("Long" + tostring(count_open_longs-9, "#"))
+    
+if (trailing_SL_short_signal)
+    strategy.close("Short" + tostring(count_open_shorts, "#"))
+    strategy.close("Short" + tostring(count_open_shorts-1, "#"))
+    strategy.close("Short" + tostring(count_open_shorts-2, "#"))
+    strategy.close("Short" + tostring(count_open_shorts-3, "#"))
+    strategy.close("Short" + tostring(count_open_shorts-4, "#"))
+    strategy.close("Short" + tostring(count_open_shorts-5, "#"))
+    strategy.close("Short" + tostring(count_open_shorts-6, "#"))
+    strategy.close("Short" + tostring(count_open_shorts-7, "#"))
+    strategy.close("Short" + tostring(count_open_shorts-8, "#"))
+    strategy.close("Short" + tostring(count_open_shorts-9, "#"))
+Expand (111 lines)

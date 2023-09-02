@@ -1,0 +1,184 @@
+Script Name: RSI of VWAP [SHORT selling]
+Author: mohanee
+Description: This is SHORT selling version of  RSIofVWAP strategy.   Settings  and Logic  are totally different from LONG side version , hence I am publishing it as a new strategy.
+
+Settings
+============
+VWAP of RSI  Length 15
+
+Slow EMA Length 200
+
+Short entry level  25
+
+Cover short level 70
+
+stop loss  5
+
+
+SHORT Entry
+============
+condition1 :  When RSIofVWAP  crossdown below...
+PineScript code:
+
+Pine Script™ strategy
+RSI of VWAP [SHORT selling]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mohanee
+//@version=4
+strategy(title="RSI of VWAP [SHORT selling]", overlay=false, pyramiding=1,     default_qty_type=strategy.percent_of_equity,  default_qty_value=20, initial_capital=10000, currency=currency.USD)  //default_qty_value=10, default_qty_type=strategy.fixed,
+rsiLength=input(11,title="RSI Length", minval=1, maxval=50)
+osLevel=input(25,title="RSI Oversold (SHORT sell Line)", minval=1, maxval=100)
+obLevel=input(70,title="RSI Overbought (SHORT Exit/cover Line)", minval=1, maxval=100)
+riskCapital = input(title="Risk % of capital", defval=10, minval=1)
+stopLoss=input(5,title="Stop Loss",minval=1)
+partialExit=input(true,title="Allow Partial exit / take profits")
+showWeeklyVwapRSI=input(true,title="Show Weekly VWAP RSI")
+checkVIXRSI=input(true,title="Check VIX RSI , ===when this setting is selected , strategy doenst look for whether price is under ema200 or not !  It only checks RSI reading of VIX=== ")
+myVwap=vwap
+vwapRsi=rsi(vwap,rsiLength)
+ema200=ema(close,200)
+//signalLine=ema(vwapRsi,9)
+vwapWeeklyRSI=rsi(security(syminfo.tickerid, "W", vwap), rsiLength)
+signalLine=ema(vwapRsi,50)
+vixVal = security("CBOE:VIX",timeframe.period,hlc3)
+vixRsi=rsi(vixVal,14)
+plot(vwapRsi, title="RSI of VWAP", linewidth=2, color=color.purple)
+plot( checkVIXRSI == true ? vwapWeeklyRSI : na, title="RSI of VWAP weekly", linewidth=2, color=color.blue)
+//plot(signalLine, title="signal line", linewidth=2, color=color.red)
+plot(checkVIXRSI == true ? vixRsi : na, title="VIX RSI", linewidth=2, color=color.red)
+hline(50, title="Middle Line", linestyle=hline.style_dotted)
+obLevelPlot = hline(obLevel, title="Overbought", linestyle=hline.style_dotted)
+osLevelPlot = hline(osLevel, title="Oversold", linestyle=hline.style_dotted)
+fill(obLevelPlot, osLevelPlot, title="Background", color=#9915FF, transp=90)
+//plot(ema200, title="EMA 200", color=color.orange,  transp=25)
+//plot(myVwap, title="VWAP", color=color.purple,  transp=25)
+//plot(close)
+//Entry--
+//Echeck how many units can be purchased based on risk manage ment and stop loss
+qty1 = (strategy.equity  * riskCapital / 100 ) /  (close*stopLoss/100)  
+//check if cash is sufficient  to buy qty1  , if capital not available use the available capital only
+qty1:= (qty1 * close >= strategy.equity ) ? (strategy.equity / close) : qty1
+//more than 80%
+strategy.entry(id="SE", comment="Short Entry", long=false, qty=qty1, when= myVwap < ema200  and  checkVIXRSI==false and ( crossunder(vwapRsi,osLevel) or  crossunder(vwapWeeklyRSI,obLevel) )  )  //original when publshed
+strategy.entry(id="SE", comment="Short Entry", long=false, qty=qty1, when=  checkVIXRSI==true and  crossover(vixRsi,60)   and ( crossunder(vwapRsi,osLevel) or  crossunder(vwapWeeklyRSI,obLevel) ))    //check VIX RSI reading
+//19.25 Net Profit  77.08  2.59 factor  drawdon 3.7 only
+//11 , 25 setting  40.75% net profit   56 trades  and 87.5% winrate 6.2 profit factor  drawdown 3.17  and 47 bars
+//strategy.entry(id="SE", comment="Short Entry", long=false, qty=qty1, when=  checkVix==false and ( crossover(vixRsi,60)  or crossover(vixRsi,70) ) and ( crossunder(vwapRsi,osLevel) or  crossunder(vwapWeeklyRSI,obLevel) ))    
+// 78.13  2.6 factor  drawdon 5.81y
+// 11 , 25 setting 30.5 net profit   65 trades and  80% winrate   2.77 profit factor  drawdown 4.79  46 bars
+//strategy.entry(id="SE", comment="Short Entry", long=false, qty=qty1, when= checkVIXRSI==true  and   vixRsi>60 and ( crossunder(vwapRsi,osLevel) or  crossunder(vwapWeeklyRSI,obLevel) ))    // 77.08  2.59 factor  drawdon 3.7 only
+//strategy.entry(id="SE", comment="Short Entry", long=false, qty=qty1, when= vixRsi > 70  and  vwapRsi < vixRsi and vwapRsi<30)
+//stoploss
+stopLossVal=  abs(strategy.position_size)>=1 ?  (strategy.position_avg_price * (1+(stopLoss*0.01) )) :   (strategy.position_avg_price * 2)
+//draw initil stop loss
+//plot(abs(strategy.position_size)>=1 ? stopLossVal : na, color = color.purple , style=plot.style_linebr,  linewidth = 2, title = "stop loss")
+bgcolor(abs(strategy.position_size)>=1?color.blue:na, transp=80)
+barcolor(abs(strategy.position_size)>=1?color.blue: na)
+//possible re entries
+bgcolor(crossunder(vwapRsi,osLevel) and myVwap < ema200  ? color.yellow:na, transp=50)
+barcolor(crossunder(vwapRsi,osLevel) and myVwap < ema200  ? color.yellow:na )
+if(partialExit==true)
+    strategy.close(id="SE",comment="Exit Partial (points="+tostring(close - strategy.position_avg_price, "####.##")+")",qty=strategy.position_size/3, when=close < strategy.position_avg_price and crossover(vwapRsi,osLevel) )  //and close>ema200
+    
+strategy.close_all(comment="Exit All (points="+tostring( strategy.position_avg_price - close , "####.##")+")", when=crossover(vwapRsi,obLevel) )  //and close>ema200
+//close all on stop loss
+strategy.close_all(comment="SL Exit (points="+tostring(strategy.position_avg_price - close, "####.##")+")", when=close > stopLossVal )  //and close>ema200
+Expand (97 lines)

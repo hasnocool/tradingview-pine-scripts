@@ -1,0 +1,154 @@
+Script Name: Buy every Month
+Author: Embit0one
+Description: This strategy script simulates, if you invest every new month.
+
+Features:
+
+ 
+You can set a Date Range
+ 
+ 
+You can set your Sparrate/how much you want to invest every month
+ 
+ 
+In the Right Corner you can see, how much you invested so far
+ 
+
+
+In the End of the Date Range, all positions get closed and you can see your performance.
+
+Note:  Please ignore the...
+PineScript code:
+
+Pine Script™ strategy
+Buy every Month
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Embit0one
+//@version=4
+strategy("Buy every Month",pyramiding=10000, overlay=true,initial_capital=0,default_qty_type=strategy.cash,default_qty_value=500,currency = currency.EUR,commission_type=strategy.commission.cash_per_order,commission_value=0)
+//INPUTS##################################################################################################################
+iniordersize = input(title="Ordersize / Sparrate", type=input.integer,defval=500)
+// Input for Date Range 
+startDate = input(title="Start Date", type=input.integer,
+     defval=1, minval=1, maxval=31)
+startMonth = input(title="Start Month", type=input.integer,
+     defval=1, minval=1, maxval=12)
+startYear = input(title="Start Year", type=input.integer,
+     defval=2020, minval=1800, maxval=2100)
+endDate = input(title="End Date", type=input.integer,
+     defval=7, minval=1, maxval=31)
+endMonth = input(title="End Month", type=input.integer,
+     defval=04, minval=1, maxval=12)
+endYear = input(title="End Year", type=input.integer,
+     defval=2021, minval=1800, maxval=2100)
+endDate1=endDate-1
+//Check if in Date Range
+inDateRange = (time >= timestamp(syminfo.timezone, startYear, startMonth, startDate, 0, 0)) and (time < timestamp(syminfo.timezone, endYear, endMonth, endDate1, 0, 0))
+//Ordersize calculation#######################################################
+var ordersize = 0
+ordersize:=floor(iniordersize/close)
+var float insgesamtinvestiert = 0
+//Open Position at beginning#####################################
+var firsttrade=true
+longCondition = inDateRange
+longnow=false
+if(firsttrade and inDateRange)
+    strategy.entry("My Long Entry Id", strategy.long,ordersize)
+    longnow:=true
+    insgesamtinvestiert:= insgesamtinvestiert + (ordersize*close)
+    firsttrade:=false
+if(longCondition and strategy.position_size > 0)
+    longnow:=true
+    
+//Start of new Month, open a possition
+if(longCondition and strategy.position_size > 0 and month>valuewhen(longnow, month ,1) or longCondition and strategy.position_size > 0 and year>valuewhen(longnow, year ,1) and inDateRange)
+    strategy.entry("My Long Entry Id", strategy.long,ordersize)
+    insgesamtinvestiert:= insgesamtinvestiert + (ordersize*close)
+//Close all positions when End Date
+if(time > timestamp(syminfo.timezone, endYear, endMonth, endDate1, 0, 0))
+    strategy.close_all()
+//print sum of investeted capital#########################################################################################################################
+f_print(_text) =>
+    // Create label on the first bar.
+    var _label = label.new(bar_index, na, _text, xloc.bar_index, yloc.price, color(na), label.style_none, color.gray, size.large, text.align_left)
+    // On next bars, update the label's x and y position, and the text it displays.
+    label.set_xy(_label, bar_index, highest(10)[1])
+    label.set_text(_label, _text)
+f_print("                                                Invested: " + tostring(floor(insgesamtinvestiert)))
+Expand (75 lines)

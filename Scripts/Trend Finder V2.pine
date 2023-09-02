@@ -1,0 +1,87 @@
+Script Name: Trend Finder V2
+Author: Wayne-o
+Description: A variation of a previous indicator i made using two stochastics and a volume weighted moving average to look for trend, 10% equity used per trade at 0.1% commission
+
+The close can be used more of a stop loss if volatility is used to take profit
+PineScript code:
+
+Pine Script™ strategy
+Trend Finder V2
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+//@version=4
+strategy(title="Trend Finder V2", shorttitle="TFV2", format=format.price, precision=2, overlay = true)
+//----------Indicator------------//
+periodK = input(30)
+periodD = 3
+smoothK = 2
+periodK_two = input(90)
+periodD_two = 3
+smoothK_two = 2
+k = sma(stoch(close, high, low, periodK), smoothK)
+d = sma(k, periodD)
+k_two = sma(stoch(close, high, low, periodK_two), smoothK_two)
+d_two = sma(k, periodD_two)
+ts = k + k_two
+tsl = vwma(ts, input(30, title = "VWMA Length"))
+//--------Label parameter--------// 
+up_label = tsl[1] < 100 and tsl > 100 ? 1 : 0
+down_label = tsl[1] > 100 and tsl < 100 ? 1 : 0
+//----------Color Code-----------//
+//tsl_col = tsl > 100 and tsl > tsl[1] ? color.aqua : tsl > 100 and tsl < tsl[1] ? color.green : tsl < 100 and tsl > tsl[1] ? color.maroon : tsl < 100 and tsl < tsl[1] ? color.red : color.silver
+//tsl_col = tsl > 100 and ts < 100 and ts > ts[1] ? color.aqua : tsl > 100 and ts > 100 and (ts > ts[1] or ts < ts[1]) ? color.green : tsl < 100 and ts > 100 and ts < ts[1] ? color.red : tsl < 100 and ts < 100 and (ts < ts[1] or ts > ts[1]) ? color.maroon : color.purple  
+tsl_col = ts > ts[1] and tsl > tsl[1] ? color.lime : ts < ts[1] and tsl < tsl[1] ? color.red : color.yellow 
+ts_col = (tsl_col == color.lime or tsl_col == color.maroon) and (k>k[1] and k < 30) ? color.lime :  (tsl_col == color.green or tsl_col == color.red) and (k < k[1] and k > 70)  ? color.red : color.silver
+//-------------Plots-------------//
+buy = tsl_col[1] == color.yellow and tsl_col == color.lime ? 1 : 0
+sell = tsl_col[1] == color.yellow and tsl_col == color.red ? -1 : 0
+plotcandle(open,high,low,close, color=tsl_col)
+strategy.entry("Long", strategy.long,when=buy==1)
+strategy.close("Long", when=sell==-1)
+Expand (47 lines)

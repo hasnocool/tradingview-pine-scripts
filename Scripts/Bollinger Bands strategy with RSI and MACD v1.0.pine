@@ -1,0 +1,330 @@
+Script Name: Bollinger Bands strategy with RSI and MACD v1.0
+Author: juliangonzaconde
+Description: This is a strategy based on the Bollinger Bands, where buy trades are made when the price crosses the lower line of the Bollinger Bands upwards, and sell trades are made when the price crosses the upper line downwards.
+
+In addition, it is possible through the inputs to enable trading with RSI and MACD, so that buy or sell trades are supported by these two...
+PineScript code:
+
+Pine Script™ strategy
+Bollinger Bands strategy with RSI and MACD v1.0
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © juliangonzaconde
+//@version=4
+strategy(title="BB-strategy", calc_on_every_tick=true,max_labels_count=500, max_bars_back = 1000, overlay=true, pyramiding=5, default_qty_value=3,initial_capital=100000, currency=currency.EUR)
+bbSource = input(title="BB source", type=input.source, defval=close)
+smaLength = input(title="Bollinger Bands SMA length", type=input.integer, defval=20)
+stdLength = input(title="Bollinger Bands StdDev length", type=input.integer, defval=2)
+longTrailPerc = input(title="Trail Long Loss (%) (min: 0.0)", type=input.float, minval=0.0, step=0.1, defval=4.0) * 0.01
+shortTrailPerc = input(title="Trail Short Loss (%) (min: 0.0)", type=input.float, minval=0.0, step=0.1, defval=4.0) * 0.01
+maxOrders= input(title="Maximum orders (min: 1, max: 3)", type=input.integer,minval=1, maxval=3, defval=2)
+posSize= input(title="Position size (min: 1, max: 100)", type=input.integer, minval=1, maxval=100, defval=2)
+rsiChosen= input(title="Use RSI", type=input.bool, defval=false)
+rsiSource = input(title="RSI source", type=input.source, defval=close)
+rsiPeriod= input(title="RSI period", type=input.integer, minval=1, maxval=1000, defval=14)
+rsiBuy = input(title="RSI value for buy", type=input.integer, minval=1, maxval=99, defval=30)
+rsiSell = input(title="RSI value for sell", type=input.integer, minval=1, maxval=99, defval=70)
+macdChosen= input(title="Use MACD", type=input.bool, defval=false)
+macdVariation= input(title="Use MACD variation (Use MACD must be selected)", type=input.bool, defval=false)
+macdSource = input(title="MACD source", type=input.source, defval=close)
+fastLen= input(title="MACD fast length", type=input.integer, minval=1, maxval=1000, defval=12)
+slowLen= input(title="MACD slow length", type=input.integer, minval=1, maxval=1000, defval=26)
+signLen= input(title="MACD signal length", type=input.integer, minval=1, maxval=1000, defval=9)
+longMaxTpChosen= input(title="Use maximum TP long", type=input.bool, defval=true)
+longMaxTp= input(title="Maximum take profit long (%) (min: 0.5, max: 30.0)", type=input.float, minval=0.5, step=0.1, defval=3.0 ,maxval=30.0) * 0.01
+shortMaxTpChosen= input(title="Use maximum TP short", type=input.bool, defval=true)
+shortMaxTp= input(title="Maximum take profit short (%) (min: 0.5, max: 30.0)", type=input.float, minval=0.5, step=0.1, defval=3.0 ,maxval=30.0) * 0.01
+rsiValue= rsi(rsiSource, rsiPeriod)
+[macdLine, signalLine, histLine] = macd(macdSource, fastLen, slowLen, signLen)
+plot(macdLine, color=color.red)
+plot(signalLine, color=color.green)
+plot(histLine, color=color.yellow, style=plot.style_histogram)
+[middle, upper, lower] = bb(bbSource, smaLength, stdLength)
+var idsLong = array.new_string(maxOrders,na)
+var idsShort = array.new_string(maxOrders,na)
+var stopLong = array.new_float(maxOrders, 0.0)
+var stopShort = array.new_float(maxOrders,999999.0)
+var longPartialClose = array.new_bool(maxOrders,false)
+var shortPartialClose = array.new_bool(maxOrders,false)
+var opTp = array.new_float(maxOrders, 0.0)
+var opTpShort = array.new_float(maxOrders, 0.0)
+canBuyMacd = true
+if macdVariation
+    canBuyMacd := histLine[2]<histLine[1] and histLine[1] < histLine
+    if not macdChosen
+        canBuyMacd := true
+else
+    canBuyMacd := histLine[2]<0 and histLine[1] >= 0 and histLine >= 0
+    if not macdChosen
+        canBuyMacd := true
+canSellMacd = true
+if macdVariation
+    canSellMacd := histLine[2]> histLine[1] and histLine[1]> histLine
+    if not macdChosen
+        canSellMacd := true
+else
+    canSellMacd := histLine[2]>0 and histLine[1] <= 0 and histLine <= 0
+    if not macdChosen
+        canSellMacd := true
+canBuyRsi = true
+if rsiChosen
+    if rsiValue > rsiBuy
+        canBuyRsi := false
+        
+canSellRsi = true
+if rsiChosen
+    if rsiValue < rsiSell
+        canSellRsi := false
+canBuy = false
+int index = na
+for i = 0 to (maxOrders - 1)
+    val=array.get(idsLong,i)
+    if val==na
+        canBuy := true
+        index := i
+canSell = false
+int indexSell= na
+for i = 0 to (maxOrders - 1)
+    val=array.get(idsShort,i)
+    if val==na
+        canSell := true
+        indexSell := i
+bool isLong = close[2] < lower[2] and close[1] > close[2] and close > close[1] and canBuy and close[3] > close[2] and close < middle and (canBuyRsi and canBuyMacd)
+bool isShort = close[2] > upper[2] and close[1] < close[2] and close < close[1] and canSell and close[3] < close[2] and close > middle and (canSellRsi and canSellMacd)
+longStopPrice = 0.0
+    
+shortStopPrice = 0.0
+tp=0.0
+id = ""
+if (isLong)
+    
+    id := tostring(time)
+    strategy.entry(id=id, long=true, qty=posSize)
+    array.set(idsLong, index, id)
+    stopValue = close * (1 - longTrailPerc)
+    longStopPrice := stopValue
+    array.set(stopLong, index, longStopPrice)
+    tp := close * (1 + longMaxTp)
+    array.set(opTp,index,tp)
+    
+    
+for i = 0 to (maxOrders - 1)
+    stopValue = close * (1 - longTrailPerc)
+    longStopPrice := max(stopValue, array.get(stopLong,i))
+    array.set(stopLong,i,longStopPrice)
+    if ((longMaxTpChosen and array.get(opTp,i)<= close) or close >= upper or close <= array.get(stopLong,i)) and array.get(idsLong,i) != na
+        id := array.get(idsLong,i) 
+        strategy.close(id=id, qty=posSize)
+        array.set(idsLong,i,na)
+        array.set(stopLong,i,0.0)
+        array.set(longPartialClose,i,false)
+    if close > middle and array.get(idsLong,i) != na and not array.get(longPartialClose,i)
+        id := array.get(idsLong,i)
+        x=array.get(idsLong,i)
+        
+        strategy.close(id=id, qty=posSize/2)
+        array.set(longPartialClose,i,true)
+        
+if (isShort)
+    id := tostring(time)
+    strategy.entry(id=id, long=false, qty=posSize)
+    array.set(idsShort, indexSell, id)
+    stopValue = close * (1 + shortTrailPerc)
+    shortStopPrice := stopValue
+    array.set(stopShort, indexSell, shortStopPrice)
+    tp := close * (1 - shortMaxTp)
+    array.set(opTpShort,indexSell,tp)
+    
+for i = 0 to (maxOrders - 1)
+    stopValue = close * (1 + shortTrailPerc)
+    shortStopPrice := min(stopValue, array.get(stopShort,i))
+    array.set(stopShort,i,shortStopPrice)
+    if ((shortMaxTpChosen and array.get(opTpShort,i) >= close) or close <= lower or close >= array.get(stopShort,i)) and array.get(idsShort,i) != na
+        id := array.get(idsShort,i)
+        strategy.close(id=id, qty=posSize)
+        array.set(idsShort,i,na)
+        array.set(stopShort,i,999999.0)
+        array.set(shortPartialClose,i,false)
+    if close < middle and not array.get(shortPartialClose,i) and array.get(idsShort,i) != na
+        id := array.get(idsShort,i)
+        strategy.close(id=id, qty=posSize/2)
+        array.set(shortPartialClose,i,true)
+        
+plot(middle, color=color.yellow)
+plot(upper, color=color.yellow)
+plot(lower, color=color.yellow)
+Expand (174 lines)

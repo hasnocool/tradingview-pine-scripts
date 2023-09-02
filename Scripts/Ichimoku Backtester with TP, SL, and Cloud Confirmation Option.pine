@@ -1,0 +1,301 @@
+Script Name: Ichimoku Backtester with TP, SL, and Cloud Confirmation Option
+Author: gregh2
+Description: Started with the Basic Ichimoku strategy from Mizuki32. Added Take Profit, Stop Loss (for both long and short), and a toggle to wait for confirmation from the cloud.
+PineScript code:
+
+Pine Script™ strategy
+Ichimoku Backtester with TP, SL, and Cloud Confirmation Option
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+strategy("Ichimoku Backtester with Optional RSI, TP, and SL", overlay=true, 
+     currency = currency.USD, default_qty_type = strategy.percent_of_equity, 
+     default_qty_value = 95)
+//@version=4
+//Ichimoku Inputs
+ts_bars = input(9, minval=1, title="Tenkan-Sen Bars", group="Ichimoku Cloud")
+ks_bars = input(26, minval=1, title="Kijun-Sen Bars", group="Ichimoku Cloud")
+ssb_bars = input(52, minval=1, title="Senkou-Span B Bars", group="Ichimoku Cloud")
+cs_offset = input(26, minval=1, title="Chikou-Span Offset", group="Ichimoku Cloud")
+ss_offset = input(26, minval=1, title="Senkou-Span Offset", group="Ichimoku Cloud")
+trade_long = input(true, title="Long Entry", group="Ichimoku Cloud")
+trade_short = input(true, title="Short Entry", group="Ichimoku Cloud")
+// REMOVED wait_for_cloud = input(true, title="Wait for Cloud Confirmation", group="Ichimoku Cloud")
+//TODO: Add option to TP on Chikou Span Cross
+//tp_on_chikou_cross = input(false, title="Exit Deal on Chikou Cross")
+//Stop Loss Inputs
+use_short_stop_loss = input(false, title="Short Stop Loss", group="Stop Loss and Take Profit", inline="Short_SL")
+short_stop_loss = input(title="(%)", type=input.float, minval=0.0, step=0.1, 
+     defval=5, group="Stop Loss and Take Profit", inline="Short_SL") * 0.01
+use_long_stop_loss = input(false, title="Long Stop Loss", group="Stop Loss and Take Profit", inline="Long_SL")
+long_stop_loss = input(title="(%)", type=input.float, minval=0.0, step=0.1, 
+     defval=5, group="Stop Loss and Take Profit", inline="Long_SL") * 0.01
+//Take Profit Inputs     
+use_short_take_profit = input(false, title="Short Take Profit", group="Stop Loss and Take Profit", inline="Short_TP")
+short_take_profit = input(title="(%)", type=input.float, minval=0.0, step=0.1,
+     defval = 20, group="Stop Loss and Take Profit", inline="Short_TP") * .01
+use_long_take_profit = input(false, title="Long Take Profit", group="Stop Loss and Take Profit", inline="Long_TP")
+long_take_profit = input(title="(%)", type=input.float, minval=0.0, step=0.1,
+     defval = 20, group="Stop Loss and Take Profit", inline="Long_TP") * .01
+//RSI Inputs
+use_rsi_entry = input(false, title="Use for Entry", group="RSI")
+use_rsi_tp = input(false, title="Use for Take Profit", group="RSI")
+//seq_rsi = input(defval=1, title="TP after X Sequential bars past RSI", type=input.integer)
+rsi_period = input(defval=7, title="RSI Period", type=input.integer, group="RSI")
+overbought_rsi = input(defval=80, title="Overbought Level", type=input.float, group="RSI")
+oversold_rsi = input(defval=20, title="Oversold Level", type=input.float, group="RSI")
+//toggle_stoch_rsi = input(defval=false, 
+//     title="Toggle RSI inputs to use Stoch RSI(experimental)")
+//stoch_rsi_length = input(defval=7, title="Stoch RSI Length")
+//Account for removal of Sequential RSI and Stoch RSI inputs.
+seq_rsi = 1
+toggle_stoch_rsi = false
+// === INPUT SHOW PLOT ===
+showDate  = input(defval = false, title = "Show Date Range", type = input.bool, group="Date Range")
+start = input(defval = timestamp("01 Jan 2019 00:00 +0000"), title = "Start", type = input.time, group="Date Range", inline="Start Date")
+finish = input(defval = timestamp("31 Dec 2021 23:59 +0000"), title = "End", type = input.time, group="Date Range", inline="End Date")
+    
+window()  => time >= start and time <= finish ? true : false     // create function "within window of time"
+middle(len) => avg(lowest(len), highest(len))
+// Ichimoku Components
+tenkan = middle(ts_bars)
+kijun = middle(ks_bars)
+senkouA = avg(tenkan, kijun)
+senkouB = middle(ssb_bars)
+chikou = close[cs_offset]
+bgcolor(color = showDate and window() ? color.gray : na, transp = 90)  // plot within time window
+// Plot Ichimoku Kinko Hyo
+plot(tenkan, color=#0496ff, title="Tenkan-Sen")
+plot(kijun, color=#991515, title="Kijun-Sen")
+plot(chikou, color=#caeb36, title="Chikou-Span")
+sa=plot(senkouA, offset=ss_offset, color=color.green, title="Senkou-Span A")
+sb=plot(senkouB, offset=ss_offset, color=color.red, title="Senkou-Span B")
+fill(sa, sb, color = senkouA > senkouB ? color.green : color.red, title="Cloud color")
+ss_high = max(senkouA[ss_offset], senkouB[ss_offset])
+ss_low = min(senkouA[ss_offset], senkouB[ss_offset])
+// Long and Short Signals
+// This was updated to specifically be the crossover and crossunder since this is the main alert for Ichimoku; not just the confirmation.
+// The rest of the pieces of Ichimoku are used for confirmation in this indicator
+tk_cross_bull = crossover(tenkan, kijun)
+tk_cross_bear = crossunder(tenkan, kijun)
+// Entry/Exit Confirmation
+cs_cross_bull = mom(close, cs_offset) > 0
+cs_cross_bear = mom(close, cs_offset) < 0
+price_above_kumo = close > ss_high
+price_below_kumo = close < ss_low
+senkou_green = senkouA > senkouB ? true : false
+rsi1 = rsi(close, rsi_period)
+rsi_value = toggle_stoch_rsi ? stoch(rsi1, rsi1, rsi1, rsi_period) : rsi1
+in_long = false
+in_long := in_long[1]
+in_short = false
+in_short := in_short[1]
+long_entry = tk_cross_bull and cs_cross_bull and price_above_kumo and senkou_green and not in_long
+short_entry = tk_cross_bear and cs_cross_bear and price_below_kumo and not senkou_green and not in_short
+long_exit = short_entry and in_long
+short_exit = long_entry and in_short
+// We use the condition of > or < for underbought and undersold because they are being used for additional confirmation
+// Use the crossover on the overbought and oversold conditions because they are used for take profit without Ichimoku
+overbought = crossover(rsi_value, overbought_rsi)
+oversold = crossunder(rsi_value, oversold_rsi)
+underbought = rsi_value < overbought_rsi
+undersold = rsi_value > oversold_rsi
+if (use_rsi_entry)
+    long_entry := long_entry and underbought
+    short_entry := short_entry and undersold
+if (use_rsi_tp)
+    long_exit := overbought and in_long
+    short_exit := oversold and in_short
+// The following logic exists to keep RSI TP from firing when you aren't already in a long or short
+// It may be used late to control other TP conditions
+if (long_entry)
+    in_long := true
+    in_short := false
+if (long_exit)
+    in_long := false
+if (short_entry)
+    in_short := true
+    in_long := false
+if (short_exit)
+    in_short := false
+longStopPrice  = strategy.position_avg_price * (1 - long_stop_loss)
+shortStopPrice = strategy.position_avg_price * (1 + short_stop_loss)
+longLimitPrice = strategy.position_avg_price * (1 + long_take_profit)
+shortLimitPrice = strategy.position_avg_price * (1 - short_take_profit)
+strategy.entry("Long", strategy.long, when=long_entry and trade_long and  (showDate ? window() : true))
+strategy.entry("Short", strategy.short, when=short_entry and trade_short  and (showDate ? window() : true))
+if (strategy.position_size > 0.0)
+    if (use_long_stop_loss and not use_long_take_profit)
+        strategy.exit("Long", stop = longStopPrice)
+    if (use_long_take_profit and not use_long_stop_loss)
+        strategy.exit("Long", limit = longLimitPrice)
+    if (use_long_take_profit and use_long_stop_loss)
+        strategy.exit("Long", stop = longStopPrice, limit=longLimitPrice)
+if (strategy.position_size < 0.0)
+    if (use_short_stop_loss and not use_short_take_profit)
+        strategy.exit("Short", stop = shortStopPrice)
+    if (use_short_take_profit and not use_short_stop_loss)
+        strategy.exit("Short", limit = shortLimitPrice)
+    if (use_short_take_profit and use_short_stop_loss)
+        strategy.exit("Short", stop = shortStopPrice, limit = shortLimitPrice)
+strategy.close("Long", when=long_exit and (showDate ? window() : true))
+strategy.close("Short", when=short_exit and (showDate ? window() : true))
+Expand (160 lines)

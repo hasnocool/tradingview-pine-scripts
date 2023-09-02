@@ -1,0 +1,83 @@
+Script Name: P-Signal Strategy & Alert
+Author: Kharevsky
+Description: Thanks to your advices I removed  in this version something that was not necessary for the strategy but added alert and the chart of the current state of the strategy  (white 1 - in trade, 0 - out of trade).
+PineScript code:
+
+Pine Script™ strategy
+P-Signal Strategy & Alert
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+// **********************************************************************************************************
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// P-Signal Strategy © Kharevsky
+// @version=4
+// **********************************************************************************************************
+strategy("P-Signal Strategy", precision = 3)
+// Parameters and const of P-Signal.
+nPoints = input(title = "Number of Bars", type = input.integer, defval = 9, minval = 4, maxval = 100, group = "Parameters of observation.")
+int nIntr = nPoints - 1
+// Horner's method for the error (Gauss) & P-Signal functions.
+fErf(x) =>
+    nT = 1.0/(1.0 + 0.5*abs(x))
+    nAns = 1.0 - nT*exp(-x*x - 1.26551223 + 
+     nT*( 1.00002368 + nT*( 0.37409196 + nT*( 0.09678418 + 
+     nT*(-0.18628806 + nT*( 0.27886807 + nT*(-1.13520398 + 
+     nT*( 1.48851587 + nT*(-0.82215223 + nT*( 0.17087277 ))))))))))
+    x >= 0 ? nAns : -nAns
+fPSignal(ser, int) => 
+    nStDev = stdev(ser, int)
+    nSma = sma(ser, int)
+    fErf(nStDev > 0 ? nSma/nStDev/sqrt(2) : 1.0)
+// Strat.
+float nPSignal = sma(fPSignal(change(ohlc4), nIntr), nIntr)
+float ndPSignal = sign(nPSignal[0] - nPSignal[1])
+strategy.entry("long", strategy.long, 1, when = nPSignal < 0 and ndPSignal > 0)
+strategy.close("long", when = nPSignal > 0 and ndPSignal < 0)
+// Plotting. 
+hline(+1.0, color = color.new(color.orange,70), linestyle = hline.style_dotted)
+hline(-1.0, color = color.new(color.orange,70), linestyle = hline.style_dotted)
+plot(nPSignal, color = color.blue, style = plot.style_line)
+plot(strategy.position_size, color = color.white, style = plot.style_cross)
+// Alerts.
+if(strategy.position_size[0] > strategy.position_size[1])
+    alert("P-Signal strategy opened the long position: " + syminfo.tickerid + " " + timeframe.period, alert.freq_once_per_bar)
+if(strategy.position_size[0] < strategy.position_size[1])
+    alert("P-Signal strategy closed the long position: " + syminfo.tickerid + " " + timeframe.period, alert.freq_once_per_bar)
+// The end.
+Expand (37 lines)

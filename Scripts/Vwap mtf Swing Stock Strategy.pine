@@ -1,0 +1,164 @@
+Script Name: Vwap mtf Swing Stock Strategy
+Author: exlux99
+Description: This is a trending strategy designed for stock market, especially long trending assets such as TSLA, NIO, AMAZON and so on.
+
+Its made of volatility bands and weekly  VWAP, in this case daily and weekly.
+
+This strategy has been adapted to go long only.
+
+Rules for entry
+For long , we want to enter close of a candle is above  vwap weekly, and at the same time the...
+PineScript code:
+
+Pine Script™ strategy
+Vwap mtf Swing Stock Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © exlux99
+//@version=4
+strategy(title="VWAP MTF STOCK STRATEGY", overlay=true, initial_capital = 1000, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent, commission_value=0, pyramiding=1 )
+// high^2 / 2 - low^2 -2
+h=pow(high,2) / 2
+l=pow(low,2) / 2
+o=pow(open,2) /2
+c=pow(close,2) /2
+x=(h+l+o+c) / 4
+y= sqrt(x)
+source = y
+useTrueRange = false
+length = input(27, minval=1)
+mult = input(0, step=0.1)
+ma = sma(source, length)
+range = useTrueRange ? tr : high - low
+rangema = sma(range, length)
+upper = ma + rangema * mult
+lower = ma - rangema * mult
+crossUpper = crossover(source, upper)
+crossLower = crossunder(source, lower)
+bprice = 0.0
+bprice := crossUpper ? high+syminfo.mintick : nz(bprice[1])
+sprice = 0.0
+sprice := crossLower ? low -syminfo.mintick : nz(sprice[1])
+crossBcond = false
+crossBcond := crossUpper ? true
+     : na(crossBcond[1]) ? false : crossBcond[1]
+crossScond = false
+crossScond := crossLower ? true
+     : na(crossScond[1]) ? false : crossScond[1]
+cancelBcond = crossBcond and (source < ma or high >= bprice )
+cancelScond = crossScond and (source > ma or low <= sprice )
+longOnly = true
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2000, title = "From Year", minval = 1970)
+ //monday and session 
+// To Date Inputs
+toDay = input(defval = 31, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 12, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2021, title = "To Year", minval = 1970)
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate 
+srcX = input(ohlc4)
+t = time("W")
+start = na(t[1]) or t > t[1]
+sumSrc = srcX * volume
+sumVol = volume
+sumSrc := start ? sumSrc : sumSrc + sumSrc[1]
+sumVol := start ? sumVol : sumVol + sumVol[1]
+vwapW= sumSrc / sumVol
+ 
+//crossUpper = crossover(source, upper)
+//crossLower = crossunder(source, lower)
+shortCondition = close < vwap and time_cond and (close < vwapW)
+longCondition = close > vwap and time_cond and (close > vwapW)
+ 
+if(longOnly and time_cond)
+    if (crossLower and close < vwapW )
+        strategy.close("long")
+    if (crossUpper and close>vwapW)
+        strategy.entry("long", strategy.long, stop=bprice)
+Expand (83 lines)

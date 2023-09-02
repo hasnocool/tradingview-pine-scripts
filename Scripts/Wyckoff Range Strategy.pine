@@ -1,0 +1,102 @@
+Script Name: Wyckoff Range Strategy
+Author: deperp
+Description: The Wyckoff Range Strategy is a trading strategy that aims to identify potential accumulation and distribution phases in the market using the principles of Wyckoff analysis. It also incorporates the detection of spring and upthrust patterns.
+
+Here's a step-by-step explanation of how to use this strategy:
+
+Understanding Accumulation and Distribution...
+PineScript code:
+
+Pine Script™ strategy
+Wyckoff Range Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © deperp
+//@version=5
+strategy("Wyckoff Range Strategy by deperp", overlay=true, initial_capital=1000, default_qty_type=strategy.percent_of_equity, default_qty_value=10, commission_type=strategy.commission.percent)
+// Input Variables
+AccumulationLength = input(32, "Accumulation")
+DistributionLength = input(35, "Distribution")
+SpringLength = input(10, "Spring")
+UpthrustLength = input(20, "Upthrust")
+stopPercentage = input(10, "Stop Percentage")
+// Accumulation Phase
+isAccumulation = ta.crossover(close, ta.sma(close, AccumulationLength))
+// Distribution Phase
+isDistribution = ta.crossunder(close, ta.sma(close, DistributionLength))
+// Spring and Upthrust
+isSpring = ta.crossover(low, ta.sma(low, SpringLength))
+isUpthrust = ta.crossunder(high, ta.sma(high, UpthrustLength))
+// Strategy Conditions
+enterLong = isAccumulation and isSpring
+enterShort = isDistribution and isUpthrust
+// Entry and Exit Conditions
+if (enterLong)
+    strategy.close("Short")
+    strategy.entry("Long", strategy.long, comment="Enter Long")
+    alert("Enter Long Position")
+if (enterShort)
+    strategy.close("Long")
+    strategy.entry("Short", strategy.short,  comment="Enter Short")
+    alert("Enter Short Position")
+// Stop Loss
+stopLossLevelLong = close * (1 - stopPercentage / 100)
+stopLossLevelShort = close * (1 + stopPercentage / 100)
+strategy.exit("Stop Loss Long", "Long", stop=stopLossLevelLong)
+strategy.exit("Stop Loss Short", "Short", stop=stopLossLevelShort)
+// Plotting Wyckoff Schematics
+plotshape(isAccumulation, title="Accumulation Phase", location=location.belowbar, color=color.green, style=shape.labelup, text="Accumulation")
+plotshape(isDistribution, title="Distribution Phase", location=location.abovebar, color=color.red, style=shape.labeldown, text="Distribution")
+plotshape(isSpring, title="Spring", location=location.belowbar, color=color.blue, style=shape.triangleup)
+plotshape(isUpthrust, title="Upthrust", location=location.abovebar, color=color.orange, style=shape.triangledown)
+Expand (50 lines)

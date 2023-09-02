@@ -1,0 +1,95 @@
+Script Name: Galileo Galilei
+Author: armigoldman
+Description: Galileo Galilei 
+Is the simplest of them all and easy to understand:
+ 
+ It has an Exponential Moving Average that you can modify to suit your pair on the chart with it's timeframe, looking at the strategy tester to compare results;
+ The prices for the EMA are taken from the OPEN of every candle (depending on your timeframe);
+ If the current candle's price closes...
+PineScript code:
+
+Pine Script™ strategy
+Galileo Galilei
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © armigoldman
+strategy(title="Galileo Galilei", shorttitle="Galileo Galilei", overlay=true, initial_capital=100000, default_qty_type=strategy.cash, default_qty_value=100000)
+len = input(11, minval=1, title="Length")
+src = input(open, title="Source")
+out = ema(src, len)
+plot(out, title="EMA", color=color.yellow)
+//last8h = highest(close, 8)
+//lastl8 = lowest(close, 8)
+//plot(last8h, color=red, linewidth=2)
+//plot(lastl8, color=green, linewidth=2)
+/////////// BACKTESTING start//////////
+startDate = input(timestamp("2020-01-01"), type = input.time)
+finishDate = input(timestamp("2025-01-01"), type = input.time)
+time_cond = time >= startDate and time <= finishDate
+/////////// BACKTESTING end//////////
+bearish = cross(close, out) == 1 and close[1] > close
+bullish = cross(close, out) == 1 and close[1] < close
+plotshape(bearish, color=color.white, style=shape.arrowdown, text="BEAR", location=location.abovebar)
+plotshape(bullish, color=color.white, style=shape.arrowup, text="BULL", location=location.belowbar)
+if bullish
+    strategy.entry("BUY", strategy.long, when=time_cond)
+        //strategy.close_all(when=bearish)
+        // strategy.exit("exit", "Long", profit =, loss = 35)
+if bearish
+    strategy.entry("SELL", strategy.short, when=time_cond)
+        //sell = if bearish
+        //strategy.close_all(when=bullish)
+        // strategy.exit("exit", "Long", profit = bullish, loss = 100)
+profit = strategy.netprofit
+if not time_cond
+    strategy.close_all()
+//plotshape(true, style=shape.triangleup, location=location.abovebar)
+Expand (47 lines)

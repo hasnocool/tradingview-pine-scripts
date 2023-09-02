@@ -1,0 +1,54 @@
+Script Name: Random entry points
+Author: kitoboynaya
+Description: It is profitable strategy with random entry points.
+
+A simple strategy involving random opening of trades. But such a strategy on large samples will demonstrate profit. Because the strategy adheres to the golden rule of trading: "Let profits rise and quickly stop losses."
+
+Remember, exit points are very important. Many traders make the mistake of focusing all...
+PineScript code:
+
+Pine Script™ strategy
+Random entry points
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+//@version=5
+strategy(title='Random entry points', overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100, currency='USD', commission_type=strategy.commission.percent, commission_value=0.05)
+int random_upper_bound = input.int(defval=7, title='Random upper bound')
+int random_signal = input.int(defval=3, title='Random signal')
+float stop_loss = input.float(defval=5.0, title='Stop-loss, %')
+float take_profit = input.float(defval=15.0, title='Take-profit, %')
+int r = int(math.random(max=random_upper_bound))
+var float stop_line = na
+var float take_line = na
+if close < stop_line or close > take_line
+    strategy.close(id='Long')
+if r == random_signal and strategy.position_size == 0
+    strategy.entry(id='Long', direction=strategy.long)
+    stop_line := close * (1 - stop_loss / 100)
+    take_line := close * (1 + take_profit / 100)
+plot(series=take_line, title='Take-profit', color=color.new(color.lime, 20), linewidth=2)
+plot(series=stop_line, title='Stop-loss', color=color.new(color.red, 20), linewidth=2)
+Expand (24 lines)

@@ -1,0 +1,243 @@
+Script Name: BBofVWAP with entry at Pivot Point
+Author: ediks123
+Description: This strategy uses  BB of VWAP and  Pivot point  to enter and exit the Long position.
+
+settings 
+
+BB length  50
+BB Source VWAP
+
+
+Entry
+When VWAP crossing up BB midline  and  price/close is  above  weekly PivotPoint  ( you can also use Daily pivot point )
+
+Exit
+When VWAP is crossing down BB lower band
+
+Stop Loss
+Stop loss defaulted to 5%    
+
+Note : Long will...
+PineScript code:
+
+Pine Script™ strategy
+BBofVWAP with entry at Pivot Point
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ediks123
+//@version=4
+strategy("BBofVWAP with entry at Pivot Point", overlay=false, pyramiding=1,   default_qty_type=strategy.percent_of_equity,  default_qty_value=20, initial_capital=10000, currency=currency.USD)  //default_qty_value=10, default_qty_type=strategy.fixed,
+// Function outputs 1 when it's the first bar of the D/W/M/Y
+is_newbar(res) =>
+    ch = 0
+    if(res == 'Y')
+        t  = year(time('D'))
+        ch := change(t) != 0 ? 1 : 0
+    else
+        t = time(res)
+        ch := change(t) != 0 ? 1 : 0
+    ch
+//variables BEGIN
+//smaLength=input(200,title="Slow MA Length")
+bbLength=input(50,title="BB Length")  
+//bbsrc = input(close, title="BB Source")
+mult = input(2.0, minval=0.001, maxval=50, title="StdDev")
+offset = input(0, "Offset", type = input.integer, minval = -500, maxval = 500)
+pp_period = input(title = "Pivot Period", type=input.string, defval="Week", options = ['Day', 'Week'])
+pp_res = pp_period == 'Day' ? 'D' : pp_period == 'Week' ? 'W' : pp_period == 'Month' ? 'M' : 'Y' 
+riskCapital = input(title="Risk % of capital", defval=10, minval=1)
+stopLoss=input(5,title="Stop Loss",minval=1)
+partialExitOnIndicator=input(title = "Partial Exit with VWAP or  Fib R3", defval="VWAP_crossunder_upperBB", options = ['VWAP_crossunder_upperBB', 'VWAP_crossover_FibR3','VWAP_crossunder_FibR3'])
+sma200=sma(close,200)
+plot(sma200, title="SMA 200", color=color.orange)
+myVwap=vwap(hlc3)
+//weekly vwap
+//myVwap=security(syminfo.tickerid, 'W', vwap)
+//bollinger calculation
+basis = sma(myVwap, bbLength)
+dev = mult * stdev(myVwap, bbLength)
+upperBand = basis + dev
+lowerBand = basis - dev
+//plot bb
+plot(basis, "Basis", color=color.teal, style=plot.style_circles , offset = offset)
+p1 = plot(upperBand, "Upper", color=color.teal, offset = offset)
+p2 = plot(lowerBand, "Lower", color=color.teal, offset = offset)
+fill(p1, p2, title = "Background", color=color.teal, transp=95)
+plot(myVwap, title="VWAP", color=color.purple)
+//plot(myVwapW, title="VWAPWeekly", color=color.orange)
+//pivot points 
+// Calc High
+high_cur = 0.0
+high_cur := is_newbar(pp_res) ? high : max(high_cur[1], high)
+phigh = 0.0
+phigh := is_newbar(pp_res) ? high_cur[1] : phigh[1]
+// Calc Low
+low_cur = 0.0
+low_cur := is_newbar(pp_res) ? low : min(low_cur[1], low)
+plow = 0.0
+plow := is_newbar(pp_res) ? low_cur[1] : plow[1]
+// Calc Close
+pclose = 0.0
+pclose := is_newbar(pp_res) ? close[1] : pclose[1]
+// CALCULATE fibonacci pivots //
+vPP = (phigh + plow + pclose) / 3
+//vPP = (phigh + plow + pclose) / 3
+vR1 = vPP + (phigh - plow) * 0.382
+vS1 = vPP - (phigh - plow) * 0.382
+vR2 = vPP + (phigh - plow) * 0.618
+vS2 = vPP - (phigh - plow) * 0.618
+vR3 = vPP + (phigh - plow) * 1.000
+vS3 = vPP - (phigh - plow) * 1.000
+  
+// CALCULATE fibonacci pivots //
+//pivot points
+//Entry--
+//Echeck how many units can be purchased based on risk manage ment and stop loss
+qty1 = (strategy.equity  * riskCapital / 100 ) /  (close*stopLoss/100)  
+//check if cash is sufficient  to buy qty1  , if capital not available use the available capital only
+qty1:= (qty1 * close >= strategy.equity ) ? (strategy.equity / close) : qty1
+strategy.entry(id="BB_VWAP_PP",long=true, qty=qty1, when=   crossover(myVwap,basis)  and close>=vPP  )
+bgcolor(strategy.position_size>=1?color.blue:na, transp=75)
+barcolor(strategy.position_size>=1?color.green:na)
+stopLossVal=  strategy.position_size>=1 ?  close * (1 - (stopLoss*0.01) ) : 0.00
+//partial exit
+//strategy.close(id="BBofVwap", qty=strategy.position_size/3, when=crossunder(myVwap,upperBand) and strategy.position_size>=1 )  //and close>strategy.position_avg_price)
+//exit on lowerband or stoploss 
+if(partialExitOnIndicator=="VWAP_crossunder_upperBB")
+    strategy.close(id="BB_VWAP_PP", comment="PExtonVWAP" , qty=strategy.position_size/3, when= crossunder(myVwap,upperBand) and strategy.position_size>=1 and close>strategy.position_avg_price)  //
+else if (partialExitOnIndicator=="VWAP_crossover_FibR3")
+    strategy.close(id="BB_VWAP_PP", comment="PExtonFibR3" , qty=strategy.position_size/3, when= crossover(myVwap,vR3)  and strategy.position_size>=1 and close>strategy.position_avg_price)  //  or  (close[1]<vR3[1] and close>vR3[1] )
+else if (partialExitOnIndicator=="VWAP_crossunder_FibR3")
+    strategy.close(id="BB_VWAP_PP", comment="PExtonFibR3" , qty=strategy.position_size/3, when= crossunder(myVwap,vR3) and strategy.position_size>=1 and close>strategy.position_avg_price)  //
+strategy.close(id="BB_VWAP_PP", comment="Exit All", when=crossunder(myVwap,lowerBand) and strategy.position_size>=1 )
+//strategy.close(id="BBofVwapWithFibPivot", comment="Exit All", when=crossunder(close,vPP) and strategy.position_size>=1 )
+strategy.close(id="BB_VWAP_PP", comment="Stop Loss Exit", when=crossunder(close,stopLossVal) and strategy.position_size>=1 )
+Expand (128 lines)

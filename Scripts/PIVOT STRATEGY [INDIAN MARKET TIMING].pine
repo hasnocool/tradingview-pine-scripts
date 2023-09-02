@@ -1,0 +1,210 @@
+Script Name: PIVOT STRATEGY [INDIAN MARKET TIMING]
+Author: The_Bull_Chartist
+Description: A Back-tested Profitable Strategy for Free!! 
+A PIVOT INTRADAY STRATEGY for 5 minute Time-Frame  , that also explains the time condition for Indian Markets  
+The Timing can be changed to fit other markets,  scroll down  to "TIME CONDITION" to know more.
+The commission is also included in the strategy .
+
+The basic idea is when ,
+
+1) Price crosses above ema1...
+PineScript code:
+
+Pine Script™ strategy
+PIVOT STRATEGY [INDIAN MARKET TIMING]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+//   ____________                _________                      _____________
+//  |____________|             ||________|                      ||__________|
+//       ||            ____    ||        ||                     ||                    ______ ________    _____ ________
+//       ||    |   || ||       ||________|| |   || ||    ||     ||     |   ||   /\\   |   // |______| || ||    |______|
+//       ||    |===|| |===     ||__________ |   || ||    ||     ||     |===||  /__\\  |===      ||    ||   \\     ||
+//       ||    |   || ||___    ||        || |___|| ||___ ||___  ||     |   || /    \\ |   \\    ||    || ___||    ||
+//       ||                    ||________||                     ||__________
+//       ||                    ||________|                      ||__________|
+  
+//@version=5
+strategy("PIVOT STRATEGY [5MIN TF]",overlay=true ,commission_type = strategy.cash, commission_value = 30 , slippage = 2, default_qty_value = 60, currency = currency.NONE, pyramiding = 0)
+leftbars = input(defval = 10)
+rightbars = input(defval = 15)
+// ══════════════════════════ //
+// —————————> INPUTS <——————— //
+// ══════════════════════════ //
+EMA1 = input.int(title='PRICE CROSS EMA', defval = 150, minval = 10 ,maxval = 400)
+factor1 = input.float(title='_ATR LONG',defval = 3.2 , minval = 1 , maxval = 5 , step = 0.1, tooltip = "ATR TRAIL LONG")
+factor2 = input.float(title='_ATR SHORT',defval = 3.2 , minval = 1 , maxval = 5 , step = 0.1, tooltip = "ATR TRAIL SHORT")
+risk = input.float(title='RISK',defval = 200 , minval = 1 , maxval = 5000 , step = 50, tooltip = "RISK PER TRADE")
+var initialCapital = strategy.equity
+t = time(timeframe.period, '0935-1400:1234567')
+time_cond = not na(t)
+// ══════════════════════════════════ //
+// ———————————> EMA DATA <——————————— //
+// ══════════════════════════════════ //
+ema1 = ta.ema(close, EMA1)
+plot(ema1, color=color.new(color.yellow, 0), style=plot.style_linebr, title='ema1')
+// ══════════════════════════════════ //
+// ————————> TRAIL DATA <———————————— //
+// ══════════════════════════════════ //
+// *******Calculate LONG TRAIL data*****
+ATR_LO = ta.atr(14)*factor1
+// *******Calculate SHORT TRAIL data*****
+ATR_SH = ta.atr(14)*factor2
+longStop = close - ATR_LO
+shortStop = close + ATR_SH
+// Plot trailing stop
+//plot(longStop, color=color.new(color.green, 0), style=plot.style_linebr, title='Long Trailing Stop')
+//plot(shortStop , color=color.new(color.red, 0), style=plot.style_linebr, title='Short Trailing Stop')
+// ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════ //
+// ————————————————————————————————————————————————————————> PIVOT DATA <———————————————————————————————————————————————————————————————————————————————————————————————————— //
+// ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════ //
+ph = ta.pivothigh(close,leftbars, rightbars)
+pl = ta.pivotlow(close,leftbars, rightbars)
+pvt_condition1 = not na(ph)
+upper_price = 0.0
+upper_price := pvt_condition1 ? ph : upper_price[1]
+pvt_condition2 = not na(pl)
+lower_price = 0.0
+lower_price := pvt_condition2 ? pl : lower_price[1]
+// Signals
+long  = ta.crossover(high, upper_price + syminfo.mintick)
+short = ta.crossunder(low, lower_price - syminfo.mintick)
+plot(upper_price, color= close > ema1  ? color.green : na, style=plot.style_line, title='PH')
+plot(lower_price,  color= close <  ema1  ? color.red : na, style=plot.style_line, title='PL')
+// ══════════════════════════════════//
+// ————————> LONG POSITION <————————//
+// ══════════════════════════════════//
+//******barinstate.isconfirmed used to avoid repaint in real time*******
+if ( long and strategy.opentrades==0 and barstate.isconfirmed and time_cond and close >= ema1 )
+    strategy.entry(id= "Long" ,direction = strategy.long, comment = "B")
+    
+//plot(longStop , color=color.new(color.blue, 0), style=plot.style_linebr, title='long Stop')
+if strategy.position_size > 0 
+    strategy.exit("long tsl", "Long" , stop = longStop ,comment='S')
+ 
+// ═════════════════════════════════════//
+// ————————> SHORT POSITIONS <————————— //
+// ═════════════════════════════════════//
+if ( short and strategy.opentrades==0 and barstate.isconfirmed and time_cond and close <= ema1 )
+    strategy.entry(id = "Short" ,direction = strategy.short,  comment = "S") 
+if strategy.position_size < 0
+    strategy.exit("short tsl", "Short" ,  stop = shortStop ,comment='B')
+// ════════════════════════════════════════════════//
+// ————————> CLOSE ALL POSITIONS BY 3PM <————————— //
+// ════════════════════════════════════════════════//
+strategy.close_all(when = hour == 14 and minute == 55)
+// ════════════════════════════════════════//
+// ————————> MAX INTRADAY LOSS  <————————— //
+// ════════════════════════════════════════//
+strategy.risk.max_intraday_loss(type = strategy.cash, value = risk)
+Expand (112 lines)

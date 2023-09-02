@@ -1,0 +1,66 @@
+Script Name: ATR Trailing Stoploss Strategy
+Author: ceyhun
+Description: I am sharing the strategy version of the indicator used before. It is very simple to use.
+
+
+
+These are the settings I use, you can change, test and use as you wish.
+Atr Period 5
+Highest High Period 10
+Multiplier 2.5
+
+
+It can generate more signals in shorter time frames.
+The success rate will be higher in longer time frames.
+PineScript code:
+
+Pine Script™ strategy
+ATR Trailing Stoploss Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ceyhun
+//@version=4
+strategy("ATR Trailing Stoploss Strategy ",overlay=true)
+Atr=input(defval=5,title="Atr Period",minval=1,maxval=500)
+Hhv=input(defval=10,title="HHV Period",minval=1,maxval=500)
+Mult=input(defval=2.5,title="Multiplier",minval=0.1)
+Barcolor=input(true,title="Barcolor")
+Prev = highest(high-Mult*atr(Atr),Hhv),barssince(close>highest(high-Mult*atr(Atr),Hhv) and close>close[1])
+TS = iff(cum(1)<16 ,close,iff( close > highest(high-Mult*atr(Atr),Hhv) and close>close[1],highest(high-Mult*atr(Atr),Hhv),Prev))
+Color=iff(close>TS,color.green,iff(close<TS,color.red,color.black))
+barcolor(Barcolor? Color:na)
+plot(TS,color=Color,linewidth=3,title="ATR Trailing Stoploss")
+Buy  = crossover(close,TS)
+Sell = crossunder(close,TS)
+if Buy
+    strategy.entry("Buy", strategy.long, comment="Buy")
+    
+if Sell
+    strategy.entry("Sell", strategy.short, comment="Sell")
+Expand (26 lines)

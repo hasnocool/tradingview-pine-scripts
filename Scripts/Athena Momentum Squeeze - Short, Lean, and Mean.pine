@@ -1,0 +1,531 @@
+Script Name: Athena Momentum Squeeze - Short, Lean, and Mean
+Author: jrandolph1046
+Description: This is a very profitable strategy focusing on 15 minute intervals on  the Micro Nasdaq Futures contracts.   CME_MINI:MNQH2023 
+
+As this contract only keeps positions for on average about an hour risk is managed. At a profit factor of 3.382 with a max drawdown of $123 from January 1st to February 15.   Looking back to Dec 2019 still maintains a profit factor of...
+PineScript code:
+
+Pine Script™ strategy
+Athena Momentum Squeeze - Short, Lean, and Mean
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © vitruvius
+//@version=5
+strategy("Athena Momentum Squeeze - Autoview", overlay=true)
+// Inputs {
+// -- Automate 
+broker = input.string("tradovate","Broker",group="AutoView",tooltip = "tradovate/tradovatesim")
+pair0 = input.string("MSFT","Pair:",group="AutoView",tooltip = "ZNH2/MSFT/ESH2")
+qty = input.string("1","Qty:",group="AutoView",tooltip = "q=10% (% of accountsize) \n q=50(Qty)")
+lo_mess =  "e="+str.tostring(broker)       +" s="+str.tostring(pair0)  +" b=long"     +" q="+str.tostring(qty)      + " t=market delay=1"
+sh_mess =  "e="+str.tostring(broker)       +" s="+str.tostring(pair0)  +" b=short"    +" q="+str.tostring(qty)      + " t=market delay=1"
+exl_mess =  "e="+str.tostring(broker)       +" s="+str.tostring(pair0)  +"b=long c=position t=market"
+exs_mess =  "e="+str.tostring(broker)       +" s="+str.tostring(pair0)  +"b=short c=position t=market"
+// Entry {
+entry_gr_name = "Entry"
+entry_tt_sqz_filter = "Checks number of dark blue dots before entering a position"
+entry_long_light_green = "Light green", entry_long_dark_green = "Dark green", entry_long_none = "None"
+entry_short_light_red = "Light red", entry_short_dark_red = "Dark red", entry_short_none = "None"
+in_entry_sqz_bar_type_long = input.string(entry_long_light_green, "Long entry", [entry_long_light_green, entry_long_dark_green, entry_long_none], group=entry_gr_name)
+in_entry_sqz_bar_type_short = input.string(entry_short_light_red, "Short entry", [entry_short_light_red, entry_short_dark_red, entry_short_none], group=entry_gr_name)
+in_entry_sqz_filter_en = input.bool(true, "Enable squeeze filter?", tooltip=entry_tt_sqz_filter, group=entry_gr_name)
+in_entry_sqz_filter_cnt = input.int(6, "Squeeze dot count", group=entry_gr_name)
+//}
+// Exit {
+exit_gr_name = "Exit"
+exit_long_light_green = "Light green", exit_long_dark_green = "Dark green", exit_long_light_red = "Light red", exit_long_dark_red = "Dark red", exit_long_none = "None"
+exit_short_light_green = "Light green", exit_short_dark_green = "Dark green", exit_short_light_red = "Light red", exit_short_dark_red = "Dark red", exit_short_none = "None"
+exit_type_per_tp = "Percentage", exit_type_atr_tp = "ATR", exit_type_rr_tp = "Risk/Reward", exit_type_none_tp = "None"
+exit_type_per_sl = "Percentage", exit_type_atr_sl = "ATR", exit_type_none_sl = "None"
+exit_tt_val_tp = "Percantage: Percentage value\nATR: ATR multiplier\nRisk/Reward: R:R ratio"
+exit_tt_val_sl = "Percantage: Percentage value\nATR: ATR multiplier"
+in_exit_sqz_bar_type_long = input.string(exit_long_dark_green, "Long close", [exit_long_light_green, exit_long_dark_green, exit_long_light_red, exit_long_dark_red, exit_long_none], group=exit_gr_name)
+in_exit_sqz_bar_type_short = input.string(exit_short_dark_red, "Short close", [exit_short_light_green, exit_short_dark_green, exit_short_light_red, exit_short_dark_red, exit_short_none], group=exit_gr_name)
+in_exit_sqz_bar_close_in_profit = input.bool(false, "Close only in profit", group=exit_gr_name)
+in_exit_type_tp = input.string(exit_type_none_tp, "Take profit type", [exit_type_per_tp, exit_type_atr_tp, exit_type_rr_tp, exit_type_none_tp], group=exit_gr_name)
+in_exit_val_tp = input.float(2.0, "Take profit value", step=0.1, tooltip=exit_tt_val_tp, group=exit_gr_name)
+in_exit_type_sl = input.string(exit_type_atr_sl, "Stop loss type", [exit_type_per_sl, exit_type_atr_sl, exit_type_none_sl], group=exit_gr_name)
+in_exit_val_sl = input.float(2.0, "Stop loss value", step=0.1, tooltip=exit_tt_val_sl, group=exit_gr_name)
+in_exit_atr_len = input.int(14, "ATR length", group=exit_gr_name)
+//}
+// Squeeze Momentum {
+sqz_gr_name = "Squeeze Momentum"
+in_sqz_length = input(20, title='BB Length', group=sqz_gr_name)
+in_sqz_mult = input(2.0, title='BB MultFactor', group=sqz_gr_name)
+in_sqz_lengthKC = input(20, title='KC Length', group=sqz_gr_name)
+in_sqz_multKC = input(1.5, title='KC MultFactor', group=sqz_gr_name)
+in_sqz_useTrueRange = input(true, title='Use TrueRange (KC)', group=sqz_gr_name)
+//}
+// Moving Average {
+ma_gr_name = "Moving Average"
+ma_type_rma = "RMA", ma_type_sma = "SMA", ma_type_ema = "EMA", ma_type_wma = "WMA", ma_type_hma = "HMA", ma_type_vwma = "VWMA", ma_type_dema = "DEMA", ma_type_tema = "TEMA"
+in_ma_en = input.bool(true, "Enable moving average filter?", group=ma_gr_name)
+in_ma_type = input.string(ma_type_sma, "Type", [ma_type_rma, ma_type_sma, ma_type_ema, ma_type_dema, ma_type_tema, ma_type_wma, ma_type_hma, ma_type_vwma], group=ma_gr_name)
+in_ma_src = input.source(close, "Source", group=ma_gr_name)
+in_ma_len = input.int(200, "Length", group=ma_gr_name)
+in_ma_show = input.bool(true, "Plot?", inline="ma_plot", group=ma_gr_name)
+in_ma_col = input.color(color.yellow, "", inline="ma_plot", group=ma_gr_name)
+in_ma_w = input.int(2, "", inline="ma_plot", group=ma_gr_name)
+//}
+// Display {
+disp_gr_name = "Display"
+in_disp_ep_col = input.color(color.gray, "Entry Price", group=disp_gr_name)
+in_disp_tp_col = input.color(color.green, "Take Profit", group=disp_gr_name)
+in_disp_sl_col = input.color(color.red, "Stop Loss", group=disp_gr_name)
+//}
+//}
+// Variables {
+// Entry {
+entry_long_sel_light_green = (in_entry_sqz_bar_type_long == entry_long_light_green)
+entry_long_sel_dark_green = (in_entry_sqz_bar_type_long == entry_long_dark_green)
+entry_short_sel_light_red = (in_entry_sqz_bar_type_short == entry_short_light_red)
+entry_short_sel_dark_red = (in_entry_sqz_bar_type_short == entry_short_dark_red)
+//}
+// Exit {
+exit_long_sel_light_green = (in_exit_sqz_bar_type_long == exit_long_light_green)
+exit_long_sel_dark_green = (in_exit_sqz_bar_type_long == exit_long_dark_green)
+exit_long_sel_light_red = (in_exit_sqz_bar_type_long == exit_long_light_red)
+exit_long_sel_dark_red = (in_exit_sqz_bar_type_long == exit_long_dark_red)
+exit_short_sel_light_green = (in_exit_sqz_bar_type_short == exit_short_light_green)
+exit_short_sel_dark_green = (in_exit_sqz_bar_type_short == exit_short_dark_green)
+exit_short_sel_light_red = (in_exit_sqz_bar_type_short == exit_short_light_red)
+exit_short_sel_dark_red = (in_exit_sqz_bar_type_short == exit_short_dark_red)
+//}
+// Strategy {
+strat_is_long = strategy.position_size > 0
+strat_is_short = strategy.position_size < 0
+strat_is_new_pos = (strategy.position_size[1] == 0 and strategy.position_size != 0) or ((strategy.position_size[1] * strategy.position_size) < 0)
+//}
+//}
+// Functions {
+// Moving Average {
+f_ma(type, src, len) =>
+    switch type
+        ma_type_rma => ta.rma(src, len)
+        ma_type_sma => ta.sma(src, len)
+        ma_type_ema => ta.ema(src, len)
+        ma_type_dema => 
+            e1 = ta.ema(src, len)
+            e2 = ta.ema(e1, len)
+            dema = 2 * e1 - e2
+        ma_type_tema =>
+            ema1 = ta.ema(src, len)
+            ema2 = ta.ema(ema1, len)
+            ema3 = ta.ema(ema2, len)
+            out = 3 * (ema1 - ema2) + ema3
+        ma_type_wma => ta.wma(src, len)
+        ma_type_hma => ta.hma(src, len)
+        ma_type_vwma => ta.vwma(src, len)
+        => ta.ema(src, len)
+//}
+//}
+// Indicator {
+// Squeeze Momentum {
+var sqz_dark_blue_dot_cnt = 0
+// Calculate BB
+sqz_source = close
+sqz_basis = ta.sma(sqz_source, in_sqz_length)
+sqz_dev = in_sqz_multKC * ta.stdev(sqz_source, in_sqz_length)
+sqz_upperBB = sqz_basis + sqz_dev
+sqz_lowerBB = sqz_basis - sqz_dev
+// Calculate KC
+sqz_ma = ta.sma(sqz_source, in_sqz_lengthKC)
+sqz_range_1 = in_sqz_useTrueRange ? ta.tr : high - low
+sqz_rangema = ta.sma(sqz_range_1, in_sqz_lengthKC)
+sqz_upperKC = sqz_ma + sqz_rangema * in_sqz_multKC
+sqz_lowerKC = sqz_ma - sqz_rangema * in_sqz_multKC
+sqz_sqzOn = sqz_lowerBB > sqz_lowerKC and sqz_upperBB < sqz_upperKC
+sqz_sqzOff = sqz_lowerBB < sqz_lowerKC and sqz_upperBB > sqz_upperKC
+sqz_noSqz = sqz_sqzOn == false and sqz_sqzOff == false
+sqz_val = ta.linreg(sqz_source - math.avg(math.avg(ta.highest(high, in_sqz_lengthKC), ta.lowest(low, in_sqz_lengthKC)), ta.sma(close, in_sqz_lengthKC)), in_sqz_lengthKC, 0)
+sqz_bar_light_green = (sqz_val > 0) and (sqz_val > nz(sqz_val[1]))
+sqz_bar_dark_green = (sqz_val > 0) and not (sqz_val > nz(sqz_val[1]))
+sqz_bar_light_red = not (sqz_val > 0) and (sqz_val < nz(sqz_val[1]))
+sqz_bar_dark_red = not (sqz_val > 0) and not (sqz_val < nz(sqz_val[1]))
+sqz_circle_dark_blue = sqz_noSqz or (not sqz_noSqz and sqz_sqzOn)
+sqz_circle_light_blue = (not sqz_noSqz and not sqz_sqzOn)
+sqz_bar_cond_long = entry_long_sel_light_green ? sqz_bar_light_green : entry_long_sel_dark_green ? sqz_bar_dark_green : false
+sqz_bar_cond_short = entry_short_sel_light_red ? sqz_bar_light_red : entry_short_sel_dark_red ? sqz_bar_dark_red : false
+sqz_bar_cond_long := sqz_bar_cond_long and sqz_circle_light_blue
+sqz_bar_cond_short := sqz_bar_cond_short and sqz_circle_light_blue
+sqz_close_cond_long = exit_long_sel_light_green ? sqz_bar_light_green : exit_long_sel_dark_green ? sqz_bar_dark_green : exit_long_sel_light_red ? sqz_bar_light_red : exit_long_sel_dark_red ? sqz_bar_dark_red : false
+sqz_close_cond_short = exit_short_sel_light_green ? sqz_bar_light_green : exit_short_sel_dark_green ? sqz_bar_dark_green : exit_short_sel_light_red ? sqz_bar_light_red : exit_short_sel_dark_red ? sqz_bar_dark_red : false
+sqz_dark_blue_dot_cnt := sqz_circle_dark_blue ? sqz_dark_blue_dot_cnt + 1 : 0
+sqz_filter_cnt_cond = in_entry_sqz_filter_en ? (sqz_dark_blue_dot_cnt[1] >= in_entry_sqz_filter_cnt) : true
+plotchar(sqz_dark_blue_dot_cnt, "Dark blue dot count", "", color=color.blue)
+//}
+// Moving Average {
+ma_val = f_ma(in_ma_type, in_ma_src, in_ma_len)
+ma_cond_long = in_ma_en ? (close > ma_val) : true
+ma_cond_short = in_ma_en ? (close < ma_val) : true
+plot(in_ma_en and in_ma_show ? ma_val : na, "Moving Average", in_ma_col, in_ma_w)
+//}
+// ATR {
+var float atr_at_entry = na
+atr_val = ta.atr(in_exit_atr_len)
+atr_at_entry := strat_is_new_pos ? atr_val[1] : atr_at_entry
+//}
+// Strategy {
+strat_long_cond = sqz_bar_cond_long and sqz_filter_cnt_cond and ma_cond_long
+strat_short_cond = sqz_bar_cond_short and sqz_filter_cnt_cond and ma_cond_short
+if (strat_long_cond)
+    strategy.entry("Long", strategy.long,alert_message = lo_mess)
+if (strat_short_cond)
+    strategy.entry("Short", strategy.short,alert_message = sh_mess)
+strat_profit_cond_close = in_exit_sqz_bar_close_in_profit ? (strategy.openprofit > 0) : true
+if (strat_is_long and sqz_close_cond_long and strat_profit_cond_close)
+    strategy.close("Long",alert_message = exl_mess)
+if (strat_is_short and sqz_close_cond_short and strat_profit_cond_close)
+    strategy.close("Short",alert_message = exs_mess)
+strat_entry_price = strategy.opentrades.entry_price(strategy.opentrades - 1)
+// Stop Loss {
+var float strat_sl_price_long = na
+var float strat_sl_price_short = na
+strat_sl_price_long := if (strat_is_new_pos)
+    switch in_exit_type_sl
+        exit_type_per_sl => strategy.position_avg_price * (1 - (in_exit_val_sl * 0.01))
+        exit_type_atr_sl => strat_entry_price - (in_exit_val_sl * atr_val)
+        => na
+else
+    strat_sl_price_long
+strat_sl_price_short := if (strat_is_new_pos)
+    switch in_exit_type_sl
+        exit_type_per_sl => strategy.position_avg_price * (1 + (in_exit_val_sl * 0.01))
+        exit_type_atr_sl => strat_entry_price + (in_exit_val_sl * atr_val)
+        => na
+else
+    strat_sl_price_short
+float strat_sl_price = strat_is_long ? strat_sl_price_long : strat_is_short ? strat_sl_price_short : na
+strat_sl_diff = math.abs(strat_entry_price - strat_sl_price)
+//}
+// Take Profit {
+var float strat_tp_price_long = na
+var float strat_tp_price_short = na
+strat_tp_price_long := if (strat_is_new_pos)
+    switch in_exit_type_tp
+        exit_type_per_tp => strategy.position_avg_price * (1 + (in_exit_val_tp * 0.01))
+        exit_type_atr_tp => strat_entry_price + (in_exit_val_tp * atr_val)
+        exit_type_rr_tp => strat_entry_price + (in_exit_val_tp * strat_sl_diff)
+        => na
+else
+    strat_tp_price_long
+strat_tp_price_short := if (strat_is_new_pos)
+    switch in_exit_type_tp
+        exit_type_per_tp => strategy.position_avg_price * (1 - (in_exit_val_tp * 0.01))
+        exit_type_atr_tp => strat_entry_price - (in_exit_val_tp * atr_val)
+        exit_type_rr_tp => strat_entry_price - (in_exit_val_tp * strat_sl_diff)
+        => na
+else
+    strat_tp_price_short
+float strat_tp_price = strat_is_long ? strat_tp_price_long : strat_is_short ? strat_tp_price_short : na
+//}
+if (strat_is_long)
+    strategy.exit("LE", "Long", stop=strat_sl_price, limit=strat_tp_price, comment_loss="L-SL", comment_profit="L-TP",alert_message = exl_mess)
+if (strat_is_short)
+    strategy.exit("SE", "Short", stop=strat_sl_price, limit=strat_tp_price, comment_loss="S-SL", comment_profit="S-TP",alert_message = exs_mess)
+//}
+// Display {
+p_ep = plot(strat_entry_price, "Entry Price", in_disp_ep_col, 1, plot.style_circles)
+p_tp = plot(strat_tp_price, "Take Profit", in_disp_tp_col, 1, plot.style_circles)
+p_sl = plot(strat_sl_price, "Stop Loss", in_disp_sl_col, 1, plot.style_circles)
+fill(p_ep, p_tp, color.new(in_disp_tp_col, 85), title="Take Profit Fill")
+fill(p_ep, p_sl, color.new(in_disp_sl_col, 85), title="Stop Loss Fill")
+//}
+//}
+Expand (296 lines)

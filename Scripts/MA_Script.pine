@@ -1,0 +1,189 @@
+Script Name: MA_Script
+Author: chauvu73550
+Description: - Entry Point : base on MA20, MA50, MA100, MA200.
+- Exit Point : base on stop loss, MA and trailing stop.
+PineScript code:
+
+Pine Script™ strategy
+MA_Script
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+//@version=4
+strategy("MA_Script", overlay=true)
+// STEP 1:
+// Configure trail stop level with input options (optional)
+longTrailPerc=input(title="Trail Long Loss (%)", type=input.float, minval=0.0, step=0.05, defval=0.1)
+// Configure backtest start date with inputs
+startDate=input(title="Start Date", type=input.integer, defval=1, minval=1, maxval=31)
+startMonth=input(title="Start Month", type=input.integer, defval=1, minval=1, maxval=12)
+startYear=input(title="Start Year", type=input.integer, defval=2020, minval=1800, maxval=2100)
+// See if this bar's time happened on/after start date
+afterStartDate=(time >=timestamp(syminfo.timezone, startYear, startMonth, startDate, 0, 0))
+// Calculate Relative Strength Index
+rsiValue=rsi(close, 14)
+// Calculate moving averages of volume
+Vol_MA =sma(volume, 20)
+// Calculate moving averages
+MA10_Val =sma(close, 10)
+plot(MA10_Val, title = "MA10", color=color.yellow, linewidth=1)
+MA20_Val =sma(close, 20)
+plot(MA20_Val, title = "MA20", color=color.green, linewidth=1)
+MA50_Val =sma(close, 50)
+plot(MA50_Val, title = "MA50", color=color.red, linewidth=1)
+MA100_Val =sma(close, 100)
+plot(MA100_Val, title = "MA100", color=color.blue, linewidth=1) 
+MA200_Val =sma(close, 200)
+plot(MA200_Val, title = "MA200", color=color.purple, linewidth=1) 
+// Calculate candlestick
+C_BodyHi = max(close, open)
+C_BodyLo = min(close, open)
+C_Body = C_BodyHi - C_BodyLo
+C_UpShadow = high - C_BodyHi
+C_DnShadow = C_BodyLo - low
+// STEP 2:
+// Calculate entry trading conditions
+buyCondition_1=crossover(MA10_Val, MA50_Val) and (rsiValue > 30) and ((MA20_Val >=  MA100_Val) or (MA50_Val >=  MA100_Val))
+avg_price = (close + open)/2
+// First Entry
+if (afterStartDate)
+    strategy.entry(id="Entry_Trade_1", long=true, limit=avg_price, when=buyCondition_1)
+plotchar(afterStartDate and crossover(MA10_Val, MA50_Val), title = "MA for Buy", textcolor = color.blue, text = 'MA\n')
+// Determine trail stop loss prices
+longStopPrice=0.0
+longStopPrice :=if (strategy.position_size > 0)
+    stopValue=C_BodyHi * (1 - longTrailPerc)
+    max(stopValue, longStopPrice[1])
+else
+    0
+plot(longStopPrice, title = "Trailing Stop", color=color.orange, linewidth=1)
+bought_1=strategy.position_size[0] > strategy.position_size[1]
+entry_Point_1=valuewhen(bought_1, avg_price, 0)
+// STEP 3:
+// Calculate exit trading conditions
+// Exit By Trailing Stop
+sellCondition_3=(C_BodyHi >= entry_Point_1*1.2) and (strategy.position_size > 0) and close <= longStopPrice
+sellCondition_2=crossunder(MA10_Val, MA50_Val) and (close < MA20_Val) and (volume >= Vol_MA) and (strategy.position_size > 0)
+sellCondition_1=(entry_Point_1*0.94 > close) and (strategy.position_size > 0)
+plotchar((sellCondition_3 == 1) and (strategy.position_size > 0) and close <= longStopPrice, title = "Trailing Stop for Sale", textcolor = color.red, text = 'TS\n', show_last = 11)
+plotchar(crossunder(MA10_Val, MA50_Val), title = "MA for Sell", textcolor = color.red, text = 'MA\n')
+id_val = ""
+stop_val = close
+condition = false
+if sellCondition_1
+    id_val := "Exit By Stop Loss At 7%"
+    stop_val := entry_Point_1*0.93
+    condition := true
+else if sellCondition_2
+    id_val := "Exit By Take Profit based on MA"
+    stop_val := close
+    condition := true
+else if sellCondition_3
+    id_val := "Exit By Trailing Stop"
+    stop_val := longStopPrice
+    condition := true
+// Submit exit orders for trail stop loss price
+if (strategy.position_size > 0)
+    strategy.exit(id=id_val, from_entry="Entry_Trade_1", stop=stop_val, when=condition)
+    
+    
+Expand (101 lines)

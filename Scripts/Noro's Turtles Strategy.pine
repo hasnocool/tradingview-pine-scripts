@@ -1,0 +1,204 @@
+Script Name: Noro's Turtles Strategy
+Author: ROBO_Trading
+Description: Original idea from book «Way of the Turtle: The Secret Methods that Turned Ordinary People into Legendary Traders» (2007, CURTIS FAITH, ISBN: 9780071486644)
+
+ Strategy 
+
+2 positions types are used. Fast and slow. The period for fast and slow user specifies separately. For example for quick: if the price is higher than the highest price in the last 10 candles, then...
+PineScript code:
+
+Pine Script™ strategy
+Noro's Turtles Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+//Noro
+//2020
+//Original idea from «Way of the Turtle: The Secret Methods that Turned Ordinary People into Legendary Traders» (2007, CURTIS FAITH, ISBN: 9780071486644) 
+//@version=4
+strategy("Noro's Turtles Strategy", shorttitle = "Turtles str", overlay = true, default_qty_type = strategy.percent_of_equity, initial_capital = 100, default_qty_value = 100, commission_value = 0.1)
+//Settings
+needlong = input(true, title = "Long")
+needshort = input(false, title = "Short")
+sizelong = input(100, defval = 100, minval = 1, maxval = 10000, title = "Lot long, %")
+sizeshort = input(100, defval = 100, minval = 1, maxval = 10000, title = "Lot short, %")
+needfast = input(true, title = "Fast")
+needslow = input(true, title = "Slow")
+enter_fast = input(20, minval=1)
+exit_fast = input(10, minval=1)
+enter_slow = input(55, minval=1)
+exit_slow = input(20, minval=1)
+showof = input(true, title = "Show offset")
+showll = input(false, title = "Show lines")
+showlabel = input(true, defval = true, title = "Show label")
+fromyear = input(1900, defval = 1900, minval = 1900, maxval = 2100, title = "From Year")
+toyear = input(2100, defval = 2100, minval = 1900, maxval = 2100, title = "To Year")
+frommonth = input(01, defval = 01, minval = 01, maxval = 12, title = "From Month")
+tomonth = input(12, defval = 12, minval = 01, maxval = 12, title = "To Month")
+fromday = input(01, defval = 01, minval = 01, maxval = 31, title = "From day")
+today = input(31, defval = 31, minval = 01, maxval = 31, title = "To day")
+//Fast
+fastL = highest(enter_fast)
+fastLC = lowest(exit_fast)
+fastS = lowest(enter_fast)
+fastSC = highest(exit_fast)
+//Slow
+slowL = highest(enter_slow)
+slowLC = lowest(exit_slow)
+slowS = lowest(enter_slow)
+slowSC = highest(exit_slow)
+//Lines
+offset = showof ? 1 : 0
+col1 = showll and needlong and needfast ? color.blue : na
+col2 = showll and needshort and needfast ? color.red : na
+col3 = showll and needlong and needslow ? color.blue : na
+col4 = showll and needshort and needslow ? color.red : na
+plot(fastL, color = col1, offset = offset)
+plot(fastLC, color = col1, offset = offset)
+plot(fastS, color = col2, offset = offset)
+plot(fastSC, color = col2, offset = offset)
+plot(slowL, color = col3, offset = offset)
+plot(slowLC, color = col3, offset = offset)
+plot(slowS, color = col4, offset = offset)
+plot(slowSC, color = col4, offset = offset)
+//Orders
+truetime = time > timestamp(fromyear, frommonth, fromday, 00, 00) and time < timestamp(toyear, tomonth, today, 23, 59)
+size = strategy.position_size
+lotlong = 0.0
+lotlong := size != size[1] ? strategy.equity / close * sizelong / 100 : lotlong[1]
+lotshort = 0.0
+lotshort := size != size[1] ? strategy.equity / close * sizeshort / 100 : lotshort[1]
+//Fast
+strategy.entry("fast L", strategy.long, lotlong, stop = fastL, when = needfast and needlong and strategy.position_size == 0 and truetime)
+strategy.entry("fast S", strategy.short, lotshort, stop = fastS, when = needfast and needshort and strategy.position_size == 0 and truetime)
+strategy.exit("fast L", stop = fastLC, when = needfast and needlong and strategy.position_size > 0)
+strategy.exit("fast S", stop = fastSC, when = needfast and needshort and strategy.position_size < 0)
+//Slow
+strategy.entry("slow L", strategy.long, lotlong, stop = slowL, when = needslow and needlong and strategy.position_size == 0 and truetime)
+strategy.entry("slow S", strategy.short, lotshort, stop = slowS, when = needslow and needshort and strategy.position_size == 0 and truetime)
+strategy.exit("slow L", stop = slowLC, when = needslow and needlong and strategy.position_size > 0)
+strategy.exit("slow S", stop = slowSC, when = needslow and needshort and strategy.position_size < 0)
+if time > timestamp(toyear, tomonth, today, 23, 59)
+    strategy.close_all()
+    strategy.cancel("fast L")
+    strategy.cancel("fast S")
+    strategy.cancel("slow L")
+    strategy.cancel("slow S")
+    
+if showlabel
+    //Drawdown
+    max = 0.0
+    max := max(strategy.equity, nz(max[1]))
+    dd = (strategy.equity / max - 1) * 100
+    min = 100.0
+    min := min(dd, nz(min[1]))
+    
+    //Label
+    min := round(min * 100) / 100
+    labeltext = "Drawdown: " + tostring(min) + "%"
+    var label la = na
+    label.delete(la)
+    tc = min > -100 ? color.white : color.red
+    osx = timenow + round(change(time)*10)
+    osy = highest(100)
+    la := label.new(x = osx, y = osy, text = labeltext, xloc = xloc.bar_time, yloc = yloc.price, color = color.black, style = label.style_labelup, textcolor = tc)
+Expand (101 lines)

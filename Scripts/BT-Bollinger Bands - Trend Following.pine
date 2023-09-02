@@ -1,0 +1,275 @@
+Script Name: BT-Bollinger Bands - Trend Following
+Author: Credsonb
+Description: Esse script foi criado para estudo de Backtest.
+
+O script usa as Bandas de Bollinger para indicar o início de uma tendência, a entrada é configurada quando o preço abre abaixo e fecha acima da banda superior ou para venda quando o preço abre acima e fecha abaixo da banda inferior.
+
+Não há um stop fixo e nem alvo fixo a saída se dá quando o preço toca a média da...
+PineScript code:
+
+Pine Script™ strategy
+BT-Bollinger Bands - Trend Following
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+//VERSION =================================================================================================================
+//@version=5
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// This strategy is intended to study.
+// It can also be used to signal a bot to open a deal by providing the Bot ID, email token and trading pair in the strategy settings screen.
+// As currently written, this strategy uses a Bollinger Bands for trend folling, you can use a EMA as a filter.
+//Autor Credsonb (M4TR1X_BR)
+//▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+//STRATEGY ================================================================================================================
+strategy(title = 'BT-Bollinger Bands - Trend Following',
+         shorttitle = 'BBTF',
+         overlay = true,
+         pyramiding = 0,
+         default_qty_type = strategy.cash,
+         default_qty_value = 300,
+         initial_capital = 1000,
+         max_lines_count = 150,
+         process_orders_on_close=true,
+         max_labels_count = 150)
+//▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+// CONFIG =================================================================================================================
+// TIME INPUTS
+usefromDate = input.bool(defval = true, title = 'Start date', inline = '0', group = "Time Filters")
+initialDate = input.time(defval = timestamp('01 Jan 2022 00:00 UTC'), title = '', inline = "0",group = 'Time Filters',tooltip="This start date is in the time zone of the exchange ")
+usetoDate = input.bool(defval = true, title = 'End date', inline = '1', group = "Time Filters")
+finalDate = input.time(defval = timestamp('31 Dec 2029 23:59 UTC'), title = '', inline = "1",group = 'Time Filters',tooltip="This end date is in the time zone of the exchange")
+// TIME LOGIC 
+inTradeWindow = not usefromDate and not usetoDate or (time >= initialDate and time < finalDate)
+// ENABLE LONG SHORT OPTIONS
+string entrygroup ='Long/Short Options ==================================='
+checkboxLong = input.bool(defval=true, title="Enable Long Entrys",group=entrygroup)
+checkboxShort = input.bool(defval=true, title="Enable Short Entrys",group=entrygroup)
+// BOLLINGER BANDS INPUTS ==================================================================================================
+string bbgroup ='Bollinger Bands ======================================'
+bbLength = input.int(defval=20,title='BB Length', minval=1, step=5, group=bbgroup)
+bbStddev = input.float(defval=2, title='BB StdDev', minval=0.5, group=bbgroup)
+//BOLLINGER BANDS LOGIC
+[bbMiddle, bbUpper, bbLower] = ta.bb(close, bbLength, bbStddev)
+// MOVING AVERAGES INPUTS ================================================================================================
+string magroup =  'Moving Average ======================================='
+useEma = input.bool(defval = true, title = 'Moving Average Filter',inline='', group= magroup,tooltip='This will enable or disable Exponential Moving Average Filter on Strategy')
+emaType=input.string (defval='Ema',title='Type',options=['Ema','Sma'],inline='', group= magroup)
+emaSource = input.source(defval=close,title="  Source",inline="", group= magroup)
+emaLength = input.int(defval=100,title="Length",minval=0,inline='', group= magroup)
+// MOVING AVERAGE LOGIC
+float ema = emaType=='Ema'? ta.ema(emaSource,emaLength): ta.sma(emaSource,emaLength)
+// BOT MESSAGES
+string msgroup='Alert Message For Bot ================================'
+messageEntry = input.string("", title="Strategy Entry Message",group=msgroup)
+messageExit  =input.string("",title="Strategy Exit Message",group=msgroup)
+messageClose = input.string("", title="Strategy Close Message",group=msgroup)
+// ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+// POSITIONS =============================================================================================================
+//VERIFY IF THE BUY FILTERS ARE ON OR OFF 
+bool emaFilterBuy = useEma? (close > ema):(close >= ema) or (close <= ema)                      
+//LONG / SHORT POSITIONS LOGIC
+bool openLongPosition  = (close[1] < bbUpper) and (close > bbUpper)   and (emaFilterBuy)
+bool openShortPosition = (close[1] > bbLower) and (close < bbLower) and (emaFilterBuy)
+//bool closeLongPosition = (close > bbMiddle)
+//bool closeShortPosition= (close < bbLower)
+// CHEK OPEN POSITONS =====================================================================================================
+// open signal when not already into a position
+bool validOpenLongPosition = openLongPosition and strategy.opentrades.size(strategy.opentrades - 1) <= 0
+bool longIsActive = validOpenLongPosition or strategy.opentrades.size(strategy.opentrades - 1) > 0
+bool validOpenShortPosition = openShortPosition and strategy.opentrades.size(strategy.opentrades - 1) <= 0
+bool shortIsActive = validOpenShortPosition or strategy.opentrades.size(strategy.opentrades - 1) < 0
+longEntryPoint = high
+if (openLongPosition) and (inTradeWindow) and (checkboxLong)
+    strategy.entry(id = 'Long Entry', direction = strategy.long, stop = longEntryPoint, alert_message=messageEntry)
+if not (openLongPosition)
+    strategy.cancel('Long Entry')
+//submit exit orders for trailing take profit price 
+if (longIsActive) and (inTradeWindow)
+    strategy.exit(id = 'Long Exit',  stop=bbMiddle, alert_message=messageExit)
+//if (closeLongPosition)
+   // strategy.close(id = 'Long Entry', alert_message=messageClose)
+      
+shortEntryPoint = low 
+if (openShortPosition) and (inTradeWindow) and (checkboxShort)
+    strategy.entry(id = 'Short Entry', direction = strategy.short, stop = shortEntryPoint, alert_message=messageEntry)
+if not(openShortPosition)
+    strategy.cancel('Short Entry')
+if (shortIsActive)
+    strategy.exit(id = 'Short Exit',  stop = bbMiddle, alert_message=messageExit)
+//if (closeShortPosition)
+    //strategy.close(id = 'Short Close', alert_message=messageClose)
+// ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+// PLOTS ===============================================================================================================
+// TRADE WINDOW ========================================================================================================
+bgcolor(color = inTradeWindow ? color.new(#089981,90):na, title = 'Time Window')
+// EMA/SMA 
+var emafilterColor = color.new(color.white, 0)
+plot(series=useEma? ema:na, title = 'EMA Filter', color = emafilterColor, linewidth = 2, style = plot.style_line)
+// BOLLINGER BANDS
+plot(series=bbUpper, title = "Upper Band", color = color.aqua)//, display = display.none)
+plot(series=bbMiddle, title = "MA Band", color = color.red)//, display = display.none)
+plot(series=bbLower, title = "Lower Band", color = color.aqua)//, display = display.none)
+// PAINT BARS COLORS
+bool bulls = (close[1] < bbUpper[1]) and (close > bbUpper)
+bool bears = (close[1] > bbLower [1]) and (close < bbLower)
+neutral_color = color.new(color.black, 100)
+barcolors = bulls ? color.green : bears ? color.red : neutral_color
+barcolor(barcolors)
+// ======================================================================================================================
+Expand (158 lines)

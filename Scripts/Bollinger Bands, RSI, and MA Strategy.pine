@@ -1,0 +1,132 @@
+Script Name: Bollinger Bands, RSI, and MA Strategy
+Author: Monkeyfish85
+Description: The "Bollinger Bands, RSI and MA Strategy" is a trend-following strategy that combines the Bollinger Bands indicator, the Relative Strength Index (RSI), and a moving average (MA). It aims to identify potential entry and exit points in the market based on price volatility, momentum, and trend.
+
+The strategy uses two Bollinger Bands with different standard...
+PineScript code:
+
+Pine Script™ strategy
+Bollinger Bands, RSI, and MA Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+//@version=5
+strategy("Bollinger Bands, RSI, and MA Strategy", overlay=true)
+// Define input variables
+b_len = input(20, title="BB Length")
+bb_mult = input(2.0, title="BB Standard Deviation")
+bb_deviation1 = input(1.0, title="BB Deviation 1")
+rsi_len = input(14, title="RSI Length")
+overbought = input(70, title="Overbought RSI Level")
+oversold = input(30, title="Oversold RSI Level")
+ma_len = input(50, title="MA Length")
+stop_loss_percent = input(1.0, title="Stop Loss Percentage")
+source = input(close, title="Source")
+// Calculate Bollinger Bands
+bb_upper = ta.sma(source, b_len) + bb_mult * ta.stdev(source, b_len)
+bb_lower = ta.sma(source, b_len) - bb_mult * ta.stdev(source, b_len)
+bb_upper1 = ta.sma(source, b_len) + bb_deviation1 * ta.stdev(source, b_len)
+bb_lower1 = ta.sma(source, b_len) - bb_deviation1 * ta.stdev(source, b_len)
+// Calculate RSI
+rsi = ta.rsi(source, rsi_len)
+// Calculate Moving Average
+ma = ta.sma(source, ma_len)
+// Determine if Bollinger Bands are contracting
+bb_contracting = ta.stdev(source, b_len) < ta.stdev(source, b_len)[1]
+// Entry conditions
+enterLong = rsi > overbought and not bb_contracting
+enterShort = rsi < oversold and not bb_contracting
+// Exit conditions
+exitLong = close < ma
+exitShort = close > ma
+// Exit trades and generate alerts
+if strategy.position_size > 0 and exitLong
+    strategy.close("Long") // Exit the long trade
+    alert("Long Exit", alert.freq_once_per_bar_close)
+if strategy.position_size < 0 and exitShort
+    strategy.close("Short") // Exit the short trade
+    alert("Short Exit", alert.freq_once_per_bar_close)
+// Strategy orders
+if enterLong
+    strategy.entry("Long", strategy.long)
+if enterShort
+    strategy.entry("Short", strategy.short)
+if exitLong
+    strategy.close("Long")
+if exitShort
+    strategy.close("Short")
+// Plotting Bollinger Bands
+plot(bb_upper, color=color.blue, title="BB Upper 2")
+plot(bb_lower, color=color.blue, title="BB Lower 2")
+plot(bb_upper1, color=color.red, title="BB Upper 1")
+plot(bb_lower1, color=color.red, title="BB Lower 1")
+// Plotting RSI
+plot(rsi, color=color.orange, title="RSI")
+// Plotting Moving Average
+plot(ma, color=color.green, title="Moving Average")
+Expand (67 lines)

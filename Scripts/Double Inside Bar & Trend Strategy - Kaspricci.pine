@@ -1,0 +1,204 @@
+Script Name: Double Inside Bar & Trend Strategy - Kaspricci
+Author: Kaspricci
+Description: Double Inside Bar & Trend Strategy - Kaspricci 
+
+This strategy combines the  Double Inside Bar  candlestick pattern with a  trend filter.  Once the second inside bar closes and price is above trend moving average, a buy stop order is placed at high of the candle. If price is below trend moving average, a sell stop order is placed at the low of the candle.
+
+ This...
+PineScript code:
+
+Pine Script™ strategy
+Double Inside Bar & Trend Strategy - Kaspricci
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Kaspricci
+//@version=5
+strategy(
+     title = "Double Inside Bar & Trend Strategy - Kaspricci", 
+     shorttitle = "Double Inside Bar & Trend", 
+     overlay=true, 
+     initial_capital = 100000, 
+     currency = currency.USD, 
+     default_qty_type = strategy.percent_of_equity, 
+     default_qty_value = 100, 
+     calc_on_every_tick = true, 
+     close_entries_rule = "ANY")
+// ================================================ Entry Inputs ======================================================================
+headlineEntry   = "Entry Seettings"
+maSource        = input.source(defval = close,             group = headlineEntry, title = "MA Source")
+maType          = input.string(defval = "HMA",             group = headlineEntry, title = "MA Type", options = ["EMA", "HMA", "SMA", "SWMA", "VWMA", "WMA"])
+maLength        = input.int(   defval = 45,    minval = 1, group = headlineEntry, title = "HMA Length")
+float ma = switch maType 
+    "EMA"  => ta.ema(maSource,  maLength)
+    "HMA"  => ta.hma(maSource,  maLength)
+    "SMA"  => ta.sma(maSource,  maLength)
+    "SWMA" => ta.swma(maSource)
+    "VWMA" => ta.vwma(maSource, maLength)
+    "WMA"  => ta.wma(maSource,  maLength)
+plot(ma, "Trend MA", color.purple)
+// ================================================ Trade Inputs ======================================================================
+headlineTrade   = "Trade Seettings"
+stopLossType    = input.string(defval = "ATR",                         group = headlineTrade,                 title = "Stop Loss Type",            options = ["ATR", "FIX"])
+atrLength       = input.int(   defval = 50,   minval = 1,              group = headlineTrade, inline = "ATR", title = "   ATR: Length                 ")
+atrFactor       = input.float( defval =  2.5, minval = 0, step = 0.05, group = headlineTrade, inline = "ATR", title = "Factor       ",             tooltip = "multiplier for ATR value")
+takeProfitRatio = input.float( defval =  2.0, minval = 0, step = 0.05, group = headlineTrade,                 title = "            TP Ration",     tooltip = "Multiplier for Take Profit calculation")
+fixStopLoss     = input.float( defval = 10.0, minval = 0, step = 0.5,  group = headlineTrade, inline = "FIX", title = "   FIX: Stop Loss             ") * 10 // need this in ticks
+fixTakeProfit   = input.float( defval = 20.0, minval = 0, step = 0.5,  group = headlineTrade, inline = "FIX", title = "Take Profit",               tooltip = "in pips") * 10 // need this in ticks
+useRiskMagmt    = input.bool(  defval = true,                          group = headlineTrade, inline = "RM",  title = "")
+riskPercent     = input.float( defval = 1.0,  minval = 0., step = 0.5, group = headlineTrade, inline = "RM",  title = "Risk in %                ", tooltip = "This will overwrite quantity from startegy settings and calculate the trade size based on stop loss and risk percent") / 100
+// ================================================ Filter Inputs =====================================================================
+headlineFilter  = "Filter Setings"
+// date filter
+filterDates     = input.bool(defval = false,                                 group = headlineFilter, title = "Filter trades by dates")
+startDateTime   = input.time(defval = timestamp("2022-01-01T00:00:00+0000"), group = headlineFilter, title = "       Start Date & Time")
+endDateTime     = input.time(defval = timestamp("2099-12-31T23:59:00+0000"), group = headlineFilter, title = "       End Date & Time  ")
+dateFilter      = not filterDates or (time >= startDateTime and time <= endDateTime)
+// session filter
+filterSession   = input.bool(title = "Filter trades by session", defval = false, group = headlineFilter)
+session         = input.session(title = "       Session", defval = "0045-2245", group = headlineFilter)
+sessionFilter   = not filterSession or time(timeframe.period, session, timezone = "CET")
+// ================================================ Trade Entries and Exits =====================================================================
+// calculate stop loss
+stopLoss        = switch stopLossType
+    "ATR" => nz(math.round(ta.atr(atrLength) * atrFactor / syminfo.mintick, 0), 0)
+    "FIX" => fixStopLoss
+// calculate take profit
+takeProfit      = switch stopLossType
+    "ATR" => math.round(stopLoss * takeProfitRatio, 0)
+    "FIX" => fixTakeProfit
+doubleInsideBar = high[2] > high[1] and high[2] > high[0] and low[2] < low[1] and low[2] < low[0]
+// highlight mother candel and inside bar candles
+bgcolor(doubleInsideBar ? color.rgb(33, 149, 243, 80) : na)
+bgcolor(doubleInsideBar ? color.rgb(33, 149, 243, 80) : na, offset = -1)
+bgcolor(doubleInsideBar ? color.rgb(33, 149, 243, 80) : na, offset = -2)
+var float buyStopPrice  = na
+var float sellStopPrice = na
+if (strategy.opentrades == 0 and dateFilter and sessionFilter and doubleInsideBar and barstate.isconfirmed)
+    buyStopPrice  := high[0] // high of recent candle (second inside bar)
+    sellStopPrice := low[0] // low of recent candle (second inside bar)
+    tradeID = str.tostring(strategy.closedtrades + strategy.opentrades + 1)
+    quantity = useRiskMagmt ? math.round(strategy.equity * riskPercent / stopLoss, 2) / syminfo.mintick : na
+    commentTemplate = "{0} QTY: {1,number,#.##} SL: {2} TP: {3}"
+    if (close > ma)
+        longComment = str.format(commentTemplate, tradeID + "L", quantity, stopLoss / 10, takeProfit / 10)
+        strategy.entry(tradeID + "L", strategy.long, qty = quantity, stop = buyStopPrice, comment = longComment)
+        strategy.exit(tradeID + "SL", tradeID + "L", profit = takeProfit, loss = stopLoss, comment_loss = "SL", comment_profit = "TP")
+    if (close < ma)
+        shortComment = str.format(commentTemplate, tradeID + "S", quantity, stopLoss / 10, takeProfit / 10)
+        strategy.entry(tradeID + "S", strategy.short, qty = quantity, stop = sellStopPrice, comment = shortComment)
+        strategy.exit(tradeID + "SL", tradeID + "S", profit = takeProfit, loss = stopLoss, comment_loss = "SL", comment_profit = "TP")
+// as soon as the first pending order has been entered the remaing pending order shall be cancelled 
+if strategy.opentrades > 0
+    currentTradeID = str.tostring(strategy.closedtrades + strategy.opentrades)
+    strategy.cancel(currentTradeID + "S")
+    strategy.cancel(currentTradeID + "L")
+Expand (109 lines)

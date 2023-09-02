@@ -1,0 +1,121 @@
+Script Name: 200DMA last DOM - ajh
+Author: muscleriot
+Description: Implements and backtests a simple 200 day moving average trend following rules based on last day of month to limits trades to 12 per year.  
+ From the book : 5 BEST Moving Average Strategies (That beat buy and hold) by Steve Burns and Holly Burns  
+
+Click on the cog to set the input date range eg; 2000-01-01 to 2016-12-31
+
+The book back tested SP500 returns from...
+PineScript code:
+
+Pine Script™ strategy
+200DMA last DOM - ajh
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © muscleriot
+//200 dma
+//1 signal per month - trade only at 'end of month' to cut whipsawing in and out. 'End of Month' is whatever trading day is 
+// nearest to the default day 28 of month in pinescript - there is no easy method to obtain trading end of month date.
+// Day 28 is default so not to miss Feburary. 
+//If > 200DMA enter long
+//If < 200DMA goto cash
+// Important Steve Burns used SPY TOTAL RETURN INDEX used not just SPY Price. Please use the ADJ at bottom of chart in Trading View. 
+// 3 Jan 2000 to 28 Jun 2021 - https://www.newtraderu.com/2021/06/30/200-day-moving-average-vs-buy-and-hold/
+//Steve Burns Results : 585.8% return on SPY vs 365% buy and hold with 12 trades
+// My Results :         415% return (on SPY with ADJ) vs BUY and HOLD of 318.9% in 12 trades so not perfect
+//@version=5
+strategy("200DMA last DOM - ajh", overlay =true,default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital = 10000)
+// Use 100% of  equity always
+ma_days = input.int(defval=200, title="SMA (Chart Period)", minval=1, maxval=600)
+trade_dom = input.int(defval=28, title="trade day of month or 0 for none", minval=0, maxval=31)
+//e =dayofmonth(time)
+// backtesting date range
+from_day = input.int(defval=3, title="From Day", minval=1, maxval=31)
+from_month = input.int(defval=1, title="From Month", minval=1, maxval=12)
+from_year = input.int(defval=2000, title="From Year", minval=1900)
+to_day = input.int(defval=28, title="To Day", minval=1, maxval=31)
+to_month = input.int(defval=6, title="To Month", minval=1, maxval=12)
+to_year = input.int(defval=2021, title="To Year", minval=1900)
+dateStart = timestamp(syminfo.timezone, from_year, from_month, from_day, 0, 0) // 2000-01-03
+dateEnd = timestamp(syminfo.timezone, to_year, to_month, to_day, 0, 0) //2021-06-28
+inDateRange = time >= dateStart and time <= dateEnd
+// 200 day ma 
+dma200 = ta.sma(close, ma_days)
+plot(dma200, color=color.red, linewidth = 2)
+//Day of month
+dom = dayofmonth(time_tradingday, syminfo.timezone) 
+// Set trade entry conditions -
+enterLong  = close > dma200
+enterSale = close < dma200
+TradeTime = (trade_dom == 0) ? true: (dom == trade_dom)? true: false //Is it the time (eom) to decide to go long or short? 
+//bgcolor((TradeTime) ?  color.gray:na)
+xLong = TradeTime and enterLong
+xSell = TradeTime and enterSale
+plotchar(xLong, "long","L", color=color.green, location=location.abovebar, size=size.tiny)   
+plotchar(xSell, "Sell","S", color=color.red, location = location.abovebar, size = size.tiny)   
+if TradeTime and inDateRange and enterLong 
+    strategy.entry("long", strategy.long)
+if TradeTime and inDateRange and enterSale
+    strategy.close("long")
+// Exit open market position when date range ends
+if (not inDateRange)
+    strategy.close_all()    
+Expand (58 lines)

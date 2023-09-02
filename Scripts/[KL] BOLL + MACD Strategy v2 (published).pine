@@ -1,0 +1,213 @@
+Script Name: [KL] BOLL + MACD Strategy v2 (published)
+Author: DojiEmoji
+Description: This strategy will look for opportunities when price touches the lower Bollinger band, then enters Long when it anticipates a MACD crossover signal.
+
+Setup: on 1-day chart interval
+
+Exits when either (a) hitting trailing stop loss, or (b) meeting risk-to-reward, if defined by user.
+PineScript code:
+
+Pine Script™ strategy
+[KL] BOLL + MACD Strategy v2 (published)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © DojiEmoji
+// https://www.tradingview.com/script/EyElTlCG-KL-BOLL-MACD-Strategy-v2-published/
+//@version=4
+strategy("[KL] BOLL + MACD Strategy",overlay=true,pyramiding=1)
+// BOLL bands {
+BOLL_length = 20
+BOLL_src = close
+BOLL_mult = 2.0
+BOLL_center = sma(BOLL_src, BOLL_length)
+BOLL_dev = BOLL_mult * stdev(BOLL_src, BOLL_length)
+BOLL_upper = BOLL_center + BOLL_dev
+BOLL_lower = BOLL_center - BOLL_dev
+BOLL_offset = 0
+plot(BOLL_center, "Basis", color=#872323, offset = BOLL_offset)
+BOLL_p1 = plot(BOLL_upper, "Upper", color=color.navy, offset = BOLL_offset, transp=50)
+BOLL_p2 = plot(BOLL_lower, "Lower", color=color.navy, offset = BOLL_offset, transp=50)
+fill(BOLL_p1, BOLL_p2, title = "Background", color=#198787, transp=85)
+// }
+// MACD signals {
+MACD_fastLen = 12
+MACD_slowLen = 26
+MACD_Len = 9
+MACD = ema(close, MACD_fastLen) - ema(close, MACD_slowLen)
+aMACD = ema(MACD, MACD_Len)
+MACD_delta = MACD - aMACD
+// }
+backtest_timeframe_start = input(defval = timestamp("01 Nov 2010 13:30 +0000"), title = "Backtest Start Time", type = input.time)
+USE_ENDTIME = input(false,title="Define backtest end-time (If false, will test up to most recent candle)")
+backtest_timeframe_end = input(defval = timestamp("19 Mar 2021 19:30 +0000"), title = "Backtest End Time (if checked above)", type = input.time)
+EXIT1 = input(false, title="Take profit when Risk:Reward met")
+REWARD_RATIO = input(3,title="Risk:[Reward] for exit")
+EXIT2 = input(false, title="Take profit when candle is bearish")
+// Trailing stop loss {
+var entry_price = float(0)
+ATR_multi_len = 26
+ATR_multi = input(2, "ATR multiplier for stop loss")
+ATR_buffer = atr(ATR_multi_len) * ATR_multi
+plotchar(ATR_buffer, "ATR Buffer", "", location = location.top)
+risk_reward_buffer = (atr(ATR_multi_len) * ATR_multi) * REWARD_RATIO
+reward_met_long = low > entry_price + risk_reward_buffer
+take_profit_short = low < entry_price - risk_reward_buffer
+var trailing_SL_buffer = float(0)
+var stop_loss_price = float(0)
+stop_loss_price := max(stop_loss_price, close - trailing_SL_buffer)
+// plot TSL line
+trail_profit_line_color = color.green
+if strategy.position_size == 0  // make TSL line less visible
+    trail_profit_line_color := color.black
+    stop_loss_price := close - trailing_SL_buffer
+plot(stop_loss_price,color=trail_profit_line_color)
+// }
+var bTouched = false
+if low < BOLL_center - atr(BOLL_length)
+    alert("Price approached lower band", alert.freq_once_per_bar)
+    bTouched := true
+else if low > BOLL_center
+    bTouched := false
+// MAIN
+if time >= backtest_timeframe_start and (time <= backtest_timeframe_end or not USE_ENDTIME)
+    expected_MACD_crossing = MACD > MACD[1] and MACD < aMACD and abs(MACD - aMACD) < abs(MACD[1] - aMACD[1])
+    buy_condition = bTouched and expected_MACD_crossing
+    //ENTRY {
+    if buy_condition
+        if strategy.position_size == 0
+            entry_price := close
+            trailing_SL_buffer := ATR_buffer
+            stop_loss_price := close - ATR_buffer
+        msg = "buy"
+        if strategy.position_size > 0
+            msg := "+"
+        strategy.entry("Long",strategy.long, comment=msg)
+    
+    // }
+    //EXIT: 
+    // Case A:
+    if strategy.position_size > 0 and close <= stop_loss_price
+        if close > entry_price
+            strategy.close("Long", comment="take profit [trailing]")
+            stop_loss_price := 0
+        else if close <= entry_price
+            strategy.close("Long", comment="stop loss")
+            stop_loss_price := 0
+            
+    // Case B: 
+    if EXIT1 or EXIT2 and strategy.position_size > 0
+        engulfing_bearish = open - close > abs(open[1]-close[1]) and high > high[1] and (open - close)/(high - low) > 0.4
+        gapped_down = high < low[1] and close < open
+        is_bearish_candle = engulfing_bearish or gapped_down
+        msg = "exit"
+        strategy.close("Long", when=(EXIT1 and reward_met_long), comment="risk:reward met")
+        strategy.close("Long", when=(EXIT2 and engulfing_bearish), comment="bearish")
+    // CLEAN UP
+    if strategy.position_size == 0
+        stop_loss_price := 0
+Expand (105 lines)

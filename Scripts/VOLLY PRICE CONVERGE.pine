@@ -1,0 +1,76 @@
+Script Name: VOLLY PRICE CONVERGE
+Author: Celar
+Description: Triggers:
+Long = Price and Volume ma's move up
+Close trade = crosses ma, volume and price move in different directions
+PineScript code:
+
+Pine Script™ strategy
+VOLLY PRICE CONVERGE
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Celar
+//@version=5
+strategy("VOLLY PRICE CONVERGE", default_qty_type= strategy.percent_of_equity )
+base_sma = ta.sma(close, 10)
+vol_sma5 = ta.hma(volume, 15)
+price_sma5 = ta.hma(close, 15)
+ma50 = ta.sma(close, 50)
+ma20 = ta.sma(close, 20)
+int vol_indicator = na
+int price_indicator = na
+if vol_sma5 > vol_sma5[1]
+    vol_indicator := 1
+else
+    vol_indicator := 0
+if price_sma5 > price_sma5[1]
+    price_indicator := 1
+else
+    price_indicator := 0
+        
+signal = vol_indicator + price_indicator
+colour = signal == 2 ?  #00802b : signal == 1 ? #cc2900 : color.white 
+bank_roll = strategy.equity
+qty = bank_roll/close
+strategy.entry("Long", strategy.long, qty, when = signal == 2 and close > base_sma)
+// Generate a full exit bracket (profit 10 points, loss 5 points per contract) from the entry named "Long".
+strategy.close("Long", when = signal == 1 or signal == 0 or close < base_sma )
+ 
+        
+Expand (36 lines)

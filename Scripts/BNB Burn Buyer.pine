@@ -1,0 +1,145 @@
+Script Name: BNB Burn Buyer
+Author: pAulseperformance
+Description: This strategy is only meant to be used on BNB.
+It's more of an inconclusive analysis of the effect of BNB's quarterly coin burn.
+
+To date there have been 13 coin burns. 
+According to Binance's whitepaper, each quarter, they will burn BNB based on their trading volume until 50% of all BNB is burned. They eventually will destroy 100MM BNB, leaving 100MM BNB...
+PineScript code:
+
+Pine Script™ strategy
+BNB Burn Buyer
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Gammapips
+// This is a compiled list of all the BNB token burns to date with TX Hash's on the BNB chain for the most recent burns
+// And links to the blog posts for Burns done while BNB was still an ERC-20 Token.
+// I grabbed the dates from each TX used only the days, month, and year the tx occured for this strategy.
+// https://explorer.binance.org/tx/2E16FBFD0F2BA92BAFFC987F6C33918240141CA8E7E2B7D49AB88E341B8255CE 
+// A08063428AB6140E31333A9793A2DD462E17D6C071F5ABF4CDCE75B4ACD38188
+// 5B824CC8C9DC7A838E2F02D28F68029B85BCBF02326D4AF907795B4B8844405A
+// 6047184045F3F761C4E91D81E530A10AAC2887B20E26CBB41A12A0DBAD5BDC3B
+// D3ED9EFA4A242BD06E667A1F5DF102BC190C9EE76F7DB8005A5633FD7D46732A
+// 9B29E778EEC20E6AB0676A11E88C7CD00DFAB2849C34B6C6A3EAEE6B4E6A8C6D
+// 2C976CCADB984C3538D2CF3D674C419ECA04DB296544B0F58FE87119C1AD5020
+// https://binance.zendesk.com/hc/en-us/articles/360026706152-Binance-Completes-7th-Quarterly-BNB-Burn
+// https://binance.zendesk.com/hc/en-us/articles/360021824592-Binance-Completes-6th-Quarterly-BNB-Burn
+// https://binance.zendesk.com/hc/en-us/articles/360018044252-Binance-Completes-5th-Quarter-Token-Burn
+// https://binance.zendesk.com/hc/en-us/articles/360007242192-Binance-4th-Quarter-Token-Burn
+// https://binance.zendesk.com/hc/en-us/articles/360002684252-Binance-3rd-Quarterly-Token-Burn
+// https://binance.zendesk.com/hc/en-us/articles/360000012892-Binance-Coin-Burn-in-2018-Winter
+// https://binance.zendesk.com/hc/en-us/articles/115002205552-Binance-1st-Quarter-BNB-Burn-Event
+// The strategy itself is very simple, it will buy on the day a burn happens and sell either when it hits TP or 2 weeks after the burn date.
+//@version=4
+strategy("BNB Burn Buyer", overlay=true, pyramiding=1, initial_capital=10000, default_qty_type=strategy.percent_of_equity, default_qty_value=10, currency="USD")
+burn1 = timestamp(2017, 10, 18, 0, 0, 0)
+burn2 = timestamp(2018, 1, 15, 0, 0, 0)
+burn3 = timestamp(2018, 4, 15, 0, 0, 0)
+burn4 = timestamp(2018, 7, 17, 0, 0, 0)
+burn5 = timestamp(2018, 10, 17, 0, 0, 0)
+burn6 = timestamp(2019, 1, 16, 0, 0, 0)
+burn7 = timestamp(2019, 4, 16, 0, 0, 0)
+burn8 = timestamp(2019, 7, 12, 0, 0, 0)
+burn9 = timestamp(2019, 10, 17, 0, 0, 0)
+burn10 = timestamp(2020, 1, 18, 0, 0, 0)
+burn11 = timestamp(2020, 4, 18, 0, 0, 0)
+burn12 = timestamp(2020, 7, 18, 0, 0, 0)
+burn13 = timestamp(2020, 10, 17, 0, 0, 0)
+i_BuyBeforeBurn = input(14, "# of bars to buy before the burn day.", type=input.integer) * (time-time[1])
+burndates = array.new_int(0)
+f_push(_burnStamp) =>
+    array.push(burndates, _burnStamp-i_BuyBeforeBurn)
+f_push( burn1)
+f_push( burn2)
+f_push( burn3)
+f_push( burn4)
+f_push( burn5)
+f_push( burn6)
+f_push( burn7)
+f_push( burn8)
+f_push( burn9)
+f_push( burn10)
+f_push( burn11)
+f_push( burn12)
+f_push( burn13)
+i_TP            = input(15.0, title="Take Profit %", type=input.float)
+longTake        = strategy.position_avg_price * (1 + i_TP/100)
+i_TimeClose     = input(2, title="# weeks after Entry to Close Long")
+var int entryTime = na
+if array.includes(burndates, time) and strategy.position_size == 0
+    entryTime := time
+    strategy.entry("BNB Burn", strategy.long)
+timeToExit = (time-entryTime)/ 1000 / 60 / 60 / 24 / 7
+strategy.close("BNB Burn", when=timeToExit >= i_TimeClose, comment="Time Expired")
+strategy.close("BNB Burn", when=high>=longTake, comment="Take Profit")
+Expand (70 lines)

@@ -1,0 +1,80 @@
+Script Name: Trend Follower Strategy v2 [divonn1994]
+Author: divonn1994
+Description: The Trend Follower Strategy that I made classifies red and green candles into tiny, small, and big sizes and will send buy or sell signals depending on if the candle is classified as "big" so you get into and out of a position when there is a big candle. Out during a big green candle to take profit. Out during a big red candle in case the market is turning down....
+PineScript code:
+
+Pine Script™ strategy
+Trend Follower Strategy v2 [divonn1994]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+//@version=5
+//Author @divonn1994
+strategy(title='Trend Follower Strategy v2 [divonn1994]', shorttitle='TrendFollowStrategyV2', overlay=false, pyramiding=0, default_qty_value=100, default_qty_type=strategy.percent_of_equity, precision=7, currency=currency.USD, commission_value=0.1, commission_type=strategy.commission.percent, initial_capital=100)
+//Important Constants for Classifying Candle Size----------------------------------------------------------------------------------------------------------------------------------------------
+timesBigger = 2
+crumbSize = 1400
+crumbSize2 = 2100
+bigCandleSize = 3800
+//Key Alerts and Classifications of Candle Size and EMAs---------------------------------------------------------------------------------------------------------------------------------------
+emaAlert = ta.ema(close, 8) > ta.ema(open, 8) ? 1 : 0 
+CandleSize = close * 1 - open * 1
+previousCandleSize = close[1] * 1 - open[1] * 1
+greenCandle = close > open ? 1 : 0
+previousGreenCandle = close[1] > open[1] ? 1 : 0
+crumb = (greenCandle==1 and CandleSize<=crumbSize) or (greenCandle==0 and -CandleSize<=crumbSize) ? 1 : 0
+bigCrumb = (greenCandle==1 and CandleSize<=crumbSize2 and CandleSize>crumbSize) or (greenCandle==0 and -CandleSize<=crumbSize2 and -CandleSize>crumbSize) ? 1 : 0
+previousCandleIsSmallCrumb = (previousGreenCandle==1 and previousCandleSize<=crumbSize) or (previousGreenCandle==0 and -previousCandleSize<=crumbSize) ? 1 : 0
+previousCandleIsBigCrumb = (previousGreenCandle==1 and previousCandleSize<=crumbSize2 and previousCandleSize>crumbSize) or (previousGreenCandle==0 and -previousCandleSize<=crumbSize2 and -previousCandleSize>crumbSize) ? 1 : 0
+bigCandle = (greenCandle==1 and previousCandleIsBigCrumb==1 and CandleSize>=math.abs(timesBigger*previousCandleSize)) or (greenCandle==1 and previousCandleIsSmallCrumb==1 and CandleSize>=bigCandleSize) or (greenCandle==1 and previousCandleIsSmallCrumb==0 and previousCandleIsBigCrumb==0 and CandleSize>=math.abs(timesBigger*previousCandleSize)) ? 1 : 0
+//Engine (Secret Sauce)------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+buy = (crumb==0 and bigCrumb==0 and greenCandle==0) or (greenCandle==1 and bigCandle==1) or (emaAlert==0) ? 0 : 1
+//Strategy-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+if ta.crossover(buy, 0.5)
+    strategy.entry('long', strategy.long, comment='long')
+if ta.crossunder(buy, 0.5)
+    strategy.close('long')
+//Plot Strategy Behavior-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+plot(buy, color=color.new(color.silver, 0))
+plot(0.5, color=color.new(color.fuchsia, 0))
+Expand (42 lines)

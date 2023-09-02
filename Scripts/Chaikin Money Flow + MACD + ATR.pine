@@ -1,0 +1,640 @@
+Script Name: Chaikin Money Flow + MACD + ATR
+Author: TradingStrategyCheck
+Description: Here I present you on of Trade Pro's Trading Idea: Chaikin Money Flow + MACD + ATR.
+This strategy is not as profitable as it can be seen in one of his videos. In the forex market, the strategy could reach a maximum of 35% profitability.
+
+I have, as some of my followers have requested, created an overview of the current position, risk and leverage settings in the...
+PineScript code:
+
+Pine Script™ strategy
+Chaikin Money Flow + MACD + ATR
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+//@version=4
+//Chaikin Money Flow + MACD + ATR
+//Strategy Idea by TradePro
+//To optimize the script for other coins / currency pairs, profit factors and the stop loss must be changed.
+//To start, you should select the current date as the start period and choose the risk of equity.
+strategy(title="Chaikin Money Flow + MACD + ATR", shorttitle="MF MACD ATR", overlay = true, pyramiding = 0, max_bars_back=5000, calc_on_order_fills = false, commission_type =  strategy.commission.percent, commission_value = 0, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, initial_capital=5000, currency=currency.USD)
+// { Time Range
+FromMonth=input(defval=1,title="FromMonth", group="Time", minval=1,maxval=12)
+FromDay=input(defval=1,title="FromDay", group="Time", minval=1,maxval=31)
+FromYear=input(defval=2020,title="FromYear", group="Time", minval=2016)
+ToMonth=input(defval=1,title="ToMonth", group="Time", minval=1,maxval=12)
+ToDay=input(defval=1,title="ToDay", group="Time", minval=1,maxval=31)
+ToYear=input(defval=9999,title="ToYear", group="Time", minval=2017)
+start=timestamp(FromYear,FromMonth,FromDay,00,00)
+finish=timestamp(ToYear,ToMonth,ToDay,23,59)
+window()=>time>=start and time<=finish?true:false
+afterStartDate = time >= start and time<=finish?true:false
+zeroline = 0
+// } Time Range
+// { Chaikin Money Flow
+length = input(title="Money Flow length", group="Chaikin Money Flow", type=input.integer, defval=20)
+ad = close==high and close==low or high==low ? 0 : ((2*close-low-high)/(high-low))*volume
+mf = sum(ad, length) / sum(volume, length)
+// } Chaikin Money Flow
+// { MACD
+// MACD
+fast_length = input(title="Fast Length", group="MACD Settings", type=input.integer, defval=11)
+slow_length = input(title="Slow Length", group="MACD Settings",type=input.integer, defval=23)
+src = input(title="Source", group="MACD Settings", type=input.source, defval=close)
+signal_length = input(title="Signal Smoothing", group="MACD Settings", type=input.integer, minval = 1, maxval = 50, defval = 9)
+sma_source = input(title="Simple MA (Oscillator)", group="MACD Settings", type=input.bool, defval=false)
+sma_signal = input(title="Simple MA (Signal Line)", group="MACD Settings", type=input.bool, defval=false)
+// Calculating
+fast_ma = sma_source ? sma(src, fast_length) : ema(src, fast_length)
+slow_ma = sma_source ? sma(src, slow_length) : ema(src, slow_length)
+macd = fast_ma - slow_ma
+signal = sma_signal ? sma(macd, signal_length) : ema(macd, signal_length)
+hist = macd - signal
+// } MACD
+// { EMA
+emasrc = close
+res = input(title="EMA Timeframe", group="EMA Settings", type=input.resolution, defval="5")
+len1 = input(title="EMA1 Length", group="EMA Settings", type=input.integer, defval=150)
+col1 = color.yellow
+// Calculate EMA
+ema1 = ema(emasrc, len1)
+emasmooth1 = security(syminfo.tickerid, res, ema1, barmerge.gaps_off, barmerge.lookahead_off)
+// Draw EMA
+plot(emasmooth1, title="EMA1", linewidth=1, color=col1)
+// } EMA
+// { Conditions
+bought = strategy.position_size[1] < strategy.position_size
+sold = strategy.position_size[1] > strategy.position_size
+barsbought = barssince(bought)
+barssold = barssince(sold)
+// ATR Take Profit/ Stop Loss
+atrprofitfactorlong = input(title="ATR Profitfactor Long", group="ATR Take Profit/ Stop Loss", type=input.float, step=0.1, defval=8.3)
+atrstopfactorlong = input(title="ATR Stopfactor Long", group="ATR Take Profit/ Stop Loss", type=input.float, step=0.1, defval=5.1)
+atrprofitfactorshort = input(title="ATR Profitfactor Short", group="ATR Take Profit/ Stop Loss", type=input.float, step=0.1, defval=8.2)
+atrstopfactorshort = input(title="ATR Stopfactor Short", group="ATR Take Profit/ Stop Loss", type=input.float, step=0.1, defval=3.5)
+// ATR
+lengthATR = input(title="ATR Length", group="ATR Take Profit/ Stop Loss", defval=8, minval=1)
+atr = atr(lengthATR)
+// Profit / Stop Loss Level
+profit_level_atr_long = strategy.position_avg_price + (atr*atrprofitfactorlong)
+stop_level_atr_long = strategy.position_avg_price - (atr*atrstopfactorlong)
+stop_atr_long=stop_level_atr_long[barsbought]
+profit_atr_long=profit_level_atr_long[barsbought]
+profit_level_atr_short = strategy.position_avg_price - (atr*atrprofitfactorshort)
+stop_level_atr_short = strategy.position_avg_price + (atr*atrstopfactorshort)
+stop_atr_short=stop_level_atr_short[barssold]
+profit_atr_short=profit_level_atr_short[barssold]
+riskofcapital = input(title="Risk of Capital in SL", group="Risk Management", type=input.float, step=0.01, defval=0.02)
+risklong = strategy.equity * riskofcapital
+differencelong = (strategy.position_avg_price - stop_level_atr_long) / strategy.position_avg_price
+stratpossizelong = risklong / differencelong
+leveragelong = stratpossizelong / strategy.equity
+qtylong = leveragelong * 100
+riskshort = strategy.equity * riskofcapital
+differenceshort = (stop_level_atr_short - strategy.position_avg_price) / strategy.position_avg_price
+stratpossizeshort = riskshort / differenceshort
+leverageshort = stratpossizeshort / strategy.equity
+qtyshort = leverageshort * 100
+tabpossizelong = risklong[barsbought] / differencelong[barsbought]
+tableveragelong = stratpossizelong[barsbought] / strategy.equity[barsbought]
+tabpossizeshort = riskshort[barssold] / differenceshort[barssold]
+tableverageshort = stratpossizeshort[barssold] / strategy.equity[barssold]
+// } Conditions
+// { Dashboard
+var table dashboard = table.new(position.top_right, 2, 24, bgcolor = color.gray, frame_width = 1, frame_color = color.black)
+table.cell(dashboard, 0, 0, "Dashboard", bgcolor = color.white)
+table.cell(dashboard, 1, 0, "v1", bgcolor = color.white)
+table.cell(dashboard, 0, 1, "Choosen Strategy")
+table.cell(dashboard, 1, 1, "Chaikin Money Flow + MACD + ATR")
+table.cell(dashboard, 0, 2, "Risk Reward Long")
+table.cell(dashboard, 1, 2, tostring(atrstopfactorlong) + " to " + tostring(atrprofitfactorlong))
+table.cell(dashboard, 0, 3, "Risk Reward Short")
+table.cell(dashboard, 1, 3, tostring(atrstopfactorshort) + " to " + tostring(atrprofitfactorshort))
+table.cell(dashboard, 0, 4, "Initial Capital")
+table.cell(dashboard, 1, 4, tostring(strategy.initial_capital))
+table.cell(dashboard, 0, 5, "Current equity")
+table.cell(dashboard, 1, 5, tostring(strategy.equity))
+table.cell(dashboard, 0, 6, "Rik of Capital at SL")
+table.cell(dashboard, 1, 6, tostring(riskofcapital))
+table.cell(dashboard, 0, 7, "Active Long Position?")
+if (strategy.opentrades > 0) and (strategy.position_entry_name == "long")
+    table.cell(dashboard, 1, 7, "Yes")
+else 
+    table.cell(dashboard, 1, 7, "No")
+    
+table.cell(dashboard, 0, 8, "SL Long")
+table.cell(dashboard, 1, 8, tostring(stop_atr_long))
+table.cell(dashboard, 0, 9, "TP Long")
+table.cell(dashboard, 1, 9, tostring(profit_atr_long))
+table.cell(dashboard, 0, 10, "Last Long Position")
+table.cell(dashboard, 1, 10, tostring(strategy.position_avg_price[barsbought]))
+table.cell(dashboard, 0, 11, "Used Leverage")
+table.cell(dashboard, 1, 11, tostring(tableveragelong))
+table.cell(dashboard, 0, 12, "Equity x Leverage")
+table.cell(dashboard, 1, 12, tostring(tabpossizelong))
+table.cell(dashboard, 0, 13, "Active Short Position?")
+if (strategy.opentrades > 0) and (strategy.position_entry_name == "short")
+    table.cell(dashboard, 1, 13, "Yes") 
+else 
+    table.cell(dashboard, 1, 13, "No")
+table.cell(dashboard, 0, 14, "SL Short")
+table.cell(dashboard, 1, 14, tostring(stop_atr_short))
+table.cell(dashboard, 0, 15, "TP Short")
+table.cell(dashboard, 1, 15, tostring(profit_atr_short))
+table.cell(dashboard, 0, 16, "Last Short Position")
+table.cell(dashboard, 1, 16, tostring(strategy.position_avg_price[barssold]))
+table.cell(dashboard, 0, 17, "Used Leverage")
+table.cell(dashboard, 1, 17, tostring(tableverageshort))
+table.cell(dashboard, 0, 18, "Equity x Leverage")
+table.cell(dashboard, 1, 18, tostring(tabpossizeshort))
+// } Dashboard
+// { Enable/ Disable Indicators
+enablemacd = input(true, title="Enable MACD?", group="Indicator")
+enablemacdhistogram = input(true, title="Enable MACD Histogram?", group="Indicator")
+enablemoneyflow = input(true, title="Enable Chaikin Money Flow Index?", group="Indicator")
+enableema = input(true, title="Enable EMA?", group="Indicator")
+// } Enable/ Disable Indicators
+// { Long Entry
+enablelong = input(true, title="Enable long?", group="Entry Settings")
+//Long Signal
+macdcrossup = crossover(macd, signal)
+macdoverhis = macd > zeroline
+mfabovezero = mf > zeroline
+emaconlong = close > emasmooth1
+barbuy1 = macdcrossup
+barbuy2 = macdoverhis
+barbuy3 = mfabovezero
+barbuy4 = emaconlong
+longcondition1 = barbuy1 and barbuy2 and barbuy3 and barbuy4
+longcondition2 = barbuy1 and barbuy2 and barbuy3
+longcondition3 = barbuy1 and barbuy2 and barbuy4
+longcondition4 = barbuy1 and barbuy3 and barbuy4
+longcondition5 = barbuy2 and barbuy3 and barbuy4
+longcondition6 = barbuy1 and barbuy2
+longcondition7 = barbuy1 and barbuy3
+longcondition8 = barbuy1 and barbuy4
+longcondition9 = barbuy2 and barbuy3
+longcondition10 = barbuy2 and barbuy4
+longcondition11 = barbuy3 and barbuy4
+longcondition12 = barbuy1
+longcondition13 = barbuy2
+longcondition14 = barbuy3
+longcondition15 = barbuy4
+//strategy buy long
+if (enablemacd == true) and (enablemacdhistogram == true) and (enablemoneyflow == true) and (enableema == true) and (longcondition1) and (afterStartDate) and strategy.opentrades < 1 and (enablelong == true)
+    strategy.entry("long", strategy.long, qty = qtylong)
+if (enablemacd == true) and (enablemacdhistogram == true) and (enablemoneyflow == true) and (enableema == false) and (longcondition2) and (afterStartDate) and strategy.opentrades < 1 and (enablelong == true)
+    strategy.entry("long", strategy.long, qty = qtylong)
+if (enablemacd == true) and (enablemacdhistogram == true) and (enablemoneyflow == false) and (enableema == true) and (longcondition3) and (afterStartDate) and strategy.opentrades < 1 and (enablelong == true)
+    strategy.entry("long", strategy.long, qty = qtylong)
+if (enablemacd == true) and (enablemacdhistogram == false) and (enablemoneyflow == true) and (enableema == true) and (longcondition4) and (afterStartDate) and strategy.opentrades < 1 and (enablelong == true)
+    strategy.entry("long", strategy.long, qty = qtylong)
+if (enablemacd == false) and (enablemacdhistogram == true) and (enablemoneyflow == true) and (enableema == true) and (longcondition5) and (afterStartDate) and strategy.opentrades < 1 and (enablelong == true)
+    strategy.entry("long", strategy.long, qty = qtylong)
+if (enablemacd == true) and (enablemacdhistogram == true) and (enablemoneyflow == false) and (enableema == false) and (longcondition6) and (afterStartDate) and strategy.opentrades < 1 and (enablelong == true)
+    strategy.entry("long", strategy.long, qty = qtylong)
+if (enablemacd == true) and (enablemacdhistogram == false) and (enablemoneyflow == true) and (enableema == false) and (longcondition7) and (afterStartDate) and strategy.opentrades < 1 and (enablelong == true)
+    strategy.entry("long", strategy.long, qty = qtylong)
+if (enablemacd == true) and (enablemacdhistogram == false) and (enablemoneyflow == false) and (enableema == true) and (longcondition8) and (afterStartDate) and strategy.opentrades < 1 and (enablelong == true)
+    strategy.entry("long", strategy.long, qty = qtylong)
+if (enablemacd == false) and (enablemacdhistogram == true) and (enablemoneyflow == true) and (enableema == false) and (longcondition9) and (afterStartDate) and strategy.opentrades < 1 and (enablelong == true)
+    strategy.entry("long", strategy.long, qty = qtylong)
+if (enablemacd == false) and (enablemacdhistogram == true) and (enablemoneyflow == false) and (enableema == true) and (longcondition10) and (afterStartDate) and strategy.opentrades < 1 and (enablelong == true)
+    strategy.entry("long", strategy.long, qty = qtylong)
+if (enablemacd == false) and (enablemacdhistogram == false) and (enablemoneyflow == true) and (enableema == true) and (longcondition11) and (afterStartDate) and strategy.opentrades < 1 and (enablelong == true)
+    strategy.entry("long", strategy.long, qty = qtylong)
+if (enablemacd == true) and (enablemacdhistogram == false) and (enablemoneyflow == false) and (enableema == false) and (longcondition12) and (afterStartDate) and strategy.opentrades < 1 and (enablelong == true)
+    strategy.entry("long", strategy.long, qty = qtylong)
+if (enablemacd == false) and (enablemacdhistogram == true) and (enablemoneyflow == false) and (enableema == false) and (longcondition13) and (afterStartDate) and strategy.opentrades < 1 and (enablelong == true)
+    strategy.entry("long", strategy.long, qty = qtylong)
+if (enablemacd == false) and (enablemacdhistogram == false) and (enablemoneyflow == true) and (enableema == false) and (longcondition14) and (afterStartDate) and strategy.opentrades < 1 and (enablelong == true)
+    strategy.entry("long", strategy.long, qty = qtylong)
+if (enablemacd == false) and (enablemacdhistogram == false) and (enablemoneyflow == false) and (enableema == true) and (longcondition15) and (afterStartDate) and strategy.opentrades < 1 and (enablelong == true)
+    strategy.entry("long", strategy.long, qty = qtylong)
+// } Long Entry
+// { Short Entry
+enableshort = input(true, title="Enable short?", group="Entry Settings")
+//Short Signal
+macdcrossdown = crossunder(macd, signal)
+macdunderhis = macd < zeroline
+mfunderzero = mf < zeroline
+emaconshort = close < emasmooth1
+barsell1 = macdcrossdown
+barsell2 = macdunderhis
+barsell3 = mfunderzero
+barsell4 = emaconshort
+shortcondition1 = barsell1 and barsell2 and barsell3 and barsell4
+shortcondition2 = barsell1 and barsell2 and barsell3
+shortcondition3 = barsell1 and barsell2 and barsell4
+shortcondition4 = barsell1 and barsell3 and barsell4
+shortcondition5 = barsell2 and barsell3 and barsell4
+shortcondition6 = barsell1 and barsell2
+shortcondition7 = barsell1 and barsell3
+shortcondition8 = barsell1 and barsell4
+shortcondition9 = barsell2 and barsell3
+shortcondition10 = barsell2 and barsell4
+shortcondition11 = barsell3 and barsell4
+shortcondition12 = barsell1
+shortcondition13 = barsell2
+shortcondition14 = barsell3
+shortcondition15 = barsell4
+//strategy buy short
+if (enablemacd == true) and (enablemacdhistogram == true) and (enablemoneyflow == true) and (enableema == true) and (shortcondition1) and (afterStartDate) and strategy.opentrades < 1 and (enableshort == true)
+    strategy.entry("short", strategy.short, qty = qtyshort)
+if (enablemacd == true) and (enablemacdhistogram == true) and (enablemoneyflow == true) and (enableema == false) and (shortcondition2) and (afterStartDate) and strategy.opentrades < 1 and (enableshort == true)
+    strategy.entry("short", strategy.short, qty = qtyshort)
+if (enablemacd == true) and (enablemacdhistogram == true) and (enablemoneyflow == false) and (enableema == true) and (shortcondition3) and (afterStartDate) and strategy.opentrades < 1 and (enableshort == true)
+    strategy.entry("short", strategy.short, qty = qtyshort)
+if (enablemacd == true) and (enablemacdhistogram == false) and (enablemoneyflow == true) and (enableema == true) and (shortcondition4) and (afterStartDate) and strategy.opentrades < 1 and (enableshort == true)
+    strategy.entry("short", strategy.short, qty = qtyshort)
+if (enablemacd == false) and (enablemacdhistogram == true) and (enablemoneyflow == true) and (enableema == true) and (shortcondition5) and (afterStartDate) and strategy.opentrades < 1 and (enableshort == true)
+    strategy.entry("short", strategy.short, qty = qtyshort)
+if (enablemacd == true) and (enablemacdhistogram == true) and (enablemoneyflow == false) and (enableema == false) and (shortcondition6) and (afterStartDate) and strategy.opentrades < 1 and (enableshort == true)
+    strategy.entry("short", strategy.short, qty = qtyshort)
+if (enablemacd == true) and (enablemacdhistogram == false) and (enablemoneyflow == true) and (enableema == false) and (shortcondition7) and (afterStartDate) and strategy.opentrades < 1 and (enableshort == true)
+    strategy.entry("short", strategy.short, qty = qtyshort)
+if (enablemacd == true) and (enablemacdhistogram == false) and (enablemoneyflow == false) and (enableema == true) and (shortcondition8) and (afterStartDate) and strategy.opentrades < 1 and (enableshort == true)
+    strategy.entry("short", strategy.short, qty = qtyshort)
+if (enablemacd == false) and (enablemacdhistogram == true) and (enablemoneyflow == true) and (enableema == false) and (shortcondition9) and (afterStartDate) and strategy.opentrades < 1 and (enableshort == true)
+    strategy.entry("short", strategy.short, qty = qtyshort)
+if (enablemacd == false) and (enablemacdhistogram == true) and (enablemoneyflow == false) and (enableema == true) and (shortcondition10) and (afterStartDate) and strategy.opentrades < 1 and (enableshort == true)
+    strategy.entry("short", strategy.short, qty = qtyshort)
+if (enablemacd == false) and (enablemacdhistogram == false) and (enablemoneyflow == true) and (enableema == true) and (shortcondition11) and (afterStartDate) and strategy.opentrades < 1 and (enableshort == true)
+    strategy.entry("short", strategy.short, qty = qtyshort)
+if (enablemacd == true) and (enablemacdhistogram == false) and (enablemoneyflow == false) and (enableema == false) and (shortcondition12) and (afterStartDate) and strategy.opentrades < 1 and (enableshort == true)
+    strategy.entry("short", strategy.short, qty = qtyshort)
+if (enablemacd == false) and (enablemacdhistogram == true) and (enablemoneyflow == false) and (enableema == false) and (shortcondition13) and (afterStartDate) and strategy.opentrades < 1 and (enableshort == true)
+    strategy.entry("short", strategy.short, qty = qtyshort)
+if (enablemacd == false) and (enablemacdhistogram == false) and (enablemoneyflow == true) and (enableema == false) and (shortcondition14) and (afterStartDate) and strategy.opentrades < 1 and (enableshort == true)
+    strategy.entry("short", strategy.short, qty = qtyshort)
+if (enablemacd == false) and (enablemacdhistogram == false) and (enablemoneyflow == false) and (enableema == true) and (shortcondition15) and (afterStartDate) and strategy.opentrades < 1 and (enableshort == true)
+    strategy.entry("short", strategy.short, qty = qtyshort)
+// } Short Entry
+// { Exit
+//LONG EXIT
+if (afterStartDate) and (strategy.opentrades > 0) and (strategy.position_entry_name == "long")
+    strategy.exit("Take Profit/ Stop Loss", "long", stop=stop_atr_long, limit=profit_atr_long)
+plot(profit_atr_long, title="Take Profit Long", linewidth=1, color=color.green)
+plot(stop_atr_long, title="Stop Loss Long", linewidth=1, color=color.red)
+//SHORT EXIT
+if (afterStartDate) and (strategy.opentrades > 0) and strategy.position_entry_name == "short"
+    strategy.exit("Take Profit/ Stop Loss", "short", stop=stop_atr_short, limit=profit_atr_short)
+plot(profit_atr_short, title="Take Profit Short", linewidth=1, color=color.green)
+plot(stop_atr_short, title="Stop Loss Short", linewidth=1, color=color.red)
+// } Exit
+Expand (358 lines)

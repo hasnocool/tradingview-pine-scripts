@@ -1,0 +1,75 @@
+Script Name: Linear Channel - Scalp Strategy 15M
+Author: TradingAmmo
+Description: Simple way how to use Linear Regression for trading.
+
+What we use:
+• Linear Regression
+• HMA as a trend filter
+
+Logic:
+Firstly we make simple linear regression moving. It is the white line which appears on the chart. 
+Then we make second line (named: band2) on the chart by multiplying linreg and value difference.
+The third step is to ad HMA as a trend filter.
+The...
+PineScript code:
+
+Pine Script™ strategy
+Linear Channel - Scalp Strategy 15M
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © TradingAmmo
+//@version=4
+strategy("Linear Channel", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent, commission_value=0.075, currency='USD')
+startP = timestamp(input(2017, "Start Year"), input(12, "Month"), input(17, "Day"), 0, 0)
+end   = timestamp(input(9999, "End Year"),  1, 1,  0, 0)
+_testPeriod() =>
+    iff(time >= startP and time <= end, true, false)
+//linreg
+length = input(55)
+linreg = linreg(close, length, 0)
+plot(linreg, color=color.white) 
+//calc band
+Value = input(-2)
+sub = (Value/100)+1
+Band2 = linreg*sub
+plot(Band2, color=color.red)
+//HMA as a filter
+HMA = input(400, minval=1)  
+plot(hma(close, HMA), color=color.purple)  
+long_condition = close <  Band2  and hma(close, HMA) < close and _testPeriod()
+strategy.entry('BUY', strategy.long, when=long_condition)  
+ 
+short_condition =  close > linreg
+strategy.close('BUY', when=short_condition)
+Expand (31 lines)

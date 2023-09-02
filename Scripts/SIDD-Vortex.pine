@@ -1,0 +1,140 @@
+Script Name: SIDD-Vortex
+Author: siddmuk2005
+Description: Sidd-Vortex strategy is using Vortex formula  to generate 4 signals Bullish1 Bullish2 and Bearish1 Bearish2.
+
+Bullish1 signal is getting generated when smooth ma of VIP is crossing over smooth ma of VIM and smooth VIM is falling from previous bar smooth VIM
+
+Bullish2 signal is getting generated when smooth ma of VIP is crossing over smooth ma of VIM and smooth VIP...
+PineScript code:
+
+Pine Script™ strategy
+SIDD-Vortex
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+//@version=4
+//@author=SIDD
+//Sidd-Vortex strategy is using Vortex formula  to generate 4 signals Bullish1 Bullish2 and Bearish1 Bearish2.
+//Bullish1 signal is getting generated when smooth ma of VIP is crossing over smooth ma of VIM and smooth VIM is falling from previous bar smooth VIM
+//Bullish2 signal is getting generated when smooth ma of VIP is crossing over smooth ma of VIM and smooth VIP is rising from previous bar smooth VIP
+//Bearish1 signal is getting generated when smooth ma of VIM is crossing over smooth ma of VIP and smooth VIP is falling from previous bar smooth VIP
+//Bearish2 signal is getting generated when smooth ma of VIM is crossing over smooth ma of VIP and smooth VIM is rising from previous bar smooth VIM
+//This strategy can be converted into study un-commenting the plotshape and 15th line strategy replace with study and overlay=false
+strategy(title = "SIDD-Vortex", shorttitle="SIDD-VORTEX", format=format.price, precision=4,overlay=false)
+period_ = input(14, title="Period", minval=2)
+len = input(14, minval=1, title="WMA Length")
+isSignalShow=input(title="Show Signal",defval=false)
+VMP = sum( abs( high - low[1]), period_ ) // sum of absolute current high and previous low with 14 period default
+VMM = sum( abs( low - high[1]), period_ ) // sum of absolute current low and previous high with 14 period default
+STR = sum( atr(1), period_ )  //sum of daily atr for 14 days
+VIP = VMP / STR
+VIM = VMM / STR
+simpleMAVIP=wma(VIP, len) 
+smmaVIP = 0.0
+smmaVIP := na(smmaVIP[1]) ? simpleMAVIP : (smmaVIP[1] * (len - 1) + VIP) / len // finding the Smoothing average 
+simpleMAVIM=wma(VIM, len) 
+smmaVIM = 0.0
+smmaVIM := na(smmaVIM[1]) ? simpleMAVIM : (smmaVIM[1] * (len - 1) + VIM) / len // finding the Smoothing average 
+risingVIP = rising(smmaVIP, 1)
+fallingVIP = falling(smmaVIP, 1)
+lineColorVIP = smmaVIP > 0.95 and risingVIP  ? color.lime : smmaVIP > 0.95 ? #d65240 : smmaVIP < 0.95 and fallingVIP ? color.red : color.olive
+risingVIM = rising(VIM, 1)
+fallingVIM = falling(VIM, 1)
+lineColorVIM = smmaVIM > 0.95 and risingVIM  ? color.red : smmaVIM > 0.95 ? color.olive : smmaVIM < 0.95 and fallingVIM ? color.lime : #d65240
+plot(VIP, title="VI +", color=lineColorVIP)
+plot(VIM, title="VI -", color=lineColorVIM) 
+longCondition = crossover(smmaVIP,smmaVIM)
+shortCondition = crossover(smmaVIM,smmaVIP)
+if (isSignalShow and longCondition and fallingVIM)
+    strategy.entry("Bullish1", strategy.long)
+if (isSignalShow and shortCondition and fallingVIP)
+    strategy.entry("Bearish1", strategy.short)
+if (isSignalShow and longCondition and risingVIP)
+    strategy.entry("Bullish2", strategy.long)
+if (isSignalShow and shortCondition and risingVIM)
+    strategy.entry("Bearish2", strategy.short)
+    
+//plotshape(longCondition and fallingVIM, color=color.lime, location=location.belowbar, style=shape.triangleup,size= size.large,text="Bullish",offset=0,textcolor=color.white)
+//plotshape(longCondition and risingVIP, color=color.lime, location=location.belowbar, style=shape.labelup,size= size.large,text="Bullish",offset=0,textcolor=color.white)
+//plotshape(Diff > 0 and direction>0, color=color.lime, location=location.belowbar, style=shape.arrowup,size= size.normal,offset=0)
+    
+//plotshape(shortCondition and fallingVIP  , color=color.red, location=location.abovebar, style=shape.triangledown, size= size.large,text="Bearish",offset=0,textcolor=color.white)
+//plotshape( shortCondition and risingVIM  , color=color.red, location=location.abovebar, style=shape.labeldown, size= size.large,text="Bearish",offset=0,textcolor=color.white)
+band1 = hline(1.0  , title="Upper Line", linestyle=hline.style_dashed, linewidth=3, color=color.red)
+band0 = hline(0.5, title="Lower Line", linestyle=hline.style_dashed, linewidth=3, color=color.lime)
+fill(band1, band0, color=color.purple, transp=70)
+Expand (76 lines)

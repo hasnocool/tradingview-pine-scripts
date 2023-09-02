@@ -1,0 +1,163 @@
+Script Name: Configurable BB+RSI+Aroon strategy backtest for binary options
+Author: MarcoJarquin
+Description: I wanted to share this strategy that I use myself for  binary options  trading. After trading binary options for several years I have learned that every single day is unique... assets behave differently every single day. So, when I start the day I want to know which is the optimum combination of parameters in my indicators that will give me the signals I want...
+PineScript code:
+
+Pine Script™ strategy
+Configurable BB+RSI+Aroon strategy backtest for binary options
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// Developed by Marco Jarquin as part of Arkansas 22 Project for Binary Options
+// CBRA for binary options (Configurable Bollinger Bands, RSI and Aroon)
+//@version=5
+// ====================================================================================
+strategy('A22.CBRA.Strat', overlay=true, initial_capital=10000, currency='USD', calc_on_every_tick=true, default_qty_type=strategy.cash, default_qty_value=4000, commission_type=strategy.commission.cash_per_order, commission_value=0)
+// Aroonish Parameters
+// ====================================================================================
+Aroonish_length = input.int(4, minval=1, title='Aroonish Lenght')
+Aroonish_ConfVal = input.int(50, minval=0, maxval=100, step=25, title='Aroonish Confirmation Value')
+Aroonish_upper = 100 * (-ta.highestbars(high, Aroonish_length + 1) + Aroonish_length) / Aroonish_length
+Aroonish_lower = 100 * (-ta.lowestbars(low, Aroonish_length + 1) + Aroonish_length) / Aroonish_length
+// Aroonish confirmations
+// ====================================================================================
+Aroonish_ConfLong = Aroonish_lower >= Aroonish_ConfVal and Aroonish_upper < Aroonish_lower
+Aroonish_ConfShrt = Aroonish_upper >= Aroonish_ConfVal and Aroonish_upper > Aroonish_lower
+plotshape(ta.crossover(Aroonish_lower, Aroonish_upper), color=color.new(color.red, 0), style=shape.triangledown, location=location.abovebar, size=size.auto, title='Ar-B')
+plotshape(ta.crossover(Aroonish_upper, Aroonish_lower), color=color.new(color.green, 0), style=shape.triangleup, location=location.belowbar, size=size.auto, title='Ar-S')
+// RSI Parameters
+// ====================================================================================
+RSI_length = input(4, title='RSI Lenght')
+RSI_overSold = input(20, title='RSI Oversold Limit')
+RSI_overBought = input(80, title='RSI Overbought Limit')
+RSI = ta.rsi(close, RSI_length)
+plotshape(ta.crossover(RSI, RSI_overSold), color=color.new(color.orange, 0), style=shape.square, location=location.belowbar, size=size.auto, title='RSI-B')
+plotshape(ta.crossunder(RSI, RSI_overBought), color=color.new(color.orange, 0), style=shape.square, location=location.abovebar, size=size.auto, title='RSI-S')
+// Bollinger Parameters
+// ====================================================================================
+BB_length = input.int(20, minval=1, title='Bollinger Lenght')
+BB_mult = input.float(2.5, minval=0.1, maxval=50, step=0.1, title='Bollinger Std Dev')
+// BB_bars = input(3, minval=1, maxval=5, title="Check bars after crossing")
+BB_basis = ta.sma(close, BB_length)
+BB_dev = BB_mult * ta.stdev(close, BB_length)
+BB_upper = BB_basis + BB_dev
+BB_lower = BB_basis - BB_dev
+p1 = plot(BB_upper, color=color.new(color.blue, 0))
+p2 = plot(BB_lower, color=color.new(color.blue, 0))
+// Bars to have the operation open
+// ====================================================================================
+nBars = input.int(3, minval=1, maxval=30, title='Bars to keep the operation open')
+// Strategy condition short or long
+// ====================================================================================
+ConditionShrt = (ta.crossunder(close, BB_upper) or ta.crossunder(close[1], BB_upper[1])) and Aroonish_ConfShrt and (ta.crossunder(RSI, RSI_overBought) or ta.crossunder(RSI[1], RSI_overBought[1]))
+ConditionLong = (ta.crossover(close, BB_lower) or ta.crossover(close[1], BB_lower[1])) and Aroonish_ConfLong and (ta.crossover(RSI, RSI_overSold) or ta.crossover(RSI[1], RSI_overSold[1]))
+plotshape(ta.crossover(close, BB_lower), color=color.new(color.blue, 0), style=shape.circle, location=location.belowbar, size=size.auto, title='BB-B')
+plotshape(ta.crossunder(close, BB_upper), color=color.new(color.blue, 0), style=shape.circle, location=location.abovebar, size=size.auto, title='BB-S')
+// Make input options that configure backtest date range
+// ====================================================================================
+iSDate = input.time(title='Start Date', defval=timestamp('14 Sep 2022 06:00 +0100'), tooltip='Start date and time of backtest')
+iFDate = input.time(title='End Date', defval=timestamp('16 Sep 2022 16:00 +0100'), tooltip='End date and time of backtest')
+// Look if the close time of the current bar falls inside the date range
+// ====================================================================================
+inDateRange = time >= iSDate and time < iFDate
+// Evaluates conditions to enter short or long
+// ====================================================================================
+if inDateRange and ConditionLong
+    strategy.entry('A22.L', strategy.long)
+if inDateRange and ConditionLong[nBars]
+    strategy.close('A22.L', comment='A22.L Exit')
+if inDateRange and ConditionShrt
+    strategy.entry('A22.S', strategy.short)
+if inDateRange and ConditionShrt[nBars]
+    strategy.close('A22.S', comment='A22.S Exit')
+if not inDateRange
+    strategy.close_all()
+Expand (89 lines)

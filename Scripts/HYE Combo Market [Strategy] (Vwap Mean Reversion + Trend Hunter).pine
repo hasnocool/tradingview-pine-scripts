@@ -1,0 +1,378 @@
+Script Name: HYE Combo Market [Strategy] (Vwap Mean Reversion + Trend Hunter)
+Author: HYE0619
+Description: In this strategy, I used a combination of trend hunter and vwap mean reversion strategies that I published before. 
+
+Trend Hunter Strategy:
+
+
+
+Mean Reversion Vwap Strategy:
+
+
+
+The results are quite impressive, especially for bitcoin.
+
+While the hodl return for bitcoin was 13419%, the strategy's return in the same period was about 5 times (65000%) of this.
+
+...
+PineScript code:
+
+Pine Script™ strategy
+HYE Combo Market [Strategy] (Vwap Mean Reversion + Trend Hunter)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+// @version=4
+// Credits
+// "Vwap with period" code which used in this strategy to calculate the leadLine was written by "neolao" active on https://tr.tradingview.com/u/neolao/
+// "TSV" code which used in this strategy was written by "liw0" active on https://www.tradingview.com/u/liw0. The code is corrected by "vitelot" December 2018.
+// "Vidya" code which used in this strategy was written by "everget" active on https://tr.tradingview.com/u/everget/
+strategy("HYE Combo Market [Strategy] (Vwap Mean Reversion + Trend Hunter)", overlay = true, initial_capital = 1000, default_qty_value = 100, default_qty_type = strategy.percent_of_equity, commission_value = 0.025)
+  
+//Strategy inputs
+source = input(title = "Source", defval = close, group = "Mean Reversion Strategy Inputs")
+smallcumulativePeriod = input(title = "Small VWAP", defval = 8, group = "Mean Reversion Strategy Inputs")
+bigcumulativePeriod = input(title = "Big VWAP", defval = 10, group = "Mean Reversion Strategy Inputs")
+meancumulativePeriod = input(title = "Mean VWAP", defval = 50, group = "Mean Reversion Strategy Inputs")
+percentBelowToBuy = input(title = "Percent below to buy %", defval = 2, group = "Mean Reversion Strategy Inputs")
+rsiPeriod = input(title = "Rsi Period", defval = 2, group = "Mean Reversion Strategy Inputs")
+rsiEmaPeriod = input(title = "Rsi Ema Period", defval = 5, group = "Mean Reversion Strategy Inputs") 
+rsiLevelforBuy = input(title = "Maximum Rsi Level for Buy", defval = 30, group = "Mean Reversion Strategy Inputs")
+slowtenkansenPeriod = input(9, minval=1, title="Slow Tenkan Sen VWAP Line Length", group = "Trend Hunter Strategy Inputs")
+slowkijunsenPeriod = input(13, minval=1, title="Slow Kijun Sen VWAP Line Length", group = "Trend Hunter Strategy Inputs")
+fasttenkansenPeriod = input(3, minval=1, title="Fast Tenkan Sen VWAP Line Length", group = "Trend Hunter Strategy Inputs")
+fastkijunsenPeriod = input(7, minval=1, title="Fast Kijun Sen VWAP Line Length", group = "Trend Hunter Strategy Inputs")
+BBlength = input(20, minval=1, title= "Bollinger Band Length", group = "Trend Hunter Strategy Inputs")
+BBmult = input(2.0, minval=0.001, maxval=50, title="Bollinger Band StdDev", group = "Trend Hunter Strategy Inputs")
+tsvlength  = input(20, minval=1, title="TSV Length", group = "Trend Hunter Strategy Inputs")
+tsvemaperiod = input(7, minval=1, title="TSV Ema Length", group = "Trend Hunter Strategy Inputs")
+length = input(title="Vidya Length", type=input.integer, defval=20, group = "Trend Hunter Strategy Inputs") 
+src = input(title="Vidya Source", type=input.source, defval= hl2 , group = "Trend Hunter Strategy Inputs")
+// Vidya Calculation 
+getCMO(src, length) =>
+    mom = change(src)
+    upSum = sum(max(mom, 0), length)
+    downSum = sum(-min(mom, 0), length)
+    out = (upSum - downSum) / (upSum + downSum)
+    out
+cmo = abs(getCMO(src, length))
+alpha = 2 / (length + 1)
+vidya = 0.0
+vidya := src * alpha * cmo + nz(vidya[1]) * (1 - alpha * cmo)
+// Make input options that configure backtest date range 
+startDate = input(title="Start Date", type=input.integer,
+     defval=1, minval=1, maxval=31, group = "Strategy Date Range")
+startMonth = input(title="Start Month", type=input.integer,
+     defval=1, minval=1, maxval=12, group = "Strategy Date Range")
+startYear = input(title="Start Year", type=input.integer,
+     defval=2000, minval=1800, maxval=2100, group = "Strategy Date Range")
+endDate = input(title="End Date", type=input.integer, 
+     defval=31, minval=1, maxval=31, group = "Strategy Date Range")
+endMonth = input(title="End Month", type=input.integer,
+     defval=12, minval=1, maxval=12, group = "Strategy Date Range") 
+endYear = input(title="End Year", type=input.integer,
+     defval=2021, minval=1800, maxval=2100, group = "Strategy Date Range")
+     
+inDateRange = (time >= timestamp(syminfo.timezone, startYear,
+         startMonth, startDate, 0, 0)) and 
+     (time < timestamp(syminfo.timezone, endYear, endMonth, endDate, 0, 0))
+ 
+// Mean Reversion Strategy Calculation 
+typicalPriceS = (high + low + close) / 3
+typicalPriceVolumeS = typicalPriceS * volume
+cumulativeTypicalPriceVolumeS = sum(typicalPriceVolumeS, smallcumulativePeriod)
+cumulativeVolumeS = sum(volume, smallcumulativePeriod)
+smallvwapValue = cumulativeTypicalPriceVolumeS / cumulativeVolumeS
+typicalPriceB = (high + low + close) / 3
+typicalPriceVolumeB = typicalPriceB * volume
+cumulativeTypicalPriceVolumeB = sum(typicalPriceVolumeB, bigcumulativePeriod)
+cumulativeVolumeB = sum(volume, bigcumulativePeriod)
+bigvwapValue = cumulativeTypicalPriceVolumeB / cumulativeVolumeB 
+typicalPriceM = (high + low + close) / 3
+typicalPriceVolumeM = typicalPriceM * volume
+cumulativeTypicalPriceVolumeM = sum(typicalPriceVolumeM, meancumulativePeriod)
+cumulativeVolumeM = sum(volume, meancumulativePeriod)
+meanvwapValue = cumulativeTypicalPriceVolumeM / cumulativeVolumeM
+rsiValue = rsi(source, rsiPeriod)
+rsiEMA   = ema(rsiValue, rsiEmaPeriod)
+buyMA = ((100 - percentBelowToBuy) / 100) * bigvwapValue[0]
+inTrade = strategy.position_size > 0
+notInTrade = strategy.position_size <= 0
+if(crossunder(smallvwapValue, buyMA) and rsiEMA < rsiLevelforBuy and close < meanvwapValue and inDateRange and notInTrade)
+    strategy.entry("BUY-M", strategy.long)
+if(close > meanvwapValue or not inDateRange)
+    strategy.close("BUY-M")
+    
+// Trend Hunter Strategy Calculation
+// Slow Tenkan Sen Calculation
+typicalPriceTS = (high + low + close) / 3
+typicalPriceVolumeTS = typicalPriceTS * volume
+cumulativeTypicalPriceVolumeTS = sum(typicalPriceVolumeTS, slowtenkansenPeriod)
+cumulativeVolumeTS = sum(volume, slowtenkansenPeriod)
+slowtenkansenvwapValue = cumulativeTypicalPriceVolumeTS / cumulativeVolumeTS
+// Slow Kijun Sen Calculation
+typicalPriceKS = (high + low + close) / 3
+typicalPriceVolumeKS = typicalPriceKS * volume
+cumulativeTypicalPriceVolumeKS = sum(typicalPriceVolumeKS, slowkijunsenPeriod)
+cumulativeVolumeKS = sum(volume, slowkijunsenPeriod)
+slowkijunsenvwapValue = cumulativeTypicalPriceVolumeKS / cumulativeVolumeKS
+// Fast Tenkan Sen Calculation
+typicalPriceTF = (high + low + close) / 3
+typicalPriceVolumeTF = typicalPriceTF * volume
+cumulativeTypicalPriceVolumeTF = sum(typicalPriceVolumeTF, fasttenkansenPeriod)
+cumulativeVolumeTF = sum(volume, fasttenkansenPeriod)
+fasttenkansenvwapValue = cumulativeTypicalPriceVolumeTF / cumulativeVolumeTF
+// Fast Kijun Sen Calculation
+typicalPriceKF = (high + low + close) / 3
+typicalPriceVolumeKF = typicalPriceKS * volume
+cumulativeTypicalPriceVolumeKF = sum(typicalPriceVolumeKF, fastkijunsenPeriod)
+cumulativeVolumeKF = sum(volume, fastkijunsenPeriod)
+fastkijunsenvwapValue = cumulativeTypicalPriceVolumeKF / cumulativeVolumeKF
+// Slow LeadLine Calculation
+ 
+lowesttenkansen_s = lowest(slowtenkansenvwapValue, slowtenkansenPeriod)
+highesttenkansen_s = highest(slowtenkansenvwapValue, slowtenkansenPeriod)
+lowestkijunsen_s = lowest(slowkijunsenvwapValue, slowkijunsenPeriod)
+highestkijunsen_s = highest(slowkijunsenvwapValue, slowkijunsenPeriod)
+slowtenkansen = avg(lowesttenkansen_s, highesttenkansen_s)
+slowkijunsen = avg(lowestkijunsen_s, highestkijunsen_s)
+slowleadLine = avg(slowtenkansen, slowkijunsen)
+// Fast LeadLine Calculation 
+ 
+lowesttenkansen_f = lowest(fasttenkansenvwapValue, fasttenkansenPeriod)
+highesttenkansen_f = highest(fasttenkansenvwapValue, fasttenkansenPeriod)
+lowestkijunsen_f = lowest(fastkijunsenvwapValue, fastkijunsenPeriod)
+highestkijunsen_f = highest(fastkijunsenvwapValue, fastkijunsenPeriod) 
+fasttenkansen = avg(lowesttenkansen_f, highesttenkansen_f)
+fastkijunsen = avg(lowestkijunsen_f, highestkijunsen_f)
+fastleadLine = avg(fasttenkansen, fastkijunsen)
+// BBleadLine Calculation
+ 
+BBleadLine = avg(fastleadLine, slowleadLine)
+// Bollinger Band Calculation
+ 
+basis = sma(BBleadLine, BBlength)
+dev = BBmult * stdev(BBleadLine, BBlength)
+upper = basis + dev  
+lower = basis - dev 
+// TSV Calculation
+tsv = sum(close>close[1]?volume*(close-close[1]):close<close[1]?volume*(close-close[1]):0,tsvlength)
+tsvema = ema(tsv, tsvemaperiod)
+// Rules for Entry & Exit  
+if(fastleadLine > fastleadLine[1] and slowleadLine > slowleadLine[1] and tsv > 0 and tsv > tsvema and close > upper and close > vidya and inDateRange and notInTrade)
+    strategy.entry("BUY-T", strategy.long)
+ 
+if((fastleadLine < fastleadLine[1] and slowleadLine < slowleadLine[1]) or not inDateRange)
+    strategy.close("BUY-T")
+// Plots 
+plot(meanvwapValue, title="MEAN VWAP", linewidth=2, color=color.yellow)
+//plot(vidya, title="VIDYA", linewidth=2, color=color.green)
+//colorsettingS = input(title="Solid Color Slow Leadline", defval=false, type=input.bool)
+//plot(slowleadLine, title = "Slow LeadLine", color = colorsettingS ? color.aqua : slowleadLine > slowleadLine[1] ? color.green : color.red, linewidth=3)
+//colorsettingF = input(title="Solid Color Fast Leadline", defval=false, type=input.bool)
+//plot(fastleadLine, title = "Fast LeadLine", color = colorsettingF ? color.orange : fastleadLine > fastleadLine[1] ? color.green : color.red, linewidth=3)
+//p1 = plot(upper, "Upper BB", color=#2962FF)
+//p2 = plot(lower, "Lower BB", color=#2962FF)
+//fill(p1, p2, title = "Background", color=color.blue)
+//plot(smallvwapValue, color=#13C425, linewidth=2)
+//plot(bigvwapValue, color=#CA1435, linewidth=2)
+Expand (201 lines)

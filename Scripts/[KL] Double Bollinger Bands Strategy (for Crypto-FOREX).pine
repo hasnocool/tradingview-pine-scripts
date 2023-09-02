@@ -1,0 +1,230 @@
+Script Name: [KL] Double Bollinger Bands Strategy (for Crypto-FOREX)
+Author: DojiEmoji
+Description: This strategy uses a setup consisting of two Bollinger Bands based on the 20 period 20-SMA +/- 
+(a) upper/lower bands of two standard deviations apart, and
+(b) upper/lower bands of one standard deviation apart.
+
+We consider price at +/- one standard deviation apart from 20-SMA as the "Neutral Zone". 
+
+If price closes above Neutral Zone after a period of...
+PineScript code:
+
+Pine Script™ strategy
+[KL] Double Bollinger Bands Strategy (for Crypto/FOREX)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © DojiEmoji (kevinhhl)
+//@version=4
+strategy("[KL] Double BB Strategy",overlay=true,pyramiding=1)
+ENUM_LONG       = "LONG"
+LONG_MSG_ENTER  = input("Long +1 entered", type=input.string, title="Alert MSG for buying (Long position)")
+LONG_MSG_EXIT   = input("Long -1 closed", type=input.string, title="Alert MSG for closing (Long position)")
+ENUM_SHORT      = "SHORT"
+SHORT_MSG_ENTER = input("Short -1 entered", type=input.string, title="Alert MSG for selling (Short position)")
+SHORT_MSG_EXIT  = input("Short +1 covered", type=input.string, title="Alert MSG for covering (Short position)")
+// Timeframe {
+backtest_timeframe_start    = input(defval = timestamp("01 Apr 2020 13:30 +0000"), title = "Backtest Start Time", type = input.time)
+USE_ENDTIME                 = input(false,title="Define backtest end-time (If false, will test up to most recent candle)")
+backtest_timeframe_end      = input(defval = timestamp("19 Apr 2021 19:30 +0000"), title = "Backtest End Time (if checked above)", type = input.time)
+within_timeframe            = time >= backtest_timeframe_start and (time <= backtest_timeframe_end or not USE_ENDTIME)
+// } Timeframe
+// Bollinger bands {
+BOLL_length     = 20, BOLL_src = close, SMA20 = sma(BOLL_src, BOLL_length)
+BOLL_sDEV       = stdev(BOLL_src, BOLL_length)
+BOLL_upper1     = SMA20 + BOLL_sDEV, BOLL_lower1 = SMA20 - BOLL_sDEV
+BOLL_upper2     = SMA20 + BOLL_sDEV*2, BOLL_lower2 = SMA20 - BOLL_sDEV*2
+SMA_20_plot     = plot(SMA20, "Basis", color=#872323, offset = 0)
+BOLL_upper1_plot = plot(BOLL_upper1, "BOLL Upper1", color=color.new(color.navy, 50), offset = 0)
+BOLL_lower1_plot = plot(BOLL_lower1, "BOLL Lower1", color=color.new(color.navy, 50), offset = 0)
+BOLL_upper2_plot = plot(BOLL_upper2, "BOLL Upper2", color=color.new(color.navy, 50), offset = 0)
+BOLL_lower2_plot = plot(BOLL_lower2, "BOLL Lower2", color=color.new(color.navy, 50), offset = 0)
+fill(BOLL_upper2_plot, BOLL_upper1_plot, title = "Background", color=color.new(#198787, 85))
+fill(BOLL_upper1_plot, SMA_20_plot, title = "Background", color=color.new(#198787, 75))
+fill(SMA_20_plot, BOLL_lower1_plot, title = "Background", color=color.new(#198787, 75))
+fill(BOLL_lower1_plot, BOLL_lower2_plot, title = "Background", color=color.new(#198787, 85))
+// { Bollinger bands 
+// Quantative methods - used for setting stop losses and entry/exit signals {
+cv = stdev(close,20)/sma(close,20)
+len_drift = input(14,title="lookback period for drift calc.")
+percentage_chng = log(close/close[1])
+drift = sma(percentage_chng, len_drift) - pow(stdev(percentage_chng, len_drift),2) * 0.5
+// } Quant methods
+// Trailing stop loss {
+ATR_X2_TSL = atr(input(14,title="Length of ATR for trailing stop loss")) * input(2.0,title="ATR Multiplier for trailing stop loss",type=input.float)
+TSL_source_long = low, TSL_source_short = high
+var stop_loss_price_long    = float(0)
+var stop_loss_price_short = float(2147483647)
+var pos_opened_long = false // to be updated in MAIN loop
+var pos_opened_short = false // to be updated in MAIN loop
+stop_loss_price_long := pos_opened_long ? max(stop_loss_price_long, TSL_source_long - ATR_X2_TSL) : TSL_source_long - ATR_X2_TSL
+stop_loss_price_short := pos_opened_short ? min(stop_loss_price_short, TSL_source_short + ATR_X2_TSL) : TSL_source_short + ATR_X2_TSL
+// tighten TSL
+is_consol = cv < sma(cv,50)
+TIGHTEN_TSL = input(true, title="Tighten stop loss when price moves sharply in favorable direction")
+if TIGHTEN_TSL
+    if not is_consol
+        if pos_opened_long and cv > cv[1]
+            stop_loss_price_long := max(stop_loss_price_long * (1+percentage_chng*0.5), stop_loss_price_long[1])
+        if pos_opened_short and cv > cv[1]
+            stop_loss_price_short := min(stop_loss_price_long * (1+percentage_chng*0.5), stop_loss_price_short[1])
+// Plot TSL
+TSL_transp_long = pos_opened_long and within_timeframe ? 0 : 100
+TSL_transp_short = pos_opened_short and within_timeframe ? 0 : 100
+plot(stop_loss_price_long, color=color.new(color.green, TSL_transp_long))
+plot(stop_loss_price_short, color=color.new(color.red, TSL_transp_short))
+// } Trailing stop loss
+// Signals for entry {
+is_neutral = close < BOLL_upper1 and close > BOLL_lower1
+below_neutral = close < BOLL_lower1 and close > BOLL_lower2
+above_neutral = close > BOLL_upper1 and close < BOLL_upper2
+atr14 = atr(14)
+entry_signal_long = is_consol and close > BOLL_upper1 and atr14 > sma(atr14,5) and drift > 0
+entry_signal_short = is_consol and close < BOLL_lower1 and atr14 > sma(atr14,5) and drift < 0
+// } Signals for entry
+// MAIN:
+if within_timeframe
+    // EXIT ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    if pos_opened_long
+        strategy.exit(ENUM_LONG, stop=stop_loss_price_long, comment="SL")
+    if pos_opened_short
+        strategy.exit(ENUM_SHORT, stop=stop_loss_price_short, comment="SL")
+    
+    end_of_rally = close < BOLL_upper1 and strategy.position_avg_price > stop_loss_price_long and low < low[1]
+    if pos_opened_long and (TSL_source_long <= stop_loss_price_long or end_of_rally and not is_consol)
+        pos_opened_long := false
+        alert(LONG_MSG_EXIT, alert.freq_once_per_bar)
+        strategy.close(ENUM_LONG, comment=close < strategy.position_avg_price ? "stop loss" : "take profit")
+    if pos_opened_short and (TSL_source_short >= stop_loss_price_short)
+        pos_opened_short := false
+        alert(SHORT_MSG_EXIT, alert.freq_once_per_bar)
+        strategy.close(ENUM_SHORT, comment=close > strategy.position_avg_price ? "stop loss" : "take profit")
+    // ENTRY :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    if entry_signal_long and close > stop_loss_price_long
+        pos_opened_long := true
+        alert(LONG_MSG_ENTER, alert.freq_once_per_bar)        
+        strategy.entry(ENUM_LONG, strategy.long, comment="long")
+    if entry_signal_short
+        pos_opened_short := true
+        alert(SHORT_MSG_ENTER, alert.freq_once_per_bar)        
+        strategy.entry(ENUM_SHORT, strategy.short, comment="short")
+// CLEAN UP:
+if not pos_opened_long
+    stop_loss_price_long := float(0)
+if not pos_opened_short
+    stop_loss_price_short := float(2147483647)
+Expand (115 lines)

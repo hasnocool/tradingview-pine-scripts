@@ -1,0 +1,184 @@
+Script Name: Close Trade at end of day
+Author: daytraderph
+Description: script serves as an example how we can close trades at end of day.
+
+can be session controlled or the time controlled. 
+
+the session should be adjusted to be earlier than the candle time.
+PineScript code:
+
+Pine Script™ strategy
+Close Trade at end of day
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © daytraderph
+//@version=4
+strategy("Close Trade at end of day ", overlay=true,process_orders_on_close=true)
+i_dateFilter    = input(false,  "═════ Date Range Filtering ═════")
+i_fromYear      = input(2020,   "From Year",    minval = 1900)
+i_fromMonth     = input(6,      "From Month",   minval = 1, maxval = 12)
+i_fromDay       = input(23,      "From Day",     minval = 1, maxval = 31)
+i_toYear        = input(2999,   "To Year",      minval = 1900)
+i_toMonth       = input(1,      "To Month",     minval = 1, maxval = 12)
+i_toDay         = input(1,      "To Day",       minval = 1, maxval = 31)
+fromDate        = timestamp(i_fromYear, i_fromMonth, i_fromDay, 00, 00)
+toDate          = timestamp(i_toYear, i_toMonth, i_toDay, 23, 59)
+f_tradeDateIsAllowed() => not i_dateFilter or (time >= fromDate and time <= toDate)
+numBars = 1
+t = time('D')
+if t == t[1]
+    numBars := nz(numBars[1]) + 1
+else
+    numBars := 1
+bool secondCandle= false
+ 
+if numBars == 1
+    secondCandle :=true 
+open_session=input(type=input.session,defval="0915-1530")
+session = time("1", open_session)
+validSession=(na(session) ? 0 : 1)
+float h1=na
+float l1=na
+h1:= valuewhen(secondCandle, high, 0)
+l1:= valuewhen(secondCandle, low, 0)
+longEntryPrice = h1 +2
+longStopPrice = l1 -10000
+longTargetPrice = longEntryPrice + 10000
+shortEntryPrice= l1 -2 
+shortTargetPrice = shortEntryPrice - 10000
+shortStopPrice = h1 +10000
+longCondition = crossover ( high,longEntryPrice ) and f_tradeDateIsAllowed()
+longTargetHit = crossover (high,longTargetPrice ) and f_tradeDateIsAllowed()
+longStopHit =  crossunder ( low,longStopPrice ) and f_tradeDateIsAllowed()
+strategy.entry( "BNFL", long=true, when=longCondition)
+if longTargetHit 
+    strategy.close("BNFL", comment="LTH")
+if longStopHit 
+    strategy.close("BNFL", comment="LSH")
+shortCondition =   crossunder ( low,shortEntryPrice )   and f_tradeDateIsAllowed()
+shortTargetHit = crossunder (low,shortTargetPrice ) and f_tradeDateIsAllowed()
+shortStopHit = crossover ( high,shortStopPrice ) and f_tradeDateIsAllowed()
+strategy.entry( "BNFS", long=true, when=shortCondition)
+if shortTargetHit 
+    strategy.close("BNFS", comment="STH")
+if shortStopHit 
+    strategy.close("BNFS", comment="SSH")
+    
+    
+barOpenTime = time 
+tt=timestamp(year(time), month(time), dayofmonth(time), hour(time), 2)
+    
+if ( hour(time) == 15 and minute(time) > 25  )  
+    strategy.close("BNFS", comment="SCM")
+if ( hour(time) == 15 and minute(time) > 25 )   
+    strategy.close("BNFL", comment="SCM")
+if validSession ==0 
+    strategy.close("BNFL", comment="SC")
+    strategy.close("BNFS", comment="SC")
+Expand (106 lines)

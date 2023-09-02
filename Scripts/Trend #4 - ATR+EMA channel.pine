@@ -1,0 +1,153 @@
+Script Name: Trend #4 - ATR+EMA channel
+Author: zxcv55602
+Description: Overview:
+This strategy use ATR to take-profit, Red-EMA to stop-loss, Blue-EMA channel to judgment breakout.
+This strategy use commission setting is 0.05%, slippage setting is 2 ticks, you can set the appropriate value size in the properties page.
+What it does:
+This strategy detects when a trend is emerging and buy or sell.
+How it does it:
+When the price breaks...
+PineScript code:
+
+Pine Script™ strategy
+Trend #4 - ATR+EMA channel
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © zxcv55602
+//@version=4
+strategy("Trend #4 - ATR+EMA channel", overlay = true,slippage=2,commission_value=0.05)
+date1 = input(title="Start Date", type=input.time, defval=timestamp("2020-01-01T00:00:00"))
+date2 = input(title="Stop Date", type=input.time, defval=timestamp("2030-01-01T00:00:00"))
+stoploss=input(1000, minval=1, title="stoploss")
+length = input(10, minval=1, title="Blue EMA length",step=1)
+multy = input(1.8, step=0.1, title="Blue EMA multy")
+atrlen = input(15, "ATR Period")
+mult_atr = input(0.7, "ATR mult", step=0.1)
+redema=input(20, "Red EMA length", step=1)
+longsignal=input(true,"long",type=input.bool)
+shortsignal=input(true,"short",type=input.bool)
+Breakout=input(false,"Breakout mode",type=input.bool)
+//------------------
+upper_atr = ema(tr(true),atrlen) * mult_atr + close
+lower_atr = close - ema(tr(true),atrlen) * mult_atr
+plot(upper_atr, "+ATR", color=color.new(color.white,80),style=plot.style_stepline)
+plot(lower_atr, "-ATR", color=color.new(color.white,80),style=plot.style_stepline)
+//------------------
+var op_upper_atr=0.0
+var op_lower_atr=0.0
+var op_close=0.0
+//------------------
+Keltma =ema(close, length)
+range = high - low
+rangema = ema(range, length)
+upperk =Keltma + rangema * multy
+lowerk = Keltma - rangema * multy
+plot(upperk, color=color.blue, title="")
+plot(lowerk, color=color.blue, title="")
+//------------------
+red_ema=ema(close,redema)
+plot(red_ema, color=color.red, title="")
+//------------------
+if time >= date1 and time <= date2 and Breakout==false
+    if longsignal and strategy.position_size==0 and close>upperk and close>red_ema
+        op_close:=close
+        op_upper_atr:=upper_atr
+        strategy.entry("L",true,qty=(stoploss/(op_close-red_ema)),stop=red_ema)
+        strategy.exit("L",limit=op_upper_atr,comment="exit_L",stop=red_ema)
+    if shortsignal and strategy.position_size==0 and close<lowerk and close<red_ema
+        op_close:=close
+        op_lower_atr:=lower_atr
+        strategy.entry("S",false,qty=(stoploss/(red_ema-op_close)),stop=red_ema)
+        strategy.exit("S",limit=op_lower_atr,comment="exit_S",stop=red_ema)
+    if strategy.position_size>0
+        strategy.exit("L",limit=op_upper_atr,comment="exit_L",stop=red_ema)
+    if strategy.position_size<0
+        strategy.exit("S",limit=op_lower_atr,comment="exit_S",stop=red_ema)
+//------------------
+if time >= date1 and time <= date2 and Breakout
+    if longsignal and strategy.position_size==0 and close[0]>high[1] and close>red_ema and close>upperk
+        op_upper_atr:=upper_atr
+        op_lower_atr:=lower_atr
+        op_close:=close
+        strategy.entry("long",strategy.long,qty=stoploss/(op_close-red_ema),limit=op_upper_atr,stop=red_ema)
+        strategy.exit("long",comment="exit_L1",limit=op_upper_atr,stop=red_ema)
+    if shortsignal and strategy.position_size==0 and close[0]<low[1] and close<red_ema and close<lowerk
+        op_upper_atr:=upper_atr
+        op_lower_atr:=lower_atr
+        op_close:=close
+        strategy.entry("short",strategy.short,qty=stoploss/(red_ema-op_close),limit=op_lower_atr,stop=red_ema)
+        strategy.exit("short",comment="exit_S1",limit=op_lower_atr,stop=red_ema)
+    if strategy.position_size>0
+        strategy.exit("long",comment="exit_L",limit=op_upper_atr,stop=red_ema)
+    if strategy.position_size<0
+        strategy.exit("short",comment="exit_S",limit=op_lower_atr,stop=red_ema)
+Expand (69 lines)

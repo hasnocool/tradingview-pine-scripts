@@ -1,0 +1,165 @@
+Script Name: Davin's 10-200MA Pullback on SPY Strategy v2.0
+Author: Gold_D_Roger
+Description: Strategy:
+Using 10 and 200 Simple moving averages, we capitalize on price pullbacks on a general uptrend to scalp 1 - 5% rebounds. 200 MA is used as a general indicator for bullish sentiment, 10 MA is used to identify pullbacks in the short term for buy entries. 
+
+An optional bonus: market crash of 20% from 52 days high is regarded as a buy the dip signal.
+An...
+PineScript code:
+
+Pine Script™ strategy
+Davin's 10/200MA Pullback on SPY Strategy v2.0
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Gold_D_Roger
+//note: spreading 1 statement over multiple lines needs 1 apce + 1 tab | multi line function is 1 tab
+//Recommended tickers: SPY (D), QQQ (D) and big indexes, AAPL (4H)
+//@version=5
+strategy("Davin's 10/200MA Pullback on SPY Strategy v2.0",
+     overlay=true,
+     initial_capital=10000,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=10, // 10% of equity on each trade
+     commission_type=strategy.commission.cash_per_contract, 
+     commission_value=0.1) //Insert your broker's rate, IB is 0.005USD or tiered
+//Best parameters
+// SPY D
+// Stop loss 0.15
+// commission of 0.005 USD using Interactive brokers
+// Exit on lower close 
+// Buy more when x% down --> 14%
+// DO NOT include stop condition using MA crossover
+// Get User Input
+i_ma1           = input.int(title="MA Length 1", defval=200, step=10, group="Strategy Parameters", tooltip="Long-term MA 200")
+i_ma2           = input.int(title="MA Length 2", defval=10, step=10, group="Strategy Parameters", tooltip="Short-term MA 10")
+i_ma3           = input.int(title="MA Length 3", defval=50, step=1, group="Strategy Parameters", tooltip="MA for crossover signals`")
+i_stopPercent   = input.float(title="Stop Loss Percent", defval=0.15, step=0.01, group="Strategy Parameters", tooltip="Hard stop loss of 10%")
+i_startTime     = input.time(title="Start filter", defval=timestamp("01 Jan 2013 13:30 +0000"), group="Time filter", tooltip="Start date and time to begin")
+i_endTime       = input.time(title="End filter", defval=timestamp("01 Jan 2099 19:30 +0000"), group="Time filter", tooltip="End date and time to stop")
+i_lowerClose    = input.bool(title="Exit on lower close", defval=true, group="Strategy Parameters", tooltip="Wait for lower close after above 10SMA before exiting") // optimise exit strat, boolean type creates tickbox type inputs
+i_contrarianBuyTheDip = input.bool(title="Buy whenever more than x% drawdown", defval=true, group="Strategy Parameters", tooltip="Buy the dip! Whenever x% or more drawdown on SPY")
+i_contrarianTrigger = input.int(title="Trigger % drop to buy the dip", defval=14, step=1, group="Strategy Parameters", tooltip="% drop to trigger contrarian Buy the Dip!") 
+//14% to be best for SPY 1D
+//20% best for AMZN 1D
+i_stopByCrossover_MA2_3 = input.bool(title="Include stop condition using MA crossover", defval=false, group="Strategy Parameters", tooltip="Sell when crossover of MA2/1 happens")
+// Get indicator values
+ma1 = ta.sma(close,i_ma1) //param 1
+ma2 = ta.sma(close,i_ma2) //param 2
+ma3 = ta.sma(close,i_ma3) //param 3
+ma_9 = ta.ema(close,9) //param 2
+ma_20 = ta.ema(close,20) //param 3
+// Check filter(s)
+f_dateFilter = time >+ i_startTime and time <= i_endTime //make sure date entries are within acceptable range
+// Highest price of the prev 52 days: https://www.tradingcode.net/tradingview/largest-maximum-value/#:~:text=()%20versus%20ta.-,highest(),max()%20and%20ta.
+highest52 = ta.highest(high,52)
+overall_change = ((highest52 - close[0]) / highest52) * 100
+// Check buy/sell conditions
+var float buyPrice = 0 //intialise buyPrice, this will change when we enter a trade ; float = decimal number data type 0.0
+buyCondition  = (close > ma1 and close < ma2 and strategy.position_size == 0 and f_dateFilter) or (strategy.position_size == 0 and i_contrarianBuyTheDip==true and overall_change > i_contrarianTrigger and f_dateFilter) // higher than 200sma, lower than short term ma (pullback) + avoid pyramiding positions
+sellCondition = close > ma2 and strategy.position_size > 0 and (not i_lowerClose or close < low[1])  //check if we already in trade + close above 10MA; 
+// third condition: EITHER i_lowerClose not turned on OR closing price has to be < previous candle's LOW [1]
+stopDistance  = strategy.position_size > 0 ? ((buyPrice - close)/close) : na // check if in trade > calc % drop dist from entry, if not na
+stopPrice     = strategy.position_size > 0 ? (buyPrice - (buyPrice * i_stopPercent)) : na // calc SL price if in trade, if not, na
+stopCondition = (strategy.position_size > 0 and stopDistance > i_stopPercent) or (strategy.position_size > 0 and (i_stopByCrossover_MA2_3==true and ma3 < ma1))
+// Enter positions
+if buyCondition 
+    strategy.entry(id="Long", direction=strategy.long) //long only
+    
+if buyCondition[1] // if buyCondition is true prev candle
+    buyPrice := open // entry price = current bar opening price
+// Exit position
+if sellCondition or stopCondition 
+    strategy.close(id="Long", comment = "Exit" + (stopCondition ? "Stop loss=true" : "")) // if condition? "Value for true" : "value for false"
+    buyPrice := na //reset buyPrice
+// Plot
+plot(buyPrice, color=color.lime, style=plot.style_linebr)
+plot(stopPrice, color=color.red, style=plot.style_linebr, offset = -1)
+plot(ma1, color=color.blue) //defval=200
+plot(ma2, color=color.white) //defval=10
+plot(ma3, color=color.yellow) // defval=50
+Expand (85 lines)

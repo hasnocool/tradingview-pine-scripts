@@ -1,0 +1,144 @@
+Script Name: Unilateral Pairs Trading
+Author: pietro3334
+Description: ecco qua il postino pat e con lui ce anche il suo gatto jeff
+PineScript code:
+
+Pine Script™ strategy
+Unilateral Pairs Trading
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+//@version=4
+// Step 1) Define strategy settings
+strategy(title="Unilateral Pairs Trading", overlay=false, pyramiding=0, initial_capital=100, default_qty_type=strategy.fixed, default_qty_value=100, commission_type=strategy.commission.cash_per_order, commission_value=0.08, slippage=2)
+// Entry trigger values
+longThres = input(title="Enter Long Threshold", type=input.float, defval=-1.05)
+shortThres = input(title="Enter Short Threshold", type=input.float, defval=1.05)
+// Exit trigger values
+exitLongThres = input(title="Exit Long Threshold", type=input.float, defval=-0.05)
+exitShortThres = input(title="Exit Short Threshold", type=input.float, defval=0.05)
+// Smoothing for ratio of price differences
+ratioLen = input(title="Ratio Length", type=input.integer, defval=20)
+// Required price changes for long and short
+chgLong = input(title="Price Change % (Long)", type=input.float, defval=-0)
+chgShort = input(title="Price Change % (Short)", type=input.float, defval=0)
+// Step 2) Calculate strategy values
+// Fetch S&P 500 tracker prices
+spyData = security("SPY", timeframe.period, close)
+// Calculate price ratio and its average
+ratioSeries = close / spyData
+ratioSMA = sma(ratioSeries, ratioLen)
+// Calculate the price ratio differences
+deltaSeries = ratioSeries - ratioSMA
+deltaSMA = sma(deltaSeries, ratioLen)
+deltaDiff = deltaSeries - deltaSMA
+// Normalise differences with standard deviation
+deltaNormRatio = deltaDiff / stdev(deltaSeries, ratioLen)
+// Calculate price return
+closeReturn = (close - close[1]) / close[1] * 100
+// Step 3) Output strategy data
+// Plot normalised ratio of price differences
+plot(series=deltaNormRatio, color=color.navy, title="Price Ratio Difs Norm")
+// Show long and short trigger levels
+hline(price=longThres, color=color.green, linestyle=hline.style_solid)
+hline(price=shortThres, color=color.red, linestyle=hline.style_solid)
+// Show long and short exit levels
+hline(price=exitLongThres, color=color.new(color.green, 25), linestyle=hline.style_dotted)
+hline(price=exitShortThres, color=color.new(color.red, 25), linestyle=hline.style_dotted)
+// Highlight price changes (%) that cross threshold
+bgColour = closeReturn < chgLong ? color.green : closeReturn > chgShort ? color.red : na
+bgcolor(color=bgColour)
+// Step 4) Determine long trading conditions
+enterLong = deltaNormRatio < longThres and closeReturn <= chgLong
+exitLong = deltaNormRatio > exitLongThres and strategy.position_size > 0
+// Step 5) Code short trading conditions
+enterShort = deltaNormRatio > shortThres and closeReturn >= chgShort
+exitShort = deltaNormRatio < exitShortThres and strategy.position_size < 0
+// Step 6) Submit entry orders
+if enterLong
+    strategy.entry(id="EL", long=true)
+if enterShort
+    strategy.entry(id="ES", long=false)
+// Step 7) Send exit orders
+if exitLong and not enterShort
+    strategy.order(id="XL", long=false, qty=strategy.position_size)
+if exitShort and not enterLong
+    strategy.order(id="XS", long=true, qty=abs(strategy.position_size))
+Expand (79 lines)

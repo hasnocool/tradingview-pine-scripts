@@ -1,0 +1,611 @@
+Script Name: trend Screener List1
+Author: TJalam
+Description: This is type of custom screener I searched and made to screen bulk stocks any one can modify it, other may get help out of it.
+in my code i have made defined
+1.   uptrend=  ema(close,55)> ema(close,144) and ema(close,144)> ema(close,388) and ema(close,388)> ema(close,576) and close>ema(close,388)
+2.   downtrend =  ema(close,55)< ema(close,144) and ema(close,144)<...
+PineScript code:
+
+Pine Script™ strategy
+trend Screener List1
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+//This is type of custom screener I searched and made to screen bulk stocks any one can modify it, other may get help out of it.
+//in my code i have made defined
+//1.   uptrend=  ema(close,55)> ema(close,144) and ema(close,144)> ema(close,388) and ema(close,388)> ema(close,576) and close>ema(close,388)
+//2.   downtrend =  ema(close,55)< ema(close,144) and ema(close,144)< ema(close,388) and ema(close,388)<ema(close,576) and close<ema(close,388)
+//if the indicator is printing DOWNTREND=TRUE or UPTREND=TRUE then the corresponding stock is in currently in that trend out of the stocks listed in the code
+//in one code only 40 (max) stocks can be called.
+//to add more stocks I copied same code and changed the stocks in the code, now you can screen 80 stocks at a time.
+//This code runs on each bar and checks if the stocks is in uptrend or down trend.
+//you can customize this screener according to your requirement.
+//thanks @QuantNomad from where i solved my problem of screening my top stock for custom screener
+//idea and motivation taken from https://www.tradingview.com/script/QKgb0Fud-Custom-Screener-with-Alerts-QuantNomad/
+//@version=4
+strategy("trend Screener List1", shorttitle = 'trend Screener List1 ', overlay = true)
+res=input("", title="input timeframe for the screener")
+// Symbols 
+s01= input('NSE:ABCAPITAL',  type=input.symbol)
+s02= input('NSE:ABFRL',  type=input.symbol)
+s03= input('NSE:ACC',  type=input.symbol)
+s04= input('NSE:ADANIENT',  type=input.symbol)
+s05= input('NSE:ADANIPORTS',  type=input.symbol)
+s06= input('NSE:ADANIPOWER',  type=input.symbol)
+s07= input('NSE:AJANTPHARM',  type=input.symbol)
+s08= input('NSE:ALKEM',  type=input.symbol)
+s09= input('NSE:AMARAJABAT',  type=input.symbol)
+s10= input('NSE:AMBUJACEM',  type=input.symbol)
+s11= input('NSE:APOLLOHOSP',  type=input.symbol)
+s12= input('NSE:APOLLOTYRE',  type=input.symbol)
+s13= input('NSE:ASHOKLEY',  type=input.symbol)
+s14= input('NSE:ASIANPAINT',  type=input.symbol)
+s15= input('NSE:AUBANK',  type=input.symbol)
+s16= input('NSE:AUROPHARMA',  type=input.symbol)
+s17= input('NSE:AXISBANK',  type=input.symbol)
+s18= input('NSE:BAJAJ_AUTO',  type=input.symbol)
+s19= input('NSE:BAJAJFINSV',  type=input.symbol)
+s20= input('NSE:BAJAJHLDNG',  type=input.symbol)
+s21= input('NSE:BAJFINANCE',  type=input.symbol)
+s22= input('NSE:BALKRISIND',  type=input.symbol)
+s23= input('NSE:BANDHANBNK',  type=input.symbol)
+s24= input('NSE:BANKBARODA',  type=input.symbol)
+s25= input('NSE:BANKINDIA',  type=input.symbol)
+s26= input('NSE:BATAINDIA',  type=input.symbol)
+s27= input('NSE:BBTC',  type=input.symbol)
+s28= input('NSE:BEL',  type=input.symbol)
+s29= input('NSE:BERGEPAINT',  type=input.symbol)
+s30= input('NSE:BHARATFORG',  type=input.symbol)
+s31= input('NSE:BHARTIARTL',  type=input.symbol)
+s32= input('NSE:BHEL',  type=input.symbol)
+s33= input('NSE:BIOCON',  type=input.symbol)
+s34= input('NSE:BOSCHLTD',  type=input.symbol)
+s35= input('NSE:BPCL',  type=input.symbol)
+s36= input('NSE:BRITANNIA',  type=input.symbol)
+s37= input('NSE:CADILAHC',  type=input.symbol)
+s38= input('NSE:CANBK',  type=input.symbol)
+s39= input('NSE:CASTROLIND',  type=input.symbol)
+s40= input('NSE:CENTURYTEX',  type=input.symbol)
+///////////////
+// FUNCTIONS //
+// Screener Function
+screenerFunc() => 
+    uptrend=  ema(close,55)> ema(close,144) and ema(close,144)> ema(close,388) and ema(close,388)> ema(close,576) and close>ema(close,388)
+    downtrend =  ema(close,55)< ema(close,144) and ema(close,144)< ema(close,388) and ema(close,388)<ema(close,576) and close<ema(close,388)
+    close_value=iff(uptrend,valuewhen(uptrend and not uptrend[1],close,1),iff(downtrend,valuewhen(downtrend and not downtrend[1],close,1),na))
+    [uptrend,downtrend ,close_value]
+ 
+///////////////////////////////////////
+// Running Functions for all sybmols //
+[v01, c01, val_c01] = security(s01, res, screenerFunc())
+[v02, c02, val_c02] = security(s02, res, screenerFunc())
+[v03, c03, val_c03] = security(s03, res, screenerFunc())
+[v04, c04, val_c04] = security(s04, res, screenerFunc())
+[v05, c05, val_c05] = security(s05, res, screenerFunc())
+[v06, c06, val_c06] = security(s06, res, screenerFunc())
+[v07, c07, val_c07] = security(s07, res, screenerFunc())
+[v08, c08, val_c08] = security(s08, res, screenerFunc())
+[v09, c09, val_c09] = security(s09, res, screenerFunc())
+[v10, c10, val_c10] = security(s10, res, screenerFunc())
+[v11, c11, val_c11] = security(s11, res, screenerFunc())
+[v12, c12, val_c12] = security(s12, res, screenerFunc())
+[v13, c13, val_c13] = security(s13, res, screenerFunc())
+[v14, c14, val_c14] = security(s14, res, screenerFunc())
+[v15, c15, val_c15] = security(s15, res, screenerFunc())
+[v16, c16, val_c16] = security(s16, res, screenerFunc())
+[v17, c17, val_c17] = security(s17, res, screenerFunc())
+[v18, c18, val_c18] = security(s18, res, screenerFunc())
+[v19, c19, val_c19] = security(s19, res, screenerFunc())
+[v20, c20, val_c20] = security(s20, res, screenerFunc())
+[v21, c21, val_c21] = security(s21, res, screenerFunc())
+[v22, c22, val_c22] = security(s22, res, screenerFunc())
+[v23, c23, val_c23] = security(s23, res, screenerFunc())
+[v24, c24, val_c24] = security(s24, res, screenerFunc())
+[v25, c25, val_c25] = security(s25, res, screenerFunc())
+[v26, c26, val_c26] = security(s26, res, screenerFunc())
+[v27, c27, val_c27] = security(s27, res, screenerFunc())
+[v28, c28, val_c28] = security(s28, res, screenerFunc())
+[v29, c29, val_c29] = security(s29, res, screenerFunc())
+[v30, c30, val_c30] = security(s30, res, screenerFunc())
+[v31, c31, val_c31] = security(s31, res, screenerFunc())
+[v32, c32, val_c32] = security(s32, res, screenerFunc())
+[v33, c33, val_c33] = security(s33, res, screenerFunc())
+[v34, c34, val_c34] = security(s34, res, screenerFunc())
+[v35, c35, val_c35] = security(s35, res, screenerFunc())
+[v36, c36, val_c36] = security(s36, res, screenerFunc())
+[v37, c37, val_c37] = security(s37, res, screenerFunc())
+[v38, c38, val_c38] = security(s38, res, screenerFunc())
+[v39, c39, val_c39] = security(s39, res, screenerFunc())
+[v40, c40, val_c40] = security(s40,res, screenerFunc())
+// Screener label //
+scr_label_up = 'Screener uptrend: \n##########\n'
+scr_label_up :=v01?scr_label_up +s01 +'=uptrend=TRUE @'+ tostring(val_c01) + '\n' :scr_label_up
+scr_label_up :=v02?scr_label_up +s02 +'=uptrend=TRUE @'+ tostring(val_c02) + '\n' :scr_label_up
+scr_label_up :=v03?scr_label_up +s03 +'=uptrend=TRUE @'+ tostring(val_c03) + '\n' :scr_label_up
+scr_label_up :=v04?scr_label_up +s04 +'=uptrend=TRUE @'+ tostring(val_c04) + '\n' :scr_label_up
+scr_label_up :=v05?scr_label_up +s05 +'=uptrend=TRUE @'+ tostring(val_c05) + '\n' :scr_label_up
+scr_label_up :=v06?scr_label_up +s06 +'=uptrend=TRUE @'+ tostring(val_c06) + '\n' :scr_label_up
+scr_label_up :=v07?scr_label_up +s07 +'=uptrend=TRUE @'+ tostring(val_c07) + '\n' :scr_label_up
+scr_label_up :=v08?scr_label_up +s08 +'=uptrend=TRUE @'+ tostring(val_c08) + '\n' :scr_label_up
+scr_label_up :=v09?scr_label_up +s09 +'=uptrend=TRUE @'+ tostring(val_c09) + '\n' :scr_label_up
+scr_label_up :=v10?scr_label_up +s10 +'=uptrend=TRUE @'+ tostring(val_c10) + '\n' :scr_label_up
+scr_label_up :=v11?scr_label_up +s11 +'=uptrend=TRUE @'+ tostring(val_c11) + '\n' :scr_label_up
+scr_label_up :=v12?scr_label_up +s12 +'=uptrend=TRUE @'+ tostring(val_c12) + '\n' :scr_label_up
+scr_label_up :=v13?scr_label_up +s13 +'=uptrend=TRUE @'+ tostring(val_c13) + '\n' :scr_label_up
+scr_label_up :=v14?scr_label_up +s14 +'=uptrend=TRUE @'+ tostring(val_c14) + '\n' :scr_label_up
+scr_label_up :=v15?scr_label_up +s15 +'=uptrend=TRUE @'+ tostring(val_c15) + '\n' :scr_label_up
+scr_label_up :=v16?scr_label_up +s16 +'=uptrend=TRUE @'+ tostring(val_c16) + '\n' :scr_label_up
+scr_label_up :=v17?scr_label_up +s17 +'=uptrend=TRUE @'+ tostring(val_c17) + '\n' :scr_label_up
+scr_label_up :=v18?scr_label_up +s18 +'=uptrend=TRUE @'+ tostring(val_c18) + '\n' :scr_label_up
+scr_label_up :=v19?scr_label_up +s19 +'=uptrend=TRUE @'+ tostring(val_c19) + '\n' :scr_label_up
+scr_label_up :=v20?scr_label_up +s20 +'=uptrend=TRUE @'+ tostring(val_c20) + '\n' :scr_label_up
+scr_label_up :=v21?scr_label_up +s21 +'=uptrend=TRUE @'+ tostring(val_c21) + '\n' :scr_label_up
+scr_label_up :=v22?scr_label_up +s22 +'=uptrend=TRUE @'+ tostring(val_c22) + '\n' :scr_label_up
+scr_label_up :=v23?scr_label_up +s23 +'=uptrend=TRUE @'+ tostring(val_c23) + '\n' :scr_label_up
+scr_label_up :=v24?scr_label_up +s24 +'=uptrend=TRUE @'+ tostring(val_c24) + '\n' :scr_label_up
+scr_label_up :=v25?scr_label_up +s25 +'=uptrend=TRUE @'+ tostring(val_c25) + '\n' :scr_label_up
+scr_label_up :=v26?scr_label_up +s26 +'=uptrend=TRUE @'+ tostring(val_c26) + '\n' :scr_label_up
+scr_label_up :=v27?scr_label_up +s27 +'=uptrend=TRUE @'+ tostring(val_c27) + '\n' :scr_label_up
+scr_label_up :=v28?scr_label_up +s28 +'=uptrend=TRUE @'+ tostring(val_c28) + '\n' :scr_label_up
+scr_label_up :=v29?scr_label_up +s29 +'=uptrend=TRUE @'+ tostring(val_c29) + '\n' :scr_label_up
+scr_label_up :=v30?scr_label_up +s30 +'=uptrend=TRUE @'+ tostring(val_c30) + '\n' :scr_label_up
+scr_label_up :=v31?scr_label_up +s31 +'=uptrend=TRUE @'+ tostring(val_c31) + '\n' :scr_label_up
+scr_label_up :=v32?scr_label_up +s32 +'=uptrend=TRUE @'+ tostring(val_c32) + '\n' :scr_label_up
+scr_label_up :=v33?scr_label_up +s33 +'=uptrend=TRUE @'+ tostring(val_c33) + '\n' :scr_label_up
+scr_label_up :=v34?scr_label_up +s34 +'=uptrend=TRUE @'+ tostring(val_c34) + '\n' :scr_label_up
+scr_label_up :=v35?scr_label_up +s35 +'=uptrend=TRUE @'+ tostring(val_c35) + '\n' :scr_label_up
+scr_label_up :=v36?scr_label_up +s36 +'=uptrend=TRUE @'+ tostring(val_c36) + '\n' :scr_label_up
+scr_label_up :=v37?scr_label_up +s37 +'=uptrend=TRUE @'+ tostring(val_c37) + '\n' :scr_label_up
+scr_label_up :=v38?scr_label_up +s38 +'=uptrend=TRUE @'+ tostring(val_c38) + '\n' :scr_label_up
+scr_label_up :=v39?scr_label_up +s39 +'=uptrend=TRUE @'+ tostring(val_c39) + '\n' :scr_label_up
+scr_label_up :=v40?scr_label_up +s40 +'=uptrend=TRUE @'+ tostring(val_c40) + '\n' :scr_label_up
+// Plot Label
+//lab_up = label.new(
+//          bar_index[200], 0, scr_label_up, 
+//          color=color.white,
+//          textcolor=color.green, 
+//          style =  label.style_labeldown,
+//          yloc = yloc.price)
+//label.delete(lab_up[1])
+label _lbl  = label.new(time, close, xloc=xloc.bar_time,
+  text      = scr_label_up,
+  color     = color.white, 
+  style     = label.style_label_left, 
+  textcolor = color.green,
+  size      = size.normal, 
+  textalign = text.align_left)
+  
+label.set_x(_lbl, label.get_x(_lbl) + round(change(time)*10))
+label.delete(_lbl[1])
+//lab_down = label.new(
+//          bar_index, 0, scr_label_up, 
+//          color=color.white,
+//          textcolor=color.red, 
+//          style =  label.style_labeldown,
+//          yloc = yloc.price)
+if (v01 and not v01[1]  )
+    alert(s01+"uptrend"+",at Price:"+tostring(val_c01), freq=alert.freq_once_per_bar)
+if (v02 and not v02[1]  )
+    alert(s02+"uptrend"+",at Price:"+tostring(val_c02), freq=alert.freq_once_per_bar)
+if (v03 and not v03[1]  )
+    alert(s03+"uptrend"+",at Price:"+tostring(val_c03), freq=alert.freq_once_per_bar)
+if (v04 and not v04[1] and not c01[1]  )
+    alert(s04+"uptrend"+",at Price:"+tostring(val_c04), freq=alert.freq_once_per_bar)
+if (v05 and not v05[1]  )
+    alert(s05+"uptrend"+",at Price:"+tostring(val_c05), freq=alert.freq_once_per_bar)
+if (v06 and not v06[1]  )
+    alert(s06+"uptrend"+",at Price:"+tostring(val_c06), freq=alert.freq_once_per_bar)
+    
+if (v07 and not v07[1]  )
+    alert(s07+"uptrend"+",at Price:"+tostring(val_c07), freq=alert.freq_once_per_bar)
+if (v08 and not v08[1]  )
+    alert(s08+"uptrend"+",at Price:"+tostring(val_c08), freq=alert.freq_once_per_bar)
+    
+if (v09 and not v09[1]  )
+    alert(s09+"uptrend"+",at Price:"+tostring(val_c09), freq=alert.freq_once_per_bar)
+    
+if (v10 and not v10[1]  )
+    alert(s10+"uptrend"+",at Price:"+tostring(val_c10), freq=alert.freq_once_per_bar)
+    
+if (v11 and not v11[1]  )
+    alert(s11+"uptrend"+",at Price:"+tostring(val_c11), freq=alert.freq_once_per_bar)
+    
+if (v12 and not v12[1]  )
+    alert(s12+"uptrend"+",at Price:"+tostring(val_c12), freq=alert.freq_once_per_bar)
+    
+if (v13 and not v13[1]  )
+    alert(s13+"uptrend"+",at Price:"+tostring(val_c13), freq=alert.freq_once_per_bar)
+    
+if (v14 and not v14[1]  )
+    alert(s14+"uptrend"+",at Price:"+tostring(val_c14), freq=alert.freq_once_per_bar)
+if (v14 and not v15[1]  )
+    alert(s14+"uptrend"+",at Price:"+tostring(val_c15), freq=alert.freq_once_per_bar)
+    
+if (v16 and not v16[1]  )
+    alert(s16+"uptrend"+",at Price:"+tostring(val_c16), freq=alert.freq_once_per_bar)
+    
+if (v17 and not v17[1]  )
+    alert(s17+"uptrend"+",at Price:"+tostring(val_c17), freq=alert.freq_once_per_bar)
+if (v18 and not v18[1]  )
+    alert(s18+"uptrend"+",at Price:"+tostring(val_c18), freq=alert.freq_once_per_bar)
+    
+if (v19 and not v19[1]  )
+    alert(s19+"uptrend"+",at Price:"+tostring(val_c19), freq=alert.freq_once_per_bar)
+    
+if (v20 and not v20[1]  )
+    alert(s20+"uptrend"+",at Price:"+tostring(val_c20), freq=alert.freq_once_per_bar)
+if (v21 and not v21[1]  )
+    alert(s21+"uptrend"+",at Price:"+tostring(val_c21), freq=alert.freq_once_per_bar)
+if (v22 and not v22[1]  )
+    alert(s22+"uptrend"+",at Price:"+tostring(val_c22), freq=alert.freq_once_per_bar)
+if (v23 and not v23[1]  )
+    alert(s23+"uptrend"+",at Price:"+tostring(val_c23), freq=alert.freq_once_per_bar)
+if (v24 and not v24[1]  )
+    alert(s24+"uptrend"+",at Price:"+tostring(val_c24), freq=alert.freq_once_per_bar)
+if (v25 and not v25[1]  )
+    alert(s25+"uptrend"+",at Price:"+tostring(val_c25), freq=alert.freq_once_per_bar)
+if (v26 and not v26[1]  )
+    alert(s26+"uptrend"+",at Price:"+tostring(val_c26), freq=alert.freq_once_per_bar)
+    
+if (v27 and not v27[1]  )
+    alert(s27+"uptrend"+",at Price:"+tostring(val_c27), freq=alert.freq_once_per_bar)
+if (v28 and not v28[1]  )
+    alert(s28+"uptrend"+",at Price:"+tostring(val_c28), freq=alert.freq_once_per_bar)
+    
+if (v29 and not v29[1]  )
+    alert(s29+"uptrend"+",at Price:"+tostring(val_c29), freq=alert.freq_once_per_bar)
+    
+if (v30 and not v30[1]  )
+    alert(s30+"uptrend"+",at Price:"+tostring(val_c30), freq=alert.freq_once_per_bar)
+    
+if (v31 and not v31[1]  )
+    alert(s31+"uptrend"+",at Price:"+tostring(val_c31), freq=alert.freq_once_per_bar)
+    
+if (v32 and not v32[1]  )
+    alert(s32+"uptrend"+",at Price:"+tostring(val_c32), freq=alert.freq_once_per_bar)
+    
+if (v33 and not v33[1]  )
+    alert(s33+"uptrend"+",at Price:"+tostring(val_c33), freq=alert.freq_once_per_bar)
+    
+if (v34 and not v34[1]  )
+    alert(s34+"uptrend"+",at Price:"+tostring(val_c34), freq=alert.freq_once_per_bar)
+if (v35 and not v35[1]  )
+    alert(s35+"uptrend"+",at Price:"+tostring(val_c35), freq=alert.freq_once_per_bar)
+    
+if (v36 and not v36[1]  )
+    alert(s36+"uptrend"+",at Price:"+tostring(val_c36), freq=alert.freq_once_per_bar)
+    
+if (v37 and not v37[1]  )
+    alert(s37+"uptrend"+",at Price:"+tostring(val_c37), freq=alert.freq_once_per_bar)
+if (v38 and not v38[1]  )
+    alert(s38+"uptrend"+",at Price:"+tostring(val_c38), freq=alert.freq_once_per_bar)
+    
+if (v39 and not v39[1]  )
+    alert(s39+"uptrend"+",at Price:"+tostring(val_c39), freq=alert.freq_once_per_bar)
+    
+if (v40 and not v40[1]  )
+    alert(s40+"uptrend"+",at Price:"+tostring(val_c40), freq=alert.freq_once_per_bar)
+    
+Expand (324 lines)

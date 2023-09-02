@@ -1,0 +1,76 @@
+Script Name: Price Action - Support & Resistance + MACD LONG Strategy
+Author: harveylam814
+Description: Using "Price Action - Support & Resistance by DGT" and the MACD (Moving Average Convergence Divergence) indicator in TradingView can help develop a trade strategy. Here's a step-by-step approach you can follow:
+
+1. Identifying Support and Resistance Levels: Apply the "Price Action - Support & Resistance by DGT" indicator to your chart. This indicator helps you...
+PineScript code:
+
+Pine Script™ strategy
+Price Action - Support & Resistance + MACD LONG Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+//@version=4
+strategy("Price Action - Support & Resistance + MACD Strategy", overlay=true)
+// Price Action - Support & Resistance
+supportLevel = input(100, title="Support Level Strength", minval=1)
+resistanceLevel = input(100, title="Resistance Level Strength", minval=1)
+var supportPrice = 0.0
+var resistancePrice = 0.0
+if low <= supportPrice or barstate.islast
+    supportPrice := low
+if high >= resistancePrice or barstate.islast
+    resistancePrice := high
+plot(supportPrice, color=color.green, linewidth=1, title="Support")
+plot(resistancePrice, color=color.red, linewidth=1, title="Resistance")
+// MACD Indicator
+[macdLine, signalLine, _] = macd(close, 26, 100, 9)
+macdHistogram = macdLine - signalLine
+// Bullish Trade Setup
+bullishSetup = crossover(macdLine, signalLine) and macdHistogram > 0 and close > supportPrice
+plotshape(bullishSetup, color=color.green, title="Bullish Setup", style=shape.triangleup, location=location.belowbar)
+// Stop Loss and Take Profit Levels
+stopLossLevel = input(5, title="Stop Loss Level (%)", minval=0.1, step=0.1)
+takeProfitLevel = input(7.5, title="Take Profit Level (%)", minval=0.1, step=0.1)
+// Execute Long Trades
+if bullishSetup
+    stopLossPrice = close * (1 - stopLossLevel / 100)
+    takeProfitPrice = close * (1 + takeProfitLevel / 100)
+    strategy.entry("Long", strategy.long)
+    strategy.exit("Exit", "Long", stop=stopLossPrice, limit=takeProfitPrice)
+Expand (37 lines)

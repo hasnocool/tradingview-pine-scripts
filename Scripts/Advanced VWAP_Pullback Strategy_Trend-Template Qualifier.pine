@@ -1,0 +1,551 @@
+Script Name: Advanced VWAP_Pullback Strategy_Trend-Template Qualifier
+Author: JS_TechTrading
+Description: General Description and Unique Features of this Script 
+
+ Introducing the Advanced VWAP Momentum-Pullback Strategy (long-only) that offers several unique features: 
+
+1.	Our script/strategy utilizes Mark Minervini's Trend-Template as a qualifier for identifying stocks and other financial securities in confirmed uptrends. Mark Minervini, a 2x US Investment Champion,...
+PineScript code:
+
+Pine Script™ strategy
+Advanced VWAP_Pullback Strategy_Trend-Template Qualifier
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+//@version=5
+strategy(title='Advanced VWAP-Momentum_Pullback Strategy_Trend-Template Qualifier', initial_capital=100000, pyramiding=0,default_qty_value=100, currency='USD', overlay=true,default_qty_type = strategy.percent_of_equity)
+// copyright JS-TechTrading 2023
+cb1 = input.bool(title="1. Stock price is above MA 150 and 200 ?" , defval=false)
+cb2 = input.bool(title="2. MA 150 is above MA 200 ?", defval=false)
+cb3 = input.bool(title="3. MA 200 is trending at least 1 month(22 days) ?", defval=false)
+cb4 = input.bool(title="4. MA 50 is above both MA 150 and MA 200 ?", defval=false)
+cb5 = input.bool(title="5. The current stock price is trading above MA 50? ", defval=false)
+cb6 = input.bool(title="6. Current stock price is 25% above 52 weeks low ?", defval=false)
+cb7 = input.bool(title="7. Current Price is within 25% of 52 week high ? ", defval=false)
+cb8 = input.bool(title="8. Meet Minervini's Criteria?", defval=false) 
+cb9= input.bool(title="9. Enable IBD Qualifier?",defval = false)
+ibd_threshhold = input.float(title="IBD RS Threshhold 3Months", defval=0.5,step = 0.1)
+//IBD
+src = request.security(syminfo.ticker, 'D', close)
+mo_3 = 0.4 * (src / src[11]) + 0.2 * (src / src[21]) + 0.2 * (src / src[42]) + 0.2 * (src / src[63])
+plot(100 * mo_3, style=plot.style_line, linewidth=1, color=color.new(#1E90FF, 0),display = display.none)
+//// Stoploss and Take Profit Parameters
+// Enable Long Strategy
+////////////
+// Date Range
+start_date = input.int(title='Start Date', defval=1, minval=1, maxval=31, group='Date Range', inline='1')
+end_date = input.int(title='End Date', defval=1, minval=1, maxval=31, group='Date Range', inline='1')
+start_month = input.int(title='Start Month', defval=1, minval=1, maxval=12, group='Date Range', inline='2')
+end_month = input.int(title='End Month', defval=1, minval=1, maxval=12, group='Date Range', inline='2')
+start_year = input.int(title='Start Year', defval=2000, minval=1800, maxval=3000, group='Date Range', inline='3')
+end_year = input.int(title='End Year', defval=2077, minval=1800, maxval=3000, group='Date Range', inline='3')
+in_date_range = time >= timestamp(syminfo.timezone, start_year, start_month, start_date, 0, 0) and time < timestamp(syminfo.timezone, end_year, end_month, end_date, 0, 0)
+//// Indicator Inputs
+// RSI
+rsi_over_sold = input.int(defval=30, minval=1, title='Over Sold Level', group='RSI')
+rsi_over_bought = input.int(defval=70, minval=1, title='Over Bought Level', group='RSI')
+rsi_length = input.int(defval=14, minval=1, title='RSI Length', group='RSI')
+rsi = ta.rsi(close, rsi_length)
+// MACD
+// VWAP
+maSource = input(title='SMA source', defval=close,group = "VWAP")
+maInterval = input.int(title='SMA interval', minval=0, maxval=999, step=1, defval=7,group = "VWAP")
+ma = ta.sma(maSource, maInterval)
+//// Strategy
+// Creating Long and Short Strategy
+was_over_sold = ta.barssince(rsi <= rsi_over_sold) <= 10
+was_over_bought = ta.barssince(rsi >= rsi_over_bought) <= 10
+crossover_bull = ta.crossover(ma, ta.vwap)
+crossover_bear = ta.crossunder(ma, ta.vwap)
+/////////////////
+sma50 = ta.sma(close, 50)
+sma150 = ta.sma(close, 150)
+sma200 = ta.sma(close, 200)
+sma200_22 = sma200[22]
+// 1. stock price is above ma 150 and 200
+is_price_above_sma_150_and_200 = close > sma150 and close > sma200 ? true:false
+c_1 = is_price_above_sma_150_and_200 ? true : false
+// 2. sma 150 is above sma 200
+is_sma_150_above_sma_200 = sma150 > sma200 ? true : false
+c_2 = is_sma_150_above_sma_200 ? true : false
+// 3. sma 200 is trending at least 1 month(22 days)
+is_trending_at_least_1_month = sma200 > sma200_22 ? true : false
+c_3 = is_trending_at_least_1_month ? true : false
+// 4. sma 50 is above both sma 150 and 200
+is_sma_50_above_sma_150_and_200 = sma50 > sma150 and sma50 > sma200 ? true : false
+c_4 = is_sma_50_above_sma_150_and_200 ? true : false
+// 5. current stock price is above sma 50 
+is_current_price_above_ma_50 = close > sma50 ? true:false
+c_5 = is_current_price_above_ma_50 ? true : false
+// 6. current stock price is 25% above 52 weeks low
+// Many of the best are up 100-300% before coming out of consolidation
+high_loopback = input(260, 'High Lookback Length')
+low_loopback = input(260, 'Low Lookback Length')
+highest_price = ta.highest(high, high_loopback)
+lowest_price = ta.lowest(low, low_loopback)
+is_price_25_percent_above_52_weeks_low = (close / lowest_price - 1) * 100 >= 25 ? true : false
+c_6 = is_price_25_percent_above_52_weeks_low ? true : false
+// Show 52 High / Low Line 
+show_52_week_high_low = input(title='Show 52 week highest/lowest', defval=true)
+plot(show_52_week_high_low ? highest_price : na, title='52 Week High', trackprice=true, color=color.new(color.orange, 0), offset=-9999)
+plot(show_52_week_high_low ? lowest_price : na, title='52 Week Low', trackprice=true, color=color.new(color.orange, 0), offset=-9999)
+// 7. Current Price is within 25% of 52 week high
+is_price_within_52_high = (1 - close / highest_price) * 100 <= 25 ? true : false
+c_7 = is_price_within_52_high ? true : false
+// relative strength IBD style
+three_month_rs = 0.4 * (close / close[13])
+six_month_rs = 0.2 * (close / (close[26] * 2))
+nine_month_rs = 0.2 * (close / (close[39] * 3))
+twelve_month_rs = 0.2 * (close / (close[52] * 4))
+rs_rating = (three_month_rs + six_month_rs + nine_month_rs + twelve_month_rs) * 100
+rs_rating_str = str.tostring(rs_rating, '#.00')
+is_rs_rating_more_than_seventy = rs_rating > 70
+//c_8 = is_rs_rating_more_than_seventy ? 1 : 0
+is_meet_all_criteria = is_price_above_sma_150_and_200 and is_sma_150_above_sma_200 and is_trending_at_least_1_month and is_sma_50_above_sma_150_and_200 and is_price_25_percent_above_52_weeks_low and is_price_within_52_high and is_current_price_above_ma_50 and mo_3>=ibd_threshhold
+//count = c_1 + c_2 + c_3 + c_4 + c_5 + c_6 + c_7 
+//
+//selection
+allConditionTrue = true
+if (cb1 == true) 
+    if (allConditionTrue==true and is_price_above_sma_150_and_200==true)
+        allConditionTrue := true
+    else 
+        allConditionTrue := false
+if (cb2 == true) 
+    if (allConditionTrue==true and is_sma_150_above_sma_200==true)
+        allConditionTrue := true
+    else 
+        allConditionTrue := false
+if (cb3 == true) 
+    if (allConditionTrue==true and is_trending_at_least_1_month==true)
+        allConditionTrue := true
+    else 
+        allConditionTrue := false
+if (cb4 == true) 
+    if (allConditionTrue==true and is_sma_50_above_sma_150_and_200==true)
+        allConditionTrue := true
+    else 
+        allConditionTrue := false
+if (cb5 == true) 
+    if (allConditionTrue==true and is_current_price_above_ma_50==true)
+        allConditionTrue := true
+    else 
+        allConditionTrue := false
+if (cb6 == true) 
+    if (allConditionTrue==true and is_price_25_percent_above_52_weeks_low==true)
+        allConditionTrue := true
+    else 
+        allConditionTrue := false
+if (cb7 == true) 
+    if (allConditionTrue==true and is_price_within_52_high==true)
+        allConditionTrue := true
+    else 
+        allConditionTrue := false
+if (cb8 == true) 
+    if (allConditionTrue==true and is_meet_all_criteria==true)
+        allConditionTrue := true
+    else 
+        allConditionTrue := false
+if (cb9 == true) 
+    if (allConditionTrue==true and mo_3>=ibd_threshhold==true)
+        allConditionTrue := true
+    else 
+        allConditionTrue := false
+//
+label1=cb1==true?'1. Stock price is above MA 150 and 200 ? ' + (is_price_above_sma_150_and_200 ? 'yes' : 'no') + '\n' : na
+label2=cb2==true?'2. MA 150 is above MA 200 ? ' + (is_sma_150_above_sma_200 ? 'yes' : 'no') + '\n':na
+label3=cb3==true?'3. MA 200 is trending at least 1 month(22 days) ? ' + (is_trending_at_least_1_month ? 'yes' : 'no') + '\n':na 
+label4=cb4==true?'4. MA 50 is above both MA 150 and MA 200 ? ' + (is_sma_50_above_sma_150_and_200 ? 'yes' : 'no') + '\n':na
+label5=cb5==true?'5. The current stock price is trading above MA 50? ' + (is_current_price_above_ma_50 ? 'yes' : 'no') + '\n':na
+label6=cb6==true?'6. Current stock price is 25% above 52 weeks low ? ' + (is_price_25_percent_above_52_weeks_low ? 'yes' : 'no') + '\n':na
+label7=cb7==true?'7. Current Price is within 25% of 52 week high ? ' + (is_price_within_52_high ? 'yes' : 'no') + '\n':na
+label8=cb8==true?'8. Meet Minervini Criteria? ' + (is_meet_all_criteria ? 'yes' : 'no') + '\n':na
+label9=cb9==true?('9.IBD Qualifier? Enabled') + " "+ (mo_3>=ibd_threshhold?"IBD Mathed":"IBD not matched") +" " + str.tostring(mo_3) : na
+text_ = ""
+text_ += 'Minervinis Strategy' + '\n'
+text_ += '˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭˭' + '\n'
+text_ += 'Selected qualifiers are as below:' + '\n'+ '\n'
+text_ += label1
+text_ += label2
+text_ += label3
+text_ += label4
+text_ += label5
+text_ += label6
+text_ += label7
+text_ += label8
+text_ += label9
+///////
+bars_right = input(5, 'x bars right')
+position = input(close, 'Label position')
+one_color = input(false, 'Label only in one color')
+lab_color = input(#ffd700, 'Label color')
+t = timenow + math.round(ta.change(time) * bars_right)
+var label lab = na
+label.delete(lab)
+lab := label.new(t, position, text=text_, style=label.style_label_left, yloc=yloc.price, xloc=xloc.bar_time, textalign=text.align_left, color=#ffd700, textcolor=color.black)
+//////////////////////////////////
+fastExit = input(false, title='Close Trade when opposite trading signal is triggered')
+clrBars = input(false, title='Mark candles according to order status')
+orderType = input.string('Only Long', title='Long/Short Strategy', options=['Long & Short', 'Only Long', 'Only Short', 'Flip'])
+//
+buy_signal = orderType=='Flip'?was_over_bought and crossover_bear :was_over_sold and crossover_bull 
+sell_signal = orderType=='Flip'?was_over_sold and crossover_bull :was_over_bought and crossover_bear
+//
+//enable_long_strategy = input.bool(true, title='Enable Long Strategy', group='SL/TP für Long Strategie', inline='1')
+//enable_short_strategy = input.bool(false, title='Enable Short Strategy', group='SL/TP For Short Strategy', inline='3')
+//lpp = input.float(title="Long Take Profit (%)", minval=0.0, step=0.1, defval=5, group='SL/TP für Long Strategie', inline='2') / 100
+AQUA = #00FFFFFF
+BLUE = #0000FFFF
+RED = #FF0000FF
+LIME = #00FF00FF
+GRAY = #808080FF
+DARKRED = #8B0000FF
+DARKGREEN = #006400FF
+bclr = not clrBars ? na : strategy.position_size==0 ? GRAY : ta.change(strategy.position_size) and strategy.position_size>0 ? DARKGREEN : strategy.position_size>0? LIME : ta.change(strategy.position_size) and strategy.position_size<0 ?  DARKRED : strategy.position_size<0 ?RED : GRAY
+barcolor(bclr, title='Trade State Bar Colouring')
+//lsl = input.float(title="Long Stop Loss (%)", minval=0.0, step=0.1, defval=5, group='SL/TP für Long Strategie', inline='2') / 100
+isS = input(false, 'Stop Loss Enable')
+slv = input.float(defval=5, title='Stop Loss (%)', minval=0, step=0.1)/100
+// Enable Short Strategy
+isTS = input(false, 'Trailing Stop Loss Enable')
+trailPerc=input.float(title='Trailing Stop Loss (%)', minval=0.0, step=0.1, defval=2) * 0.01
+isTP = input(false, 'Take Profit Enable')
+tpv = input.float(defval=5, title='Take Profit %', minval=0, step=0.1)/100
+// Plot Stoploss & Take Profit Levels
+long_stoploss_price = strategy.position_avg_price * (1 - slv )
+long_takeprofit_price = strategy.position_avg_price * (1 +  tpv)
+short_stoploss_price = strategy.position_avg_price * (1 + slv)
+short_takeprofit_price = strategy.position_avg_price * (1 - tpv)
+// Long Strategy
+if strategy.equity > 0 and (fastExit==false?strategy.position_size ==0:true) and buy_signal and in_date_range and allConditionTrue==true and (orderType=="Only Long" or orderType=='Long & Short' or orderType=='Flip')
+    strategy.entry('Long', strategy.long, alert_message='Open Long Position')
+longStopPrice = 0.0
+longStopPrice := if strategy.position_size>0
+    stopValue = high * (1 - trailPerc)
+    math.max(stopValue, longStopPrice[1])
+else
+    0
+if strategy.position_size>0
+    strategy.exit("LEx","Long",limit = (isTP?long_takeprofit_price:na),stop = isTS?longStopPrice:(isS?long_stoploss_price:na),alert_message='Close Long Position')
+// Short Strategy
+if strategy.equity > 0 and (fastExit==false?strategy.position_size ==0:true) and sell_signal and in_date_range and (orderType=="Short" or orderType=='Long & Short' or orderType=='Flip')
+    strategy.entry('Short', strategy.short, alert_message='Open Short Position')
+shortStopPrice = 0.0
+shortStopPrice := if strategy.position_size<0
+    stopValue = low * (1 + trailPerc)
+    math.min(stopValue, shortStopPrice[1])
+else
+    9999
+if strategy.position_size<0 
+    strategy.exit('SEx',"Short", limit =(isTP?short_takeprofit_price:na) ,stop = isTS?shortStopPrice:(isS?short_stoploss_price:na), alert_message='Your Short SL/TP Limit As Been Triggered.')
+plot(strategy.position_size > 0  and isTS==true?longStopPrice:na,"Long Trailing SL",color=color.red,style = plot.style_linebr)
+plot(strategy.position_size < 0  and isTS==true?shortStopPrice:na,"Short Trailing SL",color=color.red,style = plot.style_linebr)
+plot(strategy.position_size > 0  and isTS==false?long_stoploss_price:na,"Long SL",color=color.red,style = plot.style_linebr)
+plot(strategy.position_size < 0  and isTS==false?short_stoploss_price:na,"Short SL",color=color.red,style = plot.style_linebr)
+plot(strategy.position_size > 0  ?long_takeprofit_price:na,"Long TP",color=color.green,style = plot.style_linebr)
+plot(strategy.position_size < 0  ?short_takeprofit_price:na,"Short TP",color=color.green,style = plot.style_linebr)
+Expand (306 lines)

@@ -1,0 +1,132 @@
+Script Name: S&P Bear Warning Indicator
+Author: gary_trades
+Description: THIS SCRIPT HAS BEEN BUILT TO BE USED AS A S&P500 SPY CRASH INDICATOR ON A DAILY TIME FRAME (should not be used as a strategy).
+THIS SCRIPT HAS BEEN BUILT AS A STRATEGY FOR VISUALIZATION PURPOSES ONLY AND HAS NOT BEEN OPTIMIZED FOR PROFIT. 
+
+The script has been built to show as a lower indicator and also gives visual SELL signal on top when conditions are met....
+PineScript code:
+
+Pine Script™ strategy
+S&P Bear Warning Indicator
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © gary_trades
+//THIS SCRIPT HAS BEEN BUIL TO BE USED AS A S&P500 SPY CRASH INDICATOR (should not be used as a strategy).
+//THIS SCRIPT HAS BEEN BUILT AS A STRATEGY FOR VISUALIZATION PURPOSES ONLY AND HAS NOT BEEN OPTIMISED FOR PROFIT.
+//The script has been built to show as a lower indicator and also gives visual SELL signal on top when conditions are met. BARE IN MIND NO STOP LOSS, NOR ADVANCED EXIT STRATEGY HAS BEEN BUILT.
+//As well as the chart SELL signal an alert has also been built into this script.
+//The script utilizes a VIX indicator (marron line) and 50 period Momentum (blue line) and Danger/No trade zone(pink shading).
+//When the Momentum line crosses down across the VIX this is a sell off but in order to only signal major sell offs the SELL signal only triggers if the momentum continues down through the danger zone.
+//To use this indicator to identify ideal buying then you should only buy when Momentum line is crossed above the VIX and the Momentum line is above the Danger Zone. 
+//This is best used as a daily time frame indicator
+//@version=4
+strategy(title="S&P Bear Warning", shorttitle="Bear Warning", pyramiding=0,
+ currency=currency.USD, default_qty_type=strategy.percent_of_equity, default_qty_value=100,
+ initial_capital=1000, commission_value=0.1)
+//Momentum
+len = input(50, minval=1, title="Length")
+src = input(close, title="Source")
+bandUpper = input( 5)
+bandLower = input(-5)
+// ————— Control plotting of each signal. You could use the same technique to be able to turn acc/dist on/off.
+showVixFix = input(true)
+showMomentum = input(true)
+ 
+mom = src - src[len]
+myAtr = atr(14)
+plot(showMomentum ? mom : na, color=color.blue, title="MOM")
+plot(showMomentum ? 0 : na, color=color.silver, title="MOM Zero line", style=plot.style_circles, transp=100)
+plot(showMomentum ? myAtr : na, color=color.orange, title="ATR", transp=90)
+ 
+//VIX
+VIXFixLength = input(22,title="VIX Fix Length")
+VIXFix = (highest(close,VIXFixLength)-low)/(highest(close,VIXFixLength))*100
+plot(showVixFix ? VIXFix : na, "VIXFix", color=color.maroon)
+ 
+band1 = plot(showVixFix ? bandUpper : na, "Upper Band", color.red, 1, plot.style_line, transp=90)
+band0 = plot(showVixFix ? bandLower : na, "Lower Band", color.red, 1, plot.style_line, transp=90) 
+fill(band1, band0, color=color.red, transp=85, title="Background")
+ 
+//Identify Triggers
+//Back Test Range
+start = timestamp("America/New_York", 2000, 1, 1, 9,30)
+end   = timestamp("America/New_York", 2020, 7, 1, 0, 0)
+//Momentum 
+Long1 = mom > bandUpper
+Short1 = mom < bandLower
+ 
+//VIX
+Long2  = crossover(mom, VIXFix)
+Short2 = crossunder(mom, VIXFix)
+//Warning Alert
+SellAlert = Short1
+alertcondition(SellAlert, title="Sell SPY", message="Warning Selling off {{ticker}}, price= {{close}}") 
+//Entry and Exit
+if time >= start and time <= end
+    strategy.entry("SELL", false, when = Short1)
+ 
+strategy.close("SELL", when = Long2)
+Expand (63 lines)

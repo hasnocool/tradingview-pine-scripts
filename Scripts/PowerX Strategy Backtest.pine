@@ -1,0 +1,257 @@
+Script Name: PowerX Strategy Backtest
+Author: drg86
+Description: This script implements the Power X trading strategy by Markus Heitkoetter and Rockwell Trading. The strategy is described in detail in "The PowerX Strategy: How to Trade Stocks and Options in Only 15 Minutes a Day" written by Markus Heitkoetter.
+
+The Power X trading strategy uses RSI, Slow Stochastic and MACD indicators. When RSI and Slow Stochastic are both...
+PineScript code:
+
+Pine Script™ strategy
+PowerX Strategy Backtest
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+//@version=5
+strategy('PowerX Strategy Backtest', overlay = true, initial_capital = 10000)
+// Make input options that configure backtest date range
+var startDate = input.int(title = "Start Date", defval = 15, minval = 1, maxval = 31)
+var startMonth = input.int(title = "Start Month", defval = 9, minval = 1, maxval = 12)
+var startYear = input.int(title = "Start Year", defval = 2019, minval = 1800, maxval = 2100)
+var endDate = input.int(title = "End Date", defval = 15, minval = 1, maxval = 31)
+var endMonth = input.int(title = "End Month", defval = 9, minval = 1, maxval = 12)
+var endYear = input.int(title = "End Year", defval = 2021,minval = 1800, maxval = 2100)
+     
+// Make input options that select the direction of trades
+var short = input.bool(title = "Short positions", defval = false)
+var long = input.bool(title = "Long positions", defval = true)
+// Make input option for the capital at risk
+var capital_at_risk = input.float(title = "Capital at risk [%]", minval = 0, maxval = 100, defval = 2)/100
+// Make input options for risk and reward
+var risk = input.float(title = "Risk", minval = 0, defval = 1.5)
+var reward = input.float(title = "Reward", minval = 0, defval = 3)
+// Make input option for the duration of pending trades
+// If a trade is pending for more than <decay> time units it is cancelled and a 
+// new trade is opened
+var decay = input.int(title = "Max. duration of pending trades", minval = 0, defval = 7)
+// Define PowerX signal
+[macdLine, signalLine, histLine] = ta.macd(close, 12, 26, 9)
+rsiLine = ta.rsi(close, 7)
+stochLine = ta.sma(ta.sma(ta.stoch(close, high, low, 14), 3), 3)
+signal = histLine > 0 and rsiLine > 50 and stochLine > 50 ? 'buy' : histLine <= 0 and rsiLine <= 50 and stochLine <= 50 ? 'sell' : 'none'
+palette = signal == 'buy' ? color.lime : signal == 'sell' ? color.red : color.black
+plotbar(open, high, low, close, color=palette)
+// Define variables to define entry and exit prices
+var entry = float(na)
+var quantity = int(na)
+var stop_loss = float(na)
+var take_profit = float(na)
+// Variable to track the state
+// -2 = pending short
+// -1 = active short
+// 0 = ready
+// 1 = active long
+// 2 = pending long
+var state = 0
+adr = ta.sma(high - low, 7)
+// Look if the close time of the current bar falls inside the date range
+inDateRange = (time >= timestamp(syminfo.timezone, startYear,
+         startMonth, startDate, 0, 0)) and
+     (time <= timestamp(syminfo.timezone, endYear, endMonth, endDate, 0, 0))
+if (inDateRange)
+    // Reduce the decay to invalidate pending positions
+    decay := decay - 1
+    
+    // If current open position is too old open a new one
+    if (state == 2 and decay <= 0)
+        state := 0
+        
+    // On a neutral signal exit all (pending) positions
+    if (signal == 'none')
+        strategy.close("long")
+        strategy.close("short")
+        strategy.cancel("long")
+        strategy.cancel("short")
+        state := 0
+    
+    // On signal direction change reset the state
+    if (signal != signal[1])
+        // If open position close
+        if (state == -1 or state == 1)
+            strategy.close("long")
+            strategy.close("short")
+        // If pending position cancel
+        else 
+            strategy.cancel("long")
+            strategy.cancel("short")
+        state := 0
+    
+    // If pending position has been filled change state to active
+    if (state == 2 and strategy.opentrades > 0)
+        state := 1
+    
+    if (state == -2 and strategy.opentrades < 0)
+        state := -1
+        
+    // If active position has been closed change state to ready
+    if ((state == -1 or state == 1) and strategy.opentrades == 0)
+        state := 0
+    // On a buy signal define entry and exit prices and place orders
+    if (signal == 'buy' and long)
+        if (state == 0)
+            entry := high + 0.01
+            quantity := math.floor(strategy.initial_capital * capital_at_risk / (risk * adr))
+            stop_loss := entry - risk * adr
+            take_profit := entry + reward * adr
+            state := 2
+            decay := 7
+            strategy.entry(id = "long", direction = strategy.long, qty = quantity,stop = entry)
+            strategy.exit(id = "long", qty_percent = 100, limit = take_profit,stop = stop_loss)
+    
+    // On a sell signal define entry and exit prices and place orders
+    if (signal == 'sell' and short)
+        if (state == 0)
+            entry := low - 0.01
+            quantity := math.floor(strategy.initial_capital * capital_at_risk / (risk * adr))
+            stop_loss := entry + risk * adr
+            take_profit := entry - reward * adr
+            state := -2
+            decay := 7
+            strategy.entry(id = "short", direction = strategy.short,qty = quantity, stop = entry)
+            strategy.exit(id = "short", qty_percent = 100, limit = take_profit, stop = stop_loss)
+            
+// Debugging
+plotchar(state, "state", "", location.top)
+plotchar(decay, "decay", "", location.top)
+plotchar(adr, "ADR", "", location.top)
+plotchar(entry, "entry", "", location.top)
+plotchar(quantity, "quantity", "", location.top)
+plotchar(stop_loss, "stop loss", "", location.top)
+plotchar(take_profit, "take profit", "", location.top)
+Expand (130 lines)

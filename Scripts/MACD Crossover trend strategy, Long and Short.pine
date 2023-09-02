@@ -1,0 +1,207 @@
+Script Name: MACD Crossover trend strategy, Long and Short
+Author: conflixx95493
+Description: Hey everybody,
+
+This is my first strategy and script I wrote mostly myself. There's tons of content out there to learn how to code in Pinescript and it's exactly what I wanted and needed in this time of my life.
+
+In any case, I made a rather simple MACD crossover strategy that only takes trades in the direction of both EMA and SMA (there are inputs to change the...
+PineScript code:
+
+Pine Script™ strategy
+MACD Crossover trend strategy, Long and Short
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+//@version=4
+// Welcome to yet another script! This time I went back and see what worked and what didn't work. I went back to my previous scripts and I ended up finetuning a lot. 
+// This script is basically an MACD + Donchian Channel mix. Where we use MACD as our entry signals and Donchian's upper and lower channels are our exit signals.
+// It really is a mixed bag of MACD and Donchian Channel because I copy and pasted a bit of code from both of them and just fine tuned them till they worked like I intended.
+// Halfway writing this script I decided I want to have two options in this strategy. I wanted an MACD inverse crossover to be our exit signal as well as the pullback of the donchian channels which is basically either the high or low of the previous 20 candles.
+// The entry and exit signals are explained below at the strategy code
+strategy("MACD inverse cross / pullback", overlay = false, pyramiding = 0, default_qty_type = strategy.cash, default_qty_value = 150, initial_capital = 1000, currency = currency.USD, commission_type = "percent", commission_value = 0.036)
+// Getting inputs
+fast_length     = input(title = "Fast Length",              type = input.integer,   defval = 12,            group = "MACD Inputs")
+slow_length     = input(title = "Slow Length",              type = input.integer,   defval = 26,            group = "MACD Inputs")
+src             = input(title = "Source",                   type = input.source,    defval = close,         group = "MACD Inputs")
+signal_length   = input(title = "Signal Smoothing",         type = input.integer,   defval = 9,             group = "MACD Inputs",      maxval = 50,    minval = 1)
+sma_source      = input(title = "Simple MA (Oscillator)",   type = input.bool,      defval = false,         group = "MACD Inputs")
+sma_signal      = input(title = "Simple MA (Signal Line)",  type = input.bool,      defval = false,         group = "MACD Inputs")
+emaInput        = input(title = "EMA Input",                type = input.integer,   defval = 200,           group = "Indicators",       maxval = 400,   minval = 10,   step = 1)
+// Basically the Donchian Channels, it's where I got the idea from, we use this to determine the pullback of the trend. This isn't waterproof but at least it's automated and customisable through the inputs.
+// For anyone who doesn't know, Donchian Channels looks at the previous highs and lows of the period that we set, which by default is 20. So in the past 20 candles, the upper channel shows the highest price of the previous 20 candles and vice versa.
+length          = input(title = "Pullback Period",          type = input.integer,   defval = 20,            group = "Pullback Period",  minval=1)
+riskreward      = input(title = "Risk/Reward Ratio",        type = input.float,     defval = 1.50,          group = "Risk/Reward",      maxval = 100,   minval = 0.01, step = 0.01)
+strategyinput   = input(title = "Strategy",                 type = input.string,    defval = "Pullback",    group = "Strategy",         options = ["Pullback", "MACD inverse cross"])
+lower           = lowest(length)
+upper           = highest(length)
+// Backtest input range
+fromMonth       = input(defval = 1,    title = "From Month",        type = input.integer,   minval = 1,     maxval = 12,    group = "Backtest Date Range")
+fromDay         = input(defval = 1,    title = "From Day",          type = input.integer,   minval = 1,     maxval = 31,    group = "Backtest Date Range")
+fromYear        = input(defval = 2000, title = "From Year",         type = input.integer,   minval = 1970,                  group = "Backtest Date Range")
+thruMonth       = input(defval = 1,    title = "Thru Month",        type = input.integer,   minval = 1,     maxval = 12,    group = "Backtest Date Range")
+thruDay         = input(defval = 1,    title = "Thru Day",          type = input.integer,   minval = 1,     maxval = 31,    group = "Backtest Date Range")
+thruYear        = input(defval = 2099, title = "Thru Year",         type = input.integer,   minval = 1970,                  group = "Backtest Date Range")
+// Date variable, we use this in our strategy.entry condition to determine whether it should place a trade or not. This way only the data we want to backtest is being backtested.
+inDataRange     = (time >= timestamp(syminfo.timezone, fromYear, fromMonth, fromDay, 0, 0)) and (time < timestamp(syminfo.timezone, thruYear, thruMonth, thruDay, 0, 0))
+// Calculations, from the built in MACD indicator, have nothing to say about this.
+fast_ma = sma_source ? sma(src, fast_length) : ema(src, fast_length)
+slow_ma = sma_source ? sma(src, slow_length) : ema(src, slow_length)
+macd    = fast_ma - slow_ma
+signal  = sma_signal ? sma(macd, signal_length) : ema(macd, signal_length)
+hist    = macd - signal
+// Long / short entry and exit conditions also an EMA check based in the input data
+longEntryCondition  = crossover(macd, signal) and macd > 0 and signal > 0
+shortEntryCondition = crossunder(macd, signal) and macd < 0 and signal < 0
+longExitCondition   = crossunder(macd, signal)
+shortExitCondition  = crossover(macd, signal)
+emaCheck            = ema(close, emaInput)
+var pullbackLong    = 0.0
+var pullbackShort   = 0.0
+var longprofit      = 0.0
+var shortprofit     = 0.0
+// Strategy
+// For anyone who can't read the code, strategy goes as follows: 
+// Long entry signal is when the MACD line crosses the signal line upwards, below the zero point of the histogram, when price is above the EMA and if there's a position open we don't open a new one.
+// Short entry signal is when the MACD line crosses the signal line downwards, above the zero point of the histogram, when the price is below the EMA and if there's a position open we don't open a new one.
+// Exit signals are either the 20 period low, for long positions, or 20 period high, for short positions. 
+// Profit is calculated with the Risk Reward ratio input which by default is 1.5.
+// The difference between the price, when we open a position, and the pullback. Multiplied by the risk reward ratio and either added, if we're long, or subtracted, if we're short, with the current price.
+// This way we only take trades in the direction of the trend, we only use strong long or short entry signals from the MACD indicator and we use the donchian channels upper and lower channel to calculate the stop loss and take profit.
+// Like I said, halfway through writing the script I wanted to change a little bit, because I want to give us options, whether we want to use the pullback as our stoploss or whether we use the MACD crossover again as our exit signal only when it inverses.
+// To be clear, when we set the strategy.input to MACD inverse cross that means when we enter a position, short or long, we exit that position the moment the MACD line inversely crosses the signal line.
+if longEntryCondition and strategy.position_size == 0 and inDataRange and close > emaCheck
+    strategy.entry("Long Entry", strategy.long, comment = "Long Buy")
+    pullbackLong := lower * 0.99
+    longprofit := ((((1 - lower / close) * riskreward) + 1) * close)
+if strategyinput == "Pullback"
+    strategy.exit("Long Exit", "Long Entry", limit = longprofit, stop = pullbackLong, comment = "Pullback Long Exit")
+if strategyinput == "MACD inverse cross"
+    strategy.close("Long Entry", when = longExitCondition, comment = "MACD Inverse cross exit Long")
+if shortEntryCondition and strategy.position_size == 0 and inDataRange and close < emaCheck
+    strategy.entry("Short Entry", strategy.short, comment = "Short Buy")
+    pullbackShort := upper * 1.01
+    shortprofit := (close - ((((1 - close / upper) * riskreward) * close)))
+if strategyinput == "Pullback"
+    strategy.exit("Short Exit", "Short Entry", limit = shortprofit, stop = pullbackShort, comment = "Pullback Short Exit")
+if strategyinput == "MACD inverse cross"
+    strategy.close("Short Entry", when = shortExitCondition, comment = "MACD Inverse cross exit Short")
+// To make sure the backtesting doesn't leave a position open beyond, or before, our applied dates
+if (not inDataRange)
+    strategy.close_all()
+// Plotting the MACD on the chart, this is the built-in MACD indicator.
+col_grow_above  = #26A69A
+col_grow_below  = #FFCDD2
+col_fall_above  = #B2DFDB
+col_fall_below  = #EF5350
+col_macd        = #0094ff
+col_signal      = #ff6a00
+plot(hist, title="Histogram", style=plot.style_columns, color=(hist>=0 ? (hist[1] < hist ? col_grow_above : col_fall_above) : (hist[1] < hist ? col_grow_below : col_fall_below) ), transp=0 )
+plot(macd, title="MACD", color=col_macd, transp=0)
+plot(signal, title="Signal", color=col_signal, transp=0)
+// These two plots are there to check whether the pullback calculation is working as intended. If you want to use these you have to set overlay to true in the very first string of code. 
+// Also, make the MACD plots(the three above this one) comments with // before it. Otherwise your chart will be unreadable.
+// Adding the Donchian Channels helps you visualise whether the pullback variables are working properly.
+// plot(pullbackShort)
+// plot(pullbackLong)
+Expand (103 lines)

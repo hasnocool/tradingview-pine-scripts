@@ -1,0 +1,175 @@
+Script Name: TEMA Cross +HTF Backtest
+Author: Seltzer_
+Description: This is a follow up to a previous script release called " TEMA Cross Backtest ".
+
+This new strategy uses two TEMA crosses, one for trend direction, one for entry and exit. The entry and exit parameters are the same as the previous script. The trend direction is based on a user configurable higher timeframe TEMA cross which determines when to take longs or shorts....
+PineScript code:
+
+Pine Script™ strategy
+TEMA Cross +HTF Backtest
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Seltzer_
+//@version=4
+strategy(title="TEMA Cross +HTF Backtest", shorttitle="TEMA_X_+HTF_BT", overlay=true, commission_type=strategy.commission.percent, commission_value=0, initial_capital = 500,  default_qty_type=strategy.cash, default_qty_value=500)
+orderType = input("Longs+Shorts",title="What type of Orders", options=["Longs+Shorts","LongsOnly","ShortsOnly"])
+isLong   = (orderType != "ShortsOnly")
+isShort  = (orderType != "LongsOnly")
+// Backtest Section {
+// Backtest inputs
+FromMonth = input(defval=1, title="From Month", minval=1, maxval=12)
+FromDay = input(defval=1, title="From Day", minval=1, maxval=31)
+FromYear = input(defval=2020, title="From Year", minval=2010)
+ToMonth = input(defval=1, title="To Month", minval=1, maxval=12)
+ToDay = input(defval=1, title="To Day", minval=1, maxval=31)
+ToYear = input(defval=9999, title="To Year", minval=2017)
+// Define backtest timewindow
+start = timestamp(FromYear, FromMonth, FromDay, 00, 00)  // backtest start window
+finish = timestamp(ToYear, ToMonth, ToDay, 23, 59)  // backtest finish window
+window() =>  // create function "within window of time"
+    time >= start and time <= finish ? true : false
+// }
+//TEMA Section {
+//LTF Section
+xLength = input(20, minval=1, title="Fast Length")
+xPrice = close
+xEMA1 = ema(xPrice, xLength)
+xEMA2 = ema(xEMA1, xLength)
+xEMA3 = ema(xEMA2, xLength)
+xnRes = (3 * xEMA1) - (3 * xEMA2) + xEMA3
+xnResP = plot(xnRes, color=color.green, linewidth=2, title="TEMA1")
+yLength = input(60, minval=1, title="Slow Length")
+yPrice = close
+yEMA1 = ema(yPrice, yLength)
+yEMA2 = ema(yEMA1, yLength)
+yEMA3 = ema(yEMA2, yLength)
+ynRes = (3 * yEMA1) - (3 * yEMA2) + yEMA3
+ynResP = plot(ynRes, color=color.red, linewidth=2, title="TEMA2")
+fill(xnResP, ynResP, color=xnRes > ynRes ? color.green : color.red, transp=65, editable=true)
+//HTF Section
+HTFres = input(defval="D", type=input.resolution, title="HTF Resolution")
+f_secureSecurity(_symbol, _res, _src) => security(_symbol, _res, _src[1], lookahead = barmerge.lookahead_on)
+HTFxLength = input(5, minval=1, title="HTF Fast Length")
+HTFxPrice = close
+HTFxEMA1 = f_secureSecurity(syminfo.tickerid, HTFres, ema(HTFxPrice, HTFxLength))
+HTFxEMA2 = f_secureSecurity(syminfo.tickerid, HTFres, ema(HTFxEMA1, HTFxLength))
+HTFxEMA3 = f_secureSecurity(syminfo.tickerid, HTFres, ema(HTFxEMA2, HTFxLength))
+HTFxnRes = (3 * HTFxEMA1) - (3 * HTFxEMA2) + HTFxEMA3
+HTFxnResP = plot(HTFxnRes, color=color.yellow, linewidth=1,transp=30, title="TEMA1")
+HTFyLength = input(15, minval=1, title="HTF Slow Length")
+HTFyPrice = close
+HTFyEMA1 = f_secureSecurity(syminfo.tickerid, HTFres, ema(HTFyPrice, HTFyLength))
+HTFyEMA2 = f_secureSecurity(syminfo.tickerid, HTFres, ema(HTFyEMA1, HTFyLength))
+HTFyEMA3 = f_secureSecurity(syminfo.tickerid, HTFres, ema(HTFyEMA2, HTFyLength))
+HTFynRes = (3 * HTFyEMA1) - (3 * HTFyEMA2) + HTFyEMA3
+HTFynResP = plot(HTFynRes, color=color.purple, linewidth=1, transp=30, title="TEMA2")
+// HTF Plot
+fill(HTFxnResP, HTFynResP, color=HTFxnRes > HTFynRes ? color.yellow : color.purple, transp=90, editable=true)
+bgcolor(HTFxnRes > HTFynRes ? color.yellow : na, transp=90, editable=true)
+bgcolor(HTFxnRes < HTFynRes ? color.purple : na, transp=90, editable=true)
+// }
+// Buy and Sell Triggers
+LongEntryAlert = xnRes > ynRes and HTFxnRes > HTFynRes and window()
+LongCloseAlert = xnRes < ynRes and window()
+ShortEntryAlert = xnRes < ynRes and HTFxnRes < HTFynRes and window()
+ShortCloseAlert = xnRes > ynRes
+// Entry & Exit signals
+if isLong
+    strategy.entry("Long", strategy.long, when = LongEntryAlert)
+    strategy.close("Long", when = LongCloseAlert)
+if isShort
+    strategy.entry("Short", strategy.short, when = ShortEntryAlert)
+    strategy.close("Short", when = ShortCloseAlert)
+Expand (92 lines)

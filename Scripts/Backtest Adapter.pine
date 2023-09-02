@@ -1,0 +1,66 @@
+Script Name: Backtest Adapter
+Author: jdehorty
+Description: This is a proof-of-concept Backtest Adapter that can be used with my recent publication "Machine Learning: Lorentzian Classification" located here:
+
+  
+
+This adapter is helpful because it enables interactive backtesting with TradingView's built-in "Strategy Tester" framework without the need to translate the logic from an "indicator" script to a "strategy"...
+PineScript code:
+
+Pine Script™ strategy
+Backtest Adapter
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © jdehorty
+//@version=5
+strategy("Backtest Adapter", overlay=true)
+useDateFilter = input.bool(true, title="Begin Backtest at Start Date", group="Backtest Time Period")
+backtestStartDate = input.time(timestamp("11 May 2022"), title="Start Date", group="Backtest Time Period")
+inTradeWindow = not useDateFilter or time >= backtestStartDate
+src = input.source(title="Source", defval=close, tooltip="Source of the input data", group="General Settings")
+// Set up your entry and exit conditions for positions based on the indicator stream. 
+// The values here must correspond to the values in the Source indicator.
+startLongTrade = src == 1
+endLongTrade = src == 2
+startShortTrade = src == -1
+endShortTrade = src == -2
+transactionQty = 1
+if startLongTrade and inTradeWindow
+    strategy.order("Enter Long", strategy.long, qty=transactionQty) 
+    
+if endLongTrade and strategy.position_size > 0 and inTradeWindow
+    strategy.order("Exit Long", strategy.short, qty=transactionQty)
+if startShortTrade and inTradeWindow
+    strategy.order("Enter Short", strategy.short, qty=transactionQty)
+if endShortTrade and strategy.position_size < 0 and inTradeWindow
+    strategy.order("Exit Short", strategy.long, qty=transactionQty)
+Expand (29 lines)

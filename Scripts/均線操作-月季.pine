@@ -1,0 +1,66 @@
+Script Name: 均線操作-月季
+Author: kururu965
+Description: TestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTest
+TestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTest
+TestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTestTest
+TestTestTestTestTestTestTestTestTestTestTestTestTest...
+PineScript code:
+
+Pine Script™ strategy
+均線操作-月季
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+//@version=4
+strategy("均線操作-月季", overlay=true, initial_capital = 100000, default_qty_type = strategy.percent_of_equity, default_qty_value = 30)
+sma20 = sma(close, 20)
+sma60 = sma(close, 60)
+plot(sma20, title="月線", color=color.purple,linewidth=2)
+plot(sma60, title="季線", color=color.yellow,linewidth=2)
+backtest_year = input(title="backtest_year",type=input.integer,defval=2020)
+backtest_month = input(title="backtest_month",type=input.integer,defval=10)
+backtest_date = input(title="backtest_date",type=input.integer,defval=1)
+backtest_start_time = timestamp(backtest_year,backtest_month,backtest_date,0,0,0)
+to_long = sma20 > sma60  and close > highest(10)*0.9 // 黃金交叉
+to_close = sma20 < sma60 // 死亡交叉
+to_exit = close < highest(10)*0.9 //股價嚴重回檔
+to_stop = close < 0.9*strategy.position_avg_price 
+// to_long = crossover(sma20, sma60)   // 黃金交叉
+// to_close = crossunder(sma20, sma60) // 死亡交叉
+//plotchar(to_long, char="B", text="買", color=color.red, location=location.belowbar)
+//plotchar(to_close, char="S", text="賣", color=color.green, location=location.abovebar)
+//strategy.close("open long",when = tslide, comment="多單滑價7%出場")
+if time > backtest_start_time
+    strategy.entry("golden", strategy.long,  when=to_long,comment="多單入場")
+    strategy.close("golden",  when=to_exit,comment="多單滑價7%出場")
+    strategy.close("golden",  when=to_close,comment="月線季線死亡交叉")
+    strategy.close("golden",  when=to_stop,comment="虧損10%強迫停損")
+Expand (30 lines)

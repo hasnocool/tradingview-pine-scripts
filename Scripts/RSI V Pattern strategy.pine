@@ -1,0 +1,192 @@
+Script Name: RSI V Pattern strategy
+Author: mohanee
+Description: This strategy based on RSI  for  swing trading or short term trading 
+
+Strategy Rules
+=============
+
+LONG
+
+1. ema20 is above ema50  --- candles are colored  green on the chart
+2. RSI value sharply coming up 
+    
+    previous candle1  low is previous candle2 low  and  previous candle1 RSI value is less than  previous candle2
+    current candle RSI value is greater...
+PineScript code:
+
+Pine Script™ strategy
+RSI V Pattern strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mohanee
+//@version=4
+//strategy("RSI V Pattern", overlay=true)
+strategy(title="RSI V Pattern", overlay=false, pyramiding=3, default_qty_type=strategy.percent_of_equity , default_qty_value=10,   initial_capital=10000, currency=currency.USD,process_orders_on_close=true)
+//Strategy Rules
+//ema20 is above ema50  --- candles are colored  green on the chart
+//RSI value sharply coming up which makes a V shape ,  colored in yellow on the chart
+//RSI V pattern should occur from below 30    
+len = input(title="RSI Period", minval=1, defval=5)
+buyRsiEntry = input(title="Buy at RSI ", minval=5, defval=30, maxval=60)
+stopLoss = input(title="Stop Loss %", minval=1, defval=8)
+myRsi = rsi(close,len)
+longEmaVal=ema(close,50)
+shortEmaVal=ema(close,20)
+//plot emas 
+//plot(longEmaVal, title="Long EMA" ,linewidth=2, color=color.orange, trackprice=true)
+//plot(shortEmaVal, title="Short EMA" ,linewidth=2, color=color.green, trackprice=true)
+isEma20AboveEma50=ema(close,20)>ema(close,50) ? true : false 
+//V Pattern
+longCondition =  ema(close,20)>ema(close,50)   and (low[1]<low[2] and  low[1]<low[3]) and (myRsi>myRsi[1] and myRsi>myRsi[2] ) and crossover(myRsi,buyRsiEntry) //  (   and myRsi<60)
+patternText=" V "
+//W Pattern
+//longCondition = isEma20AboveEma50 and ( low[1]<low[4] and  (low[1]<low[2] or low[1]<low[3])) and (myRsi[1]<65 and myRsi[3]<65 and myRsi[2]>myRsi[3] and myRsi[2]>myRsi[1] and myRsi[1]>=myRsi[3] and myRsi>myRsi[1] and myRsi>30) 
+//longCondition = isEma20AboveEma50 and ( low[1]<low[4] or low[1]<low[3] ) and (myRsi[2]>myRsi[3] and myRsi[2]>myRsi[1] and myRsi[1]>=myRsi[3] )  and myRsi>=30 and myRsi<60
+//  myRsi[1]=myRsi[3]  exact W pattern
+//  myRsi[1]>myRsi[3]  ugly W pattern
+//patternText=" W "
+//and crossover(myRsi,30)
+//(myRsi<60 and myRsi>30)  and myRsi>myRsi[1] and (myRsi[1]<myRsi[2]  or  myRsi[1]<myRsi[3]) and (myRsi[2]<30)  and (myRsi[3]<30 and myRsi[4]>=30)
+//barcolor(shortEmaVal>longEmaVal?color.green:color.purple)
+//longCondition = crossover(sma(close, 14), sma(close, 28))
+barcolor(longCondition?color.yellow:na)
+strategy.entry("RSI_V_LE", strategy.long, when=longCondition )
+//stoploss value at 10%
+stopLossValue=strategy.position_avg_price -  (strategy.position_avg_price*stopLoss/100) 
+//stopLossValue=valuewhen(longCondition,low,3)
+//takeprofit at RSI highest  reading
+//at RSI75 move the stopLoss to entry price
+moveStopLossUp=strategy.position_size>0 and crossunder(myRsi,70)
+barcolor(moveStopLossUp?color.blue:na)
+stopLossValue:=crossover(myRsi,70) ? strategy.position_avg_price:stopLossValue
+//stopLossValue:=moveStopLossUp?strategy.position_avg_price:stopLossValue
+rsiPlotColor=longCondition ?color.yellow:color.purple
+rsiPlotColor:= moveStopLossUp ?color.blue:rsiPlotColor
+plot(myRsi, title="RSI", linewidth=2, color=rsiPlotColor)
+//longCondition?color.yellow:#8D1699)
+hline(50, title="Middle Line", linestyle=hline.style_dotted)
+obLevel = hline(75, title="Overbought", linestyle=hline.style_dotted)
+osLevel = hline(25, title="Oversold", linestyle=hline.style_dotted)
+fill(obLevel, osLevel, title="Background", color=#9915FF, transp=90)
+plotshape(
+     longCondition ? myRsi[1] : na,
+     offset=-1,
+     title="V Pattern",
+     text=patternText,
+     style=shape.labelup,
+     location=location.absolute,
+     color=color.purple,
+     textcolor=color.yellow,
+     transp=0
+     )   
+     
+    
+//when RSI crossing down 70 , close 1/2 position and move stop loss to average entry price
+strategy.close("RSI_V_LE",  qty=strategy.position_size*1/2, when=strategy.position_size>0 and crossunder(myRsi,70))
+//when RSI reaches high reading 90 and crossing down close 3/4 position
+strategy.close("RSI_V_LE",  qty=strategy.position_size*3/4, when=strategy.position_size>0 and crossunder(myRsi,90))
+//close everything when Rsi goes down below to 10 or stoploss hit  
+//just keeping RSI cross below 10 , can work as stop loss , which also keeps you long in the trade ... however sharp declines could  make large loss
+//so I combine RSI goes below 10 OR stoploss hit  , whichever comes first - whole position closed
+longCloseCondition=close<stopLossValue
+//crossunder(myRsi,10)  or close<stopLossValue
+strategy.close("RSI_V_LE", qty=strategy.position_size,when=longCloseCondition )
+Expand (98 lines)

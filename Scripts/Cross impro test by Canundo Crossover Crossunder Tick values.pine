@@ -1,0 +1,92 @@
+Script Name: Cross impro test by Canundo Crossover Crossunder Tick values
+Author: Canundo
+Description: This is a script where I tried to check the following things:
+
+ 
+ Even thought the tick of an asset is, for example 0.5, there are calculated prices, like SMA's that have even more decimals. Leading to crosses happening that for example happen at the same price. Consequently triggering totally useless in side markets.  What happens if SMA values are restricted to...
+PineScript code:
+
+Pine Script™ strategy
+Cross impro test by Canundo Crossover Crossunder Tick values
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Canundo
+//@version=4
+strategy("Cross impro test by Canundo", overlay=true)
+//Run on 1 min chart for better testing cases where x and y of crossover have the same value.
+EnableStrictCross = input(title="Enable Strict Cross (rounds SMA to pips/ticks), otherwise standard", type=input.bool, defval=true) //Disable to see differences
+BacktestTradeCandleCount = input(title="Backtest Trade Candle Count", type=input.integer, defval=3000) //Avoid error for too many trades
+MinTick = input(title="Change mintick for Cross Check (0 = Standard Tick/Pip, Chose pips like 0.5, 10, 100, 0.002)",
+     type=input.float, defval=0) //Precision of round to pip function
+SpreadBetween = input(title="Add spread between values to be crossed.",
+     type=input.float, defval=0)
+     
+//Calculate Timeframe for Backtest demonstration
+starttime = 0, starttime := starttime[1] != 0 ? starttime[1] : timenow
+timeFrame = (time_close - time_close[1]) * BacktestTradeCandleCount
+f_tWindow() => time >= starttime - timeFrame ? true : false
+//Rounding function
+mult = 1 / (MinTick == 0 ? syminfo.mintick : MinTick)
+f_roundToPip(x)=> (x-floor(x*mult)/mult) < (ceil(x*mult)/mult-x) ? floor(x*mult)/mult : ceil(x*mult)/mult
+//Very short SMA's to show the effect of crossovers und price values with more decimals than the tick has
+sma1 = sma(close, 2), sma1impr = EnableStrictCross ? f_roundToPip(sma1) : sma1
+sma2 = sma(close, 3), sma2impr = EnableStrictCross ? f_roundToPip(sma2) : sma2
+longCondition = crossover(sma1impr - SpreadBetween/2, sma2impr + SpreadBetween/2)
+if (longCondition and f_tWindow())
+    strategy.entry("Long", strategy.long)
+shortCondition = crossunder(sma1impr + SpreadBetween/2, sma2impr - SpreadBetween/2)
+if (shortCondition and f_tWindow())
+    strategy.entry("Short", strategy.short)
+//Show changed SMA as line, show normal SMA with crosses.
+plot(sma1, title="SMA1", color=color.red, linewidth=2, style=plot.style_cross)
+plot(sma1impr, title="SMA1 Improved", color=color.red, linewidth=2, style=plot.style_cross)
+plot(strategy.position_size < 0 ? sma1impr - SpreadBetween/2 : sma1impr + SpreadBetween/2, title="SMA1 Improved + Spread", color=color.red, linewidth=1)
+plot(sma2, title="SMA2", color=color.green, linewidth=2, style=plot.style_cross)
+plot(sma2impr, title="SMA2 Improved ", color=color.green, linewidth=2, style=plot.style_cross)
+plot(strategy.position_size < 0 ? sma2impr + SpreadBetween : sma2impr - SpreadBetween, title="SMA2 Improved + Spread", color=color.green, linewidth=1)
+plot(sma1*1000, title="sma1*1000 (Show hidden decimal values)", transp=100)
+Expand (44 lines)

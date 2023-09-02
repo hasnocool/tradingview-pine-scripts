@@ -1,0 +1,163 @@
+Script Name: Maguila Strategy by Rodrigo Cohen
+Author: cbed
+Description: READ BEFORE USE!!! 
+
+ 
+ !!!ALERT!!!! THIS CODE ONLY WORKS WITH   WDO  AND  WIN , BOTH WITH TIMEFRAMES 1 MINUTE AND 5 MINUTE.
+ This is a test to the Maguila strategy created by Rodrigo Cohen.
+ This code MUST be validaded by Rodrigo Cohen, use ONLY for tests.
+ Some results are different from Cohen's videos, so the McGuinley indicator needs some ajustments.
+ 
+
+...
+PineScript code:
+
+Pine Script™ strategy
+Maguila Strategy by Rodrigo Cohen
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+// !!!ALERT!!!! THIS CODE ONLY WORKS WITH WDO AND WIN, BOTH WITH TIMEFRAMES 1 MINUTE AND 5 MINUTE
+// 
+// Developed by Caio Bedeschi
+// 
+// This is a test to the Maguila strategy created by Rodrigo Cohen.
+// 
+// This code MUST be validaded by Rodrigo Cohen, use ONLY for tests.
+//
+// Some results are different from Cohen's videos, so the McGuinley indicator needs some ajustments.
+//@version=4
+strategy("Maguila Strategy by Rodrigo Cohen", overlay=true, pyramiding=0)
+/////////////////////////BASIC CONFIGS/////////////////////////
+int length = input(title="Maguila Periods", type=input.integer, defval=20)
+int fastEmaValue = na
+int slowEmaValue = na
+int gain = na
+int loss = na
+// With timeframe of 5 periods this strategy works better with EMAs: 17 and 34
+if timeframe.period != "5"
+    fastEmaValue := input(title="Fast EMA (1m)", type=input.integer, defval=21)
+    slowEmaValue := input(title="Slow EMA (1m)", type=input.integer, defval=42)
+else
+    fastEmaValue := input(title="Fast EMA (5m)", type=input.integer, defval=17)
+    slowEmaValue := input(title="Slow EMA (5m)", type=input.integer, defval=34)
+// Different gains for different roots
+if syminfo.root == "WDO"
+    gain := input(title="WDO - Gain (points)", type=input.integer, defval=10)
+    loss := input(title="WDO - Loss (points)", type=input.integer, defval=10)
+else
+    gain := input(title="WIN - Gain (points)", type=input.integer, defval=200)
+    loss := input(title="WIN - Loss (points)", type=input.integer, defval=200)
+fastEma = ema(close, fastEmaValue)
+slowEma = ema(close, slowEmaValue)
+plot(series=fastEma, color=color.red, linewidth=2, title="Fast EMA")
+plot(series=slowEma, color=color.blue, linewidth=2, title="Slow EMA")
+/////////////////////////UTILS/////////////////////////
+roundTwo(number) => 
+    round(number * 100) / 100
+/////////////////////////MAGUILA/////////////////////////
+mg = 0.0
+mgPre = na(mg[1]) ? roundTwo(close) : mg[1]
+mg := roundTwo(mgPre + (close - mgPre) / (length * pow(close/mgPre, 4)))
+// mgColor will never 'na', because first value always will be different of zero
+mgColor = color.black
+mgColor := mg < mgPre ? color.red : mg > mgPre ? color.green : mgColor[1]
+barcolor(mgColor)
+// by previous rule, 'current' never will have the same value of 'previous'
+isLongEntry = mg > mgPre
+/////////////////////////STRATEGY/////////////////////////
+// Trend (-1: Negativa; 0: Neutral; 1: Positiva)
+trend = (fastEma > slowEma ? 1 : fastEma < slowEma ? -1 : 0)
+isBarOverFastEma = low <= fastEma and high >= fastEma
+// Signal Bar (1: Buy/Sell signal; 0: Neutral; -1: Turn signal invalid)
+buyFlag =  isLongEntry ? (trend > 0 ? (isBarOverFastEma ? 1 : 0) : -1) : -1
+sellFlag = not isLongEntry ? (trend < 0 ? (isBarOverFastEma ? 1 : 0) : -1) : -1
+strategy.entry("buy", strategy.long, when = buyFlag == 1, stop=high)
+strategy.exit("stop buy","buy", loss=(loss/syminfo.mintick), profit=(gain/syminfo.mintick))
+strategy.entry("sell", strategy.short, when = sellFlag == 1, stop=low)
+strategy.exit("stop sell","sell", loss=(loss/syminfo.mintick), profit=(gain/syminfo.mintick))
+Expand (86 lines)

@@ -1,0 +1,66 @@
+Script Name: Tendies Heist Auto Compounding Example
+Author: himista
+Description: This is an example of how we can use compounding to control our position size. This example shows how we can automatically add and reduce position size based on account equity. The "initial capital" in properties is the starting account equity. At default its set to 100,000. If our max position size is set to 25 then the very first position that's taken has a...
+PineScript code:
+
+Pine Script™ strategy
+Tendies Heist Auto Compounding Example
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+// This source code is subject to the terms of Tendies Heist LLC, 2021
+//@version=4
+strategy("Tendies Heist Auto Compounding Example", overlay=true)
+    
+leverage = input(10000)
+maxps = input(25, "max position size")
+strategy.risk.max_position_size(maxps)
+balance = max(1,floor(strategy.equity / leverage))
+o        = 1
+ps       = true
+size     = 0.
+balance2 = size[1] < balance
+balance3 = size[1] > balance
+l        = balance3
+w        = balance2
+if ps
+    size := w ? size[1]+o : l ? size[1]-o : nz(size[1],o)
+if size > maxps
+    size := maxps
+longCondition = crossover(sma(close, 14), sma(close, 28))
+if (longCondition)
+    strategy.entry("My Long Entry Id", strategy.long,qty=size)
+shortCondition = crossunder(sma(close, 14), sma(close, 28))
+if (shortCondition)
+    strategy.entry("My Short Entry Id", strategy.short,qty=size)
+Expand (32 lines)

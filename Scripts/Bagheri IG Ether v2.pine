@@ -1,0 +1,294 @@
+Script Name: Bagheri IG Ether v2
+Author: Bagheri_IG
+Description: In this version, the winning ratio has been decreased, but the Risk to Reward Ratio (RRR) has been set to be better than the previous version. 
+
+This is a technical trading strategy for Ethereum ( BINANCE:ETHUSDT ). We built and developed it on MetaEditor and optimized it with MetaTrader optimizer.
+The main indicators are Donchian Channel, Oscillator of ROC ,...
+PineScript code:
+
+Pine Script™ strategy
+Bagheri IG Ether v2
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mbagheri746
+//@version=4
+strategy("Bagheri IG Ether v2", overlay=true, margin_long=100, margin_short=100)
+TP = input(3000, minval = 1 , title ="Take Profit")
+SL = input(2200, minval = 1 , title ="Stop Loss")
+//_________________ RoC Definition _________________
+rocLength = input(title="ROC Length", type=input.integer, minval=1, defval=186)
+smoothingLength = input(title="Smoothing Length", type=input.integer, minval=1, defval=50)
+src = input(title="Source", type=input.source, defval=close)
+ma = ema(src, smoothingLength)
+mom = change(ma, rocLength)
+sroc = nz(ma[rocLength]) == 0
+     ? 100
+     : mom == 0
+         ? 0
+         : 100 * mom / ma[rocLength]
+//srocColor = sroc >= 0 ? #0ebb23 : color.red
+//plot(sroc, title="SROC", linewidth=2, color=srocColor, transp=0)
+//hline(0, title="Zero Level", linestyle=hline.style_dotted, color=#989898)
+//_________________ Donchian Channel _________________
+length1 = input(53, minval=1, title="Upper Channel")
+length2 = input(53, minval=1, title="Lower Channel")
+offset_bar = input(91,minval=0, title ="Offset Bars")
+upper = highest(length1)
+lower = lowest(length2)
+basis = avg(upper, lower)
+DC_UP_Band = upper[offset_bar]
+DC_LW_Band = lower[offset_bar]
+l = plot(DC_LW_Band, style=plot.style_line, linewidth=1, color=color.red)
+u = plot(DC_UP_Band, style=plot.style_line, linewidth=1, color=color.aqua)
+fill(l,u,color = color.new(color.aqua,transp = 90))
+//_________________ Bears Power _________________
+wmaBP_period = input(65,minval=1,title="BearsP WMA Period")
+line_wma = ema(close, wmaBP_period)
+BP = low - line_wma
+//_________________ Balance of Power _________________
+ES_BoP=input(15, title="BoP Exponential Smoothing")
+BOP=(close - open) / (high - low)
+SBOP = rma(BOP, ES_BoP)
+//_________________ Alligator _________________
+//_________________ CCI _________________
+//_________________ Moving Average _________________
+sma_period = input(74, minval = 1 , title = "SMA Period")
+sma_shift = input(37, minval = 1 , title = "SMA Shift")
+sma_primary = sma(close,sma_period)
+SMA_sh = sma_primary[sma_shift]
+plot(SMA_sh, style=plot.style_line, linewidth=2, color=color.yellow)
+//_________________ Long Entry Conditions _________________//
+MA_Lcnd = SMA_sh > low and SMA_sh < high
+ROC_Lcnd = sroc < 0
+DC_Lcnd = open < DC_LW_Band
+BP_Lcnd = BP[1] < BP[0] and BP[1] < BP[2]
+BOP_Lcnd = SBOP[1] < SBOP[0]
+//_________________ Short Entry Conditions _________________//
+MA_Scnd = SMA_sh > low and SMA_sh < high
+ROC_Scnd = sroc > 0
+DC_Scnd = open > DC_UP_Band
+BP_Scnd = BP[1] > BP[0] and BP[1] > BP[2]
+BOP_Scnd = SBOP[1] > SBOP[0]
+//_________________ OPEN POSITION __________________//
+if strategy.position_size  == 0
+    strategy.entry(id = "BUY", long = true , when = MA_Lcnd and ROC_Lcnd and DC_Lcnd and BP_Lcnd and BOP_Lcnd)
+    strategy.entry(id = "SELL", long = false , when = MA_Scnd and ROC_Scnd and DC_Scnd and BP_Scnd and BOP_Scnd)
+//_________________ CLOSE POSITION __________________//
+strategy.exit(id = "CLOSE BUY", from_entry = "BUY", profit = TP , loss = SL)
+strategy.exit(id = "CLOSE SELL", from_entry = "SELL" , profit = TP , loss = SL)
+//_________________ TP and SL Plot __________________//
+currentPL= strategy.openprofit
+pos_price = strategy.position_avg_price
+open_pos = strategy.position_size
+TP_line = (strategy.position_size  > 0) ? (pos_price + TP/100) : strategy.position_size < 0 ? (pos_price - TP/100) : 0.0
+SL_line = (strategy.position_size  > 0) ? (pos_price - SL/100) : strategy.position_size < 0 ? (pos_price + SL/100) : 0.0
+// hline(TP_line, title = "Take Profit", color = color.green , linestyle = hline.style_dotted, editable = false)
+// hline(SL_line, title = "Stop Loss", color = color.red , linestyle = hline.style_dotted, editable = false)
+Tline = plot(TP_line != 0.0 ? TP_line : na , title="Take Profit", color=color.green, trackprice = true, show_last = 1)
+Sline = plot(SL_line != 0.0 ? SL_line : na, title="Stop Loss", color=color.red, trackprice = true, show_last = 1)
+Pline = plot(pos_price != 0.0 ? pos_price : na, title="Stop Loss", color=color.gray, trackprice = true, show_last = 1)
+fill(Tline , Pline, color = color.new(color.green,transp = 90))
+fill(Sline , Pline, color = color.new(color.red,transp = 90))
+//_________________ Alert __________________//
+//alertcondition(condition = , title = "Position Alerts", message = "Bagheri IG Ether\n Symbol: {{ticker}}\n Type: {{strategy.order.id}}")
+//_________________ Label __________________//
+inMyPrice           = input(title="My Price", type=input.float, defval=0)
+inLabelStyle        = input(title="Label Style", options=["Upper Right", "Lower Right"], defval="Lower Right")
+posColor = color.new(color.green, 25)
+negColor = color.new(color.red, 25)
+dftColor = color.new(color.aqua, 25)
+posPnL   = (strategy.position_size != 0) ? (close * 100 / strategy.position_avg_price - 100) : 0.0
+posDir   = (strategy.position_size  > 0) ? "long" : strategy.position_size < 0 ? "short" : "flat"
+posCol   = (strategy.openprofit > 0) ? posColor : (strategy.openprofit < 0) ? negColor : dftColor
+myPnL    = (inMyPrice != 0) ? (close * 100 / inMyPrice - 100) : 0.0
+var label lb = na
+label.delete(lb)
+lb := label.new(bar_index, close,
+   color=posCol,
+   style=inLabelStyle=="Lower Right"?label.style_label_upper_left:label.style_label_lower_left,
+   text=
+      "╔═══════╗" +"\n" + 
+      "Pos: "  +posDir +"\n" +
+      "Pos Price: "+tostring(strategy.position_avg_price) +"\n" +
+      "Pos PnL: "  +tostring(posPnL, "0.00") + "%" +"\n" +
+      "Profit: "  +tostring(strategy.openprofit, "0.00") + "$" +"\n" +
+      "TP: "  +tostring(TP_line, "0.00") +"\n" +
+      "SL: "  +tostring(SL_line, "0.00") +"\n" +
+      "╚═══════╝")
+Expand (176 lines)

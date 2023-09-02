@@ -1,0 +1,184 @@
+Script Name: Linear Regression - Reverse Up-Down Strategy
+Author: bruce.lesko
+Description: For my first foray into pine script I took the code from the generic "Consecutive up/down" and flipped the logic.  I added a linear regression filter to try and stay with the overall trend.  ATR added for visual, I eventually want to use it as part of the money management.
+
+
+Rules to open trade or close the opposite:
+IF the linear regression slope is >=0 AND the...
+PineScript code:
+
+Pine Script™ strategy
+Linear Regression - Reverse Up/Down Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+//@version=4
+strategy("Reverse Up/Down Strategy", currency=currency.USD, initial_capital=500, pyramiding=3, default_qty_type=strategy.percent_of_equity, default_qty_value=100, overlay=true)
+// === INPUT BACKTEST RANGE === backtest date function credit to © allanster https://www.tradingview.com/script/62hUcP6O-How-To-Set-Backtest-Date-Range/
+fromMonth = input(defval = 1,    title = "From Month",      type = input.integer, minval = 1, maxval = 12)
+fromDay   = input(defval = 1,    title = "From Day",        type = input.integer, minval = 1, maxval = 31)
+fromYear  = input(defval = 2020, title = "From Year",       type = input.integer, minval = 1970)
+thruMonth = input(defval = 1,    title = "Thru Month",      type = input.integer, minval = 1, maxval = 12)
+thruDay   = input(defval = 1,    title = "Thru Day",        type = input.integer, minval = 1, maxval = 31)
+thruYear  = input(defval = 2112, title = "Thru Year",       type = input.integer, minval = 1970)
+// === INPUT SHOW PLOT ===
+showDate  = input(defval = true, title = "Show Date Range", type = input.bool)
+// === FUNCTION EXAMPLE ===
+start     = timestamp(fromYear, fromMonth, fromDay, 00, 00)        // backtest start window
+finish    = timestamp(thruYear, thruMonth, thruDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+//User Options 
+buyPullback         = input(title="Buy Pullbacks?",     type=input.bool,        defval=true)
+priceOne            = input(title="Price Source 1",     type=input.source,      defval=open)
+priceTwo            = input(title="Price Source 1",     type=input.source,      defval=close)
+goWithTrend         = input(title="With Trend?",        type=input.bool,        defval=false)
+len                 = input(title="Trend Length",       type=input.integer,     defval=4,       minval=1)
+goWithMajorTrend    = input(title="With Major Trend?",  type=input.bool,        defval=true)
+lenMajorTrend       = input(title="Major Trend Length", type=input.integer,     defval=200,     minval=2)
+consecutiveBarsUp   = input(title="Bars Up",            type=input.integer,     defval=2,       minval=1)
+consecutiveBarsDown = input(title="Bars Down",          type=input.integer,     defval=2,       minval=1)
+atrLength           = input(title="ATR Length",         type=input.integer,     defval=14,      minval=1)
+atrMult             = input(title="ATR Multiplier",     type=input.float,       defval=1.33,    minval=0.1)
+lengthRSI           = input(title="RSI Length",         type=input.integer,     defval=4,       minval=1)
+srcRSI              = input(title="Source",             type=input.source,      defval=close)
+rsiOverbought       = input(title="RSI Overbought",     type=input.integer,     defval=70,      minval=1)
+rsiOversold         = input(title="RSI Oversold",       type=input.integer,     defval=30,      minval=1)
+lots                = input(title="Min Lot Size",       type=input.float,       defval=0.01)*100000
+//RSI
+up              = rma(max(change(srcRSI), 0), lengthRSI)
+down            = rma(-min(change(srcRSI), 0), lengthRSI)
+rsi             = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+//ATR
+adjustedATR     = atr(atrLength) * atrMult
+longATR         = sma(low - adjustedATR, atrLength)
+shortATR        = sma(high + adjustedATR, atrLength)
+plot(shortATR,  title="Short ATR",  color=color.red)
+plot(longATR,   title="Long ATR",   color=color.lime)
+//Trend Linear Regression Slope
+lineRegSource   = hlc3
+lrc             = linreg(lineRegSource, len, 0)
+lrc1            = linreg(lineRegSource, len, 1)
+lrs             = goWithTrend ? (lrc-lrc1) : (lrc1-lrc)
+lrcMajorTrend   = linreg(lineRegSource, lenMajorTrend, 0)
+lrc1MajorTrend  = linreg(lineRegSource, lenMajorTrend, 1)
+lrsMajorTrend   = goWithMajorTrend ? (lrcMajorTrend - lrc1MajorTrend ) : (lrc1MajorTrend - lrcMajorTrend )
+//Check if last candle was up or down
+longCondition   = buyPullback ? priceOne > priceTwo : priceOne < priceTwo
+shortCondition  = buyPullback ? priceOne < priceTwo : priceOne > priceTwo
+higherHigh      = high[0] > high[1]
+lowerLow        = low[0] < low[1]
+ups = 0.0
+dns = 0.0
+ups := shortCondition   ? nz(ups[1]) + 1 : 0
+dns := longCondition    ? nz(dns[1]) + 1 : 0
+if (shortCondition and rsi > rsiOversold and window())
+    if (ups >= consecutiveBarsUp and lrs <= 0 and lrsMajorTrend <= 0)
+        strategy.entry("sell1", strategy.short, comment="Sell1", qty=lots)
+    if (ups >= consecutiveBarsUp + 1 and lrs <= 0 and lrsMajorTrend <= 0)
+        strategy.entry("sell2", strategy.short, comment="Sell2", qty=lots)
+    if (ups >= consecutiveBarsUp + 2 and lrs <= 0 and lrsMajorTrend <= 0)
+        strategy.entry("sell3", strategy.short, comment="Sell3", qty=lots)
+    strategy.close(id="buy1", qty_percent=100, comment="Close")
+    strategy.close(id="buy2", qty_percent=100, comment="Close")
+    strategy.close(id="buy3", qty_percent=100, comment="Close")
+if (longCondition and rsi < rsiOverbought  and window())
+    if (dns >= consecutiveBarsDown and lrs >= 0 and lrsMajorTrend >= 0)
+        strategy.entry("buy1", strategy.long, comment = "Buy1", qty=lots)
+    if (dns >= consecutiveBarsDown + 1 and lrs >= 0 and lrsMajorTrend >= 0)
+        strategy.entry("buy2", strategy.long, comment = "Buy2", qty=lots)
+    if (dns >= consecutiveBarsDown + 2 and lrs >= 0 and lrsMajorTrend >= 0)
+        strategy.entry("buy3", strategy.long, comment = "Buy3", qty=lots)
+    strategy.close(id="sell1", qty_percent=100, comment="Close")
+    strategy.close(id="sell2", qty_percent=100, comment="Close")
+    strategy.close(id="sell3", qty_percent=100, comment="Close")
+Expand (92 lines)

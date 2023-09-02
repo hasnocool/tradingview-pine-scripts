@@ -1,0 +1,109 @@
+Script Name: Trade Hour
+Author: mablue
+Description: This script is just finds the best hour to buy and sell hour in a day by checking chart movements in past
+For example if the red line is on the 0.63 on BTC/USDT chart it mean the start of 12AM hour on a day is the best hour to buy (all based on 
+It's just for 1 hour time-frame but you can test it on other charts.
+IMPORTANT: You can change time Zone in strategy...
+PineScript code:
+
+Pine Script™ strategy
+Trade Hour
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mablue (Masoud Azizi)
+// based on idea of circular mean with atan2
+//@version=5
+strategy("Trade Hour V4",overlay=false)
+src = input.source(close)
+timezone = input.string("UTC+0000",options=["UTC+0000","GMT+0000","America/New_York","America/Los_Angeles","America/Chicago","America/Phoenix","America/Toronto","America/Vancouver","America/Argentina" ,"America/El_Salvador","America/Sao_Paulo","America/Bogota","Europe/Moscow","Europe/Athens","Europe/Berlin","Europe/London","Europe/Madrid","Europe/Paris","Europe/Warsaw","Australia/Sydney","Australia/Brisbane","Australia/Adelaide","Australia/ACT","Asia/Almaty","Asia/Ashkhabad","Asia/Tokyo","Asia/Taipei","Asia/Singapore","Asia/Shanghai","Asia/Seoul","Asia/Tehran","Asia/Dubai","Asia/Kolkata","Asia/Hong_Kong","Asia/Bangkok","Pacific/Auckland","Pacific/Chatham","Pacific/Fakaofo","Pacific/Honolulu"]   )
+length = input.int(24,"Timeperiod")
+arctan2(x,y)=>
+    if x>0 and y>0
+        result = math.atan(x/y) 
+    else if y<0
+        result = math.atan(x/y) + math.pi
+    else if x<0 and y>0
+        result = math.atan(x/y) + 2*math.pi
+best_hour(indicator)=>
+    hours = (2*math.pi)*(hour(time,timezone)/24)
+    hours_y =  math.sin(hours)
+    hours_x =  math.cos(hours)
+    hours_x_avg = ta.cum(hours_x*indicator)/ta.cum(indicator)
+    hours_y_avg = ta.cum(hours_y*indicator)/ta.cum(indicator)
+    hours_avg = (arctan2(hours_y_avg,hours_x_avg)*24/(2*math.pi))%24
+buy_indicator = math.avg(ta.rsi(src,length),ta.mfi(src,length))
+sell_indicator = math.avg(ta.rsi(1/src,length),ta.mfi(1/src,length))
+// buy_indicator = ta.roc(src,length)
+// sell_indicator = ta.roc(1/src,length)
+// buy_indicator = ta.roc(src,length)
+// sell_indicator = ta.roc(1/src,length)
+buy_hour = best_hour(buy_indicator)
+sell_hour = best_hour(sell_indicator)
+plot(buy_hour,"Buy hour",color.green)
+plot(sell_hour,"Sell hour",color.red)
+bool isLongBestHour = math.round(buy_hour) == hour(time,timezone)
+bool isShortBestHour =   math.round(sell_hour) == hour(time,timezone)
+bgcolor(isLongBestHour ? color.new(color.green,80) : na)
+bgcolor(isShortBestHour ? color.new(color.red,80) : na)
+strategy.order("buy", strategy.long, when =isLongBestHour)
+strategy.order("sell", strategy.short, when = isShortBestHour)
+Expand (59 lines)

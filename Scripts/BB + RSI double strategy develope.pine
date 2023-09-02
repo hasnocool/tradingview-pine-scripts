@@ -1,0 +1,147 @@
+Script Name: BB + RSI double strategy develope
+Author: NNYG
+Description: I'm Korean, and it may not be enough to explain this script in English. I feel sorry for the users of TradingView for this lack of English skills. If you are Korean, please return it to the translator using Papago. It will be a useful manual for you.
+
+This script referenced Chartart's Double Strategy. But there are some changes in his script.
+
+0. Basically, when...
+PineScript code:
+
+Pine Script™ strategy
+BB + RSI double strategy develope
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+//@version=4
+strategy("Ezieh Str.v2", shorttitle="Ezieh Str.v2", overlay=true, pyramiding=10, currency=currency.USD, slippage=3, commission_type=strategy.commission.cash_per_order, commission_value=0.04, initial_capital=1000)
+UseDateFilter  = input(title="Enable Date Filter"         ,type=input.bool    ,defval=false                               ,group="Date & Time" ,tooltip="Turns on/off date filter")
+StartDate      = input(title="Start Date Filter"          ,type=input.time    ,defval=timestamp("1 Jan 2000 00:00 +0000") ,group="Date & Time" ,tooltip="Date & time to start excluding trades")
+EndDate        = input(title="End Date Filter"            ,type=input.time    ,defval=timestamp("1 Jan 2100 00:00 +0000") ,group="Date & Time" ,tooltip="Date & time to stop excluding trades")
+UseTimeFilter  = input(title="Enable Time Session Filter" ,type=input.bool    ,defval=false                               ,group="Date & Time" ,tooltip="Turns on/off time session filter")
+TradingSession = input(title="Trading Session"            ,type=input.session ,defval="1000-2200:1234567"                 ,group="Date & Time" ,tooltip="No trades will be taken outside of this range")
+In(t)      => na(time(timeframe.period, t)) == false
+TimeFilter = (UseTimeFilter and not In(TradingSession)) or not UseTimeFilter
+DateFilter = time >= StartDate and time <= EndDate
+DateTime = (UseDateFilter ? not DateFilter : true) and (UseTimeFilter ? In(TradingSession) : true) 
+///////////// RSI
+L_RSI_Length     = input(7  , title="L_Length")
+L_RSI_OverSold   = input(45 , title="L_OverSold")
+S_RSI_Length     = input(14 , title="S_Length")
+S_RSI_OverBought = input(65 , title="S_OverBought")
+price = close
+Lvrsi = rsi(price, L_RSI_Length)
+Svrsi = rsi(price, S_RSI_Length)
+///////////// Bollinger Bands
+BBlength = input(title="Bollinger Period Length", type=input.integer, defval=100, minval=2)
+BBmult = 2.1 // input(2.0, minval=0.001, maxval=50,title="Bollinger Bands Standard Deviation")
+BBbasis = sma(price, BBlength)
+BBdev = BBmult * stdev(price, BBlength)
+BBupper = BBbasis + BBdev
+BBlower = BBbasis - BBdev
+source = close
+plot(BBbasis, color=color.aqua,title="Bollinger Bands SMA Basis Line")
+p1 = plot(BBupper, color=color.silver,title="Bollinger Bands Upper Line")
+p2 = plot(BBlower, color=color.silver,title="Bollinger Bands Lower Line")
+fill(p1, p2)
+///////////// Colors
+switch1=input(true, title="Enable Bar Color?")
+switch2=input(true, title="Enable Background Color?")
+///////////// Condition
+LongCondition  = crossover(Lvrsi, L_RSI_OverSold)    and crossover(close  ,BBlower)
+ShortCondition = crossunder(Svrsi, S_RSI_OverBought) and crossunder(close,BBupper)
+Longexcon      = crossunder(low, BBupper)
+Shortexcon     = crossover(low, BBlower)
+qt = round(strategy.equity/price, 3)
+///////////// RSI + Bollinger Bands Strategy
+if (not na(Lvrsi))
+    if LongCondition and DateTime
+        strategy.entry("RSI_BB_L", strategy.long, qty=qt, oca_type=strategy.oca.cancel, comment="Long")
+    else
+        strategy.cancel(id="RSI_BB_L")
+        
+    if Longexcon
+        strategy.close("RSI_BB_L", qty_percent = 100, comment = "L_exit")
+    
+    if ShortCondition and DateTime
+        strategy.entry("RSI_BB_S", strategy.short, qty=qt, oca_type=strategy.oca.cancel, comment="Short")
+    else
+        strategy.cancel(id="RSI_BB_S")
+        
+    if Shortexcon
+        strategy.close("RSI_BB_S", qty_percent = 100, comment = "S_exit")
+    
+//plot(strategy.equity, title="equity", color=red, linewidth=2, style=areabr)
+Expand (75 lines)

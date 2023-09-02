@@ -1,0 +1,216 @@
+Script Name: Forex Daytrade T3 MA session
+Author: exlux99
+Description: This is a simple yet very efficient daytrading strategy for most crosses pairs, like EUR/NZD, EUR/AUD , GBP/NZD, GBP/AUD and so on.
+
+It tends to works best with 1h and 15 min time frame charts.
+
+Its components are :
+Entry time = session that we want to trade, where we can combine for example half of London and all of NY using an hour system.
+T3 Moving...
+PineScript code:
+
+Pine Script™ strategy
+Forex Daytrade T3 MA session
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © exlux99
+//@version=4
+strategy("FOREX Daytrade T3 MA session",overlay=true)
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2000, title = "From Year", minval = 1970)
+ //monday and session 
+// To Date Inputs
+toDay = input(defval = 31, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 12, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2021, title = "To Year", minval = 1970)
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate 
+timeinrange(res, sess) => time(res, sess) != 0
+Length = input(9, minval=1)
+xPrice = close
+xe1 = ema(xPrice, Length)
+xe2 = ema(xe1, Length)
+xe3 = ema(xe2, Length)
+xe4 = ema(xe3, Length)
+xe5 = ema(xe4, Length)
+xe6 = ema(xe5, Length)
+b = 0.7
+c1 = -b*b*b
+c2 = 3*b*b+3*b*b*b
+c3 = -6*b*b-3*b-3*b*b*b
+c4 = 1+3*b+b*b*b+3*b*b
+nT3Average = c1 * xe6 + c2 * xe5 + c3 * xe4 + c4 * xe3
+plot(nT3Average, color=color.blue, title="T3")
+myspecifictradingtimes = input('1000-1900', type=input.session, title="My Defined Hours")
+//myspecifictradingtimes2 = input('1000-1900', type=input.session, title="My Defined Hours")
+exittime = input('2100-2115', type=input.session, title="exit time")
+optionmacd=true
+entrytime = time(timeframe.period, myspecifictradingtimes) != 0
+exiton = time(timeframe.period, exittime) != 0
+//entrytime2 = time(timeframe.period, myspecifictradingtimes2) != 0
+// long =time_cond and (entrytime or entrytime2) and close > high[1] and close > nT3Average 
+// short =time_cond and (entrytime or entrytime2) and close < low[1]  and close < nT3Average 
+long =time_cond and (entrytime ) and close > high[1] and close > nT3Average 
+short =time_cond and (entrytime) and close < low[1]  and close < nT3Average 
+tp = input(0.01)
+sl = input(0.01)
+modified=input(true)
+inverse=input(true)
+exit  = input(false)
+if(modified)
+    if(not exiton)
+        if(inverse)
+            strategy.entry("long",1,when=short)
+            strategy.entry("short",0,when=long)
+           /// strategy.exit("xlong","long",profit=200, loss=200)
+           // strategy.exit("xshort","short",profit=200, loss=200)
+        
+        if(inverse==false)
+            strategy.entry("long",1,when=long)
+            strategy.entry("short",0,when=short)
+            
+        if(exit)
+          //  strategy.close("long", when = crossover(close,nT3Average))
+           // strategy.close("short", when = crossunder(close,nT3Average))
+            strategy.exit("closelong", "long" , profit = close * tp / syminfo.mintick, loss = close * sl / syminfo.mintick, alert_message = "closelong")
+            strategy.exit("closeshort", "short" , profit = close * tp / syminfo.mintick, loss = close * sl / syminfo.mintick, alert_message = "closeshort")
+if(modified==false)
+    if(inverse)
+        strategy.entry("long",1,when=short)
+        strategy.entry("short",0,when=long)
+           /// strategy.exit("xlong","long",profit=200, loss=200)
+           // strategy.exit("xshort","short",profit=200, loss=200)
+        
+    if(inverse==false)
+        strategy.entry("long",1,when=long)
+        strategy.entry("short",0,when=short)
+            
+    // if(exit)
+    //       //  strategy.close("long", when = crossover(close,nT3Average))
+    //       // strategy.close("short", when = crossunder(close,nT3Average))
+strategy.exit("closelong", "long" , loss = close * sl / syminfo.mintick, alert_message = "closelong")
+strategy.exit("closeshort", "short" , loss = close * sl / syminfo.mintick, alert_message = "closeshort")
+//strategy.close_all(when =exiton )
+//gbpnzd 10-20
+//gbpcad 10-19
+//gbpaud 07-19
+//euruad 10-19  / 16-20
+//eurnzd 08-21  / 10-20
+//eurchf 08-20
+//gbpchf 06-18
+// 18-19settings entry gbp aud, gbpcad gbpnzd ??? 1 entry only big spread
+//test
+Expand (111 lines)

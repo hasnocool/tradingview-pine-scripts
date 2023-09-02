@@ -1,0 +1,266 @@
+Script Name: Risk Reduction Ultimate Template
+Author: burgercrisis
+Description: This is a template not actually meant for trading. I picked two random oscillators. This is a template meant to turn into a live trading strategy, however.
+
+It's literally just a specialized take profit/stop loss system. It is to ensure your bot doesn't make any bad moves that you wouldn't have manually. The code should be pretty well annotated. Putting this into...
+PineScript code:
+
+Pine Script™ strategy
+Risk Reduction Ultimate Template
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © burgercrisis
+//@version=4
+strategy(title="Risk Reduction Ultimate Template", overlay=false, pyramiding=10, calc_on_every_tick=true, default_qty_type=strategy.percent_of_equity, default_qty_value=10, initial_capital=1000, slippage=10, commission_value=0.1)
+//This is just to make this template work and publishable.
+src = input(close, title="Source")
+//SMII
+longlen = input(20, minval=1, title="Long Length")
+shortlen = input(5, minval=1, title="Short Length")
+siglen = input(5, minval=1, title="Signal Line Length")
+erg = tsi(src, shortlen, longlen)
+sig = ema(erg, siglen)
+plot(erg, color=#0094FF, title="SMI")
+plot(sig, color=#FF6A00, title="Signal")
+//%Blength = input(20, minval=1)
+length = input(20, minval=1)
+mult = input(2.0, minval=0.001, maxval=50, step=0.1, title="StdDev")
+basis = sma(src, length)
+dev = mult * stdev(src, length)
+upper = basis + dev
+lower = basis - dev
+bbr = (src - lower)/(upper - lower)
+plot(bbr, "Bollinger Bands %B", color=color.teal)
+buy=input(0.0,step=0.1)
+sellonce=input(1.0,step=0.1)
+sellall=input(1.1,step=0.1)
+band1 = hline(sellonce, "Overbought", color=#606060, linestyle=hline.style_dashed)
+band0 = hline(buy, "Oversold", color=#606060, linestyle=hline.style_dashed)
+fill(band1, band0, color=color.teal, title="Background")
+//Always include a backtesting period selector. Always always always always or I hate you.
+//* Backtesting Period Selector | Component *//
+//* https://www.tradingview.com/script/eCC1cvxQ-Backtesting-Period-Selector-Component *//
+//* https://www.tradingview.com/u/pbergden/ *//
+//* Modifications made *//
+testStartYear = input(2020, "Backtest Start Year") 
+testStartMonth = input(1, "Backtest Start Month")
+testStartDay = input(1, "Backtest Start Day")
+testPeriodStart = timestamp(testStartYear,testStartMonth,testStartDay,0,0)
+testStopYear = input(999999, "Backtest Stop Year")
+testStopMonth = input(9, "Backtest Stop Month")
+testStopDay = input(26, "Backtest Stop Day")
+testPeriodStop = timestamp(testStopYear,testStopMonth,testStopDay,0,0)
+testPeriod() =>
+    time >= testPeriodStart and time <= testPeriodStop ? true : false
+///////
+//////// END - Backtesting Period Selector | Component ///////////////
+//Whats the point of this?
+//This is a strategy template for risk reduction. I've found that the main problem with strategies on Tradingview is they do not account for risk and reward management! The ones that do, do so very poorly and rudimentarily!
+//Utter lack of stop losses, rudimentary and unconditional stop losses with no care for changes in momentum that may indicate the stop loss shouldn't be taken, take profits occurring in the middle of huge rush just because a price was hit
+//and momentum based signals with no care for whether the sale is profitable or not, or if price had barely even changed!
+//I thought maybe TA-based bots just aren't possible to actually be any good for a moment. But rather then give up, I decided to try to gear up. And I believe I found a key that can make almost any strategy work. A path to actually beating buy and hold.
+//
+//How do I use this?
+//It's actually really simple. It might have a lot of tiny pieces but that is to maximize the users choices in maximizing risk adjusted return and its really simple once you make sense of it.
+//You have a single buy signal, three stop losses, two take profits and two (roughly) standard sells.
+//I tend to use a trigger and multiple filter conditions for both my buys and sales. This strategy doesn't need it for the buys but that is how you make the sale system work so for clarity there are two conditions for buys – longtrigger and longcondition1.
+//The trigger, you want to be something that occurs at a single point in time, such as a crossover of some kind. The filter you want to be more loose and regional, such as an overbought or oversold condition.
+//The sells conditions are similar. You have a shorttrigger and two shortconditions sets for filtering. The first shortcondition is to sell a single set (depending on your position sizing settings in properties tab).
+//The second shortcondition is to sell everything at more extreme settings. This is because nobody can perfectly time every top, even with a script, so you want to take profits along the way without completely exiting
+//and allowing yourself to re-enter when its right and only fully exit at extreme cases. If you want to use just one set of conditions, move to the last line and replace  shortcondition2 with  shortcondition1.
+//Then you can decide if selling all is truly better then pyramiding things out... Test both % and flat and you will see.
+//
+//Everything should be pretty clearly labeled.
+//
+//
+longtrigger=crossover(erg,sig)                                          ////Put your trigger for buys here
+longcondition1=bbr<buy                                                  ////Put your buy filter signals here
+shorttrigger=crossunder(erg,sig)                                        ////Put your sell trigger here
+shortcondition1=bbr>sellonce                                            ////This is your filters for partial exits
+shortcondition2=bbr>sellall                                             ////This is your filter for full sales.
+//This gets multiplied to your sale thresholds to make sure they account for commission properly.
+commission=input(0.1)
+comms=(100+commission)/100
+//Three stop losses
+//StopLosses
+stopLossFear=input(100.0, step=0.2, title="Hard Stop Loss")     //Hard stop loss triggers immediately when a drop from your assumed average position price occurs equal to set percentage
+sl1=(100-stopLossFear)/100*comms
+stopLossSafe=input(100.0, step=0.2, title="Soft Stop Loss")     //Soft stop loss triggers when your shorttrigger occurs after a drop from position price equal to set percentage
+sl2=(100-stopLossSafe)/100*comms
+stopLossSafest=input(100.0, step=0.2, title="Safe Stop Loss")   //Safe stop loss triggers when both shorttrigger and shortcondition1 occur after a drop from position price equal to set percentage
+sl3=(100-stopLossSafest)/100*comms
+//TakeProfits
+TakeProfit1=input(100.0, step=0.2, title="Hard Take Profit")        //Hard Take Profit occurs after a rise from position price equal to set percentage
+tp1=(100+TakeProfit1)/100*comms
+TakeProfit2=input(100.0, step=0.2, title="Soft Take Profit")        //Soft Take Profit occurs when your shorttrigger occurs after a rise from position price equal to set percentage
+tp2=(100+TakeProfit2)/100*comms
+TakeProfit3=input(0.0, step=0.2, title="Minimum Sale Profit")       //This is the standard single sell signal, it occurs when shorttrigger and shortcondition1 occur after a rise from position price equal to set percentage to filter bad signals
+tp3=(100+TakeProfit3)/100*comms
+TakeProfit4=input(0.0, step=0.2, title="Sell All Profit")           //This sells all positions when shorttrigger and shortcondition1 occur after a rise from position price equal to set percentage
+tp4=(100+TakeProfit4)/100*comms
+if testPeriod()                                                                 //Backtesting period selector component
+    if longcondition1 and longtrigger
+        strategy.entry(id="EL", comment="Buy", long=true)                                           //Buy signal
+        
+    if shortcondition1 and shorttrigger and ((strategy.position_avg_price*tp3 < high) or (strategy.position_avg_price*tp3 < close))     //Sell One signal
+        strategy.entry("Sell One Order", strategy.short)
+        
+    if shortcondition2 and shorttrigger and ((strategy.position_avg_price*tp4 < high) or (strategy.position_avg_price*tp4 < close))     //Sell All signal
+        strategy.close(id="EL", comment="Sell All")
+        
+    if ((strategy.position_avg_price*tp1 < high) or (strategy.position_avg_price*tp1 < close))                          //Hard Take Profit signal
+        strategy.close(id="EL", comment="Hard Take Profit")
+        
+    if ((strategy.position_avg_price*tp2 < high) or (strategy.position_avg_price*tp2 < close)) and shorttrigger                 //Soft Take Profit signal
+        strategy.close(id="EL", comment="Soft Take Profit")
+        
+    if (strategy.position_avg_price*sl1 > close)                                                    //Hard Stop Loss Signal
+        strategy.close(id="EL", comment="Hard Stop Loss")
+        
+    if (strategy.position_avg_price*sl2 > close) and shorttrigger                                           //Soft Stop Loss signal
+        strategy.close(id="EL", comment="Soft Stop Loss")
+        
+    if (strategy.position_avg_price*sl3 > close) and shortcondition1 and shorttrigger                               //Safe Stop Loss from Sell One conditions
+        strategy.close(id="EL", comment="Safe Stop Loss 1")
+       
+    if (strategy.position_avg_price*sl3 > close) and shortcondition2 and shorttrigger                               //Safe Stop Loss  from Sell All condition
+        strategy.close(id="EL", comment="Safe Stop Loss 2")
+Expand (138 lines)

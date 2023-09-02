@@ -1,0 +1,92 @@
+Script Name: Heikin Ashi EMA v5 no repaint
+Author: gustavobramao1
+Description: This script was inspired by the "Heikin/Kaufman Strategy" from marco valente built on v2.
+
+The script was rebuilt on the v5 and most importantly removed the repaint function that was driving surrealistic backtesting inflated numbers.
+
+This script is now fully functional and not repainting - At the time of testing worked efficiently 90% WR and 2x profit factor on...
+PineScript code:
+
+Pine Script™ strategy
+Heikin Ashi EMA v5 no repaint
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+//@version=5
+//Heikin/Kaufman by Gustavo v5
+strategy('Heikin Ashi EMA v5 no repaint ', shorttitle='Heikin Ashi EMA v5 no repaint', overlay=true, max_bars_back=500, default_qty_value=1000, initial_capital=100000, currency=currency.EUR)
+// Settings - H/K
+res1 = input.timeframe(title='Heikin Ashi EMA Time Frame', defval='D')
+test = input(0, 'Heikin Ashi EMA Shift')
+sloma = input(20, 'Slow EMA Period')
+nAMA = hlc3
+//Kaufman MA
+Length = input.int(5, minval=1)
+xPrice = input(hlc3)
+xvnoise = math.abs(xPrice - xPrice[1])
+Fastend = input.float(2.5, step=.5)
+Slowend = input(20)
+nfastend = 2 / (Fastend + 1)
+nslowend = 2 / (Slowend + 1)
+nsignal = math.abs(xPrice - xPrice[Length])
+nnoise = math.sum(xvnoise, Length)
+nefratio = nnoise != 0 ? nsignal / nnoise : 0
+nsmooth = math.pow(nefratio * (nfastend - nslowend) + nslowend, 2)
+nAMAn = nz(nAMA[1]) + nsmooth * (xPrice - nz(nAMA[1]))
+//Heikin Ashi Open/Close Price
+ha_t = ticker.heikinashi(syminfo.tickerid)
+ha_close = request.security(ha_t, timeframe.period, nAMAn)
+mha_close = request.security(ha_t, res1, hlc3)
+//Moving Average
+fma = ta.ema(mha_close[test], 1)
+sma = ta.ema(ha_close, sloma)
+plot(fma, title='MA', color=color.new(color.black, 0), linewidth=2, style=plot.style_line)
+plot(sma, title='SMA', color=color.new(color.red, 0), linewidth=2, style=plot.style_line)
+//Strategy
+golong = ta.crossover(fma, sma)
+goshort = ta.crossunder(fma, sma)
+strategy.entry('Buy', strategy.long, when=golong)
+strategy.entry('Sell', strategy.short,when=goshort)
+Expand (44 lines)

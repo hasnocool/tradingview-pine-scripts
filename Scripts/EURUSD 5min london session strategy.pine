@@ -1,0 +1,103 @@
+Script Name: EURUSD 5min london session strategy
+Author: SoftKill21
+Description: Hey, today I bring you another strategy that I pull up together.
+Its a KISS system ( keep it stupid simple )
+
+We have 2 ma of 5 lenght each, one applied to the high and the other to low. With this we create a channel.
+
+If the candle close above or below the channel we got a signal. Then we can optionally verify with the RSI to increase our chances.
+
+At the same...
+PineScript code:
+
+Pine Script™ strategy
+EURUSD 5min london session strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © SoftKill21
+//@version=4
+strategy(title="Moving Average", shorttitle="MA", overlay=true)
+timeinrange(res, sess) => time(res, sess) != 0
+len = input(5, minval=1, title="Length")
+src = input(high, title="Source")
+offset = input(title="Offset", type=input.integer, defval=0, minval=-500, maxval=500)
+out = sma(src, len)
+plot(out, color=color.white, title="MA", offset=offset)
+len2 = input(5, minval=1, title="Length")
+src2 = input(low, title="Source")
+offset2 = input(title="Offset", type=input.integer, defval=0, minval=-500, maxval=500)
+out2 = sma(src2, len2)
+plot(out2, color=color.white, title="MA", offset=offset2)
+length = input( 5 )
+overSold = input( 10 )
+overBought = input( 80 )
+price = input(close, title="Source RSI")
+vrsi = rsi(price, length)
+longcond= close > out and close > out2 and vrsi > overBought and timeinrange(timeframe.period, "0300-1100")
+shortcont = close < out and close < out2 and vrsi < overSold and timeinrange(timeframe.period, "0300-1100")
+tp=input(150,title="tp")
+sl=input(80,title="sl")
+strategy.entry("long",1,when=longcond)
+//strategy.close("long",when= close < out2)
+strategy.exit("long_exit","long",profit=tp,loss=sl)
+strategy.entry("short",1,when=shortcont)
+//strategy.close("short",when=close >out)
+strategy.exit("short_exit","short",profit=tp,loss=sl)
+maxOrder = input(6, title="max trades per day")
+maxRisk = input(2,type=input.float, title="maxrisk per day")
+strategy.risk.max_intraday_filled_orders(maxOrder)
+strategy.risk.max_intraday_loss(maxRisk, strategy.percent_of_equity)
+strategy.close_all(when =not timeinrange(timeframe.period, "0300-1100"))
+Expand (52 lines)

@@ -1,0 +1,82 @@
+Script Name: Double Bollinger Binary Options
+Author: Trade_by_DB
+Description: This script uses 2 Bollinger bands and rsi oversold and overbought region to give signals. Basically, it detects those conditions where the market gets spiked in one direction aggressively(mostly during news) and then reverses back, although signals occur less frequently, this strategy is worth trying. Keep the timeframe for 5 minutes and trade for 5 candles i.e....
+PineScript code:
+
+Pine Script™ strategy
+Double Bollinger Binary Options
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Trade_by_DB
+//@version=5
+strategy("Double Bollinger Binary Options", overlay=true, margin_long=100, margin_short=100)
+// Bollinger bands #1 (20,2)
+length1 = input.int(20, minval=1)
+src1 = input(close, title="Source")
+mult1 = input.float(2.0, minval=0.001, maxval=50, title="StdDev")
+basis1 = ta.sma(src1, length1)
+dev1 = mult1 * ta.stdev(src1, length1)
+upper1 = basis1 + dev1
+lower1 = basis1 - dev1
+//Bollinger bands #2
+length2 = input.int(20, minval=1)
+src2 = input(close, title="Source")
+mult2 = input.float(3.0, minval=0.001, maxval=50, title="StdDev")
+basis2 = ta.sma(src2, length2)
+dev2 = mult2 * ta.stdev(src2, length2)
+upper2 = basis2 + dev2
+lower2 = basis2 - dev2
+//Buy Condition
+buy = close < lower2 and ta.rsi(close,14) <=20
+sell = close > upper2 and ta.rsi(close,14) >=80
+// plotshape(buy, style = shape.arrowup , color = color.green, location = location.belowbar)
+// plotshape(sell, style = shape.arrowdown , color = color.red, location = location.abovebar)
+if (buy)
+    strategy.entry("CALL", strategy.long)
+if (sell)
+    strategy.entry("PUT", strategy.short)
+Expand (44 lines)

@@ -1,0 +1,114 @@
+Script Name: Yusram Mount MaV - Day MaV CrossOver Strgty
+Author: dadashkadir
+Description: This indicator shows the comparison between the 7-day fast simple average and the monthly slow average of 5 bars. The red line indicates the monthly green and blue lines the daily average. If the Green-Blue line crosses the red upwards, it is a buy signal and the opposite is a sell signal. As soon as it turns green blue without waiting for the sell signal, a sell...
+PineScript code:
+
+Pine Script™ strategy
+Yusram Mount MaV - Day MaV CrossOver Strgty
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © dadashkadir
+//@version=4
+strategy("Mount MaV - Day MaV CrossOver Strgty", shorttitle="Yusram Str.", overlay=true)
+src = input(title= "Kaynak", type=input.source, defval=close)
+mav = input(title="Hareketli Ortlama Tipi", defval="SMA", options=["SMA", "EMA", "WMA"])
+Gbar = input(title="Günlük Bar Sayısı", defval=7, minval=1, maxval=999)
+Abar = input(title="Aylık Bar Sayısı", defval=5, minval=1, maxval=999)
+//displacement = input(20, minval=1, title="Displacement")
+getMA(src, length) =>
+    ma = 0.0
+    if mav == "SMA"
+        ma := sma(src, length)
+        ma
+    if mav == "EMA"
+        ma := ema(src, length)
+        ma
+    if mav == "WMA"
+        ma := wma(src, length)
+        ma
+    ma
+long = "M" //Aylık
+ln = security(syminfo.ticker, long, src)
+lnma = getMA(ln, Abar)
+gnma = getMA(src, Gbar)
+col1= gnma>gnma[1]
+col3= gnma<gnma[1]
+colorM = col1 ? color.green : col3 ? color.navy : color.yellow
+l1 = plot(lnma, title="MhO", trackprice = true, style=plot.style_line, color=color.red, linewidth=3)
+l2 = plot(gnma, title="DhO", trackprice = true, style=plot.style_line, color=colorM, linewidth=3)
+fill(l1, l2, color = lnma < gnma ? color.green : color.red, title="Gölgelendirme", transp=90)
+zamanaralik = input (2020, title="Backtest Başlangıç Tarihi")
+al  = crossover (gnma, lnma) and zamanaralik <= year
+sat = crossover (lnma, gnma) and zamanaralik <= year
+plotshape(al,  title = "Giriş",  text = 'Al',  style = shape.labelup,   location = location.belowbar, color= color.green, textcolor = color.white, transp = 0, size = size.tiny)
+plotshape(sat, title = "Çıkış", text = 'Sat', style = shape.labeldown, location = location.abovebar, color= color.red,   textcolor = color.white, transp = 0, size = size.tiny)
+FromDay    = input(defval = 1, title = "Str. Başlama Tarihi Gün", minval = 1, maxval = 31)
+FromMonth  = input(defval = 1, title = "Str. Başlama Tarihi Ay", minval = 1, maxval = 12)
+FromYear   = input(defval = 2015, title = "Str. Başlama Tarihi Yıl", minval = 2005)
+ToDay      = input(defval = 1, title = "Str. Bitiş Tarihi Gün", minval = 1, maxval = 31)
+ToMonth    = input(defval = 1, title = "Str. Bitiş Tarihi Ay", minval = 1, maxval = 12)
+ToYear     = input(defval = 9999, title = "Str. Bitiş Tarihi Yıl", minval = 2006)
+Start     = timestamp(FromYear, FromMonth, FromDay, 00, 00)
+Finish    = timestamp(ToYear, ToMonth, ToDay, 23, 59)
+Timerange() =>
+    time >= Start and time <= Finish ? true : false
+if al
+    strategy.entry("Al", strategy.long, when=Timerange())
+if sat
+    strategy.entry("Sat", strategy.short, when=Timerange())
+Expand (55 lines)

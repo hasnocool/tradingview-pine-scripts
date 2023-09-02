@@ -1,0 +1,431 @@
+Script Name: Impulse Strategy Signals V2
+Author: danieljordi
+Description: This is a low timeframe strategy based on SMMAs and RSI, shared by Investishare.
+This script turns the indicator into a strategy and allows for several variables to be customized.
+PineScript code:
+
+Pine Script™ strategy
+Impulse Strategy Signals V2
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Hiubris_Indicators
+//@version=5
+strategy(title = "Impulse Strategy Signals (SMMA Cross)", overlay = true, default_qty_value = 100, initial_capital=100000,default_qty_type=strategy.percent_of_equity, pyramiding=0, process_orders_on_close=true) 
+ma_len1 = input(21, title="SMMA Length 1 ", group='SMMA')
+ma_len2 = input(50, title="SMMA Length 2 ", group='SMMA')
+ma_len3 = input(200, title="SMMA Length 3 ", group='SMMA')
+smma(src, len) =>
+    smma = 0.0
+    smma := na(smma[1]) ? ta.sma(src, len) : (smma[1] * (len - 1) + src) / len
+    smma
+    
+ma1 = smma(close, ma_len1)
+ma2 = smma(close, ma_len2)
+ma3 = smma(close, ma_len3)
+plot(ma1, title='MA1', color=color.green)
+plot(ma2, title='MA2', color=color.orange)
+plot(ma3, title='MA3', color=color.white)
+rsi_src = input(close, title="RSI Source", group='RSI')
+rsi_len = input(14, title='RSI Length', group='RSI')
+rsi = ta.rsi(rsi_src, rsi_len)
+rsi_long = input.float(50.0, title="LONG: RSI Entry Threshold", group='RSI')
+rsi_short= input.float(50.0, title="SHORT: RSI Entry Threshold", group='RSI')
+// Trading Session 1
+session1 = input.session("0700-1600", title="Trading Session 1")+":1234567"
+t1 = time(timeframe.period, session1)
+trading_session_filter1 = na(t1) ? 0 : 1
+// Trading Session 2
+session2 = input.session("1200-2100", title="Trading Session 2")+":1234567"
+t2 = time(timeframe.period, session2)
+trading_session_filter2 = na(t2) ? 0 : 1
+bgcolor(trading_session_filter1? color.new(color.blue, 90):na, title="Trading Session 1")
+bgcolor(trading_session_filter2? color.new(color.blue, 90):na, title="Trading Session 2")
+trading_session_cond = (trading_session_filter1 or trading_session_filter2) and not (trading_session_filter1 and trading_session_filter2)
+long0 = rsi>rsi_long and close>ma1 and close>ma2 and close>ma3 and ((ta.crossover (ma1, ma2) or ta.crossover (close, ma3)))
+short0= rsi<rsi_short and close<ma1 and close<ma2 and close<ma3 and ((ta.crossunder(ma1, ma2) or ta.crossunder(close, ma3)))
+long = long0  and not long0 [1] and trading_session_cond
+short= short0 and not short0[1] and trading_session_cond
+// Position Management Tools
+pos = 0.0
+pos:= long? 1 : short? -1 : pos[1]
+longCond  = long  and (pos[1]!= 1 or na(pos[1]))
+shortCond = short and (pos[1]!=-1 or na(pos[1]))
+// EXIT FUNCTIONS //
+strat_grp = "strategy settings"
+atrlen = input(14, title="ATR Length", group=strat_grp)
+atr = ta.atr(atrlen)
+i_sl_sw  = input.string("ATR", title="", inline="i_sl ", options=["%", "ATR"], group=strat_grp)
+i_tsl_sw = input.string("ATR", title="", inline="i_tsl", options=["ATR", "%"], group=strat_grp)
+i_sl  = input.float(2.0, title="● Stop Loss  ", minval=0, inline="i_sl ", group=strat_grp,step=0.1)
+i_tsl = input.float(0.0, title="● Trailing SL", minval=0, inline="i_tsl", group=strat_grp,step=0.1)
+i_tp1_sw   = input.string("%", title="", inline="i_tp1 ", options=["%", "ATR", "R:R"], group=strat_grp)
+i_tp2_sw   = input.string("%", title="", inline="i_tp2 ", options=["%", "ATR", "R:R"], group=strat_grp)
+i_tp3_sw   = input.string("%", title="", inline="i_tp3 ", options=["%", "ATR", "R:R"], group=strat_grp)
+i_tp4_sw   = input.string("%", title="", inline="i_tp4 ", options=["%", "ATR", "R:R"], group=strat_grp)
+i_tp1   = input.float(1.0, title="TP 1", minval=0, step=0.1, inline="i_tp1 ", group=strat_grp)
+i_tp2   = input.float(2.0, title="TP 2", minval=0, step=0.1, inline="i_tp2 ", group=strat_grp)
+i_tp3   = input.float(3.0, title="TP 3", minval=0, step=0.1, inline="i_tp3 ", group=strat_grp)
+i_tp4   = input.float(4.0, title="TP 4", minval=0, step=0.1, inline="i_tp4 ", group=strat_grp)
+perc_tp1_0  = input(10.0 , title="QTY%", inline="i_tp1 ", group=strat_grp)
+perc_tp2_0  = input(10.0 , title="QTY%", inline="i_tp2 ", group=strat_grp)
+perc_tp3_0  = input(30.0 , title="QTY%", inline="i_tp3 ", group=strat_grp)
+perc_tp4_0  = input(100.0, title="QTY%", inline="i_tp4 ", group=strat_grp)
+perc_tp1 = perc_tp1_0
+perc_tp2 = perc_tp1_0+perc_tp2_0==100? 100 : perc_tp2_0
+perc_tp3 = perc_tp1_0+perc_tp2_0+perc_tp3_0==100? 100 : perc_tp3_0
+perc_tp4 = perc_tp1_0+perc_tp2_0+perc_tp3_0+perc_tp4_0==100? 100 : perc_tp4_0
+sl  = i_sl >0? (i_sl_sw =="%"? i_sl /100 : i_sl ) : 99999
+tsl = i_tsl>0? (i_tsl_sw=="%"? i_tsl/100 : i_tsl) : 99999
+tp1   = i_tp1  >0? (i_tp1_sw  =="%"? i_tp1  /100 : i_tp1  ) : 99999
+tp2   = i_tp2  >0? (i_tp2_sw  =="%"? i_tp2  /100 : i_tp2  ) : 99999
+tp3   = i_tp3  >0? (i_tp3_sw  =="%"? i_tp3  /100 : i_tp3  ) : 99999
+tp4   = i_tp4  >0? (i_tp4_sw  =="%"? i_tp4  /100 : i_tp4  ) : 99999
+long_entry  = ta.valuewhen(longCond , close, 0)
+short_entry = ta.valuewhen(shortCond, close, 0)
+// Trailing Stop Loss
+trail_long = 0.0, trail_short = 0.0
+trail_long  := longCond? high : high>trail_long[1]? high : pos<1 ? 0  : trail_long[1]
+trail_short := shortCond? low : low<trail_short[1]? low : pos>-1 ? 99999  : trail_short[1]
+trail_long_final_atr    = trail_long  - atr*tsl
+trail_short_final_atr   = trail_short + atr*tsl
+trail_long_final_perc   = trail_long  * (1-tsl)
+trail_short_final_perc  = trail_short * (1+tsl)
+trail_long_final  = i_tsl_sw=="ATR"? trail_long_final_atr  : trail_long_final_perc 
+trail_short_final = i_tsl_sw=="ATR"? trail_short_final_atr : trail_short_final_perc
+// Stop Loss Functions
+sl_long_perc   = long_entry  * (1 - sl)
+sl_short_perc  = short_entry * (1 + sl)
+sl_long_atr   = ta.valuewhen(longCond , close -atr * sl, 0)
+sl_short_atr  = ta.valuewhen(shortCond, close +atr * sl, 0)
+sl_long0  = i_sl_sw =="%"? sl_long_perc  : i_sl_sw =="ATR"? sl_long_atr  : 0 
+sl_short0 = i_sl_sw =="%"? sl_short_perc : i_sl_sw =="ATR"? sl_short_atr : 99999
+sl_long  = math.max(sl_long0 , trail_long_final )
+sl_short = math.min(sl_short0, trail_short_final)
+perc_tp_long1   = long_entry  * (1 + tp1 ),   atr_tp_long1   = ta.valuewhen(longCond , close + atr * tp1 , 0),   rr_tp_long1   = ta.valuewhen(longCond , close+math.abs(close-sl_long )* tp1 , 0)
+perc_tp_long2   = long_entry  * (1 + tp2 ),   atr_tp_long2   = ta.valuewhen(longCond , close + atr * tp2 , 0),   rr_tp_long2   = ta.valuewhen(longCond , close+math.abs(close-sl_long )* tp2 , 0)
+perc_tp_long3   = long_entry  * (1 + tp3 ),   atr_tp_long3   = ta.valuewhen(longCond , close + atr * tp3 , 0),   rr_tp_long3   = ta.valuewhen(longCond , close+math.abs(close-sl_long )* tp3 , 0)
+perc_tp_long4   = long_entry  * (1 + tp4 ),   atr_tp_long4   = ta.valuewhen(longCond , close + atr * tp4 , 0),   rr_tp_long4   = ta.valuewhen(longCond , close+math.abs(close-sl_long )* tp4 , 0)
+perc_tp_short1  = short_entry * (1 - tp1 ),   atr_tp_short1  = ta.valuewhen(shortCond , close - atr * tp1 , 0),   rr_tp_short1  = ta.valuewhen(shortCond, close-math.abs(close-sl_short)*tp1 , 0)
+perc_tp_short2  = short_entry * (1 - tp2 ),   atr_tp_short2  = ta.valuewhen(shortCond , close - atr * tp2 , 0),   rr_tp_short2  = ta.valuewhen(shortCond, close-math.abs(close-sl_short)*tp2 , 0)
+perc_tp_short3  = short_entry * (1 - tp3 ),   atr_tp_short3  = ta.valuewhen(shortCond , close - atr * tp3 , 0),   rr_tp_short3  = ta.valuewhen(shortCond, close-math.abs(close-sl_short)*tp3 , 0)
+perc_tp_short4  = short_entry * (1 - tp4 ),   atr_tp_short4  = ta.valuewhen(shortCond , close - atr * tp4 , 0),   rr_tp_short4  = ta.valuewhen(shortCond, close-math.abs(close-sl_short)*tp4 , 0)
+tp_long1   = i_tp1_sw  =="%"? perc_tp_long1   : i_tp1_sw  =="ATR"? atr_tp_long1   : rr_tp_long1  
+tp_long2   = i_tp2_sw  =="%"? perc_tp_long2   : i_tp2_sw  =="ATR"? atr_tp_long2   : rr_tp_long2  
+tp_long3   = i_tp3_sw  =="%"? perc_tp_long3   : i_tp3_sw  =="ATR"? atr_tp_long3   : rr_tp_long3  
+tp_long4   = i_tp4_sw  =="%"? perc_tp_long4   : i_tp4_sw  =="ATR"? atr_tp_long4   : rr_tp_long4  
+tp_short1  = i_tp1_sw  =="%"? perc_tp_short1  : i_tp1_sw  =="ATR"? atr_tp_short1  : rr_tp_short1 
+tp_short2  = i_tp2_sw  =="%"? perc_tp_short2  : i_tp2_sw  =="ATR"? atr_tp_short2  : rr_tp_short2 
+tp_short3  = i_tp3_sw  =="%"? perc_tp_short3  : i_tp3_sw  =="ATR"? atr_tp_short3  : rr_tp_short3 
+tp_short4  = i_tp4_sw  =="%"? perc_tp_short4  : i_tp4_sw  =="ATR"? atr_tp_short4  : rr_tp_short4 
+// Take Profits %
+sum_tp4 = perc_tp1 + perc_tp2 + perc_tp3 + perc_tp4
+sum_tp3 = perc_tp1 + perc_tp2 + perc_tp3
+sum_tp2 = perc_tp1 + perc_tp2
+sum_tp1 = perc_tp1
+last_tp_long = i_tp4>0 and sum_tp4>=100?  tp_long4 : 
+ i_tp3>0 and sum_tp3>=100?  tp_long3 : 
+ i_tp2>0 and sum_tp2>=100?  tp_long2 : 
+ i_tp1>0 and sum_tp1>=100?  tp_long1 : na
+ 
+last_tp_short = i_tp4>0 and sum_tp4>=100?  tp_short4 : 
+ i_tp3>0 and sum_tp3>=100?  tp_short3 : 
+ i_tp2>0 and sum_tp2>=100?  tp_short2 : 
+ i_tp1>0 and sum_tp1>=100?  tp_short1 : na
+ 
+// Position Adjustment
+long_sl  = low <sl_long[1]  and pos[1]==1
+short_sl = high>sl_short[1] and pos[1]==-1
+final_long_tp  = high>last_tp_long [1]  and pos[1]==1
+final_short_tp = low <last_tp_short[1] and pos[1]==-1
+if ((long_sl or final_long_tp) and not shortCond) or ((short_sl or final_short_tp) and not longCond)
+    pos:=0
+//  Strategy Backtest Limiting Algorithm
+i_startTime = input.time(defval = timestamp("01 Sep 2002 13:30 +0000"), title = "Backtesting Start Time")
+i_endTime   = input.time(defval = timestamp("30 Sep 2099 19:30 +0000"), title = "Backtesting End Time"  )
+timeCond   = (time > i_startTime) and (time < i_endTime)
+equity = strategy.initial_capital + strategy.netprofit
+if equity>0 and timeCond
+    if longCond
+        strategy.entry("long" , strategy.long )
+    if shortCond
+        strategy.entry("short", strategy.short)
+    
+strategy.exit("SL/TP1 ", from_entry = "long" , stop=sl_long , limit=tp_long1 , qty_percent=perc_tp1 , when=perc_tp1 >0)
+strategy.exit("SL/TP2 ", from_entry = "long" , stop=sl_long , limit=tp_long2 , qty_percent=perc_tp2 , when=perc_tp2 >0)
+strategy.exit("SL/TP3 ", from_entry = "long" , stop=sl_long , limit=tp_long3 , qty_percent=perc_tp3 , when=perc_tp3 >0)
+strategy.exit("SL/TP4 ", from_entry = "long" , stop=sl_long , limit=tp_long4 , qty_percent=perc_tp4 , when=perc_tp4 >0)
+strategy.exit("SL/TP1 ", from_entry = "short" , stop=sl_short, limit=tp_short1 , qty_percent=perc_tp1 , when=perc_tp1 >0)
+strategy.exit("SL/TP2 ", from_entry = "short" , stop=sl_short, limit=tp_short2 , qty_percent=perc_tp2 , when=perc_tp2 >0)
+strategy.exit("SL/TP3 ", from_entry = "short" , stop=sl_short, limit=tp_short3 , qty_percent=perc_tp3 , when=perc_tp3 >0)
+strategy.exit("SL/TP4 ", from_entry = "short" , stop=sl_short, limit=tp_short4 , qty_percent=perc_tp4 , when=perc_tp4 >0)
+show_sltp = input(true, title="Show SL/TP Lines on Chart")
+plot(show_sltp and pos== 1? tp_long1  : na, color=color.green, style=plot.style_linebr, title="TP Long 1")
+plot(show_sltp and pos== 1? tp_long2  : na, color=color.green, style=plot.style_linebr, title="TP Long 2")
+plot(show_sltp and pos== 1? tp_long3  : na, color=color.green, style=plot.style_linebr, title="TP Long 3")
+plot(show_sltp and pos== 1? tp_long4  : na, color=color.green, style=plot.style_linebr, title="TP Long 4")
+plot(show_sltp and pos==-1? tp_short1 : na, color=color.green, style=plot.style_linebr, title="TP Short 1")
+plot(show_sltp and pos==-1? tp_short2 : na, color=color.green, style=plot.style_linebr, title="TP Short 2")
+plot(show_sltp and pos==-1? tp_short3 : na, color=color.green, style=plot.style_linebr, title="TP Short 3")
+plot(show_sltp and pos==-1? tp_short4 : na, color=color.green, style=plot.style_linebr, title="TP Short 4")
+plot(show_sltp and pos== 1? sl_long  : na, color=color.red  , style=plot.style_linebr, title="SL Long ")
+plot(show_sltp and pos==-1? sl_short : na, color=color.red  , style=plot.style_linebr, title="SL Short")
+plotshape(longCond,  textcolor=#ffffff, color=color.lime, style=shape.labelup  , title="Buy" , text="Buy" , location=location.belowbar,  offset=0, size=size.small)
+plotshape(shortCond, textcolor=#ffffff, color=color.red , style=shape.labeldown, title="Sell", text="Sell", location=location.abovebar,  offset=0, size=size.small)
+longCond_txt         = input("", title='Alert Msg: LONG Entry', group='Alert Message', inline='longCond_txt      ')
+shortCond_txt        = input("", title='Alert Msg: SHORT Entry', group='Alert Message', inline='shortCond_txt     ')
+long_sltp_txt        = input("", title='Alert Msg: LONG SL/TP', group='Alert Message', inline='long_sltp_txt       ')
+short_sltp_txt       = input("", title='Alert Msg: SHORT SL/TP', group='Alert Message', inline='short_sltp_txt      ')
+if longCond
+    alert(longCond_txt, alert.freq_once_per_bar_close)
+if shortCond
+    alert(shortCond_txt, alert.freq_once_per_bar_close)
+if long_sl  or final_long_tp
+    alert(long_sltp_txt, alert.freq_once_per_bar_close)
+if short_sl or final_short_tp
+    alert(short_sltp_txt, alert.freq_once_per_bar_close)
+Expand (245 lines)

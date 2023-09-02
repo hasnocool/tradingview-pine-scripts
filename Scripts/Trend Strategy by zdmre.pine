@@ -1,0 +1,246 @@
+Script Name: Trend Strategy by zdmre
+Author: zdmre
+Description: This Strategy is a trend following indicator. It is plotted on price and the current trend can be determined by its placement vis-a-vis price. It is constructed with just three parameters: Period, Multiplier and Entry/Exit Point with Superformula.
+
+The default parameters are 14 for Average True Range (ATR) and 4 for its multiplier. The average true range (ATR)...
+PineScript code:
+
+Pine Script™ strategy
+Trend Strategy by zdmre
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+//@version=5
+strategy('Trend Strategy by zdmre', shorttitle='Trend Strategy', overlay=true, pyramiding=0, currency=currency.USD, default_qty_type=strategy.percent_of_equity, initial_capital=10000, default_qty_value=100, commission_type=strategy.commission.percent, commission_value=0.005)
+show_trend = input(true, 'Color Candles')
+show_STOPLOSSprice = input(false, title='Show TrailingSTOP Prices')
+show_BackgroundColor = input(false, title='Show Background Color')
+show_TrendColor = input(false, title='Fill Trend Color')
+shtline = input.bool(defval = false, title = "Show Trend Lines")
+shpoints = input.bool(defval = false, title = "Strategy Entry/Exit")
+src = input(close, title='Source')
+out2 = ta.ema(src, 20)
+buyavg = (close + high) / 2.02 - high * (1 - open / close) * (1 - low * open / (high * close))
+sellavg = ((low + close) / 1.99 + low * (1 - low / open) * (1 - low * open / (close * high)) / 1.1 + out2 )/ 2
+// === INPUT BACKTEST RANGE ===
+fromMonth = input.int(defval=1, title='From Month', minval=1, maxval=12)
+fromDay = input.int(defval=1, title='From Day', minval=1, maxval=31)
+fromYear = input.int(defval=2021, title='From Year', minval=1970)
+thruMonth = input.int(defval=1, title='Thru Month', minval=1, maxval=12)
+thruDay = input.int(defval=1, title='Thru Day', minval=1, maxval=31)
+thruYear = input.int(defval=2100, title='Thru Year', minval=1970)
+// === INPUT SHOW PLOT ===
+showDate = input(defval=true, title='Show Date Range')
+// === FUNCTION EXAMPLE ===
+start = timestamp(fromYear, fromMonth, fromDay, 00, 00)  // backtest start window
+finish = timestamp(thruYear, thruMonth, thruDay, 23, 59)  // backtest finish window
+window() =>  // create function "within window of time"
+    time >= start and time <= finish ? true : false
+// === TRAILING STOP LOSS === //
+ATR_Period = input(14)
+ATR_Mult = input(4.0)
+var float ATR_TrailSL = na
+var int pos = na
+xATR = ta.atr(ATR_Period)
+nLoss = ATR_Mult * xATR
+iff_1 = close > nz(ATR_TrailSL[1], 0) ? close - nLoss : close + nLoss
+iff_2 = close < nz(ATR_TrailSL[1], 0) and close[1] < nz(ATR_TrailSL[1], 0) ? math.min(nz(ATR_TrailSL[1]), close + nLoss) : iff_1
+ATR_TrailSL := close > nz(ATR_TrailSL[1], 0) and close[1] > nz(ATR_TrailSL[1], 0) ? math.max(nz(ATR_TrailSL[1]), close - nLoss) : iff_2
+iff_3 = close[1] > nz(ATR_TrailSL[1], 0) and close < nz(ATR_TrailSL[1], 0) ? -1 : nz(pos[1], 0)
+pos := close[1] < nz(ATR_TrailSL[1], 0) and close > nz(ATR_TrailSL[1], 0) ? 1 : iff_3
+// Color-Candle and Color-TrendLine
+var color trend_candle = na
+var color trend_line = na
+if show_trend
+    trend_candle := pos == -1 ? color.red : pos == 1 ? color.green : na
+if shtline
+    trend_line := pos == -1 ? color.red : pos == 1 ? color.green : na
+plotcandle(open, high, low, close  , color = trend_candle  , wickcolor = trend_candle  , bordercolor = trend_candle  , editable = false)
+atrtrend = plot(ATR_TrailSL, 'Trailing StopLoss', trend_line, linewidth=1)
+// ===  Stop Loss === //
+slGroup = 'Stop Loss'
+useSL = input.bool(false, title='╔══════   Enable   ══════╗', group=slGroup, tooltip='If you are using this strategy for Scalping or Futures market, we do not recommend using Stop Loss.')
+SLbased = input.string(title='Based on', defval='Percent', options=['ATR', 'Percent'], group=slGroup, tooltip='ATR: Average True Range\nPercent: eg. 5%.')
+multiATR = input.float(10.0, title='ATR   Mult', group=slGroup, inline='atr')
+lengthATR = input.int(14, title='Length', group=slGroup, inline='atr')
+SLPercent = input.float(5, title='Percent', group=slGroup) * 0.01
+Shortposenter = input.bool(false, title='ShortPosition')
+longStop = 0.0
+shortStop = 0.0
+if SLbased == 'ATR'
+    longStop := ta.valuewhen(pos == 1, low, 0) - ta.valuewhen(pos == 1, ta.rma(ta.tr(true), lengthATR), 0) * multiATR
+    longStopPrev = nz(longStop[1], longStop)
+    longStop := close[1] > longStopPrev ? math.max(longStop, longStopPrev) : longStop
+    shortStop := ta.valuewhen(pos == -1, ta.rma(ta.tr(true), lengthATR), 0) * multiATR + ta.valuewhen(pos == -1, high, 0)
+    shortStopPrev = nz(shortStop[1], shortStop)
+    shortStop := close[1] > shortStopPrev ? math.max(shortStop, shortStopPrev) : shortStop
+    shortStop
+if SLbased == 'Percent'
+    longStop := strategy.position_avg_price * (1 - SLPercent)
+    shortStop := strategy.position_avg_price * (1 + SLPercent)
+    shortStop
+exitLong  = pos == -1 
+// === PlotColor === //
+buySignal = pos == 1 and pos[1] == -1
+exitSignal = pos == -1 and pos[1] == 1
+up=src-nLoss
+up1 = nz(up[1],up)
+up := close[1] > up1 ? math.max(up,up1) : up
+dn=src+nLoss
+dn1 = nz(dn[1], dn)
+dn := close[1] < dn1 ? math.min(dn, dn1) : dn
+plotshape(buySignal and shpoints ? up : na, title="UpTrend Begins", location=location.absolute, style=shape.circle, size=size.tiny, color=color.green)
+plotshape(buySignal and shpoints ? up : na, title="Buy", text="Buy", location=location.absolute, style=shape.labelup, size=size.normal, color=color.green, textcolor=color.black)
+plotshape(exitSignal and shpoints ? dn : na, title="DownTrend Begins", location=location.absolute, style=shape.circle, size=size.tiny, color=color.red)
+plotshape(exitSignal and shpoints ? dn : na, title="Sell", text="Sell", location=location.absolute, style=shape.labeldown, size=size.normal, color=color.red, textcolor=color.black)
+hPlot = plot(ohlc4, title="", style=plot.style_circles, linewidth=0, editable = false)
+longFill = (pos == 1 and show_TrendColor? color.new(color.green,80) : na) 
+shortFill = (pos == -1 and show_TrendColor? color.new(color.red,80) : na)
+fill(hPlot, atrtrend,color=longFill)
+fill(hPlot,atrtrend, color=shortFill)
+col = pos == 1  ? color.new(color.lime,85) : color.new(color.red,85)
+bgcolor(show_BackgroundColor ? col:na)
+// === Strategy === //
+strategy.entry('Long', strategy.long, limit = close, when=window() and buySignal  and shpoints,comment="BuyLow: "+str.tostring(buyavg))
+strategy.close('Long', when=window() and exitSignal  and shpoints, comment='SellHigh: '+str.tostring(sellavg))
+if Shortposenter 
+    strategy.entry('Short', strategy.short, when=window() and pos== -1,comment="Entry: "+str.tostring(close))
+    strategy.close('Short', when=window() and pos == 1 , comment='Exit: '+str.tostring(close))
+if useSL
+    strategy.exit('Stop Loss', 'Long', stop=longStop)
+    
+// === Show StopLoss Price === //
+if show_STOPLOSSprice
+    if pos == -1
+        label ShortStop = label.new(bar_index, na, 'SL: ' + str.tostring(ATR_TrailSL), color=color.green, textcolor=color.black, style=label.style_label_lower_left, yloc=yloc.abovebar, size=size.small)
+        label.delete(ShortStop[1])
+    if pos == 1
+        label LongStop = label.new(bar_index, na, 'SL: ' + str.tostring(ATR_TrailSL), color=color.red, textcolor=color.black, style=label.style_label_upper_left, yloc=yloc.belowbar, size=size.small)
+        label.delete(LongStop[1])
+Expand (128 lines)

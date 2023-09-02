@@ -1,0 +1,182 @@
+Script Name: MACD,RSI & EMA strategy with MA+PSAR by MAM
+Author: maizirul959
+Description: MACD,RSI & EMA strategy with MA+PSAR
+
+Buy strategy
+ - MACD above signal
+ - RSI above RSI signal
+ - Close price above EMA
+
+Sell Strategy
+ - MACD below signal
+ - RSI below RSI signal
+ - Close price below EMA
+PineScript code:
+
+Pine Script™ strategy
+MACD,RSI & EMA strategy with MA+PSAR by MAM
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © maizirul959
+//@version=4
+strategy("MACD,RSI & EMA strategy with MA+PSAR by MAM", overlay=true)
+//Input Data
+_ema_len1 = input(5, title="EMA1 length")
+_ema_len2 = input(20, title="EMA2 length")
+_macd_fast = input(12, title="MACD Fast")
+_macd_slow = input(26, title="MACD Slow")
+_macd_signal_len = input(20, title="MACD Signal length")
+//MAM add SMA
+_sma_len1 = input(5, title="SMA1 Length")
+_sma_len2 = input(10, title="SMA2 Length")
+_sma_len3 = input(50, title="SMA3 Length")
+_sma_len4 = input(200, title="SMA4 Length")
+lineWidth = input(1, minval=1, title="Line width")
+src = input(close, title="Source")
+SMA1 = if _sma_len1 != 0
+    sma(src, _sma_len1)
+SMA2 = if _sma_len2 != 0
+    sma(src, _sma_len2)
+SMA3 = if _sma_len3 != 0
+    sma(src, _sma_len3)
+SMA4 = if _sma_len4 != 0
+    sma(src, _sma_len4)
+//__________________________________________________________________________
+_rsi_len = input(14, title="RSI length")
+_rsi_signal_len = input(20, title="RSI signal length")
+//_________________________________________________________________________
+//MAM Add PSAR
+PSAR_start = input(0.02)
+PSAR_increment = input(0.02)
+PSAR_maximum = input(0.2)
+psar = sar(PSAR_start, PSAR_increment, PSAR_maximum)
+//_________________________________________________________________________
+_ema1 = ema(close, _ema_len1)
+_ema2 = ema(close, _ema_len2)
+//_________________________________________________________________________
+//MAM add SMA
+//_sma1 = sma(close, _sma_len1)
+//_sma2 = sma(close, _sma_len2)
+//_________________________________________________________________________
+_macd = ema(close, _macd_fast) - ema(close, _macd_slow)
+_macd_signal = ema(_macd, _macd_signal_len)
+_rsi = rsi(close, _rsi_len)
+_rsi_signal = ema(_rsi, _rsi_signal_len)
+//PLOT SMA
+plot(SMA1, color=#B71C1C, title="SMA1", linewidth=lineWidth)
+plot(SMA2, color=#FFFF00, title="SMA2", linewidth=lineWidth)
+plot(SMA3, color=#5b34ff, title="SMA3", linewidth=lineWidth)
+plot(SMA4, color=#d7d7d7, title="SMA4", linewidth=lineWidth)
+//PLOT PSAR
+//plot(psar, "ParabolicSAR", style=plot.style_cross, color=#3A6CA8)
+pc = close < psar ? color.red : color.green
+plot(psar, style=plot.style_cross, color=pc)
+//plot(_rsi, color=color.yellow)
+//plot(_rsi_signal, color=color.green)
+//plot(_macd, color=color.blue)
+//plot(_macd_signal, color=color.red)
+longCondition = close > _ema1 and close > _ema2 and _macd > _macd_signal and _rsi > _rsi_signal and _rsi > 50 and _rsi < 70
+if (longCondition)
+    strategy.entry("Buy",strategy.long)
+shortCondition = close < _ema1 and close <_ema2 and _macd < _macd_signal and _rsi < _rsi_signal 
+if (shortCondition)
+    strategy.entry("Sell",strategy.short)
+    
+//bcol = longCondition ? color.green : shortCondition ? color.orange : na
+//bgcolor(bcol)
+Expand (95 lines)

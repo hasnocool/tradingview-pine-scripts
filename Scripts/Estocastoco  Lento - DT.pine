@@ -1,0 +1,220 @@
+Script Name: Estocastoco  Lento - DT
+Author: lhcbenac
+Description: Operacional criado pelo Jean Lira - Trader. 
+Basicamente busca uma situação de confirmação de exaustão com o indicador estocastico. 
+Na primeira barra de reversão do movimento, e com o sinal forte do estocastico Lento, no periodo de 5. 
+Gerenciamento de risco com e sem parcial.
+PineScript code:
+
+Pine Script™ strategy
+Estocastoco Lento - DT
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+//@version=5
+strategy('Cross', overlay=true, initial_capital=1000 )
+// Creditos : Cleber.martinelli
+////////////////////////////////////////////////////////
+//                                                    //
+//                                                    //
+//                    CALENDARIO                      //
+//                                                    //
+//                                                    //
+////////////////////////////////////////////////////////
+//052)
+// trading view solicita que se ja informado data para gerar backtest a partir de tal data
+//começa backtest do trading sistem em qual data ?
+ano = input.int(2022, minval=1, title="Ano")
+mes = input.int(1, minval=1, maxval=12, title="Mes")
+dia = input.int(1, minval=1, maxval=31, title="Dia")
+hora = input.int(1, minval=1, maxval=23, title="hora")
+minuto = input.int(0, minval=0, maxval=59, title="minuto")
+horaabertura = input.int(10, minval=1, maxval=23, title="hora Inicio Operacao Robo")
+minutoabertura = input.int(40, minval=1, maxval=59, title="Minuto Encerra Tudo")
+horaencerra = input.int(17, minval=1, maxval=23, title="hora Fechamento")
+minutoencerra = input.int(50, minval=1, maxval=59, title="Minuto Encerra Novas Operacoes")
+minutofinaliza = input.int(50, minval=1, maxval=59, title="Minuto Encerra Tudo")
+//valida se o dia de hoje é posterior ao dia informado acima
+Validadia = year >= ano and month >= mes and dayofmonth >= dia
+//cria horario de abertura de negociaçao, considerar default 10 hs, pois os indicadores ja estarão corrigidos
+abreloja = year >= ano and month >= mes and dayofmonth >= dia and hour >= horaabertura
+//and minute >= minutoabertura)
+//cria horario de fechamento de todas as negociaçoes, considerar default 17:00 hs
+//nenhuma ordem pode ser aberta depois dessa data e as abertas devem ser fechadas
+fechaloja = year >= ano and month >= mes and dayofmonth >= dia and hour >= horaencerra
+//and minute >= minutoencerra)
+fechaloja2 = year >= ano and month >= mes and dayofmonth >= dia and hour >= horaencerra
+//and minute >= minutofinaliza)
+//valida horario de negociação, pra liberar as operacoes.
+lojaaberta = abreloja == true and fechaloja == false and fechaloja2 == false
+////////////////////////////////////////////////////////
+//                                                    //
+//                                                    //
+//                 Codigo Operacional                 //
+//                                                    //
+//                                                    //
+////////////////////////////////////////////////////////
+// Inputs da Estratégia
+pmax = input.int(90, minval=0, maxval=100, title="Estocastico Alvo - Para Short")
+pmin = input.int(10, minval=0, maxval=100, title="Estocastico Alvo - Para Buy ")
+parcial = input(title="Parcial ? ", defval=true)
+p_gain = input.int(150, minval=0, maxval=1000, title="Pontos para Gain ")
+p_loss = input.int(150, minval=0, maxval=1000, title="Pontos para Loss")
+p_parcial = input.int(50, minval=0, maxval=100, title="Pontos para Parcial ")
+// puxando os indicadores que usaremos 
+estoc = ta.stoch(close,high,low,5)
+if (estoc >=pmax and close < open)
+    strategy.entry("Vende", strategy.short ,qty = 2)
+if (estoc <=pmax and close > open)
+    strategy.entry("Compra", strategy.long ,qty  =  2 )
+pm_ativo = strategy.opentrades.entry_price(0)
+if strategy.position_size > 0 and parcial// Posicionado na compra 
+    if strategy.position_size == 2 // Mão cheia
+        if close < pm_ativo - 100
+            strategy.exit("Fecha Compra", "Compra", loss=p_loss , qty  =  2 )
+        if close > pm_ativo + 50
+            strategy.exit("Fecha Compra", "Compra", profit=p_gain , qty  =  1 )
+    if strategy.position_size == 1// Mão cheia
+        if close < pm_ativo 
+            strategy.exit("Fecha Compra", "Compra", loss=0 , qty  =  1 )
+        if close > pm_ativo + 100
+            strategy.exit("Fecha Compra", "Compra", profit= p_gain * 1.5 , qty  =  1 )    
+    
+if strategy.position_size < 0 and parcial // Posicionado na Venda 
+    if strategy.position_size == -2 // Mão cheia
+        if close > pm_ativo - 100
+            strategy.exit("Fecha Venda", "Vende", loss=p_loss , qty  =  2 )
+        if close < pm_ativo + 50
+            strategy.exit("Fecha Venda", "Vende", profit=p_gain , qty  =  1 )
+    if strategy.position_size == -1// Mão cheia
+        if close > pm_ativo 
+            strategy.exit("Fecha Venda", "Vende", loss=0 , qty  =  1 )
+        if close < pm_ativo + 100
+            strategy.exit("Fecha Venda", "Vende", profit=p_gain*1.5 , qty  =  1 )    
+    
+if strategy.position_size > 0 and parcial == false // Sem Parcial 
+    strategy.exit("Fecha Compra", "Compra", loss=p_loss , profit = p_gain , qty  =  2 )
+if strategy.position_size < 0 and parcial == false // Sem Parcial 
+    strategy.exit("Fecha Venda", "Vende", loss=p_loss , profit = p_gain , qty  =  2 )
+Expand (123 lines)

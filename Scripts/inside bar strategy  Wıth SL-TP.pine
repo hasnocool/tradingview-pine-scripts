@@ -1,0 +1,120 @@
+Script Name: inside bar strategy  Wıth SL-TP
+Author: ridvansozen1
+Description: Based on strat bars to enter trades, you can use it  with very low stop loss level and try all coins in daily frequency
+PineScript code:
+
+Pine Script™ strategy
+inside bar strategy Wıth SL-TP
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+//@version=4
+strategy("inside bar strategy  Wıth SL-TP ", overlay=true,default_qty_type = strategy.percent_of_equity, default_qty_value = 100,commission_type=strategy.commission.percent,commission_value=0.1,slippage=1)
+insides = high < high[1] and low > low[1]
+outsides = high > high[1] and low < low[1]
+candle_control=insides or outsides
+target_profit_percent=input(3,"target profit%",step=0.1)
+stop_loss_percent=input(1,"stop loss %",step=0.1)
+yearfrom = input(2021)
+yearuntil =input(2022)
+monthfrom =input(1)
+monthuntil =input(12)
+dayfrom=input(1)
+dayuntil=input(31)
+long_cond=candle_control[1] and close>open and high>high[1]
+short_cond=candle_control[1] and close<open and low<low[1]
+if ( long_cond and   year >= yearfrom and year <= yearuntil and month>=monthfrom and month <=monthuntil and dayofmonth>=dayfrom and dayofmonth < dayuntil) 
+    strategy.entry("LONG", strategy.long, stop=close, oca_name="TREND", oca_type=strategy.oca.cancel, comment="LONG")
+    
+else
+    strategy.cancel(id="LONG")
+if (  short_cond and  year >= yearfrom and year <= yearuntil and month>=monthfrom and month <=monthuntil and dayofmonth>=dayfrom and dayofmonth < dayuntil ) 
+    strategy.entry("SHORT", strategy.short,stop=close, oca_name="TREND", oca_type=strategy.oca.cancel, comment="SHORT")
+else
+    strategy.cancel(id="SHORT")
+    
+    
+    
+    
+profit_target=(close*(target_profit_percent/100))/syminfo.mintick
+stop_target=(close*(stop_loss_percent/100))/syminfo.mintick
+strategy.exit("LONG EXIT","LONG",profit=profit_target, loss=stop_target ) 
+    
+strategy.exit("LONG EXIT","SHORT",profit=profit_target, loss=stop_target ) 
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+Expand (66 lines)

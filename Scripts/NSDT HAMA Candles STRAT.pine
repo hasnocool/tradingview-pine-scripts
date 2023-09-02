@@ -1,0 +1,389 @@
+Script Name: NSDT HAMA Candles STRAT
+Author: NorthStarDayTrading
+Description: This is a STRATEGY based on our popular HAMA Candles Indicator.
+It is an "Always On" strategy, meaning it will stay in a Long position until the Short criteria shows up, and then it will close the Long position and immediately enter a Short position.
+
+Since this is a strategy, we added a few more components. The most notable one is the grid at the top right that...
+PineScript code:
+
+Pine Script™ strategy
+NSDT HAMA Candles STRAT
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+//@version=5
+strategy('NSDT HAMA Candles STRAT', overlay=true, calc_on_every_tick=true, process_orders_on_close=true)
+//The follow gradient code is taken from the Pinecoders Gradient Framework example.
+//https://www.tradingview.com/script/hqH4YIFa-Color-Gradient-Framework-PineCoders/
+//Pro Advance/Decline Gradient
+////////////////////
+//GRADIENT AREA
+////////////////////
+f_c_gradientAdvDecPro(_source, _center, _steps, _c_bearWeak, _c_bearStrong, _c_bullWeak, _c_bullStrong) =>
+    var float _qtyAdvDec = 0.
+    var float _maxSteps = math.max(1, _steps)
+    bool _xUp = ta.crossover(_source, _center)
+    bool _xDn = ta.crossunder(_source, _center)
+    float _chg = ta.change(_source)
+    bool _up = _chg > 0
+    bool _dn = _chg < 0
+    bool _srcBull = _source > _center
+    bool _srcBear = _source < _center
+    _qtyAdvDec := _srcBull ? _xUp ? 1 : _up ? math.min(_maxSteps, _qtyAdvDec + 1) : _dn ? math.max(1, _qtyAdvDec - 1) : _qtyAdvDec : _srcBear ? _xDn ? 1 : _dn ? math.min(_maxSteps, _qtyAdvDec + 1) : _up ? math.max(1, _qtyAdvDec - 1) : _qtyAdvDec : _qtyAdvDec
+    var color _return = na
+    _return := _srcBull ? color.from_gradient(_qtyAdvDec, 1, _maxSteps, _c_bullWeak, _c_bullStrong) : _srcBear ? color.from_gradient(_qtyAdvDec, 1, _maxSteps, _c_bearWeak, _c_bearStrong) : _return
+    _return
+//MA TYPES
+mat(source, length, type) =>
+    type == 'SMA' ? ta.sma(source, length) : type == 'EMA' ? ta.ema(source, length) : type == 'RMA' ? ta.rma(source, length) : type == 'WMA' ? ta.wma(source, length) : type == 'VWMA' ? ta.vwma(source, length) : type == 'HMA' ? ta.hma(source, length) : type == 'TMA' ? ta.sma(ta.sma(source, length), length) : na
+//INPUTS
+bull = input(color.rgb(0, 255, 0), title='Bull Color', group='----- Candles -----')
+bear = input(color.rgb(255, 0, 0), title='Bear Color', group='----- Candles -----')
+neutral = input(color.rgb(255, 255, 0, 0), title='Neutral Color', group='----- Candles -----')
+show_ma = true
+ma_type = 'WMA'
+ma_source = close
+ma_length = 55
+UseGradient = input(true, title='Use Gradient Colors', group='----- Candles -----')
+stepn = input(5, title='Max Gradient Steps', group='----- Candles -----')
+ma = mat(ma_source, ma_length, ma_type)
+col = f_c_gradientAdvDecPro(ma, ta.ema(ma, 3), stepn, neutral, bear, neutral, bull)
+////////////////////
+//END GRADIENT AREA
+////////////////////
+//MA INFO
+WickColor = input.color(color.rgb(80, 80, 80, 100), title='Wick Color', group='----- Candles -----', tooltip='Suggest Full Transparency.')
+OpenLength = input.int(25, minval=1, title='Length Open', inline='Open', group='----- HAMA Candles -----')
+OpenType = input.string(defval='EMA', title='Type', options=['EMA', 'SMA', 'WMA'], inline='Open', group='----- HAMA Candles -----')
+HighLength = input.int(20, minval=1, title='Length High', inline='High', group='----- HAMA Candles -----')
+HighType = input.string(defval='EMA', title='Type', options=['EMA', 'SMA', 'WMA'], inline='High', group='----- HAMA Candles -----')
+LowLength = input.int(20, minval=1, title='Length Low', inline='Low', group='----- HAMA Candles -----')
+LowType = input.string(defval='EMA', title='Type', options=['EMA', 'SMA', 'WMA'], inline='Low', group='----- HAMA Candles -----')
+CloseLength = input.int(20, minval=1, title='Length Close', inline='Close', group='----- HAMA Candles -----')
+CloseType = input.string(defval='EMA', title='Type', options=['EMA', 'SMA', 'WMA'], inline='Close', group='----- HAMA Candles -----')
+LengthMA = input.int(55, minval=1, title='MA Line Length', inline='MA Length', group='----- MA Settings -----')
+MAType = input.string(defval='EMA', title='MA Line Type', options=['EMA', 'SMA', 'WMA'], inline='MA Info', group='----- MA Settings -----')
+MASource = input(close, title='MA Source', inline='MA Info', group='----- MA Settings -----')
+EntryMALength = input.int(55, minval=1, title='Entry MA Line Length', inline='Entry MA Length', group='----- MA Settings -----')
+EntryMAType = input.string(defval='EMA', title='Entry MA Line Type', options=['EMA', 'SMA', 'WMA'], inline='Entry MA Info', group='----- MA Settings -----')
+EntryMASource = input(close, title='Entry MA Source', inline='Entry MA Info', group='----- MA Settings -----')
+TypeOpen = OpenType
+SourceOpen = (open[1] + close[1]) / 2
+LengthOpen = OpenLength
+TypeHigh = HighType
+SourceHigh = math.max(high, close)
+LengthHigh = HighLength
+TypeLow = LowType
+SourceLow = math.min(low, close)
+LengthLow = LowLength
+TypeClose = CloseType
+SourceClose = (open + high + low + close) / 4
+LengthClose = CloseLength
+funcCalcMA(type1, src1, len1) =>
+    return_1 = type1 == 'EMA' ? ta.ema(src1, len1) : type1 == 'SMA' ? ta.sma(src1, len1) : type1 == 'WMA' ? ta.wma(src1, len1) : na
+    return_1
+funcCalcEntryMA(type1a, src1a, len1a) =>
+    return_1a = type1a == 'EMA' ? ta.ema(src1a, len1a) : type1a == 'SMA' ? ta.sma(src1a, len1a) : type1a == 'WMA' ? ta.wma(src1a, len1a) : na
+    return_1a
+funcCalcOpen(TypeOpen, SourceOpen, LengthOpen) =>
+    return_2 = TypeOpen == 'EMA' ? ta.ema(SourceOpen, LengthOpen) : TypeOpen == 'SMA' ? ta.sma(SourceOpen, LengthOpen) : TypeOpen == 'WMA' ? ta.wma(SourceOpen, LengthOpen) : na
+    return_2
+funcCalcHigh(TypeHigh, SourceHigh, LengthHigh) =>
+    return_3 = TypeHigh == 'EMA' ? ta.ema(SourceHigh, LengthHigh) : TypeHigh == 'SMA' ? ta.sma(SourceHigh, LengthHigh) : TypeHigh == 'WMA' ? ta.wma(SourceHigh, LengthHigh) : na
+    return_3
+funcCalcLow(TypeLow, SourceLow, LengthLow) =>
+    return_4 = TypeLow == 'EMA' ? ta.ema(SourceLow, LengthLow) : TypeLow == 'SMA' ? ta.sma(SourceLow, LengthLow) : TypeLow == 'WMA' ? ta.wma(SourceLow, LengthLow) : na
+    return_4
+funcCalcClose(TypeClose, SourceClose, LengthClose) =>
+    return_5 = TypeClose == 'EMA' ? ta.ema(SourceClose, LengthClose) : TypeClose == 'SMA' ? ta.sma(SourceClose, LengthClose) : TypeClose == 'WMA' ? ta.wma(SourceClose, LengthClose) : na
+    return_5
+MA = funcCalcMA(MAType, MASource, LengthMA)
+EntryMA = funcCalcEntryMA(EntryMAType, EntryMASource, EntryMALength)
+CandleOpen = funcCalcOpen(TypeOpen, SourceOpen, LengthOpen)
+CandleHigh = funcCalcHigh(TypeHigh, SourceHigh, LengthHigh)
+CandleLow = funcCalcLow(TypeLow, SourceLow, LengthLow)
+CandleClose = funcCalcClose(TypeClose, SourceClose, LengthClose)
+//PLOT CANDLES
+BodyColor = CandleOpen > CandleOpen[1] ? color.green : color.red
+barcolor(UseGradient ? col : BodyColor)
+plotcandle(CandleOpen, CandleHigh, CandleLow, CandleClose, color=UseGradient ? col : BodyColor, title='HAMA Candles', wickcolor=WickColor, bordercolor=na)
+plot(MA, title='MA Line', color=UseGradient ? col : BodyColor, style=plot.style_line, linewidth=2)
+//ADX
+adxlen = input.int(14, title='ADX Smoothing', group='----- ADX Settings -----')
+dmilen = input.int(14, title='DMI Length', group='----- ADX Settings -----')
+Threshold = input.int(0, title='Threshold', minval=0, group='----- ADX Settings -----')
+dirmov(len) =>
+    up = ta.change(high)
+    down = -ta.change(low)
+    plusDM = na(up) ? na : up > down and up > 0 ? up : 0
+    minusDM = na(down) ? na : down > up and down > 0 ? down : 0
+    truerange = ta.rma(ta.tr, len)
+    plus = fixnan(100 * ta.rma(plusDM, len) / truerange)
+    minus = fixnan(100 * ta.rma(minusDM, len) / truerange)
+    [plus, minus]
+adx(dmilen, adxlen) =>
+    [plus, minus] = dirmov(dmilen)
+    sum = plus + minus
+    adx = 100 * ta.rma(math.abs(plus - minus) / (sum == 0 ? 1 : sum), adxlen)
+    adx
+ADXCalc = adx(dmilen, adxlen)
+ADXRising = ADXCalc > ADXCalc[1]
+//STRATEGY AREA
+currentYear = year(timenow)
+currentMonth = month(timenow)
+currentDay = dayofmonth(timenow)
+currentHour = hour(timenow)
+currentMinute = minute(timenow)
+today = year == currentYear and month == currentMonth and dayofmonth == currentDay and hour == currentHour and minute == currentMinute
+yearFilter = input.int(title="Year Start", defval=2022, group='----- Strategy Start Date/Time -----')
+monthFilter = input.int(title="Month Start", defval=1, maxval=12, group='----- Strategy Start Date/Time -----')
+dayFilter = input.int(title="Day Start", defval=16, maxval=31, group='----- Strategy Start Date/Time -----')
+hourFilter = input.int(title="Hour Start", defval=9, maxval=23, group='----- Strategy Start Date/Time -----')
+minuteFilter = input.int(title="Minute Start", defval=30, maxval=59, group='----- Strategy Start Date/Time -----')
+longCondition = ta.rising(EntryMA, 2) and ADXCalc > Threshold and year == yearFilter and month >= monthFilter and dayofmonth >= dayFilter and hour >= hourFilter and minute >= minuteFilter
+shortCondition = ta.falling(EntryMA, 2) and ADXCalc > Threshold and year == yearFilter and month >= monthFilter and dayofmonth >= dayFilter and hour >= hourFilter and minute >= minuteFilter
+if (longCondition)
+    strategy.entry("Long", strategy.long, qty=1, comment = "Long Entry")
+if (shortCondition)
+    strategy.entry("Short", strategy.short, qty=1, comment = "Short Entry")
+OpenProfit = str.tostring(strategy.openprofit)
+NetProfit = str.tostring(strategy.netprofit)
+GrossProfit = str.tostring(strategy.grossprofit)
+GrossLoss = str.tostring(strategy.grossloss * -1)
+WinningTrades = str.tostring(strategy.wintrades)
+LosingTrades = str.tostring(strategy.losstrades)
+MaxDrawdown = str.tostring(strategy.max_drawdown)
+OpenProfitColor = if strategy.openprofit >= 0
+    color.new(color.green, 0)
+else
+    color.new(color.red, 0)
+NetProfitColor = if strategy.netprofit >= 0
+    color.new(color.green, 0)
+else
+    color.new(color.red, 0)
+GrossProfitColor = if strategy.grossprofit >= 0
+    color.new(color.green, 0)
+else
+    color.new(color.red, 0)
+GrossLossColor = if strategy.grossloss <= 0
+    color.new(color.green, 0)
+else
+    color.new(color.red, 0)
+ProfitTable = table.new(position.top_right, 6, 2, border_width=2)
+table.cell(ProfitTable, 0, 0, text='Open PnL', text_color=color.new(color.white, 20), bgcolor=color.new(color.white, 90), text_size=size.normal)
+table.cell(ProfitTable, 0, 1, text=OpenProfit, text_color=OpenProfitColor, bgcolor=color.new(color.white, 90), text_size=size.normal)
+table.cell(ProfitTable, 1, 0, text='Net PnL', text_color=color.new(color.white, 20), bgcolor=color.new(color.white, 90), text_size=size.normal)
+table.cell(ProfitTable, 1, 1, text=NetProfit, text_color=NetProfitColor, bgcolor=color.new(color.white, 90), text_size=size.normal)
+table.cell(ProfitTable, 2, 0, text='Gross Profit', text_color=color.new(color.white, 20), bgcolor=color.new(color.white, 90), text_size=size.normal)
+table.cell(ProfitTable, 2, 1, text=GrossProfit, text_color=GrossProfitColor, bgcolor=color.new(color.white, 90), text_size=size.normal)
+table.cell(ProfitTable, 3, 0, text='Gross Loss', text_color=color.new(color.white, 20), bgcolor=color.new(color.white, 90), text_size=size.normal)
+table.cell(ProfitTable, 3, 1, text=GrossLoss, text_color=GrossLossColor, bgcolor=color.new(color.white, 90), text_size=size.normal)
+table.cell(ProfitTable, 4, 0, text='# Winning Trades', text_color=color.new(color.white, 20), bgcolor=color.new(color.white, 90), text_size=size.normal)
+table.cell(ProfitTable, 4, 1, text=WinningTrades, text_color=color.new(color.white, 20), bgcolor=color.new(color.white, 90), text_size=size.normal)
+table.cell(ProfitTable, 5, 0, text='# Losing Trades', text_color=color.new(color.white, 20), bgcolor=color.new(color.white, 90), text_size=size.normal)
+table.cell(ProfitTable, 5, 1, text=LosingTrades, text_color=color.new(color.white, 20), bgcolor=color.new(color.white, 90), text_size=size.normal)
+//WATERMARK
+Watermark = table.new(position.bottom_left, 1, 4, border_width=3)
+table.cell(Watermark, 0, 0, text='North Star Day Trading - NSDT HAMA Candles STRAT', text_color=color.new(color.white, 95), text_size=size.huge)
+Expand (203 lines)

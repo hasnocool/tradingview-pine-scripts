@@ -1,0 +1,184 @@
+Script Name: VWAP Trendfollow Strategy [wbburgin]
+Author: wbburgin
+Description: This is an experimental strategy that enters long when the instrument crosses over the upper standard deviation band of a VWAP and enters short when the instrument crosses below the bottom standard deviation band of the VWAP. I have added a trend filter as well, which stops entries that are opposite to the current trend of the VWAP. The trend filter will reduce...
+PineScript code:
+
+Pine Script™ strategy
+VWAP Trendfollow Strategy [wbburgin]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+//@version=5
+strategy(title="VWAP Trendfollow Strategy [wbburgin]", shorttitle="VWAP Trendfollow [wbburgin]", overlay=true,
+ default_qty_type = strategy.percent_of_equity,default_qty_value = 3,initial_capital=1000,pyramiding=1,commission_type=strategy.commission.percent,
+  commission_value = 0.025)
+import wbburgin/wbburgin_utils/2 as utils
+hideonDWM = input(false, title="Hide VWAP on 1D or Above", group="VWAP Settings")
+var anchor = input.string(defval = "Session", title="Anchor Period",
+ options=["Session", "Week", "Month", "Quarter", "Year", "Decade", "Century", "Earnings", "Dividends", "Splits"], group="VWAP Settings")
+src = input(title = "Source", defval = hlc3, group="VWAP Settings")
+offset = input(0, title="Offset", group="VWAP Settings")
+showBand_1 = input(true, title="", group="Standard Deviation Bands Settings", inline="band_1")
+stdevMult_1 = input(0.88, title="Standard Deviation Multiplier", group="Standard Deviation Bands Settings", inline="band_1")
+matchedTrends = input.bool(true,"Only Enter on Matched Trends",tooltip = "This setting will only enter a long trade"+
+ " when the VWAP is trending up and will only enter a short trade when the VWAP is trending down.",group="Strategy")
+displaybars = input.bool(true,"Barcolors",group="Display")
+if barstate.islast and ta.cum(volume) == 0
+    runtime.error("No volume is provided by the data vendor.")
+new_earnings = request.earnings(syminfo.tickerid, earnings.actual, barmerge.gaps_on, barmerge.lookahead_on, ignore_invalid_symbol=true)
+new_dividends = request.dividends(syminfo.tickerid, dividends.gross, barmerge.gaps_on, barmerge.lookahead_on, ignore_invalid_symbol=true)
+new_split = request.splits(syminfo.tickerid, splits.denominator, barmerge.gaps_on, barmerge.lookahead_on, ignore_invalid_symbol=true)
+isNewPeriod = switch anchor
+    "Earnings"  => not na(new_earnings)
+    "Dividends" => not na(new_dividends)
+    "Splits"    => not na(new_split)
+    "Session"   => timeframe.change("D")
+    "Week"      => timeframe.change("W")
+    "Month"     => timeframe.change("M")
+    "Quarter"   => timeframe.change("3M")
+    "Year"      => timeframe.change("12M")
+    "Decade"    => timeframe.change("12M") and year % 10 == 0
+    "Century"   => timeframe.change("12M") and year % 100 == 0
+    => false
+isEsdAnchor = anchor == "Earnings" or anchor == "Dividends" or anchor == "Splits"
+if na(src[1]) and not isEsdAnchor
+    isNewPeriod := true
+float vwapValue = na
+float upperBandValue1 = na
+float lowerBandValue1 = na
+float upperBandValue2 = na
+float lowerBandValue2 = na
+if not (hideonDWM and timeframe.isdwm)
+    [_vwap, _stdevUpper, _] = ta.vwap(src, isNewPeriod, 1)
+    vwapValue := _vwap
+    stdevAbs = _stdevUpper - _vwap
+    upperBandValue1 := _vwap + stdevAbs * stdevMult_1
+    lowerBandValue1 := _vwap - stdevAbs * stdevMult_1
+    upperBandValue2 := _vwap + 2 * stdevAbs * stdevMult_1
+    lowerBandValue2 := _vwap - 2 * stdevAbs * stdevMult_1
+vTopBreak = ta.crossover(close,upperBandValue1)
+vBottomBreak = ta.crossunder(close,lowerBandValue1)
+inLongTrade = ta.barssince(vTopBreak) < ta.barssince(vBottomBreak)
+upV = utils.trendUp(vwapValue)
+matchedTrendsFilter_long = not matchedTrends ? true : upV
+matchedTrendsFilter_short = not matchedTrends ? true : not upV
+b_vwap = vTopBreak and matchedTrendsFilter_long
+s_vwap = vBottomBreak and matchedTrendsFilter_short
+takeprofit_long = ta.crossunder(close,upperBandValue2)
+takeprofit_short = ta.crossover(close,lowerBandValue2)
+if b_vwap
+    strategy.entry("Long",strategy.long)
+if s_vwap
+    strategy.entry("Short",strategy.short)
+if takeprofit_long
+    strategy.close("Long")
+if takeprofit_short
+    strategy.close("Short")
+plot(vwapValue, title="VWAP", color=color.white, offset=offset)
+upperBand_1 = plot(upperBandValue1, title="Upper Band #1", color=na, offset=offset)
+lowerBand_1 = plot(lowerBandValue1, title="Lower Band #1", color=na, offset=offset)
+plot(upperBandValue2,color = color.lime)
+plot(lowerBandValue2,color=color.red)
+hl2_plot = plot(hl2,color=na,title="HL2")
+fill(hl2_plot,upperBand_1,color = hl2 > upperBandValue1 ? color.new(color.green,50) : na)
+fill(hl2_plot,lowerBand_1,color = hl2 < lowerBandValue1 ?  color.new(color.red,50) : na)
+fill(upperBand_1, lowerBand_1, title="Bands Fill", color= upV ? color.new(color.lime,88) : color.new(color.red,88))
+barcolor(displaybars == true ? inLongTrade ? color.lime : color.red : na)
+Expand (99 lines)

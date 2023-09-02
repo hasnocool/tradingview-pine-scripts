@@ -1,0 +1,130 @@
+Script Name: Bolinger strategy v1 open
+Author: Goatftw
+Description: Find lows based on divergence on bollinger bands .
+Works great on stocks and index, no success on forex.
+
+Different stock/index requires different values.
+Exit is not perfect, often on the safer side.
+
+Example settings: NASDAQ:OMXS30, 30m: 25 0.452 0.42 0.453 2 62 20
+
+Lower bbrower = buys harder dips, too low will cause buy during fall.
+Higher bbrhigher = buys on...
+PineScript code:
+
+Pine Script™ strategy
+Bolinger strategy v1 open
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+//@version=4
+//study(title = "Bolinger strategy", overlay=true)
+strategy("Bolinger strategy",currency="SEK",default_qty_value=10000,default_qty_type=strategy.cash,max_bars_back=50)
+len = 5
+src = close
+up = rma(max(change(src), 0), len)
+down = rma(-min(change(src), 0), len)
+rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+bbw3level = input(15, title="bbw3")
+bbr3level = input(0.45, title="bbr3level")
+bbrlower = input(0.4480, title="bbrlower")
+bbrhigher = input(0.4560, title="bbrhigher")
+sincelowestmin = input(7, title="sincelowestmin")
+sincelowestmax = input(57, title="sincelowestmax")
+length = input(20, minval=1)
+mult = 20
+src3 = close[3]
+basis3 = sma(src3, length)
+dev3 = mult * stdev(src3, length)
+upper3 = basis3 + dev3
+lower3 = basis3 - dev3
+bbr3 = (src3 - lower3)/(upper3 - lower3)
+bbw3 = (upper3-lower3)/basis3*100
+basis = sma(src, length)
+dev = mult * stdev(src, length)
+upper = basis + dev
+lower = basis - dev
+bbr = (src - lower)/(upper - lower)
+bbw = (upper-lower)/basis*100
+criteriamet = 0
+crossUnderB0 = crossunder(bbr,0)
+since_x_under = barssince(crossUnderB0)
+sincelowest = barssince(close[6] > close[3] and close[5] > close[3] and close[4] > close[3] and close[2] > close[3] and close[1] > close[3] and close > close[3] and bbw3 > bbw3level and bbr3 < bbr3level) //  and bbr3 < 0 
+if sincelowest > sincelowestmin and sincelowest < sincelowestmax and bbr > bbrlower and bbr < bbrhigher
+    criteriamet := 1
+else
+    criteriamet := 0    
+//plot (criteriamet)
+//exit 
+exitmet = 0
+if rsi > 70
+    exitmet := 1
+else
+    exitmet := 0
+if criteriamet == 1
+    strategy.entry("long", strategy.long)
+if exitmet == 1
+    strategy.close("long")
+Expand (64 lines)

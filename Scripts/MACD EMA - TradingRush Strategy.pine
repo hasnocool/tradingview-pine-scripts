@@ -1,0 +1,242 @@
+Script Name: MACD EMA - TradingRush Strategy
+Author: TradingStrategyCheck
+Description: Hey there!
+
+Today I present you a rather simple, but very profitable MACD strategy. Since I trade it with cryptocurrencies, the settings have been adjusted.
+I discovered the strategy on a YouTube channel and tried to transfer it as a strategy into a script.
+
+Tested with the crypto pair ETH/USDT in the 15 minute chart.
+
+There is the possibility to switch between...
+PineScript code:
+
+Pine Script™ strategy
+MACD EMA - TradingRush Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+//@version=4
+strategy(title="MACD EMA Strategy", shorttitle="MACD EMA STRAT", overlay = true, pyramiding = 0, max_bars_back=5000, calc_on_order_fills = false, commission_type =  strategy.commission.percent, commission_value = 0, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, initial_capital=5000, currency=currency.USD)
+// Time Range
+FromMonth=input(defval=1,title="FromMonth",minval=1,maxval=12)
+FromDay=input(defval=1,title="FromDay",minval=1,maxval=31)
+FromYear=input(defval=2020,title="FromYear",minval=2016)
+ToMonth=input(defval=1,title="ToMonth",minval=1,maxval=12)
+ToDay=input(defval=1,title="ToDay",minval=1,maxval=31)
+ToYear=input(defval=9999,title="ToYear",minval=2017)
+start=timestamp(FromYear,FromMonth,FromDay,00,00)
+finish=timestamp(ToYear,ToMonth,ToDay,23,59)
+window()=>time>=start and time<=finish?true:false
+// STEP 2:
+// See if this bar's time happened on/after start date
+afterStartDate = time >= start and time<=finish?true:false
+//EMA
+emasrc = close
+res = input(title="EMA Timeframe", type=input.resolution, defval="15")
+len1 = input(title="EMA Length", type=input.integer, defval=206)
+col1 = color.yellow
+// Calculate EMA
+ema1 = ema(emasrc, len1)
+emaSmooth = security(syminfo.tickerid, res, ema1, barmerge.gaps_off, barmerge.lookahead_off)
+// Draw EMA
+plot(emaSmooth, title="EMA", linewidth=1, color=col1)
+//MACD
+fast_length = input(title="Fast Length", type=input.integer, defval=15)
+slow_length = input(title="Slow Length", type=input.integer, defval=24)
+src = input(title="Source", type=input.source, defval=close)
+signal_length = input(title="Signal Smoothing", type=input.integer, minval = 1, maxval = 50, defval = 9)
+sma_source = input(title="Simple MA (Oscillator)", type=input.bool, defval=true)
+sma_signal = input(title="Simple MA (Signal Line)", type=input.bool, defval=true)
+zeroline = 0
+// Plot colors
+col_grow_above = #26A69A
+col_grow_below = #FFCDD2
+col_fall_above = #B2DFDB
+col_fall_below = #EF5350
+col_macd = #0094ff
+col_signal = #ff6a00
+// Calculating
+fast_ma = sma_source ? sma(src, fast_length) : ema(src, fast_length)
+slow_ma = sma_source ? sma(src, slow_length) : ema(src, slow_length)
+macd = fast_ma - slow_ma
+signal = sma_signal ? sma(macd, signal_length) : ema(macd, signal_length)
+hist = macd - signal
+//plot(hist, title="Histogram", style=plot.style_columns, color=(hist>=0 ? (hist[1] < hist ? col_grow_above : col_fall_above) : (hist[1] < hist ? col_grow_below : col_fall_below) ), transp=0 )
+//plot(macd, title="MACD", color=col_macd, transp=0)
+//plot(signal, title="Signal", color=col_signal, transp=0)
+//plot(zeroline, title="Zero Line", color=color.black, transp=0)
+///////////////////////////LONG////////////////////////////////////////////////////////////////////
+enablelong = input(true, title="Enable long?")
+//Long Signal
+upcondition = close > emaSmooth and close[1] > emaSmooth[1]
+macdunderhis = macd < zeroline
+macdcrossup = crossover(macd, signal)
+longcondition = upcondition and macdunderhis and macdcrossup
+//strategy buy long
+if (longcondition) and (afterStartDate) and strategy.opentrades < 1 and (enablelong == true)
+    strategy.entry("long", strategy.long)
+plotshape(longcondition, style=shape.arrowup,
+                 location=location.abovebar, color=color.green)
+//////////////////////////////////////SHORT//////////////////////////////////////////////////////////////////////////////////
+enableshort = input(true, title="Enable short?")
+//Short Signal
+downcondition = close < emaSmooth and close[1] < emaSmooth[1]
+macdoverhis = macd > zeroline
+macdcrosunder = crossunder(macd, signal)
+shortcondition = downcondition and macdoverhis and macdcrosunder
+//strategy buy short
+if (shortcondition) and (afterStartDate) and strategy.opentrades < 1 and (enableshort == true)
+    strategy.entry("short", strategy.short)
+plotshape(shortcondition, style=shape.arrowdown,
+                 location=location.belowbar, color=color.red)
+//////////////////////////////////////EXIT CONDITION//////////////////////////////////////////////////////////////////////////////////
+bought = strategy.position_size[1] < strategy.position_size
+sold = strategy.position_size[1] > strategy.position_size
+barsbought = barssince(bought)
+barssold = barssince(sold)
+slbuffer = input(title="SL Buffer", type=input.float, step=0.1, defval=0)
+//////LOWEST LOW//////
+//Lowest Low LONG
+profitfactorlong = input(title="ProfitfactorLong", type=input.float, step=0.1, defval=1.9)
+loLen = input(title="Lowest Low Lookback", type=input.integer,
+  defval=46, minval=2)
+stop_level_long = lowest(low, loLen)[1]
+if strategy.position_size>0 and strategy.position_entry_name == "long"
+    profit_level_long = strategy.position_avg_price + ((strategy.position_avg_price - stop_level_long[barsbought])*profitfactorlong) + slbuffer
+    strategy.exit(id="TP/ SL", stop=stop_level_long[barsbought] - slbuffer, limit=profit_level_long)
+//Lowest Low SHORT
+profitfactorshort = input(title="ProfitfactorShort", type=input.float, step=0.1, defval=2.1)
+highLen = input(title="highest high lookback", type=input.integer,
+  defval=25, minval=2)
+stop_level_short = highest(high, highLen)[1]
+if strategy.position_size<0 and strategy.position_entry_name == "short"
+    profit_level_short = strategy.position_avg_price - ((stop_level_short[barssold] - strategy.position_avg_price)*profitfactorshort) - slbuffer
+    strategy.exit(id="TP/ SL", stop=stop_level_short[barssold] + slbuffer, limit=profit_level_short)
+    
+//PLOTT TP SL
+plot(stop_level_long - slbuffer, title="SL Long", linewidth=1, color=color.red)
+plot(stop_level_short + slbuffer, title="SL Short", linewidth=1, color=color.red)
+Expand (125 lines)

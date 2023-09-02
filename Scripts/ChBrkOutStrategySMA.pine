@@ -1,0 +1,82 @@
+Script Name: ChBrkOutStrategySMA
+Author: anshuanshu333
+Description: This script relies on channel breakout strategy and the exit condition is defined by the SMA crossover, this works well on futures and Indices
+PineScript code:
+
+Pine Script™ strategy
+ChBrkOutStrategySMA
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © anshuanshu333
+//@version=4
+strategy("ChBrkOutStrategySMA", overlay=true, initial_capital = 200000)
+length = input(title="Length", type=input.integer, minval=1, maxval=1000, defval=7)
+     
+fastSMA = sma(close,9)
+slowSMA = sma(close,21)
+upBound = highest(high, length)
+downBound = lowest(low, length)
+boundLongEntry = ((close >= upBound) or (high >= upBound)) and fastSMA>slowSMA and (close > open)
+boundShortEntry =((close <= downBound) or (low <= downBound)) and fastSMA<slowSMA and (close <open)
+u=plot(upBound, title = "Upper Bound",color=color.blue, linewidth=1)
+l=plot(downBound, title = "Lower Bound",color=color.red, linewidth=1)
+plot(fastSMA,title = "Fast SMA", color = color.red, linewidth =2)
+plot(slowSMA,title = "Slow SMA" ,color = color.green, linewidth =1)
+fill(u,l, transp=95)
+plot(avg(upBound,downBound), title = "Avg", color=color.gray,linewidth =1)
+     
+if (boundLongEntry )
+    strategy.entry("LE", long = true)
+    
+if (boundShortEntry)
+    strategy.entry("SE", long = false)
+    
+SmaLongExit = crossunder(fastSMA,slowSMA)
+SmaShortExit = crossover(fastSMA,slowSMA)
+    
+//Close TRades   
+if (strategy.position_size > 0)
+    strategy.close(id="LE",when= SmaLongExit)
+if (strategy.position_size < 0)
+    strategy.close(id="SE",when= SmaShortExit)
+Expand (40 lines)

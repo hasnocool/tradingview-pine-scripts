@@ -1,0 +1,179 @@
+Script Name: Mathias & Christer EMA
+Author: mattehalen
+Description: So this Strategy is my first at when writing it's not 100% finnished.
+
+The strategy idé builds on EMA (9) being clearly over/under the EMA for some bars.
+If the EMA is over this will make a triggerline that when EMA (1) crosses this line it signals a buy/sell.
+
+I don't have a great TP or SL for this yet so as of now I'm only using oposit crossing of close for...
+PineScript code:
+
+Pine Script™ strategy
+Mathias & Christer EMA
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mattehalen
+strategy("Mathias & Christer EMA", shorttitle="M&C_EMA",overlay=true, process_orders_on_close = true, default_qty_type =  strategy.percent_of_equity, default_qty_value = 100)
+len = input(9, title="Length", type=input.integer)
+src = input(close, title="Source", type=input.source)
+//show4h = input(true, title="show 4h", type=input.bool)
+maxLoss = input(3000)
+//ema4h = security(syminfo.ticker, "240", rsi(src, len))
+ema4h                   = ema(src, len)
+emaCurrent              = ema(src, 1)
+difference              = (emaCurrent - ema4h)/ema4h
+buyLow                  = low>ema4h
+plot(buyLow?1:0,title="buyLow",display=display.none)
+myATR                   = atr(1)
+BuyFirstTrigger         = (difference>myATR) and (emaCurrent>ema4h) and (difference[1]<myATR[1])
+BuyTriggerLineBarssince = barssince(BuyFirstTrigger)
+BuyTriggerLine          = close[BuyTriggerLineBarssince]
+BuySignalTest           = crossover(close[1],BuyTriggerLine) and (BuyTriggerLineBarssince > 6)
+BuySignalTestBarssince  = barssince(BuySignalTest)
+bgcolor(BuySignalTest and BuySignalTestBarssince[1]>BuyTriggerLineBarssince[1]? color.green : na, transp=20)
+bgcolor(BuyFirstTrigger and not BuyFirstTrigger[1]? color.green : na, transp=80,title="BuyFirstTrigger")
+SellFirstTrigger         = ((difference*-1)>myATR) and (emaCurrent<ema4h)
+SellTriggerLineBarssince = barssince(SellFirstTrigger)
+SellTriggerLine          = close[SellTriggerLineBarssince]
+SellSignalTest           = crossunder(close[1],SellTriggerLine) and (SellTriggerLineBarssince > 6)
+SellSignalTestBarssince  = barssince(SellSignalTest)
+bgcolor(SellSignalTest and SellSignalTestBarssince[1]>SellTriggerLineBarssince? color.red : na, transp=20)
+bgcolor(SellFirstTrigger and not SellFirstTrigger[1] and SellTriggerLineBarssince[1]>SellTriggerLineBarssince? color.red : na, transp=80)
+plot(myATR,title="myATR",display=display.none)
+plot(difference,title="difference",display=display.none)
+plot(emaCurrent,title="emaCurrent")
+plot(ema4h,title="ema4h", color=color.purple, linewidth=5)
+plot(BuyTriggerLineBarssince,title="BuyTriggerLineBarssince",display=display.none)
+plot(BuySignalTestBarssince,title="BuySignalTestBarssince",display=display.none)
+plot(BuyTriggerLine,"BuyTriggerLine",color.green,linewidth=5)
+plot(SellTriggerLineBarssince,title="SellTriggerLineBarssince",display=display.none)
+plot(SellSignalTestBarssince,title="SellSignalTestBarssince",display=display.none)
+plot(SellTriggerLine,"SellTriggerLine",color.red,linewidth=5)
+//--------------------------------------------------
+//--------------------------------------------------
+//
+BuySignal       = BuySignalTest and BuySignalTestBarssince[1]>BuyTriggerLineBarssince
+BuySignalBarssince = barssince(BuySignal)
+BuySignalOutBarssince = barssince(crossunder(close[1],ema4h[1]))
+BuySignalOut   = crossunder(close[1],ema4h[1]) and BuySignalOutBarssince[1]>BuySignalTestBarssince[1]
+plot(BuySignalOutBarssince,title="BuySignalOutBarssince",display=display.none)
+SellSignal      = SellSignalTest and SellSignalTestBarssince[1]>SellTriggerLineBarssince
+SellSignalBarssince = barssince(ema4h[1]>ema4h[0] and ema4h[1]>80)
+SellSignalOutBarssince = barssince(crossover(close[1],ema4h[1]))
+SellSignalOut   = crossover(close[1],ema4h[1]) and SellSignalOutBarssince[1]>SellSignalTestBarssince[1]
+if BuySignal
+    strategy.close("short", comment = "Exit short")
+    strategy.entry("long", true)
+    strategy.exit("Max Loss", "long", loss = maxLoss)
+if BuySignalOut
+    strategy.close("long", comment = "Exit Long")
+if SellSignal
+    // Enter trade and issue exit order on max loss.
+    strategy.close("long", comment = "Exit Long")
+    strategy.entry("short", false)
+    strategy.exit("Max Loss", "short", loss = maxLoss)
+if SellSignalOut
+    // Force trade exit.
+    strategy.close("short", comment = "Exit short")
+    
+plotchar(BuySignal, "BuySignal", "⬆", location.belowbar, color.lime,size =size.huge )
+plotchar(BuySignalOut, "BuySignalOut", "█", location.belowbar, color.lime,size =size.small)
+plotchar(SellSignal, "SellSignal", "⬇", location.abovebar ,color.red,size =size.huge)
+plotchar(SellSignalOut, "SellSignalOut", "█", location.abovebar, color.red,size =size.small)
+Expand (95 lines)

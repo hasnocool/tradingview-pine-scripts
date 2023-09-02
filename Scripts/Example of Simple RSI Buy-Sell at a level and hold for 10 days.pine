@@ -1,0 +1,93 @@
+Script Name: Example of Simple RSI Buy-Sell at a level and hold for 10 days
+Author: sevendays
+Description: Script implements strategy:
+1 Buy at RSI (10) < 30
+2 Sell at RSI (10) > 40 or after 10 days
+
+The strategy is not profitable for long term trading.
+PineScript code:
+
+Pine Script™ strategy
+Example of Simple RSI Buy/Sell at a level and hold for 10 days
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Bitduke
+//@version=4
+strategy("Simple RSI Buy/Sell at a level", shorttitle="Simple RSI Strategy", overlay=true,calc_on_every_tick=false,pyramiding=1, default_qty_type=strategy.cash,default_qty_value=1000, currency=currency.USD, initial_capital=1000,commission_type=strategy.commission.percent, commission_value=0.075)
+overbought = input(40, title="overbought value")
+oversold = input(30, title="oversold value")
+// Component Test Periods Code Begin
+testStartYear = input(2018, "Backtest Start Year")
+testStartMonth = input(1, "Backtest Start Month")
+testStartDay = input(1, "Backtest Start Day")
+testPeriodStart = timestamp(testStartYear,testStartMonth,testStartDay,0,0)
+testStopYear = input(2021, "Backtest Stop Year")
+testStopMonth = input(16, "Backtest Stop Month")
+testStopDay = input(2, "Backtest Stop Day")
+testPeriodStop = timestamp(testStopYear,testStopMonth,testStopDay,0,0)
+// A switch to control background coloring of the test period
+testPeriodBackground = input(title="Color Background?", type=input.bool, defval=true)
+testPeriodBackgroundColor = testPeriodBackground and (time >= testPeriodStart) and (time <= testPeriodStop) ? #00FF00 : na
+bgcolor(testPeriodBackgroundColor, transp=97)
+testPeriod() =>
+    time >= testPeriodStart and time <= testPeriodStop ? true : false
+// Component Test Periods Code End
+//////////////////////////////////////////////////////////////////////
+myrsi = rsi(close, 10) > overbought
+myrsi2 = rsi(close, 10) < oversold
+barcolor(myrsi ? color.black : na)
+barcolor(myrsi2 ? color.blue : na)
+myEntry = myrsi2 and hour(time) <= 9
+strategy.entry("Buy Signal", strategy.long, when = myEntry and testPeriod())
+// Close 10 bar periods after the condition that triggered the entry
+//if (myEntry[10])
+    //strategy.close("Buy Signal")
+strategy.close("Buy Signal", when = barssince(myEntry) >= 10 or myrsi and testPeriod())
+//strategy.entry("Sell Signal",strategy.short, when = myrsi2)
+Expand (46 lines)

@@ -1,0 +1,163 @@
+Script Name: ATR_Trade_strategy
+Author: arameshraju
+Description: ATR Based Strategy 
+
+Identify the ATR range on Daily Chart. 
+ATR HIGH= Previous Close +ATR
+ATR Low =Previous Close - ATR
+
+Long when Close is above ATR High 
+Short when Close is below ATR Low
+
+Exit when close moves below EMA(10) OR 
+a user-selected max loss
+PineScript code:
+
+Pine Script™ strategy
+ATR_Trade_strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © arameshraju
+//Thanks to Vamsikrishna Kona  who planned this Idea in my mind. helped ot inprove it
+//@version=4
+strategy("ATR_Trade_strategy-2",shorttitle="ATR_Trade", overlay=true) 
+showMiddle = input(false, title="Show Middle Line", type=input.bool)
+showEMA = input(true, title="Show EMA Line", type=input.bool)
+showTypical = input(false, title="Show Typical Line", type=input.bool)
+length = input(title="Length", defval=14, minval=1)
+smoothing = input(title="Smoothing", defval="EMA", options=["RMA", "SMA", "EMA", "WMA"])
+maxLoss = input(0.5, title="Max Loss on one Trade", type=input.float)
+emaCount = input(10, title="EMA Periods", type=input.integer)
+tradeQty = input(10, title="Trade Quanity", type=input.integer)
+SlasMiddle = input(false, title="Stop Loss as Middle", type=input.bool)
+onTypical = input(false, title="Trade on Typical", type=input.bool)
+getSeries(_e, _timeFrame) => security(syminfo.tickerid, _timeFrame, _e, lookahead=barmerge.lookahead_on) 
+previousClose= getSeries(close[1], 'D')
+previousHigh= getSeries(high[1], 'D')
+previousLow= getSeries(low[1], 'D')
+typicalPrice=(close+high+low)/3
+mxloss=close*maxLoss
+ 
+ma_function(source, length) =>
+    if smoothing == "RMA"
+        rma(source, length)
+    else
+        if smoothing == "SMA"
+            sma(source, length)
+        else
+            if smoothing == "EMA"
+                ema(source, length)
+            else
+                wma(source, length)
+ATRH=ma_function(tr(true), length)+previousClose
+ATRL=previousClose-ma_function(tr(true), length)
+ATRM= (ATRH+ATRL)/2
+plot(ATRH, title = "ATR-HIGH", color=#991515, transp=80)
+plot(ATRL, title = "ATR-LOW", color=#991515, transp=80)
+plot(showMiddle?ATRM:na, title = "ATR-MIDDLE", color=#80cbc4, transp=60)
+plot(showTypical?typicalPrice:na, title = "ATR-MIDDLE", color=color.black)
+plot(showEMA?ema(close, emaCount):na, color=color.blue)
+lognCondition =  onTypical? typicalPrice> (ATRH):close> (ATRH*1.01) 
+shortCondition = onTypical ? typicalPrice< (ATRL)  :  close< (ATRL) 
+// if onTypical
+//     lognCondition=typicalPrice> (ATRH)  
+//     shortCondition = typicalPrice< (ATRL) 
+// else
+//     lognCondition=close> (ATRH*1.01) 
+//     shortCondition = close< (ATRL) 
+if(lognCondition  and year>2009)   
+    strategy.entry("Buy", strategy.long, tradeQty,when=strategy.position_size <= 0)    
+if(shortCondition and year>2009)   
+    strategy.entry("sell", strategy.short, tradeQty,when=strategy.position_size > 0)
+strategy.close("buy", when = close < ema(close, emaCount),  comment = "close if blow ema")
+strategy.close("sell", when = close > ema(close, emaCount),  comment = "close if blow ema")
+strategy.close("buy", when = (close < ATRM) and SlasMiddle,  comment = "close if blow ATRM")
+strategy.close("sell", when = (close > ATRM) and SlasMiddle,  comment = "close if ABOVE ATRM")
+strategy.exit("Buy", "long", loss = mxloss)
+strategy.exit("sell", "long", loss = mxloss)
+//plot(strategy.equity)
+Expand (84 lines)

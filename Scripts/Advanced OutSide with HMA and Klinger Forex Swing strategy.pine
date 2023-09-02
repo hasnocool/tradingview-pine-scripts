@@ -1,0 +1,71 @@
+Script Name: Advanced OutSide with HMA and Klinger Forex Swing strategy
+Author: exlux99
+Description: This is a swing forex strategy, adapted for big timeframes, such as 4h+.
+
+For this example I adapted the strategy to EUR USD main forex pair.
+
+Its components are:
+Outside condition
+Klinger Oscillator
+Hull moving average
+
+Rules for entry
+For long: if current high is bigger than previous high and current is smaller than previous low and klinger is positive, close of...
+PineScript code:
+
+Pine Script™ strategy
+Advanced OutSide with HMA and Klinger Forex Swing strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © exlux99
+//@version=4
+strategy("Advanced OutSide Forex strategy", overlay = true, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, calc_on_every_tick = true, commission_type = strategy.commission.percent, commission_value = 0.0)
+sv = change(hlc3) >= 0 ? volume : -volume
+kvo = ema(sv, 34) - ema(sv, 55)
+sig = ema(kvo, 13)
+length = input(title="Length", type=input.integer, defval=27)
+src = input(close, title="Source")
+lsma = hma(src, length)
+if (high > high[1] and low < low[1])
+    if (close > open and kvo>0 and lsma<close)
+        strategy.entry("long", strategy.long, comment="long")
+if (high < high[1] and low > low[1])        
+    if (close < open and kvo<0 and lsma>close)
+        strategy.entry("short", strategy.short, comment="short")
+tplong=input(0.006, step=0.001, title="Take profit % for long")
+sllong=input(0.012, step=0.001, title="Stop loss % for long")
+tpshort=input(0.0075, step=0.001, title="Take profit % for short")
+slshort=input(0.015, step=0.001, title="Stop loss % for short")
+strategy.exit("short_tp/sl", "long", profit=close * tplong / syminfo.mintick, loss=close * sllong / syminfo.mintick, comment='LONG EXIT',  alert_message = 'closeshort')
+strategy.exit("short_tp/sl", "short", profit=close * tpshort / syminfo.mintick, loss=close * slshort / syminfo.mintick, comment='SHORT EXIT',  alert_message = 'closeshort')
+Expand (30 lines)

@@ -1,0 +1,380 @@
+Script Name: Macd Divergence + MTF EMA
+Author: Trading_Solutions_
+Description: MACD Divergence + Multi Time Frame EMA
+This Strategy uses 3 indicators: the Macd and two emas in different time frames
+The configuration of the strategy is:
+Macd standar configuration (12, 26, 9) in 1H resolution
+10 periods ema, in 1H resolution
+5 periods ema, in 15 minutes resolution
+
+We use the two emas to filter for long and short positions. 
+If 15 minutes ema...
+PineScript code:
+
+Pine Script™ strategy
+Macd Divergence + MTF EMA
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © maxits
+//@version=5
+// MACD Divergence + Multi Time Frame EMA
+// This Strategy uses 3 indicators: the Macd and two emas in different time frames
+// The configuration of the strategy is:
+// Macd standar configuration (12, 26, 9) in 1H resolution
+// 10 periods ema, in 1H resolution
+// 5 periods ema, in 15 minutes resolution
+// We use the two emas to filter for long and short positions. 
+// If 15 minutes ema is above 1H ema, we look for long positions
+// If 15 minutes ema is below 1H ema, we look for short positions 
+// We can use an aditional filter using a 100 days ema, so when the 15' and 1H emas are above the daily ema we take long positions
+// Using this filter improves the strategy 
+// We wait for Macd indicator to form a divergence between histogram and price
+// If we have a bullish divergence, and 15 minutes ema is above 1H ema, we wait for macd line to cross above signal line and we open a long position
+// If we have a bearish divergence, and 15 minutes ema is below 1H ema, we wait for macd line to cross below signal line and we open a short position
+// We close both position after a cross in the oposite direction of macd line and signal line
+// Also we can configure a Take profit parameter and a trailing stop loss
+strategy('Macd Divergence + MTF EMA [Trading Solutions]', overlay=true, initial_capital=1000, default_qty_value=20, default_qty_type=strategy.percent_of_equity, commission_value=0.1, pyramiding=0)
+// User Inputs
+i_time = input.time(defval=timestamp('01 Apr 2018 13:30 +0000'), title='Start Time')   // Starting  time for backtest
+f_time = input.time(defval=timestamp('30 Sep 2021 13:30 +0000'), title='Finish Time')  // Finishing time for backtest
+long_pos  = input.bool  (title='Show Long Positions',  defval=true)   // Enable Long  Positions
+short_pos = input.bool  (title='Show Short Positions', defval=true)   // Enable Short Positions
+src       = input.source(title='Source',               defval=close)  // Price value to calculate indicators
+emas_properties = "EMAS Settings"
+mtf_15       = input.timeframe(title='Fast EMA', defval='15', group = emas_properties)      // Resolucion para MTF EMA 15 minutes
+ma_15_length = input.int(5,    title='Fast EMA Period',       group = emas_properties)      // MTF EMA 15 minutes Length
+mtf_60       = input.timeframe(title='Slow EMA', defval='60', group = emas_properties)      // Resolucion para MTF EMA 60 minutes
+ma_60_length = input.int(10,   title='Slow EMA Period',       group = emas_properties)      // MTF EMA 60 minutes Length
+filterSettings  = "Filter Settings"
+e_new_filter    = input.bool     (title='Enable a Third Ema filter?', defval=true,  group = filterSettings) // Enable Filter
+slowest_ema_len = input.int      (title='Filter EMA Period',          defval = 100, group = filterSettings) // Filter EMA Length
+slowest_ema_res = input.timeframe(title='Filter Resolution EMA',      defval='D',   group = filterSettings) // Filter Resolution
+macd_properties = 'MACD Properties'
+macd_res        = input.timeframe(title='MACD TimeFrame', defval='', group = macd_properties)       // MACD Time Frame
+fast_len        = input.int      (title='Fast Length',    defval=12, group = macd_properties)       // Fast MA Length
+slow_len        = input.int      (title='Sign Length',    defval=26, group = macd_properties)       // Sign MA Length
+sign_len        = input.int      (title='Sign Length',    defval=9,  group = macd_properties)
+syst_properties = 'Trade Management'                                // Properties
+lookback     = input.int  (title='Lookback period',                      defval=14,  minval=1,   group = syst_properties)        // Candles to lookback for swing high or low
+multiplier   = input.float(title='Profit Multiplier based on Stop Loss', defval=6.0, minval=0.1, group = syst_properties)        // Profit multiplier based on stop loss
+shortStopPer = input.float(title='Short Stop Loss Percentage',           defval=1.0, minval=0.0, group = syst_properties) / 100  // Target Percentage  
+longStopPer  = input.float(title='Long Stop Loss Percentage',            defval=2.0, minval=0.0, group = syst_properties) / 100  // Sloss Percentage
+// Indicators
+[macd, signal, hist] = request.security(syminfo.tickerid, macd_res,        ta.macd(src, fast_len, slow_len, sign_len))
+ma_15                = request.security(syminfo.tickerid, mtf_15,          ta.ema(src, ma_15_length))
+ma_60                = request.security(syminfo.tickerid, mtf_60,          ta.ema(src, ma_60_length))
+ma_slo               = request.security(syminfo.tickerid, slowest_ema_res, ta.ema(src, slowest_ema_len))
+// Macd Plot
+col_grow_above = #26A69A
+col_grow_below = #FFCDD2
+col_fall_above = #B2DFDB
+col_fall_below = #EF5350
+plot(macd, color=color.new(color.blue, 0)) 
+plot(signal, color=color.new(color.orange, 0))
+plot(hist, style=plot.style_columns, color=hist >= 0 ? hist[1] < hist ? col_grow_above : col_fall_above : hist[1] < hist ? col_grow_below : col_fall_below)
+// MTF EMA Plot
+bullish_filter = e_new_filter ? ma_15 > ma_60 and ma_60 > ma_slo : ma_15 > ma_60
+bearish_filter = e_new_filter ? ma_15 < ma_60 and ma_60 < ma_slo : ma_15 < ma_60
+plot(ma_15, color=color.new(color.blue, 0))
+plot(ma_60, color=color.new(color.yellow, 0))
+plot(e_new_filter ? ma_slo : na, color=ma_60 > ma_slo ? color.new(color.green, 0) : color.new(color.red, 0))
+////////////////////////////////////////////// Logic For Macd Divergence
+zero_cross  = false
+zero_cross := ta.crossover(hist, 0) or ta.crossunder(hist, 0)  //Cruce del Histograma a la linea 0
+// plot(zero_cross ? 1 : na)
+// MACD DIVERGENCE TOPS (Bearish Divergence) 
+highest_top  = 0.0
+prior_top    = 0.0
+highest_top := zero_cross == true ? 0.0 : hist > 0 and hist > highest_top[1] ? hist : highest_top[1]
+prior_top   := ta.crossunder(hist, 0) ? highest_top[1] : prior_top[1]  
+highest_top_close  = 0.0
+prior_top_close    = 0.0
+highest_top_close := zero_cross == true ? 0.0 : hist > 0 and hist > highest_top[1] ? close : highest_top_close[1]
+prior_top_close   := ta.crossunder(hist, 0) ? highest_top_close[1] : prior_top_close[1]  
+top = false
+top := highest_top[1] < prior_top[1] and highest_top_close[1] > prior_top_close[1] and hist < hist[1] and ta.crossunder(hist, 0)  // Bearish Divergence: top == true 
+// MACD DIVERGENCE BOTTOMS (Bullish Divergence) 
+lowest_bottom = 0.0
+prior_bottom  = 0.0
+lowest_bottom := zero_cross == true ? 0.0 : hist < 0 and hist < lowest_bottom[1] ? hist : lowest_bottom[1]
+prior_bottom  := ta.crossover(hist, 0) ? lowest_bottom[1] : prior_bottom[1]
+lowest_bottom_close = 0.0
+prior_bottom_close  = 0.0
+lowest_bottom_close := zero_cross == true ? 0.0 : hist < 0 and hist < lowest_bottom[1] ? close : lowest_bottom_close[1]
+prior_bottom_close  := ta.crossover(hist, 0) ? lowest_bottom_close[1] : prior_bottom_close[1]
+bottom = false
+bottom := lowest_bottom[1] > prior_bottom[1] and lowest_bottom_close[1] < prior_bottom_close[1] and hist > hist[1] and ta.crossover(hist, 0)  // Bullish Divergence: bottom == true 
+////////////////////////////////////////////// Logic For RSI Divergence
+////////////////////////////////////////////// System Conditions //////////////////////////////////////////////
+inTrade    = strategy.position_size != 0  // In Trade
+longTrade  = strategy.position_size > 0   // Long position
+shortTrade = strategy.position_size < 0   // Short position
+notInTrade = strategy.position_size == 0  // No trade
+entryPrice = strategy.position_avg_price  // Position Entry Price
+////////////////////////////////////////////// Long Conditions //////////////////////////////////////////////
+sl = ta.lowest(low, lookback)  // Swing Low for Long Entry
+longStopLoss = 0.0  // Trailing Stop Loss calculation
+longStopLoss := if longTrade
+    astopValue = sl * (1 - longStopPer)
+    math.max(longStopLoss[1], astopValue)
+else
+    0
+longTakeProf = 0.0  // Profit calculation based on stop loss
+longTakeProf := if longTrade
+    profitValue = entryPrice + (entryPrice - longStopLoss) * multiplier
+    math.max(longTakeProf[1], profitValue)
+else
+    0
+// Long Entry Conditions
+if bottom and notInTrade and bullish_filter and long_pos and barstate.isconfirmed
+    strategy.entry(id='Go Long', direction=strategy.long, comment='Long Position')
+    alert("Long Trade: " + syminfo.ticker, alert.freq_once_per_bar_close)
+    label.new(bar_index, low, text = "Long Trade", textcolor = color.white, color = color.green, style = label.style_label_up)
+// strategy.close(id="Go Long", when=zero_cross)
+if longTrade
+    strategy.exit('Exit Long', 'Go Long', limit=longTakeProf, stop=longStopLoss)
+    
+    
+plot(longTrade and longStopLoss ? longStopLoss : na, title='Long Stop Loss', color=color.new(color.red, 0), style=plot.style_linebr)
+plot(longTrade and longTakeProf ? longTakeProf : na, title='Long Take Prof', color=color.new(color.green, 0), style=plot.style_linebr)
+////////////////////////////////////////////// Short Conditions //////////////////////////////////////////////
+sh = ta.highest(high, lookback)  // Swing High for Short Entry
+shortStopLoss = 0.0
+shortStopLoss := if shortTrade
+    bstopValue = sh * (1 + shortStopPer)
+    math.min(shortStopLoss[1], bstopValue)
+else
+    999999
+shortTakeProf = 0.0
+shortTakeProf := if shortTrade
+    SprofitValue = entryPrice - (shortStopLoss - entryPrice) * multiplier
+    math.min(SprofitValue, shortTakeProf[1])
+else
+    999999
+// Short Entry
+if top and notInTrade and bearish_filter and short_pos and barstate.isconfirmed
+    strategy.entry(id='Go Short', direction=strategy.short, comment='Short Position')
+    alert("Short Trade: " + syminfo.ticker, alert.freq_once_per_bar_close)
+    label.new(bar_index, high, text = "Short Trade", textcolor = color.white, color = color.red, style = label.style_label_down)
+// strategy.close(id="Go Short", when=zero_cross)
+if shortTrade
+    strategy.exit('Exit Short', 'Go Short', limit=shortTakeProf, stop=shortStopLoss)
+plot(shortTrade and shortStopLoss ? shortStopLoss : na, title='Short Stop Loss', color=color.new(color.red, 0), style=plot.style_linebr)
+plot(shortTrade and shortTakeProf ? shortTakeProf : na, title='Short Take Prof', color=color.new(color.green, 0), style=plot.style_linebr)
+Expand (216 lines)

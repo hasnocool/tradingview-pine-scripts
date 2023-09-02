@@ -1,0 +1,96 @@
+Script Name: ET TurnaroundMonday
+Author: EndoTech
+Description: ET TurnaroundMonday - two red bars, on Monday go long and exit when close > yeasterday High
+PineScript code:
+
+Pine Script™ strategy
+ET TurnaroundMonday
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+//@version=4
+strategy("ET Forex TurnaroundMonday", overlay=true)
+FirstYear = input(2018, minval=2000, maxval=2023, step=1)
+FirstMonth = 1 //input(1, minval=1, maxval=12, step=1)
+FirstDay = 1 //input(1, minval=1, maxval=31, step=1)
+deltaDay = input(0)
+StartHour = input(0)
+f_barssince(_cond, _count) => _barssince=bar_index-valuewhen(_cond, bar_index, _count)
+HoldTime = input(6, step=1)
+MM = input(1)
+startHour = input(-7, step=1)
+endHour = input(34, step=1)
+exitHour = input(30, step=1)
+startdateCond = (year > FirstYear or (year == FirstYear and (month > FirstMonth or (month == FirstMonth and dayofmonth >= FirstDay))))
+iHour = hour
+if iHour > 19 
+    iHour := iHour-20
+else
+    iHour := iHour+4    
+    
+    
+timeCondition = true //(iHour>=startHour and iHour<=endHour and iHour<=exitHour)
+since_flat_condition = strategy.position_size == 0
+entryPrice=strategy.position_avg_price
+EntryLongCondition = dayofweek == (dayofweek.monday+deltaDay) and close[0] < close[1] and close[1]<close[2] and startdateCond //and timeCondition and iHour > StartHour
+ExitTimeCondition = false//(f_barssince(since_flat_condition, 0)>=HoldTime)
+ExitLongCondition = strategy.position_size > 0  and (close[0] > high[1])// or close[0]< entryPrice-abs(close[1]-close[2])*0.2)//(ExitTimeCondition) //iHour >= exitHour or 
+// MM Block
+lots = if MM < 2 
+    strategy.initial_capital 
+else 
+    strategy.equity
+lots := lots/close
+entryPrice:=strategy.position_avg_price
+strategy.close("ETLong",when=(ExitLongCondition==true))
+strategy.entry("ETLong", strategy.long, qty=lots, comment="OpenLong",oca_type=strategy.oca.cancel,when=(EntryLongCondition==true))
+Expand (51 lines)

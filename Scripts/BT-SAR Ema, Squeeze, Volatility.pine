@@ -1,0 +1,466 @@
+Script Name: BT-SAR Ema, Squeeze, Volatility
+Author: Credsonb
+Description: Esse script foi criado para estudo de Backtest. 
+
+Ele usa o SAR PARABÓLICO como indicador de sinal de entrada, você também pode combinar 3 indicadores para filtrar as entradas: Média Móvel, Squeeze Momentum   e Volatility Oscilator  .
+Existe duas entradas, quando o SAR Parabólico vira ou pelo Breakout (usando o último preço) do SAR Parabólico antes dele...
+PineScript code:
+
+Pine Script™ strategy
+BT-SAR Ema, Squeeze, Volatility
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+//VERSION =================================================================================================================
+//@version=5
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// This strategy is intended to study.
+// It can also be used to signal a bot to open a deal by providing the Bot ID, email token and trading pair in the strategy settings screen.
+// As currently written, this strategy uses a SAR PARABOLIC to send signal, and EMA, Squeeze Momentum, Volatility Oscilator as filter.
+// There are two enter point, when SAR Flips, or Breakout Point - the last SAR Value before it Flips.
+// There are tree options for exit: SAR Flips, Fixed Stop Loss ande Fixed Take Profit in % and Risk Reward tha can be set, 0.5/1, 1/1 etc.
+//Autor M4TR1X_BR
+//▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+//STRATEGY ================================================================================================================
+strategy(title = 'BT-SAR Ema, Squeeze, Voltatility',
+         shorttitle = 'SAR ESV',
+         overlay = true,
+         pyramiding = 0,
+         default_qty_type = strategy.cash,
+         default_qty_value = 300,
+         initial_capital = 1000,
+         max_lines_count = 150,
+         process_orders_on_close=true,
+         max_labels_count = 150)
+//▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+// INPUTS =================================================================================================================
+// TIME INPUTS
+usefromDate = input.bool(defval = true, title = 'Start date', inline = '0', group = "Time Filters")
+initialDate = input.time(defval = timestamp('01 Jan 2022 00:00 UTC'), title = '', inline = "0",group = 'Time Filters',tooltip="This start date is in the time zone of the exchange ")
+usetoDate = input.bool(defval = true, title = 'End date', inline = '1', group = "Time Filters")
+finalDate = input.time(defval = timestamp('31 Dec 2029 23:59 UTC'), title = '', inline = "1",group = 'Time Filters',tooltip="This end date is in the time zone of the exchange")
+// TIME LOGIC 
+inTradeWindow = not usefromDate and not usetoDate or (time >= initialDate and time < finalDate)
+// SAR PARABOLIC INPUTS ==================================================================================================
+string sargroup=  "SAR PARABOLIC ========================================="
+start = input.float(defval=0.02,title='Start',inline='',group = sargroup)
+increment = input.float(defval=0.02,title='Increment',inline='',group = sargroup)
+maximum = input.float(defval=0.2,title='Maximo',inline='',group = sargroup)
+// SAR PARABOLIC LOGIC 
+out = ta.sar(start, increment, maximum)
+// SAR FLIP OR BREAKOUT OPTIONS
+string bkgroup ='SAR TRADE SIGNAL ====================================== '
+sarTradeSignal =input.string(defval='SAR Flip',title='SAR Trade Signal', options= ['SAR Flip','SAR Breakout'],group=bkgroup, tooltip='SAR Flip: Once the parabolic SAR flips it will send a signal, SAR Breakout: Will wait the price cross last Sar Value before it flips.')
+nBars = input.int(defval=4,title='Bars',group=bkgroup, tooltip ='Define the number of bars for a entry when the price cross breakout point')
+float sarBreakoutPoint= ta.valuewhen((close[1] < out[1])  and (close > out),out[1],0)   //Get Sar Breakout Point
+bool check = (close[1] < out[1])  and (close > out)                                     //Verify when sar flips
+bool BreakoutPrice = sarTradeSignal=='SAR Breakout'? (ta.barssince(check) < nBars) and ((open < sarBreakoutPoint) and (close > sarBreakoutPoint)): (ta.barssince(check) < nBars) and (close > out)
+barcolor (check? color.yellow:na,title="Signal Bar color" )
+// MOVING AVERAGES INPUTS ================================================================================================
+string magroup =  "Moving Average ========================================"
+useEma = input.bool(defval = true, title = 'Moving Average Filter',inline='', group= magroup,tooltip='This will enable or disable Exponential Moving Average Filter on Strategy')
+emaType=input.string (defval='Ema',title='Type',options=['Ema','Sma'],inline='', group= magroup)
+emaSource = input.source(defval=close,title="  Source",inline="", group= magroup)
+emaLength = input.int(defval=100,title="Length",minval=0,inline='', group= magroup)
+// MOVING AVERAGE LOGIC
+float ema = emaType=='Ema'? ta.ema(emaSource,emaLength): ta.sma(emaSource,emaLength)
+// VOLATILITY OSCILLATOR =================================================================================================
+string vogroup =  "VOLATILITY OSCILLATOR ================================="
+useVltFilter=input.bool(defval=true,title="Volatility Oscillator Filter",inline='',group= vogroup,tooltip='This will enable or disable Volatility Oscillator filter on Strategy')
+vltFilterLength = input.int(defval=100,title="Volatility Oscillator",inline='',group=vogroup)
+vltFilterSpike = close - open
+vltFilterX = ta.stdev(vltFilterSpike,vltFilterLength)
+vltFilterY = ta.stdev(vltFilterSpike,vltFilterLength) * -1
+// SQUEEZE MOMENTUM INPUTS ==============================================================================================
+string sqzgroup = "SQUEEZE MOMENTUM =====================================" 
+useSqzFilter=input.bool(defval=true,title="Squeeze Momentum Filter",inline='',group= sqzgroup, tooltip='This will enable or disable Squeeze Momentum filter on Strategy')
+sqzFilterlength = input.int(defval=20, title='Bollinger Bands Length',inline='',group= sqzgroup)
+sqzFiltermult = input.float(defval=2.0, title='Boliinger Bands Mult',inline='',group= sqzgroup)
+keltnerLength = input.int(defval=20, title='Keltner Channel Length',inline='',group= sqzgroup)
+keltnerMult = input.float(defval=1.5, title='Keltner Channel Mult',inline='',group= sqzgroup)
+useTrueRange = input(true, title='Use TrueRange (KC)', inline='',group= sqzgroup)
+// CALCULATE BOLLINGER BANDS
+sqzFilterSrc = close
+basis = ta.sma(sqzFilterSrc, sqzFilterlength)
+dev = keltnerMult * ta.stdev(sqzFilterSrc, sqzFilterlength)
+upperBB = basis + dev
+lowerBB = basis - dev
+// CALCULATE KELTNER CHANNEL 
+sma = ta.sma(sqzFilterSrc, keltnerLength)
+range_1 = useTrueRange ? ta.tr : high - low
+rangema = ta.sma(range_1, keltnerLength)
+upperKC = sma + rangema * keltnerMult
+lowerKC = sma - rangema * keltnerMult
+// CHECK IF BOLLINGER BANDS IS IN OR OUT OF KELTNER CHANNEL
+sqzOn = lowerBB > lowerKC and upperBB < upperKC
+sqzOff = lowerBB < lowerKC and upperBB > upperKC
+noSqz = sqzOn == false and sqzOff == false
+// SQUEEZE MOMENTUM LOGIC
+val = ta.linreg(sqzFilterSrc - math.avg(math.avg(ta.highest(high, keltnerLength), ta.lowest(low, keltnerLength)),ta.sma(close, keltnerLength)), keltnerLength, 0)
+// ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+// TAKE PROFIT STOP LOSS INPUTS =========================================================================================
+string tkpgroup='Take Profit =================================================='
+tpType = input.string(defval = 'SAR Flip', title='Take Profit and Stop Loss', options=['SAR Flip','Fixed % TP/SL', 'Risk Reward TP/SL'], group=tkpgroup )
+longTakeProfitPerc = input.float(defval = 1.5, title = 'Fixed TP %', minval = 0.05, step = 0.5, group=tkpgroup, tooltip = 'The percentage increase to set the take profit price target.')/100
+longLossPerc = input.float(defval=1.0, title="Fixed Long SL %", minval=0.1, step=0.5, group = tkpgroup, tooltip = 'The percentage increase to set the Long Stop Loss price target.') * 0.01
+//shortLossPerc = input.float(defval=1.5, title="Fixed Short SL (%)", minval=0.1, step=0.5, group = tkpgroup, tooltip = 'The percentage increase to set the Short Stop Loss price target.') * 0.01
+longTakeProfitRR = input.float(defval = 1, title = 'Risk Reward TP', minval = 0.25, step = 0.25, group=tkpgroup, tooltip = 'The Risk Reward parameter.')
+var plotStopLossRR = input.bool(defval=false, title='Show RR Stop Loss', group=tkpgroup)
+//enableStopLossRR = input.bool(defval = false, title = 'Enable Risk Reward TP',group=tkpgroup, tooltip = 'Enable Variable Stop Loss.')
+string trpgroup='Traling Profit ==============================================='
+enableTrailing = input.bool(defval = false, title = 'Enable Trailing',group=trpgroup, tooltip = 'Enable or disable the trailing for take profit.')
+trailingTakeProfitDeviationPerc = input.float(defval = 0.1, title = 'Trailing Take Profit Deviation %', minval = 0.01, maxval = 100, step = 0.01, group=trpgroup, tooltip = 'The step to follow the price when the take profit limit is reached.') / 100
+// BOT MESSAGES
+string msgroup='Alert Message For Bot ========================================='
+messageEntry = input.string("", title="Strategy Entry Message",group=msgroup)
+messageExit  =input.string("",title="Strategy Exit Message",group=msgroup)
+messageClose = input.string("", title="Strategy Close Message",group=msgroup)
+// ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+// POSITIONS =============================================================================================================
+//VERIFY IF THE BUY FILTERS ARE ON OR OFF 
+bool emaFilterBuy = useEma? (close > ema):(close >= ema) or (close <= ema)                      
+bool volatilityFilterBuy = useVltFilter? (vltFilterSpike > vltFilterX) : (vltFilterSpike >= 0) or (vltFilterSpike <= 0)                  
+bool sqzFilterBuy = useSqzFilter? (val > val[1]): (val >= val[1] or val <=val[1])                                      
+bool sarflip = (close > out)
+//LONG / SHORT POSITIONS LOGIC
+//Var 'check' will verify if the SAR flips and if the exit price occurs it will limit in bars number a new entry on the same signal.
+bool limitEntryNumbers = (ta.barssince(check) < nBars) 
+bool openLongPosition =   sarTradeSignal == 'SAR Flip'? (sarflip and emaFilterBuy and volatilityFilterBuy and sqzFilterBuy and limitEntryNumbers) :sarTradeSignal=='SAR Breakout'? (BreakoutPrice and emaFilterBuy and volatilityFilterBuy and sqzFilterBuy): na
+bool openShortPosition = na
+bool closeLongPosition= tpType=='SAR Flip'? (close < out):na
+bool closeShortPosition=na
+// CHEK OPEN POSITONS =====================================================================================================
+// open signal when not already into a position
+bool validOpenLongPosition = openLongPosition and strategy.opentrades.size(strategy.opentrades - 1) <= 0
+bool longIsActive = validOpenLongPosition or strategy.opentrades.size(strategy.opentrades - 1) > 0
+// ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+// TAKE PROFIT STOP LOSS CONFIG ==========================================================================================
+// FIXED TAKE PROFIT IN %
+float posSize = strategy.opentrades.entry_price(strategy.opentrades - 1) //Get the entry price
+var float longTakeProfitPrice = na
+longTakeProfitPrice := if (longIsActive)
+    if (openLongPosition and not (strategy.opentrades.size(strategy.opentrades - 1) > 0))
+        posSize * (1 + longTakeProfitPerc)
+    else
+        nz(longTakeProfitPrice[1], close * (1 + longTakeProfitPerc))
+else
+    na
+longTrailingTakeProfitStepTicks = longTakeProfitPrice * trailingTakeProfitDeviationPerc / syminfo.mintick
+// FIXED STOP LOSS IN %
+longStopPrice  = strategy.position_avg_price * (1 - longLossPerc)
+//shortStopPrice = strategy.position_avg_price * (1 + shortLossPerc)
+// TAKE PROFIT BY RISK/REWARD
+// Set stop loss
+tta = not (strategy.opentrades.size(strategy.opentrades - 1) > 0)
+float lastb = ta.valuewhen(check and tta,ta.lowest(low,5),0) - (10 * syminfo.mintick)
+// TAKE PROFIT CALCULATION
+float stopLossRisk = (posSize - lastb)
+float takeProfitRR = posSize + (longTakeProfitRR * stopLossRisk)
+// ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+// POSITION ORDERS =====================================================================================================
+// LOGIC ===============================================================================================================
+// getting into LONG position
+if (openLongPosition) and (inTradeWindow)
+    strategy.entry(id = 'Long Entry', direction = strategy.long, alert_message=messageEntry)
+//submit exit orders for trailing take profit price 
+if (longIsActive) and (inTradeWindow)
+    strategy.exit(id = 'Long Take Profit', from_entry = 'Long Entry', limit = enableTrailing ? na : tpType=='Fixed % TP/SL'? longTakeProfitPrice: tpType == 'Risk Reward TP/SL'? takeProfitRR:na, trail_price = enableTrailing ? longTakeProfitPrice : na, trail_offset = enableTrailing ? longTrailingTakeProfitStepTicks : na, stop = tpType =='Fixed % TP/SL' ? longStopPrice: tpType == 'Risk Reward TP/SL'? lastb:na, alert_message=messageExit) 
+if (closeLongPosition)
+    strategy.close(id = 'Long Entry', alert_message=messageClose)
+                                                   
+// ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+// PLOTS ===============================================================================================================
+// TRADE WINDOW ========================================================================================================
+bgcolor(color = inTradeWindow ? color.new(#089981,90):na, title = 'Time Window')
+// SAR PARABOLIC
+var sarColor = color.new(#00bcd4,0)
+plot(out, "ParabolicSAR", color=sarColor, linewidth=1,style=plot.style_cross)
+//BREAKOUT LINE
+var plotBkPoint = input.bool(defval=false, title='Show Breakout Point', group=bkgroup)
+plot(series = (sarTradeSignal=='SAR Breakout' and plotBkPoint == true)? sarBreakoutPoint:na, title = 'Breakout line', color =color.new(#ffeb3b,50) , linewidth = 1, style = plot.style_linebr, offset = 0)
+// EMA/SMA 
+var emafilterColor = color.new(color.white, 0)
+plot(series=useEma? ema:na, title = 'EMA Filter', color = emafilterColor, linewidth = 2, style = plot.style_line)
+// ENTRY PRICE
+var posColor = color.new(#2962ff, 0)
+plot(series = strategy.opentrades.entry_price(strategy.opentrades - 1), title = 'Position', color = posColor, linewidth = 1, style = plot.style_linebr,offset=0)
+// FIXED TAKE PROFIT 
+var takeProfitColor = color.new(#ba68c8, 0)
+plot(series = tpType=='Fixed % TP/SL'? longTakeProfitPrice:na, title = 'Fixed TP', color = takeProfitColor, linewidth = 1, style = plot.style_linebr, offset = 0)
+// FIXED STOP LOSS
+var stopLossColor = color.new(#ff0000, 0)
+plot(series = tpType=='Fixed % TP/SL' ? longStopPrice:na, title = 'Fixed SL', color = stopLossColor, linewidth = 1, style = plot.style_linebr, offset = 0)
+// RISK REWARD TAKE PROFIT
+var takeProfitRRColor = color.new(#ba68c8, 0)
+plot(series=tpType == 'Risk Reward TP/SL'? takeProfitRR:na,title='Risk Reward TP',color=takeProfitRRColor,linewidth=1,style=plot.style_linebr)
+// STOP LOSS RISK REWARD
+plot(series = (check and plotStopLossRR)? lastb:na, title = 'Last Bottom', color =color.new(#ff0000,0), linewidth = 2, style = plot.style_linebr, offset = 0)
+// ======================================================================================================================
+Expand (269 lines)

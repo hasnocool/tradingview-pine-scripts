@@ -1,0 +1,73 @@
+Script Name: Brrrrr strategy
+Author: ROBO_Trading
+Description: Theory 
+
+When Tether prints new USDT the price of BTC rises.
+When Tether burns USDT the price of BTC goes down.
+
+ Idea 
+
+Open a long position when Tether starts printing new USDT.
+Close a long position when Tether begins to burn USDT.
+Optional: open a short position.
+(Short positions can be disabled in this script's settings.)
+
+ Donchian Channel 
+
+USDT changes...
+PineScript code:
+
+Pine Script™ strategy
+Brrrrr strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+//@version=5
+strategy(title = "Brrrrr strategy", shorttitle = "Brrrrr", overlay = false, default_qty_type = strategy.percent_of_equity, initial_capital = 100, default_qty_value = 100, commission_type = strategy.commission.percent, commission_value = 0.1)
+//Settings
+short = input(true, title = "Use short")
+len = input.int(50, minval = 1, maxval = 1000)
+//BRRRRR (USDT Printing)
+brrrrr = request.security("GLASSNODE:USDT_SUPPLY", "D", close)
+//Donchian channel
+h = ta.highest(brrrrr, len)
+l = ta.lowest(brrrrr, len)
+//Lines
+plot(h, color = color.lime)
+plot(brrrrr)
+plot(l, color = color.red)
+//Trading
+if brrrrr > h[1]
+    strategy.entry("Long", strategy.long)
+if brrrrr < l[1]
+    if short
+        strategy.entry("Short", strategy.short)
+    if short == false
+        strategy.close_all()
+Expand (28 lines)

@@ -1,0 +1,73 @@
+Script Name: ETF - Stocks - Crypto - DCA Strategy v1
+Author: TsangYouJun
+Description: Simple "benchmark" strategy for ETFs, Stocks and Crypto! Super-easy to implement for beginners, a DCA (dollar-cost-averaging) strategy means that you buy a fixed amount of an ETF / Stock / Crypto every several months. For instance, to DCA the S&P 500 (SPY), you could purchase $10,000 USD every 12 months, irrespective of the market price. Assuming the...
+PineScript code:
+
+Pine Script™ strategy
+ETF / Stocks / Crypto - DCA Strategy v1
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+// To simplify matters for newbies, this script only computes DCA on H1, D1, W1 and M1 timeframes
+// If you want a script that DCAs per x-bars, let me know in the comments.
+// © TsangYouJun
+//@version=4
+strategy("DCA Strategy v1", overlay=false)
+//user inputs
+contribution = input(title="Contribution (USD)",type=input.integer,minval=1,maxval=1000000,step=1,defval=10000,confirm=false)
+frequency = input(title="Frequency (Months)",type=input.integer,minval=1,maxval=1000000,step=1,defval=12,confirm=false)
+//units to buy
+units = contribution / close
+//when to dca
+hourDca = bar_index[0] % (frequency * 28 * 24)
+dayDca = bar_index[0] % (frequency * 28)
+weekDca = bar_index[0] % (frequency * 4)
+monthDca = bar_index[0] % frequency
+//when to dca
+if(timeframe.period == "60" and hourDca == 0)
+    strategy.order("DCA", strategy.long, units)
+    
+if(timeframe.period == "D" and dayDca == 0)
+    strategy.order("DCA", strategy.long, units)
+    
+if(timeframe.period == "W" and weekDca == 0)
+    strategy.order("DCA", strategy.long, units)
+    
+if(timeframe.period == "M" and monthDca == 0)
+    strategy.order("DCA", strategy.long, units)
+//plot strategy equity
+plot(strategy.equity - strategy.initial_capital, color=color.blue, linewidth=2, title="Net Profit")
+Expand (35 lines)

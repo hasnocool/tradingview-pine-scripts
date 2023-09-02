@@ -1,0 +1,67 @@
+Script Name: MACD Long Strat
+Author: TheGrindToday
+Description: First script I've written, but the concept is pretty simple. This uses the MACD with settings fast_SMA = 6 and slow SMA=16 and uses the distance between the 2 (histogram) to look for potential trend reversals to flag potential entries for Long trades. It waits for the confirmation looking backward 2 x timeframes (to reduce false calls slightly). You can adjust it...
+PineScript code:
+
+Pine Script™ strategy
+MACD Long Strat
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © TheGrindToday
+//@version=4
+strategy("MACD Long Strat", overlay=false)
+//fast = 12, slow = 26
+fast = 6, slow = 26
+fastMA = ema(close, fast)
+slowMA = ema(close, slow)
+macd = fastMA - slowMA
+signal = sma(macd, 9)
+histogram = macd-signal
+macdpos = histogram[0] > 0
+macdneg = histogram[0] < 0
+histogram_reversing_negative = histogram[1] > histogram[2]
+LongEntryCondition =  histogram > histogram[1] 
+ShortEntryCondition =  histogram < histogram[1]
+exitConditionLong = histogram[0] < histogram[2]
+if (LongEntryCondition and histogram_reversing_negative)
+    strategy.entry("Long", strategy.long)
+if (exitConditionLong)
+    strategy.close("Long")
+    
+plot(histogram)
+Expand (35 lines)

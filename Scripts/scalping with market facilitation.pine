@@ -1,0 +1,214 @@
+Script Name: scalping with market facilitation
+Author: trent777brown
+Description: This strategy is for scalping low timeframes for 10 pips.  I have yet to see a strategy with this unique combo of indicators.
+First we have volume indicator market facilitation, where we are looking for volume and mfi to be up, then we want the adx 5 to be above level 30 and above its ema period 3, then if these conditions are good we take shorts when ema 8 is...
+PineScript code:
+
+Pine Script™ strategy
+scalping with market facilitation
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © trent777brown
+//@version=5
+strategy("scalping with market facilitation", overlay=true, margin_long=100, margin_short=100)
+MFI0 = (high - low) / volume
+MFI1 = (high[1] - low[1]) / volume[1]
+MFIplus = MFI0 > MFI1
+MFIminus = MFI0 < MFI1
+//Current Trend-(Changed mean to trend)-revised
+trendplus = hl2 > high[1]
+trendzero = hl2 < high[1] and hl2 > low[1]  //addition of script
+trendminus = hl2 < low[1]  //changed high to low
+//Volume +/-
+volplus = volume > volume[1]
+volminus = volume < volume[1]
+//Period Control by Buyers or Sellers is determined with reference to Price action of the period 
+//divided into 3 sectors, sector 1 is the Top third, Sector 2 is the middle third, 
+//and sector 3 is the Bottom third of the period. Control classifications are: Extremes(11, 33), Neutral(22), 
+//Climbers(31,21,32) Open lower than Close, and Drifters(13,23,12)Close lower than Open
+//value0 = low
+//value1 = ((high - low)/3)
+//value2 = ((high - low)/3)*2
+//value3 = high
+//o1 = (open >= (((high - low)/3) * 2) + low)
+//c1 = (close >= (((high - low)/3) * 2) + low)
+//o2 = (open <= o1) 
+//c2 = (close <= c1)
+//o3 = (open <= ((high - low)/3) + low)
+//c3 = (close <= ((high - low)/3) + low)
+//sector2 = if((high - low)/3) + low and sector2 <= (((high - low)/3)*2) + low
+//sector3 = if((high - low)/3) + low and >= low
+//Extremes-Full Control of Period by Buyers or Sellers 
+//pg79 notes an 85% chance that the current trend will change in the next 1 to 5 bars
+b11 = open >= (high - low) / 3 * 2 + low and close >= (high - low) / 3 * 2 + low  //Extreme Buyer Control:Chartruse
+b33 = open <= (high - low) / 3 + low and close <= (high - low) / 3 + low  //Extreme Seller Control:Crimson
+//Neutral pg80
+b22 = open >= (high - low) / 3 + low and open <= (high - low) / 3 * 2 and close >= (high - low) / 3 + low and open <= (high - low) / 3 * 2  //Bracketed Price Control
+//Climber-Open lower than Close pg81
+b31 = open <= (high - low) / 3 + low and close >= (high - low) / 3 * 2 + low  //Strong Buyer Control:Dark Green
+b21 = open >= (high - low) / 3 + low and open <= (high - low) / 3 * 2 and close >= (high - low) / 3 * 2 + low  //Moderate Buyer Control:Green
+b32 = open <= (high - low) / 3 + low and close >= (high - low) / 3 + low and open <= (high - low) / 3 * 2  //Weak Buyer Control:Light Green
+//Drifter-Close lower than Open pg81
+b13 = open >= (high - low) / 3 * 2 + low and close <= (high - low) / 3 + low  //Strong Seller Control:Dark Red
+b23 = open >= (high - low) / 3 + low and open <= (high - low) / 3 * 2 and close <= (high - low) / 3 + low  //Moderate Seller Control:Red
+b12 = open >= (high - low) / 3 * 2 + low and close >= (high - low) / 3 + low and open <= (high - low) / 3 * 2  //Weak Seller Control:Light Red/Pink
+ 
+//
+psar= ta.sar(.09, .2, .2)
+ema8= ta.ema(hlc3, 8)
+ema13h= ta.ema(high, 13)
+ema13l= ta.ema(low, 13)
+ema13= ta.ema(close, 13)
+ema55= ta.ema(close, 100)
+[dip, dim, adx]= ta.dmi(5, 5)
+adxema=ta.ema(adx, 3)
+[macdl, sigl, histl]= ta.macd(close, 8, 13, 5)
+obv= ta.obv
+obvema= ta.ema(obv, 8)
+obvema55= ta.ema(obv, 55)
+mfigreen= MFIplus and volplus
+adx_x_over= ta.crossover(adx, adxema) and adx >= 25
+barssincemfi= ta.barssince(mfigreen)
+longtrig2= adx > 30 and adx > adxema and barssincemfi <= 4 
+shorttrig2= adx > 30 and adx > adxema and barssincemfi <= 4 
+long= macdl > sigl and obv > obvema55 and ema8 > ema55   and psar < low and trendplus//and ema13l > ema55//and open > hull200 and close > hull200
+short= macdl < sigl and obv < obvema55 and ema8 < ema55 and psar > high and trendminus//and ema13h < ema55//open < hull200 and close < hull200
+//plot(hull200, color=color.red, linewidth=3)
+plot(ema13h, color=color.gray, linewidth=3)
+plot(ema13l, color=color.gray, linewidth=3)
+plot(ema13, color=color.blue, linewidth=3)
+//
+plot(ema55, color=color.white, linewidth=3)
+plot(psar, color=color.white, style=plot.style_circles)
+plotshape(mfigreen, color=color.yellow, style=shape.flag, location=location.belowbar, size= size.tiny)
+longCondition = long
+if (longCondition)
+    strategy.entry("My Long Entry Id", strategy.long, 100000,  when= longtrig2)
+    strategy.exit("exit long", "My Long Entry Id", profit= 100, loss= 75)
+shortCondition = short
+if (shortCondition)
+    strategy.entry("My Short Entry Id", strategy.short, 100000,  when= shorttrig2)
+    strategy.exit("exit short", "My Short Entry Id", profit= 100, loss= 75)
+Expand (122 lines)

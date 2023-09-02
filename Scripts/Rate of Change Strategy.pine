@@ -1,0 +1,217 @@
+Script Name: Rate of Change Strategy
+Author: sonnyparlin
+Description: This strategy calculates the rate of change over time to determine buy/sell points.  This strategy is best run with 1 hour candles .
+
+Configurable values:
+
+ 
+ SMA Fast (days)
+ SMA Slow (days)
+ SMA Reference (days)
+ ROC Low (%)
+ ROC High (%)
+ Order Stake (%)
+ Look back Candles
+PineScript code:
+
+Pine Script™ strategy
+Rate of Change Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+//@version=5
+// Author: Sonny Parlin (highschool dropout)
+// Best if run on 5m timeframe
+strategy(shorttitle='ROC+Strategy', title='Rate of Change Strategy', overlay=true, currency=currency.USD, initial_capital=10000)
+// Inputs and variables
+ss = input.int(14, minval=10, maxval=29, title='SMA Fast (days)')
+ff = input.int(80, minval=30, maxval=200, title='SMA Slow (days)')
+lowOffset = input.float(2, 'ROC Low (%)', minval=0, step=0.1)/100
+orderStake = input.float(80, 'Order Stake (%)', minval=0, step=0.01)/100
+lookback = input.int(12, 'Lookback Candles', minval=1, step=1)
+// SMA
+smaFast = ta.sma(close, ss)
+smaSlow = ta.sma(close, ff)
+// SMA plots
+plot(smaFast, 'smaFast', color=color.new(#00ffcc, 0), display=display.none)
+plot(smaSlow, 'smaSlow', color=color.new(#ff0000, 0), display=display.none)
+// Rate of change
+ROC = (close[lookback] - close) / close[lookback]
+// Plot ROC and low offset, these will be near the bottom of the chart
+// scroll down to see them.
+plot(ROC, 'ROC', style=plot.style_linebr, color=color.new(#aaaaaa, 0), display=display.none)
+plot(lowOffset, 'lowOffset', style=plot.style_linebr, color=color.new(#01ff00, 0), display=display.none)
+// taken from Candlestick Reversal System by LonesomeTheBlue
+// Outside reversal pattern
+O = open
+C = close
+H = high
+L = low
+mycandlesize = H - L
+BarMultiplier = 1.25
+BarsBack = 50
+AverageCandle1 = ta.sma(mycandlesize, BarsBack)
+longsignal = L < L[1] and C > H[1] and H - L >= AverageCandle1 * BarMultiplier
+// The buy stratey:
+cond1 = ROC > lowOffset
+cond2 = ta.rising(smaFast, 2)
+cond3 = ta.rising(smaSlow,3)
+cond4 = close < close[lookback] 
+cond5 = ta.rising(smaSlow, 3)
+cond6 = longsignal
+cond7 = ta.crossover(smaFast,smaSlow)
+cond8 = (close > open and close > smaFast)
+enterLong = cond1 and cond2 and cond3 and cond4 or cond5 or cond6 or cond7 or cond8
+// Order size is based on total equity
+// Example 1:
+// startingEquity = 2000
+// close = 47434.93
+// orderStake = 0.45
+// (2,000 × orderStake) / close = orderSize = 0.0189733599 = approx $900
+// Example 2:
+// startingEquity = 2000
+// close = 1.272
+// orderStake = 0.45
+// (startingEquity × orderStake) / close = orderSize = 707.5471698113 = approx $900
+orderSize = strategy.equity * orderStake / close
+// Stoploss
+sl_inp = input.float(9, step=0.1, title='Stop Loss (%)') / 100
+slLevel = strategy.position_avg_price * (1 - sl_inp)
+// Stoploss plot
+plot(strategy.position_size > 0 ? slLevel : na, 'Stoploss', style=plot.style_linebr, color=color.new(#ffff00, 0), display=display.none)
+// Trailing Stoploss
+// I'm using 2.62 as my default value, play with this for different results.
+longTrailPerc = input.float(title='Trailing Stoploss (%)', minval=0.0, step=0.1, defval=3.62) * 0.01
+longStopPrice = 0.0
+longStopPrice := if strategy.position_size > 0
+    stopValue = close * (1 - longTrailPerc)
+    math.max(stopValue, longStopPrice[1])
+else
+    0
+// Trailing stoploss plot
+plot(strategy.position_size > 0 ? longStopPrice : na, 'Trailing Stoploss', style=plot.style_linebr, color=color.new(#ffffff, 0), display=display.none)
+// Take profit
+tp = input.float(4, minval=-100, step=0.1, title='Take Profit (%) -100 to disable') / 100
+takeProfit = strategy.position_avg_price * (1 + tp)
+// Take profit plot
+plot(strategy.position_size > 0 ? takeProfit : na, 'Take Profit', style=plot.style_linebr, color=color.new(color.blue, 0), display=display.none)
+// Enter long
+if enterLong
+    strategy.entry('Open Long Position', strategy.long, orderSize, stop=longStopPrice, when=strategy.position_size <= 0)
+// Exit strategies
+// Take profit
+if low < takeProfit and high > takeProfit or ta.crossunder(low, takeProfit) or ta.crossover(high, takeProfit)
+    strategy.close('Open Long Position', comment='Take Profit')
+// Trailing stoploss
+if ta.crossunder(low, longStopPrice)
+    strategy.close('Open Long Position', comment='Trailing Stop loss')
+// absolute stoploss
+strategy.exit(id='Close Long Position', stop=slLevel)
+Expand (109 lines)

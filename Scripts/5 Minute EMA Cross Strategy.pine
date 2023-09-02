@@ -1,0 +1,270 @@
+Script Name: 5 Minute EMA Cross Strategy
+Author: jordanfray
+Description: This simple Fast/Slow EMA cross strategy is designed to be used with Alertatron to place limit orders and use a trailing stop/take profit. 
+Features:
+ 
+ Indicators when the fast EMA crosses the slow EMA
+ Trailing Stop/Take Profit
+ Bar look back for placing limit order
+ Macro EMA filter to only trade with the macro trend
+PineScript code:
+
+Pine Script™ strategy
+5 Minute EMA Cross Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © jordanfray
+//@version=5
+strategy(title="5 Minute EMA Strategy", overlay=true, max_bars_back=5000, default_qty_type=strategy.percent_of_equity, default_qty_value=100,initial_capital=100000, commission_type=strategy.commission.percent, commission_value=0.05, backtest_fill_limits_assumption=2)
+max_bars_back(time, 5000)
+// Indenting Classs
+indent_1 = " "
+indent_2 = "  "
+indent_3 = "   "
+indent_4 = "    "
+// Group Titles
+group_one_title = "EMA Settings"
+group_two_title = "Entry Settings"
+group_three_title = "Trade Filters"
+// Input Tips
+ocean_blue = color.new(#0C6090,0)
+sky_blue = color.new(#00A5FF,0)
+green = color.new(#2DBD85,0)
+red = color.new(#E02A4A,0)
+light_blue = color.new(#00A5FF,85)
+light_green = color.new(#2DBD85,85)
+light_red = color.new(#E02A4A,85)
+light_yellow = color.new(#FFF900,85)
+white = color.new(#ffffff,0)
+light_gray = color.new(#000000,70)
+transparent = color.new(#000000,100)
+// Strategy Settings - EMA
+fast_EMA_length = input.int(defval=20, minval=1, title="Fast Length", group=group_one_title)
+fast_EMA_type = input.string(defval="EMA", options = ["EMA", "SMA", "RMA", "WMA"], title=indent_4+"Type", group=group_one_title)
+fast_EMA_source = input.source(defval=close, title=indent_4+"Source", group=group_one_title)
+fast_EMA = switch fast_EMA_type
+    "EMA" => ta.ema(fast_EMA_source, fast_EMA_length)
+    "SMA" => ta.sma(fast_EMA_source, fast_EMA_length)
+    "RMA" => ta.rma(fast_EMA_source, fast_EMA_length)
+    "WMA" => ta.wma(fast_EMA_source, fast_EMA_length)
+    => na
+plot(fast_EMA, title="Fast EMA", linewidth=1, color=green, editable=true)
+slow_EMA_length = input.int(defval=100, minval=1, title="Slow Length", group=group_one_title)
+slow_EMA_type = input.string(defval="EMA", options = ["EMA", "SMA", "RMA", "WMA"], title=indent_4+"Type", group=group_one_title)
+slow_EMA_source = input.source(defval=close, title=indent_4+"Source", group=group_one_title)
+slow_EMA = switch slow_EMA_type
+    "EMA" => ta.ema(slow_EMA_source, slow_EMA_length)
+    "SMA" => ta.sma(slow_EMA_source, slow_EMA_length)
+    "RMA" => ta.rma(slow_EMA_source, slow_EMA_length)
+    "WMA" => ta.wma(slow_EMA_source, slow_EMA_length)
+    => na
+plot(slow_EMA, title="Slow EMA", linewidth=1, color=sky_blue, editable=true)
+// EMA Macro Filter
+enable_EMA_filter = input.bool(defval=false, title="Use EMA Filter", group=group_three_title)
+EMA_filter_timeframe = input.timeframe(defval="", title=indent_4+"Timeframe", group=group_three_title)
+EMA_filter_length = input.int(defval=300, minval=1, step=10, title=indent_4+"Length", group=group_three_title)
+EMA_filter_source = input.source(defval=hl2, title=indent_4+"Source", group=group_three_title)
+ema_filter = ta.ema(EMA_filter_source, EMA_filter_length)
+ema_filter_smoothed = request.security(syminfo.tickerid, EMA_filter_timeframe, ema_filter[barstate.isrealtime ? 1 : 0], gaps=barmerge.gaps_on)
+plot(enable_EMA_filter ? ema_filter_smoothed: na, title="EMA Macro Filter", linewidth=2, color=white, editable=true)
+// Entry Settings
+stop_loss_val = input.float(defval=2.0, title="Stop Loss (%)", step=0.1, group=group_two_title)/100
+take_profit_val = input.float(defval=2.0, title="Take Profit (%)", step=0.1, group=group_two_title)/100
+long_entry_limit_lookback = input.int(defval=3, title="Long Entry Limit Lookback", minval=1, step=1, group=group_two_title)
+short_entry_limit_lookback = input.int(defval=3, title="Short Entry Limit Lookback", minval=1, step=1, group=group_two_title)
+limit_order_long_price = ta.lowest(low, long_entry_limit_lookback)
+limit_order_short_price = ta.highest(high, short_entry_limit_lookback)
+start_trailing_after = input.float(defval=1, title="Start Trailing After (%)", step=0.1, group=group_two_title)/100
+trail_behind = input.float(defval=1, title="Trail Behind (%)", step=0.1, group=group_two_title)/100
+long_start_trailing_val = strategy.position_avg_price + (strategy.position_avg_price * start_trailing_after)
+short_start_trailing_val = strategy.position_avg_price - (strategy.position_avg_price * start_trailing_after)
+long_trail_behind_val = close - (strategy.position_avg_price * (trail_behind/100))
+short_trail_behind_val = close + (strategy.position_avg_price * (trail_behind/100))
+currently_in_a_long_postion = strategy.position_size > 0
+currently_in_a_short_postion = strategy.position_size < 0
+long_profit_target = strategy.position_avg_price * (1 + take_profit_val)
+long_stop_loss = strategy.position_avg_price * (1.0 - stop_loss_val)
+short_profit_target = strategy.position_avg_price * (1 - take_profit_val)
+short_stop_loss = strategy.position_avg_price * (1 + stop_loss_val)
+bars_since_entry = currently_in_a_long_postion or currently_in_a_short_postion ? bar_index - strategy.opentrades.entry_bar_index(strategy.opentrades - 1) + 1 : 5
+plot(bars_since_entry, editable=false, title="Bars Since Entry", color=green)
+long_run_up = ta.highest(high, bars_since_entry)
+long_trailing_stop = currently_in_a_long_postion and bars_since_entry > 0 and long_run_up > long_start_trailing_val ? long_run_up - (long_run_up * trail_behind) : long_stop_loss
+// long_run_up_line = plot(long_run_up, style=plot.style_stepline, editable=false, color=currently_in_a_long_postion ? green : transparent)
+long_trailing_stop_line = plot(long_trailing_stop, style=plot.style_stepline, editable=false, color=currently_in_a_long_postion ? long_trailing_stop > strategy.position_avg_price ? green : red : transparent)
+short_run_up = ta.lowest(low, bars_since_entry)
+short_trailing_stop = currently_in_a_short_postion and bars_since_entry > 0 and short_run_up < short_start_trailing_val ? short_run_up + (short_run_up * trail_behind) : short_stop_loss
+// short_run_up_line = plot(short_run_up, style=plot.style_stepline, editable=false, color=currently_in_a_short_postion ? green : transparent)
+short_trailing_stop_line = plot(short_trailing_stop, style=plot.style_stepline, editable=false, color=currently_in_a_short_postion ? short_trailing_stop < strategy.position_avg_price ? green : red : transparent)
+// Trade Conditions
+fast_EMA_cross_down_slow_EMA = ta.crossunder(fast_EMA,slow_EMA)
+fast_EMA_cross_up_slow_EMA = ta.crossover(fast_EMA,slow_EMA)
+plotshape(fast_EMA_cross_down_slow_EMA ? close : na, title="Short Entry Symbol", color=red, style=shape.triangledown, location=location.belowbar)
+plotshape(fast_EMA_cross_up_slow_EMA ? close : na, title="Long Entry Symbol", color=green, style=shape.triangleup, location=location.abovebar)
+fast_EMA_is_above_slow_EMA = fast_EMA > slow_EMA
+fast_EMA_is_below_slow_EMA = fast_EMA < slow_EMA
+ema_macro_filter_longs_only = fast_EMA > ema_filter_smoothed and slow_EMA > ema_filter_smoothed
+ema_macro_filter_shorts_only = fast_EMA < ema_filter_smoothed and slow_EMA < ema_filter_smoothed
+long_position_take_profit = ta.cross(close, long_trailing_stop) or close > long_profit_target
+short_position_take_profit = ta.cross(close, short_trailing_stop) or close > short_profit_target
+long_conditions_met = enable_EMA_filter ? ema_macro_filter_longs_only and fast_EMA_cross_up_slow_EMA and fast_EMA_is_above_slow_EMA and not currently_in_a_short_postion : fast_EMA_cross_up_slow_EMA and not currently_in_a_short_postion
+short_conditions_met = enable_EMA_filter ? ema_macro_filter_shorts_only and fast_EMA_cross_down_slow_EMA and fast_EMA_is_below_slow_EMA and not currently_in_a_long_postion : fast_EMA_cross_down_slow_EMA and fast_EMA_is_below_slow_EMA and not currently_in_a_long_postion
+// Long Entry
+strategy.entry(id="Long", direction=strategy.long, limit=limit_order_long_price, when=long_conditions_met)
+strategy.cancel(id="Cancel Long", when=ta.crossover(fast_EMA,slow_EMA))
+strategy.exit(id="Close Long", from_entry="Long", stop=long_trailing_stop, limit=long_profit_target, when=long_position_take_profit)
+// Short Entry 
+strategy.entry(id="Short", direction=strategy.short, limit=limit_order_short_price, when=short_conditions_met)
+strategy.cancel(id="Cancel Short", when=ta.crossunder(fast_EMA,slow_EMA))
+strategy.exit(id="Close Short", from_entry="Short", stop=short_trailing_stop, limit=short_profit_target, when=short_position_take_profit)
+entry = plot(strategy.position_avg_price, editable=false, title="Entry", style=plot.style_stepline, color=currently_in_a_long_postion or currently_in_a_short_postion ? color.blue : transparent, linewidth=1)
+fill(entry,long_trailing_stop_line, editable=false, color=currently_in_a_long_postion ? long_trailing_stop > strategy.position_avg_price ? light_green : light_red : transparent)
+fill(entry,short_trailing_stop_line, editable=false, color=currently_in_a_short_postion ? short_trailing_stop < strategy.position_avg_price ? light_green : light_red : transparent)
+//ltp = plot(currently_in_a_long_postion ? long_profit_target : na, style=plot.style_stepline, title="Take Profit", color=currently_in_a_long_postion ? green : transparent, linewidth=1)
+//lsl = plot(currently_in_a_long_postion ? long_stop_loss : na, style=plot.style_stepline, title="Take Profit", color=currently_in_a_long_postion ? red : transparent, linewidth=1)
+//fill(entry,ltp, color= currently_in_a_long_postion ? light_green : light_red)
+//fill(entry,lsl, color= currently_in_a_long_postion ? light_red : light_green)
+//stp = plot(currently_in_a_short_postion ? short_profit_target : na, style=plot.style_stepline, title="Take Profit", color=currently_in_a_short_postion ? green : transparent, linewidth=1)
+//ssl = plot(currently_in_a_short_postion ? short_stop_loss : na, style=plot.style_stepline, title="Take Profit", color=currently_in_a_short_postion ? red : transparent, linewidth=1)
+//fill(entry,stp, color= currently_in_a_short_postion ? light_green : light_red)
+//fill(entry,ssl, color= currently_in_a_short_postion ? light_red : light_green)
+Expand (139 lines)

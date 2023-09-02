@@ -1,0 +1,71 @@
+Script Name: ETF 3-Day Reversion Strategy
+Author: TradeAutomation
+Description: Introduction: This strategy is a modification of the “3-day Mean Reversion Strategy” from the book "High Probability ETF Trading" by Larry Connors and Cesar Alvarez. In the book, the authors discuss a high-probability ETF mean reversion strategy for a 1-day time-frame with these simple rules:
+
+ 
+ The price must be above the 200 day SMA and below the 5 day SMA.
+...
+PineScript code:
+
+Pine Script™ strategy
+ETF 3-Day Reversion Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// @version = 5
+// Author = TradeAutomation
+strategy(title="ETF 3-Day Reversion Strategy", shorttitle="ETF 3-Day Reversion Strategy", process_orders_on_close=true, overlay=true, commission_type=strategy.commission.cash_per_order, commission_value=1, initial_capital = 10000000, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+// Backtest Date Range Inputs // 
+StartTime = input.time(defval=timestamp('01 Jan 2012 05:00 +0000'), title='Start Time')
+EndTime = input.time(defval=timestamp('01 Jan 2099 00:00 +0000'), title='End Time')
+InDateRange = time>=StartTime and time<=EndTime
+// Strategy Rules //
+DayEMA5 = ta.ema(close, 5)
+EMAQualInput = input.bool(false, "Only enter trades when above qualifier EMA?", tooltip="When this is selected, a trade will only be entered when the price is above the EMA qualifier line.")
+QEMA = ta.ema(close, input.int(200, "EMA Trade Qualifier Length"))
+EMAQualifier = close>QEMA
+Rule1 = EMAQualInput==true ? EMAQualifier : close>0
+Rule2 = close<DayEMA5
+Rule3 = high<high[1] and low<low[1] and high[1]<high[2] and low[1]<low[2] and high[2]<high[3] and low[2]<low[3]
+ExitEMA = ta.ema(close, input.int(5, "EMA Length For Exit Strategy", tooltip = "The strategy will sell when the price crosses over this EMA"))
+plot(DayEMA5, "Five Period EMA")
+plot(QEMA, "Qualifier EMA")
+plot(ExitEMA, "Exit EMA", color=color.green)
+// Entry & Exit Functions //
+if (InDateRange)
+    strategy.entry("Long", strategy.long, when = Rule1 and Rule2 and Rule3)
+    strategy.close("Long", when = ta.crossover(close, ExitEMA))
+if (not InDateRange)
+    strategy.close_all()
+Expand (32 lines)

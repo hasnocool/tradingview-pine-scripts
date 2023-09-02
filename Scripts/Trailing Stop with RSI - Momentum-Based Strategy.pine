@@ -1,0 +1,171 @@
+Script Name: Trailing Stop with RSI - Momentum-Based Strategy
+Author: freddieironside
+Description: Trailing Stop with RSI - Momentum-Based Strategy
+
+Description:
+The Trailing Stop with RSI strategy combines momentum analysis and trailing stop functionality to help traders identify potential entry and exit points in their trading decisions. This strategy is suitable for various markets and timeframes.
+
+Key Features:
+
+    Momentum Analysis: The strategy...
+PineScript code:
+
+Pine Script™ strategy
+Trailing Stop with RSI - Momentum-Based Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+//@version=5
+strategy("Trailing Stop with RSI", overlay=true)
+length = input.int(12, "Momentum Length")
+price = close
+momentum(seria, length) =>
+    mom = seria - seria[length]
+    mom
+mom0 = momentum(price, length)
+mom1 = momentum(mom0, 1)
+rsiLength = input.int(14, "RSI Length")
+rsiOverbought = input(70, "RSI Overbought Level")
+rsiOversold = input(30, "RSI Oversold Level")
+rsiValue = ta.rsi(close, rsiLength)
+tsact = input.float(0.0, "Trailing Stop Activation (%)", group="strategy", tooltip="Activates the Trailing Stop once this PnL is reached.") / 100
+tsact := tsact ? tsact : na
+ts = input.float(0.0, "Position Trailing Stop (%)", group="strategy", tooltip="Trails your position with a stop loss at this distance from the highest PnL") / 100
+ts := ts ? ts : na
+in_long = strategy.position_size > 0
+in_short = strategy.position_size < 0
+var ts_ = array.new_float()
+ts_size = array.size(ts_)
+ts_get = ts_size > 0 ? array.get(ts_, ts_size - 1) : 0
+if in_long
+    if tsact and high > strategy.position_avg_price + strategy.position_avg_price * tsact
+        if ts_size > 0 and ts_get < high
+            array.push(ts_, high)
+        if ts_size < 1
+            array.push(ts_, high)
+    if not tsact
+        if ts_size > 0 and ts_get < high
+            array.push(ts_, high)
+        if ts_size < 1
+            array.push(ts_, high)
+if in_short
+    if tsact and low < strategy.position_avg_price - strategy.position_avg_price * tsact
+        if ts_size > 0 and ts_get > low
+            array.push(ts_, low)
+        if ts_size < 1
+            array.push(ts_, low)
+    if not tsact
+        if ts_size > 0 and ts_get > low
+            array.push(ts_, low)
+        if ts_size < 1
+            array.push(ts_, low)
+trail = in_long and ts_size > 0 ? low < ts_get - ts_get * ts : in_short and ts_size > 0 ? high > ts_get + ts_get * ts : na
+if (mom0 > 0 and mom1 > 0)
+    strategy.entry("MomLE", strategy.long, stop=high+syminfo.mintick, comment="MomLE")
+else
+    strategy.cancel("MomLE")
+if (mom0 < 0 and mom1 < 0)
+    strategy.entry("MomSE", strategy.short, stop=low-syminfo.mintick, comment="MomSE")
+else
+    strategy.cancel("MomSE")
+tsClose = in_long ? ts_get - ts_get * ts : in_short ? ts_get + ts_get * ts : na
+if trail
+    strategy.close_all()
+if not strategy.opentrades
+    array.clear(ts_)
+rsiOverboughtCondition = rsiValue >= rsiOverbought
+rsiOversoldCondition = rsiValue <= rsiOversold
+if rsiOverboughtCondition
+    strategy.close("SHORT", "SX")
+    strategy.entry("LONG", strategy.long)
+if rsiOversoldCondition
+    strategy.close("LONG", "LX")
+    strategy.entry("SHORT", strategy.short)
+plotchar(ts_get, "GET", "")
+plot(strategy.position_avg_price > 0 ? strategy.position_avg_price : na, "Average", color.rgb(251, 139, 64), 2, plot.style_cross)
+plot(tsClose > 0 ? tsClose : na, "Trailing", color.rgb(251, 64, 64), 2, plot.style_cross)
+plot(strategy.position_avg_price - strategy.position_avg_price * tsact > 0 ? strategy.position_avg_price - strategy.position_avg_price * tsact : na, "TS Activation", color.fuchsia, 2, plot.style_cross)
+Expand (85 lines)

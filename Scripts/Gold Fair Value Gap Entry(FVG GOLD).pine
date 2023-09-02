@@ -1,0 +1,61 @@
+Script Name: Gold Fair Value Gap Entry(FVG GOLD)
+Author: SmirkingNick
+Description: This script calculates the fair value of gold, which is set as an input parameter. It then gets the current price of gold and calculates the gap between the price and the fair value. If the gap is positive, it enters a long trade, and if it's negative, it enters a short trade.
+
+The script also uses proper risk management techniques by setting a stop loss and take...
+PineScript code:
+
+Pine Script™ strategy
+Gold Fair Value Gap Entry(FVG GOLD)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+//@version=5
+strategy("Gold Fair Value Gap Entry", overlay=true)
+// Define the fair value
+fairValue = input.float(title="Fair Value", defval=1800.00, step=0.01)
+// Get the current price and calculate the gap
+price = request.security("XAUUSD", timeframe.period, close)
+gap = price - fairValue
+// Enter long and short trades based on the gap
+if (gap > 0)
+    strategy.entry("Long", strategy.long)
+if (gap < 0)
+    strategy.entry("Short", strategy.short)
+// Use proper risk management techniques
+stopLoss = input.float(title="Stop Loss", defval=1.0, step=0.1)
+takeProfit = input.float(title="Take Profit", defval=2.0, step=0.1)
+strategy.exit("Exit Long", "Long", stop=close * (1 - stopLoss / 100), limit=close * (1 + takeProfit / 100))
+strategy.exit("Exit Short", "Short", stop=close * (1 + stopLoss / 100), limit=close * (1 - takeProfit / 100))
+// Plot the fair value and gap
+plot(fairValue, color=color.blue, style=plot.style_line)
+plot(price, color=color.black)
+plot(gap, color=price > fairValue ? color.green : color.red)
+Expand (29 lines)

@@ -1,0 +1,435 @@
+Script Name: Hulk Grid Algorithm - The Quant Science
+Author: thequantscience
+Description: Grid-based intraday algorithm that works 50% in trend following and 50% in swing trading. Orders are executed on a grid of 10 levels. The grid levels are dynamic and calculated on the difference between the previous day's open and close. The algorithm makes only long trades based on the following logic: 
+
+1. The daily close of the previous day is analyzed, the...
+PineScript code:
+
+Pine Script™ strategy
+Hulk Grid Algorithm - The Quant Science
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © thequantscience
+//  ██╗  ██╗██╗   ██╗██╗     ██╗  ██╗     ██████╗ ██████╗ ██╗██████╗      █████╗ ██╗      ██████╗  ██████╗ ██████╗ ██╗████████╗██╗  ██╗███╗   ███╗
+//  ██║  ██║██║   ██║██║     ██║ ██╔╝    ██╔════╝ ██╔══██╗██║██╔══██╗    ██╔══██╗██║     ██╔════╝ ██╔═══██╗██╔══██╗██║╚══██╔══╝██║  ██║████╗ ████║
+//  ███████║██║   ██║██║     █████╔╝     ██║  ███╗██████╔╝██║██║  ██║    ███████║██║     ██║  ███╗██║   ██║██████╔╝██║   ██║   ███████║██╔████╔██║
+//  ██╔══██║██║   ██║██║     ██╔═██╗     ██║   ██║██╔══██╗██║██║  ██║    ██╔══██║██║     ██║   ██║██║   ██║██╔══██╗██║   ██║   ██╔══██║██║╚██╔╝██║
+//  ██║  ██║╚██████╔╝███████╗██║  ██╗    ╚██████╔╝██║  ██║██║██████╔╝    ██║  ██║███████╗╚██████╔╝╚██████╔╝██║  ██║██║   ██║   ██║  ██║██║ ╚═╝ ██║
+//  ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝     ╚═════╝ ╚═╝  ╚═╝╚═╝╚═════╝     ╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝
+                                                                                                                                                                                     
+//@version=5
+strategy(
+     title = 'Hulk Grid Algorithm - The Quant Science', 
+     overlay = true,
+     initial_capital = 1000, 
+     commission_type = strategy.commission.percent, 
+     commission_value = 0.07, 
+     pyramiding = 10,
+     default_qty_type = strategy.percent_of_equity
+     )
+// #########################################################################################################
+if not timeframe.isintraday
+    runtime.error("WRONG TIMEFRAME: Please select an intraday timeframe when use this strategy backtesting.")
+// #########################################################################################################
+startDate   = input.int(title="Start Date", defval=1, minval=1, maxval=31, group = "DATE PERIOD CONFIGURATION")
+startMonth  = input.int(title="Start Month", defval=1, minval=1, maxval=12, group = "DATE PERIOD CONFIGURATION")
+startYear   = input.int(title="Start Year", defval=2018, minval=1800, maxval=2100, group = "DATE PERIOD CONFIGURATION")
+endDate     = input.int(title="End Date", defval=12, minval=1, maxval=31, group = "DATE PERIOD CONFIGURATION")
+endMonth    = input.int(title="End Month", defval=3, minval=1, maxval=12, group = "DATE PERIOD CONFIGURATION")
+endYear     = input.int(title="End Year", defval=2022, minval=1800, maxval=2100, group = "DATE PERIOD CONFIGURATION")
+inDateRange = (time >= timestamp(syminfo.timezone, startYear, startMonth, startDate, 0, 0)) and (time < timestamp(syminfo.timezone, endYear, endMonth, endDate, 0, 0))
+// #########################################################################################################
+requestpastweekclose = request.security(syminfo.tickerid,  "D", close[1], gaps = barmerge.gaps_off) 
+requestpastweekopen  = request.security(syminfo.tickerid,  "D", open[1],  gaps = barmerge.gaps_off)
+newday  = request.security(syminfo.tickerid,  "D", close,  gaps = barmerge.gaps_off)
+// #########################################################################################################
+ten_grid        = input.bool(defval = false, title = "Enable Strategy", tooltip = "Create grid backtesting.", group = "STRATEGY CONFIGURATION")
+stop_loss       = input.float(defval = 2.00, step = 0.10, title = "Stop Loss: ", group = "STRATEGY CONFIGURATION")
+take_profit     = input.float(defval = 2.00, step = 0.10, title = "Take Profit: ", group = "STRATEGY CONFIGURATION")
+period_num      = input.int(defval = 3, step = 1, title = "Minimum Bars: ", group = "STRATEGY CONFIGURATION")
+size_grid       = input.float(defval = 200.00, step = 1.00, title = "Size Grid Range: ", group = "STRATEGY CONFIGURATION")
+// #########################################################################################################
+var float high_start = 0 
+var float high_end   = 0 
+checking = requestpastweekclose > requestpastweekopen 
+if checking==true
+    high_start := requestpastweekclose
+    high_end   := requestpastweekopen
+grid_range = high_start - high_end
+period = ta.barssince(ta.change(checking==true))==period_num
+TriggerGrid() =>
+    trigger = checking==true and period and grid_range > size_grid and close 
+    trigger
+trigger_entry = TriggerGrid() 
+var float grid_1  = 0
+var float grid_2  = 0
+var float grid_3  = 0
+var float grid_4  = 0
+var float grid_5  = 0
+var float grid_6  = 0
+var float grid_7  = 0
+var float grid_8  = 0
+var float grid_9  = 0
+var float grid_10 = 0
+var float factor = 0 
+if ten_grid == true and trigger_entry==true and strategy.opentrades==0
+    factor := grid_range / 10
+    // UP GRID
+    grid_1  := (high_start) 
+    grid_2  := (high_start + (factor * 1)) 
+    grid_3  := (high_start + (factor * 2)) 
+    grid_4  := (high_start + (factor * 3)) 
+    grid_5  := (high_start + (factor * 4))
+    // DOWN GRID
+    grid_6  := (high_start - (factor * 1)) 
+    grid_7  := (high_start - (factor * 2)) 
+    grid_8  := (high_start - (factor * 3)) 
+    grid_9  := (high_start - (factor * 4))
+    grid_10 := (high_start - (factor * 5))
+// #########################################################################################################
+var tb = table.new(position.bottom_left, 1, 1, bgcolor = color.new(#00ff08, 74))
+if barstate.isfirst
+    table.cell(tb, 0, 0, 
+      'Developed by The Quant Science™'
+      ,text_size = size.normal
+      ,text_color = color.new(#00ff08, 21))
+// #########################################################################################################
+var float new_ten_grid_1  = 0 
+var float new_ten_grid_2  = 0 
+var float new_ten_grid_3  = 0 
+var float new_ten_grid_4  = 0 
+var float new_ten_grid_5  = 0 
+var float new_ten_grid_6  = 0 
+var float new_ten_grid_7  = 0 
+var float new_ten_grid_8  = 0 
+var float new_ten_grid_9  = 0 
+var float new_ten_grid_10 = 0 
+if ten_grid == true 
+    new_ten_grid_1  := grid_1
+    new_ten_grid_2  := grid_2
+    new_ten_grid_3  := grid_3
+    new_ten_grid_4  := grid_4
+    new_ten_grid_5  := grid_5
+    new_ten_grid_6  := grid_6
+    new_ten_grid_7  := grid_7
+    new_ten_grid_8  := grid_8
+    new_ten_grid_9  := grid_9
+    new_ten_grid_10 := grid_10
+else if ten_grid == false
+    new_ten_grid_1  := na
+    new_ten_grid_2  := na
+    new_ten_grid_3  := na
+    new_ten_grid_4  := na
+    new_ten_grid_5  := na
+    new_ten_grid_6  := na
+    new_ten_grid_7  := na
+    new_ten_grid_8  := na
+    new_ten_grid_9  := na
+    new_ten_grid_10 := na
+destroyall = new_ten_grid_10 - (new_ten_grid_10 * stop_loss / 100)
+des_function = ta.crossunder(close, destroyall)
+takeprofitlevel = new_ten_grid_5 + (new_ten_grid_5 * take_profit / 100)
+var float lots = 0 
+if trigger_entry==true and ten_grid==true and period and inDateRange
+    lots := (strategy.equity / close) / 5
+    if close > new_ten_grid_1
+        strategy.entry(id = "O #1",  direction = strategy.long, qty = lots, limit = new_ten_grid_1)
+        strategy.entry(id = "O #2",  direction = strategy.long, qty = lots, limit = new_ten_grid_2)
+        strategy.entry(id = "O #3",  direction = strategy.long, qty = lots, limit = new_ten_grid_3)
+        strategy.entry(id = "O #4",  direction = strategy.long, qty = lots, limit = new_ten_grid_4)
+        strategy.entry(id = "O #5",  direction = strategy.long, qty = lots, limit = new_ten_grid_5)
+    if close < new_ten_grid_1
+        strategy.entry(id = "O #6",  direction = strategy.long, qty = lots, limit = new_ten_grid_6)
+        strategy.entry(id = "O #7",  direction = strategy.long, qty = lots, limit = new_ten_grid_7)
+        strategy.entry(id = "O #8",  direction = strategy.long, qty = lots, limit = new_ten_grid_8)
+        strategy.entry(id = "O #9",  direction = strategy.long, qty = lots, limit = new_ten_grid_9)
+        strategy.entry(id = "O #10", direction = strategy.long, qty = lots, limit = new_ten_grid_10)
+    if close > takeprofitlevel
+        strategy.cancel_all()
+    if close < destroyall
+        strategy.cancel_all()
+if new_ten_grid_2 and ten_grid == true
+    strategy.exit(id = "C #1", from_entry = "O #1", qty = 100, limit = new_ten_grid_2)
+if new_ten_grid_3 and ten_grid == true
+    strategy.exit(id = "C #2", from_entry = "O #2", qty = 100, limit = new_ten_grid_3)
+if new_ten_grid_4 and ten_grid == true
+    strategy.exit(id = "C #3", from_entry = "O #3", qty = 100, limit = new_ten_grid_4)
+if new_ten_grid_5 and ten_grid == true
+    strategy.exit(id = "C #4", from_entry = "O #4", qty = 100, limit = new_ten_grid_5)
+if takeprofitlevel and ten_grid == true
+    strategy.exit(id = "C #5", from_entry = "O #5", qty = 100, limit = takeprofitlevel)
+if new_ten_grid_5 and ten_grid == true
+    strategy.exit(id = "C #6", from_entry = "O #6", qty = 100, limit = new_ten_grid_1)
+if new_ten_grid_6 and ten_grid == true
+    strategy.exit(id = "C #7", from_entry = "O #7", qty = 100, limit = new_ten_grid_6)
+if new_ten_grid_7 and ten_grid == true
+    strategy.exit(id = "C #8", from_entry = "O #8", qty = 100, limit = new_ten_grid_7)
+if new_ten_grid_8 and ten_grid == true
+    strategy.exit(id = "C #9", from_entry = "O #9", qty = 100, limit = new_ten_grid_8)
+if new_ten_grid_9 and ten_grid == true
+    strategy.exit(id = "C #10", from_entry = "O #10", qty = 100, limit = new_ten_grid_9)
+if des_function 
+    strategy.close_all("Destroyed Grid")
+    strategy.cancel_all()
+if session.islastbar_regular
+    strategy.close_all("Dayli Session End")
+if session.islastbar_regular
+    strategy.cancel_all()
+// #########################################################################################################
+fill(plot(grid_1, color = color.new(color.rgb(0, 255, 132), 95)), 
+     plot(grid_2, color = color.new(color.rgb(0, 255, 132), 95)),  
+         color = color.new(#00ff08, 80))
+fill(plot(grid_2, color = color.new(color.rgb(0, 255, 132), 95)),  
+     plot(grid_3, color = color.new(color.rgb(0, 255, 132), 95)),  
+         color = color.new(#00ff08, 85))
+fill(plot(grid_3, color = color.new(color.rgb(0, 255, 132), 95)),  
+     plot(grid_4, color = color.new(color.rgb(0, 255, 132), 95)),  
+         color = color.new(#00ff08, 85))
+fill(plot(grid_4, color = color.new(color.rgb(0, 255, 132), 95)), 
+     plot(grid_5, color = color.new(color.rgb(0, 255, 132), 95)),  
+         color = color.new(#00ff08, 90))
+fill(plot(grid_1, color = color.new(color.rgb(0, 255, 132), 95)),  
+     plot(grid_6, color = color.new(color.rgb(0, 255, 132), 95)), 
+         color = color.new(#00ff08, 80))
+fill(plot(grid_6, color = color.new(color.rgb(0, 255, 132), 95)),  
+     plot(grid_7, color = color.new(color.rgb(0, 255, 132), 95)),  
+         color = color.new(#00ff08, 80))
+fill(plot(grid_7, color = color.new(color.rgb(0, 255, 132), 95)), 
+     plot(grid_8, color = color.new(color.rgb(0, 255, 132), 95)),  
+         color = color.new(#00ff08, 85))
+fill(plot(grid_8, color = color.new(color.rgb(0, 255, 132), 95)),  
+     plot(grid_9, color = color.new(color.rgb(0, 255, 132), 95)),  
+         color = color.new(#00ff08, 85))
+fill(plot(grid_9, color = color.new(color.rgb(0, 255, 132), 95)), 
+     plot(grid_10, color = color.new(color.rgb(0, 255, 132), 95)), 
+         color = color.new(#00ff08, 90))
+// #########################################################################################################
+Expand (228 lines)

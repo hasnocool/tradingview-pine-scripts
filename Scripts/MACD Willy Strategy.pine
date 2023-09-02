@@ -1,0 +1,240 @@
+Script Name: MACD Willy Strategy
+Author: PtGambler
+Description: This strategy is mainly developed for scalping / intraday trading. It could potentially be used to identify entry/exit signals for short term options trading. It performs decently well on popular stocks when used on time frames between 5 min to 15 min using regular session bar data. It combines 3 popular indicators, EMA, MACD, and William %range, to generate both...
+PineScript code:
+
+Pine Script™ strategy
+MACD Willy Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © platsn
+//@version=5
+strategy("MACD Willy Strategy", overlay=true, pyramiding=1, initial_capital=10000) 
+// ******************** Trade Period **************************************
+startY = input(title='Start Year', defval=2011, group = "Trading window")
+startM = input.int(title='Start Month', defval=1, minval=1, maxval=12, group = "Trading window")
+startD = input.int(title='Start Day', defval=1, minval=1, maxval=31, group = "Trading window")
+finishY = input(title='Finish Year', defval=2050, group = "Trading window")
+finishM = input.int(title='Finish Month', defval=12, minval=1, maxval=12, group = "Trading window")
+finishD = input.int(title='Finish Day', defval=31, minval=1, maxval=31, group = "Trading window")
+timestart = timestamp(startY, startM, startD, 00, 00)
+timefinish = timestamp(finishY, finishM, finishD, 23, 59)
+// t1 = time(timeframe.period, "0945-1545:23456") 
+// window = time >= timestart and time <= timefinish and t1 ? true : false 
+// t2 = time(timeframe.period, "0930-1555:23456")
+// window2 = time >= timestart and time <= timefinish and t2 ? true : false 
+leverage = input.float(1, title="Leverage (if applicable)", step=0.1, group = "Trading Options")
+reinvest = input.bool(defval=false,title="Reinvest profit", group = "Trading Options")
+reinvest_percent = input.float(defval=20, title = "Reinvest percentage", group="Trading Options")
+// entry_lookback = input.int(defval=10, title="Lookback period for entry condition", group = "Trading Options")
+// -------------------------------------------- Data Source --------------------------------------------
+src = input(title="Source", defval=close)
+// ***************************************************************************************************** Daily ATR *****************************************************
+atrlen = input.int(14, minval=1, title="ATR period", group = "Daily ATR")
+iPercent = input.float(5, minval=1, maxval=100, step=0.1, title="% ATR to use for SL / PT", group = "Daily ATR")
+ 
+percentage = iPercent * 0.01
+datr = request.security(syminfo.tickerid, "1D", ta.rma(ta.tr, atrlen))
+datrp = datr * percentage
+// plot(datr,"Daily ATR")
+// plot(datrp, "Daily % ATR")
+//*********************************************************** VIX volatility index ****************************************
+VIX = request.security("VIX", timeframe.period, close)
+vix_thres = input.float(20.0, "VIX Threshold for entry", step=0.5, group="VIX Volatility Index")
+// ************************************************ Volume ******************************************************
+vol_len = input(50, 'Volume MA Period')
+avg_vol = ta.sma(volume, vol_len)
+//-------------------------------------------------------- Moving Average ------------------------------------
+emalen1 = input.int(200, minval=1, title='EMA', group= "Moving Averages")
+ema1 = ta.ema(src, emalen1)
+// ------------------------------------------ MACD ------------------------------------------
+// Getting inputs
+fast_length = input(title="Fast Length", defval=12)
+slow_length = input(title="Slow Length", defval=26)
+signal_length = input.int(title="Signal Smoothing",  minval = 1, maxval = 50, defval = 9)
+sma_source = input.string(title="Oscillator MA Type",  defval="EMA", options=["SMA", "EMA"])
+sma_signal = input.string(title="Signal Line MA Type", defval="EMA", options=["SMA", "EMA"])
+// Plot colors
+col_macd = input(#2962FF, "MACD Line  ", group="Color Settings", inline="MACD")
+col_signal = input(#FF6D00, "Signal Line  ", group="Color Settings", inline="Signal")
+col_grow_above = input(#26A69A, "Above   Grow", group="Histogram", inline="Above")
+col_fall_above = input(#B2DFDB, "Fall", group="Histogram", inline="Above")
+col_grow_below = input(#FFCDD2, "Below Grow", group="Histogram", inline="Below")
+col_fall_below = input(#FF5252, "Fall", group="Histogram", inline="Below")
+// Calculating
+fast_ma = sma_source == "SMA" ? ta.sma(src, fast_length) : ta.ema(src, fast_length)
+slow_ma = sma_source == "SMA" ? ta.sma(src, slow_length) : ta.ema(src, slow_length)
+macd = fast_ma - slow_ma
+signal = sma_signal == "SMA" ? ta.sma(macd, signal_length) : ta.ema(macd, signal_length)
+hist = macd - signal
+// ---------------------------------------- William %R --------------------------------------
+w_length = input.int(defval=34, minval=1)
+w_upper = ta.highest(w_length)
+w_lower = ta.lowest(w_length)
+w_output = 100 * (close - w_upper) / (w_upper - w_lower)
+fast_period = input(defval=5, title='Smoothed %R Length')
+slow_period = input(defval=13, title='Slow EMA Length')
+w_fast_ma = ta.wma(w_output,fast_period)
+w_slow_ma = ta.ema(w_output,slow_period)
+// ------------------------------------------------ Entry Conditions ----------------------------------------
+L_entry1 = close > ema1 and hist > 0 and w_fast_ma > w_slow_ma 
+S_entry1 = close < ema1 and hist < 0 and w_fast_ma < w_slow_ma 
+// -------------------------------------------------- Entry -----------------------------------------------
+profit = strategy.netprofit
+trade_amount = math.floor(strategy.initial_capital*leverage / close) 
+if strategy.netprofit > 0 and reinvest
+    trade_amount := math.floor((strategy.initial_capital+(profit*reinvest_percent*0.01))*leverage / close) 
+else
+    trade_amount := math.floor(strategy.initial_capital*leverage/ close) 
+if L_entry1 //and window
+    strategy.entry("Long", strategy.long, trade_amount)
+    alert(message= "Long Signal", freq= alert.freq_once_per_bar_close)
+if S_entry1 //and window
+    strategy.entry("Short", strategy.short, trade_amount)
+    alert(message= "Short Signal", freq= alert.freq_once_per_bar_close)
+// --------------------------------------------------- Exit Conditions -------------------------------------
+L_exit1 = hist < 0 and w_fast_ma < w_slow_ma and w_fast_ma < -20
+S_exit1 = hist > 0 and w_fast_ma > w_slow_ma and w_fast_ma > -80
+// ----------------------------------------------------- Exit ---------------------------------------------
+if L_exit1 //and window2
+    strategy.close("Long")
+    alert(message= "Long Exit Signal", freq= alert.freq_once_per_bar_close)
+    
+if S_exit1 //and window2
+    strategy.close("Short")
+    alert(message= "Short Exit Signal", freq= alert.freq_once_per_bar_close)
+// if time(timeframe.period, "1530-1600:23456")
+//     strategy.close_all()
+Expand (132 lines)

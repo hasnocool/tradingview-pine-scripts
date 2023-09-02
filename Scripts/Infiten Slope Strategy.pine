@@ -1,0 +1,164 @@
+Script Name: Infiten Slope Strategy
+Author: spiritualhealer117
+Description: This model is an index fund trading model, which uses moving averages and price percentage oscillators to minimize downside exposure.
+PineScript code:
+
+Pine Script™ strategy
+Infiten Slope Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © spiritualhealer117
+//@version=4
+strategy("Infiten Slope Strategy", overlay=false,calc_on_every_tick = true, default_qty_type=strategy.percent_of_equity, default_qty_value = 100)
+// //TIME RESTRICT FOR BACKTESTING {
+// inDateRange = (time >= timestamp(syminfo.timezone, 2003,
+//          1, 1, 0, 0)) and
+//      (time < timestamp(syminfo.timezone, 2021, 5, 25, 0, 0))
+// //}
+//OPTIMAL PARAMETERS {
+daysback = 30
+volumesens = 1.618
+//}
+//Calculating Exhaustion and Exhaustion Moving Average {
+clh = close+low+high
+exhaustion = (clh-sma(clh,daysback))/sma(clh,daysback)
+exhaustionSma = sma(exhaustion,daysback)
+//}
+//Long Term Moving Averages for sell signals {
+red = sma(close,300)
+white = sma(close,150)
+blue = sma(close,50)
+plot(red,color=color.red)
+plot(white,color=color.white)
+plot(blue,color=color.blue)
+//}
+//MACD Calculation {
+fast_length = input(title="Fast Length", type=input.integer, defval=12)
+slow_length = input(title="Slow Length", type=input.integer, defval=26)
+src = input(title="Source", type=input.source, defval=close)
+signal_length = input(title="Signal Smoothing", type=input.integer, minval = 1, maxval = 50, defval = 9)
+sma_source = input(title="Simple MA (Oscillator)", type=input.bool, defval=false)
+sma_signal = input(title="Simple MA (Signal Line)", type=input.bool, defval=false)
+// Calculating
+fast_ma = sma_source ? sma(src, fast_length) : ema(src, fast_length)
+slow_ma = sma_source ? sma(src, slow_length) : ema(src, slow_length)
+macd = fast_ma - slow_ma
+signal = sma_signal ? sma(macd, signal_length) : ema(macd, signal_length)
+hist = macd - signal
+//}
+//SIGMOID Bottom {
+timeAdjust = 300/sma(close,500)
+//}
+//RSI bottom {
+len = input(14, minval=1, title="Length")
+up = rma(max(change(src), 0), len)
+down = rma(-min(change(close), 0), len)
+rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+//}
+//Entry and exit conditions {
+//Sell conditions
+bigVolume = sma(volume,30)*volumesens
+sellcond1 = crossunder(exhaustion,exhaustionSma) and volume > bigVolume
+sellcond2 = crossunder(macd,signal) and volume > bigVolume
+midtermsellcond1 = crossunder(blue,white)
+longtermsellcond1 = white < red
+//Buy conditions
+buycond = crossover(exhaustion,exhaustionSma) and not longtermsellcond1
+buycond2 = rsi < 30
+buycond3 = crossover(blue,white) and longtermsellcond1
+//}
+//Backtest Run Buy/Sell Commands {
+strategy.entry("buycond",true, when=buycond and bigVolume)
+strategy.entry("buycond2",true, when=buycond2 and bigVolume)
+strategy.close_all(when=sellcond1,comment="short term sell signal 1")
+strategy.close_all(when=midtermsellcond1, comment="mid term sell signal 1")
+strategy.close_all(when=longtermsellcond1, comment="long term sell signal 1")
+strategy.close_all(when=sellcond2, comment="short term sell signal 2")
+plot(strategy.position_size)
+//Sell on last tested day (only for data collection)
+//strategy.close_all(when=not inDateRange)
+//}
+Expand (83 lines)

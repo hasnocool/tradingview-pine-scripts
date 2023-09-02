@@ -1,0 +1,176 @@
+Script Name: Take Profit On Trend (by BHD_Trade_Bot)
+Author: BHD_Trade_Bot
+Description: The purpose of strategy is to detect  long-term uptrend  and  short-term downtrend  so that you can easy to take profit.
+
+The strategy also using  BHD  unit to detect how big you win and lose, so that you can use this strategy for all coins without worry about it have different percentage of price change.
+
+
+ ENTRY 
+
+The buy order is placed on assets that have...
+PineScript code:
+
+Pine Script™ strategy
+Take Profit On Trend (by BHD_Trade_Bot)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+// @version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © BHD_Trade_Bot
+strategy(shorttitle='Take Profit On Trend',
+ title='Take Profit On Trend (by BHD_Trade_Bot)',
+ overlay=true,
+ initial_capital = 15,
+ default_qty_type = strategy.cash,
+ default_qty_value = 15,
+ commission_type=strategy.commission.percent,
+ commission_value=0.1)
+//Backtest Time
+start_day = 1
+start_month = 1
+start_year = 2021
+end_day = 1
+end_month = 1
+end_year = 2050
+start_time = timestamp(start_year, start_month, start_day, 00, 00)
+end_time = timestamp(end_year, end_month, end_day, 23, 59)
+is_back_test_time() =>
+    time >= start_time and time <= end_time ? true : false
+// Last bar
+h1_last_bar = (timenow - time)/1000/60/60 < 2
+// EMA
+ema50 = ema(close, 50)
+ema200 = ema(close, 200)
+// RSI length 200
+rsi200 = rsi(close, 200)
+// Bollinger Bands length 50
+bb50 = 2 * stdev(close, 50)
+// BHD Unit
+bhd_unit = sma(bb50, 100)
+bb50_upper = ema50 + bhd_unit
+bb50_lower = ema50 - bhd_unit
+// All n candles is going down
+all_body_decrease(n) =>
+    isValid = true
+    for i = 0 to (n - 1)
+        if (close[i] > close[i + 1])
+            isValid := false
+            break
+    isValid
+// ENTRY
+// Long-term uptrend
+entry_condition1 = rsi200 > 51 
+// Short-term downtrend
+entry_condition2 = all_body_decrease(2) 
+ENTRY_CONDITION = entry_condition1 and entry_condition2
+if (ENTRY_CONDITION and is_back_test_time())
+    strategy.entry("entry", strategy.long)
+// CLOSE CONDITIONS
+// Price increase 1 BHD unit
+TAKE_PROFIT = close > strategy.position_avg_price + bhd_unit
+// Price decrease 2 BHD unit
+STOP_LOSS = close < strategy.position_avg_price - bhd_unit * 2
+CLOSE_CONDITION = TAKE_PROFIT or STOP_LOSS
+if (CLOSE_CONDITION or h1_last_bar)
+    strategy.close("entry")
+// Draw
+plot(ema50)
+plot(ema200, color=color.yellow)
+plot(bb50_upper)
+plot(bb50_lower)
+Expand (96 lines)

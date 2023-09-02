@@ -1,0 +1,231 @@
+Script Name: Parabolic SAR Strategy With take profit and stop loss
+Author: Crypto-Engineer
+Description: Do not make it too difficult!
+
+This is my first strategy! I took the Parabolic SAR Strategy and added Stop Loss and Take profit, and I can see some fantastic results in 2h-3h-4h on some of the Crypto coins. 
+
+This is for training only, and I do not recommend using it as part of a trading bot, however, I do myself.
+PineScript code:
+
+Pine Script™ strategy
+Parabolic SAR Strategy With take profit and stop loss
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+//@version=4
+strategy("Parabolic SAR Strategy", overlay=true)
+start = input(0.02)
+increment = input(0.02)
+maximum = input(0.2)
+var bool uptrend = na
+var float EP = na
+var float SAR = na
+var float AF = start
+var float nextBarSAR = na
+if bar_index > 0
+    firstTrendBar = false
+    SAR := nextBarSAR
+    if bar_index == 1
+        float prevSAR = na
+        float prevEP = na
+        lowPrev = low[1]
+        highPrev = high[1]
+        closeCur = close
+        closePrev = close[1]
+        if closeCur > closePrev
+            uptrend := true
+            EP := high
+            prevSAR := lowPrev
+            prevEP := high
+        else
+            uptrend := false
+            EP := low
+            prevSAR := highPrev
+            prevEP := low
+        firstTrendBar := true
+        SAR := prevSAR + start * (prevEP - prevSAR)
+    if uptrend
+        if SAR > low
+            firstTrendBar := true
+            uptrend := false
+            SAR := max(EP, high)
+            EP := low
+            AF := start
+    else
+        if SAR < high
+            firstTrendBar := true
+            uptrend := true
+            SAR := min(EP, low)
+            EP := high
+            AF := start
+    if not firstTrendBar
+        if uptrend
+            if high > EP
+                EP := high
+                AF := min(AF + increment, maximum)
+        else
+            if low < EP
+                EP := low
+                AF := min(AF + increment, maximum)
+    if uptrend
+        SAR := min(SAR, low[1])
+        if bar_index > 1
+            SAR := min(SAR, low[2])
+    else
+        SAR := max(SAR, high[1])
+        if bar_index > 1
+            SAR := max(SAR, high[2])
+    nextBarSAR := SAR + AF * (EP - SAR)
+    if barstate.isconfirmed
+        if uptrend
+            strategy.entry("ParSE", strategy.short, stop=nextBarSAR, comment="ParSE")
+            strategy.cancel("ParLE")
+        else
+            strategy.entry("ParLE", strategy.long, stop=nextBarSAR, comment="ParLE")
+            strategy.cancel("ParSE")
+plot(SAR, style=plot.style_cross, linewidth=3, color=color.orange)
+plot(nextBarSAR, style=plot.style_cross, linewidth=3, color=color.aqua)
+//Stop Loss Inputs
+use_short_stop_loss = input(false, title="Short Stop Loss", group="Stop Loss and Take Profit", inline="Short_SL")
+short_stop_loss = input(title="(%)", type=input.float, minval=0.0, step=0.1, 
+     defval=5, group="Stop Loss and Take Profit", inline="Short_SL") * 0.01
+use_long_stop_loss = input(false, title="Long Stop Loss", group="Stop Loss and Take Profit", inline="Long_SL")
+long_stop_loss = input(title="(%)", type=input.float, minval=0.0, step=0.1, 
+     defval=5, group="Stop Loss and Take Profit", inline="Long_SL") * 0.01
+//Take Profit Inputs     
+use_short_take_profit = input(false, title="Short Take Profit", group="Stop Loss and Take Profit", inline="Short_TP")
+short_take_profit = input(title="(%)", type=input.float, minval=0.0, step=0.1,
+     defval = 20, group="Stop Loss and Take Profit", inline="Short_TP") * .01
+use_long_take_profit = input(false, title="Long Take Profit", group="Stop Loss and Take Profit", inline="Long_TP")
+long_take_profit = input(title="(%)", type=input.float, minval=0.0, step=0.1,
+     defval = 20, group="Stop Loss and Take Profit", inline="Long_TP") * .01
+longStopPrice  = strategy.position_avg_price * (1 - long_stop_loss)
+shortStopPrice = strategy.position_avg_price * (1 + short_stop_loss)
+longLimitPrice = strategy.position_avg_price * (1 + long_take_profit)
+shortLimitPrice = strategy.position_avg_price * (1 - short_take_profit)
+if (strategy.position_size > 0.0)
+    if (use_long_stop_loss and not use_long_take_profit)
+        strategy.exit("Long", stop = longStopPrice)
+    if (use_long_take_profit and not use_long_stop_loss)
+        strategy.exit("Long", limit = longLimitPrice)
+    if (use_long_take_profit and use_long_stop_loss)
+        strategy.exit("Long", stop = longStopPrice, limit=longLimitPrice)
+if (strategy.position_size < 0.0)
+    if (use_short_stop_loss and not use_short_take_profit)
+        strategy.exit("Short", stop = shortStopPrice)
+    if (use_short_take_profit and not use_short_stop_loss)
+        strategy.exit("Short", limit = shortLimitPrice)
+    if (use_short_take_profit and use_short_stop_loss)
+        strategy.exit("Short", stop = shortStopPrice, limit = shortLimitPrice)
+//plot(strategy.equity, title="equity", color=color.red, linewidth=2, style=plot.style_areabr)
+Expand (112 lines)

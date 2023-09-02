@@ -1,0 +1,167 @@
+Script Name: LarryWillians - Simple Strategy
+Author: lhcbenac
+Description: A simple and classic strategy on market, created by LarryWillians using a EMA9. 
+The brute model use a Cross from closing price on EMA9. But occurs many false entries. 
+In other to correct this kind of thing, I add a SMA21 to confirm the trend and decrease numbers of false trades. 
+The strategy waits to break the last High (for buy) a position. 
+As a strategy...
+PineScript code:
+
+Pine Script™ strategy
+LarryWillians - Simple Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+// @_benac
+//@version=5
+strategy('Larry', overlay=true , initial_capital=1000 )
+////////////////////////////////////////////////////////
+//                                                    //
+//                                                    //
+//                 Codigo Operacional                 //
+//                                                    //
+//                                                    //
+////////////////////////////////////////////////////////
+// Usage for Stocks , or Criptos with value bigger then 1, cuz of 0.01 ´pip.
+// Daily timeframe
+//Observation Point
+start     = timestamp(2020, 00, 00, 00, 00)         // backtest start window
+finish    = timestamp(2022, 01, 07, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false // create function "within window of time"  
+if time < start 
+    strategy.close_all("Closing All")
+// Take infos from inputs. 
+inp_mmshort = input.int(defval = 9, title = "Media Curta"  )
+inp_mminter = input.int(defval = 21, title = "Media Curta"  )
+// Risk Manager, here define max and min 
+inp_max = input.int(defval = 15, title = "Percentual Ganho"  )
+inp_min = input.int(defval = 5, title = "Percental  Perda"  )
+// Converting the input to % 
+pmax = (inp_max / 100 )
+pmin =  (inp_min / 100)
+// Infos From Moving Average
+mm_short = ta.sma(close , inp_mmshort)
+mm_inter = ta.ema(close , inp_mminter)
+// Trend Logic
+//Long Condition 
+//Setup do Larry Willians Bem Simples , media virou para cima e rompeu a maxima de referencia, compra. 
+tendencia_alta = mm_short[2] > mm_short[1] and mm_short > mm_short[1] and close > high[1] and close > mm_short and mm_short > mm_inter
+tendencia_baixa = mm_short[2] < mm_short[1] and mm_short < mm_short[1] and close > low[1] and close < mm_short and mm_short < mm_inter
+// Creating the entry
+if tendencia_alta 
+    strategy.entry("Compra" , strategy.long , stop = low - 0.01  )
+    stop_inst = low - 0.01 
+if tendencia_baixa 
+    strategy.entry("Venda" , strategy.short , stop= high + 0.01  )
+    stop_inst = high + 0.01
+// TrailingStop Creation
+// Sell Position
+if strategy.position_size < 0 
+    gain_p = strategy.opentrades.entry_price(0) - (strategy.opentrades.entry_price(0) * pmax) 
+    stop_p = strategy.opentrades.entry_price(0) + (strategy.opentrades.entry_price(0) * pmin) 
+    // Managing the position
+    if close < gain_p 
+        strategy.close_all(comment = " 1 - Ganho : " + str.tostring( gain_p) + " Perda : " + str.tostring( stop_p)  )
+    if close > stop_p 
+        strategy.close_all(comment = " 2 - Ganho : " + str.tostring( gain_p) + " Perda : " + str.tostring( stop_p)  )
+    
+    if  high > mm_short[1]
+        strategy.close_all(comment = " 3 - Ganho : " + str.tostring( gain_p) + " Perda : " + str.tostring( stop_p)  )
+      
+// Buy Position    
+if strategy.position_size > 0
+    gain_p = strategy.opentrades.entry_price(0) + (strategy.opentrades.entry_price(0) * pmax) 
+    stop_p = strategy.opentrades.entry_price(0) - (strategy.opentrades.entry_price(0) * pmin) 
+    // Managing the position
+    if close > gain_p 
+        strategy.close_all(comment = " 1- Ganho : " + str.tostring( gain_p) + " Perda : " + str.tostring( stop_p)  )
+    if close < stop_p 
+        strategy.close_all(comment = " 2 -Ganho : " + str.tostring( gain_p) + " Perda : " + str.tostring( stop_p)  )
+    if low < mm_short[1]
+        strategy.close_all(comment = " 3 -Ganho : " + str.tostring( gain_p) + " Perda : " + str.tostring( stop_p)  )
+        
+Expand (86 lines)

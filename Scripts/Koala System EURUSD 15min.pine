@@ -1,0 +1,246 @@
+Script Name: Koala System EURUSD 15min
+Author: SoftKill21
+Description: Today I bring you one of the best systems I have found for 15min chart for EURUSD, can be adapted to other pairs aswell I suppose.
+
+Its made of 4 SMA 3 6 9 50 and EMA 200.
+
+It only makes 1 trade per day, in this case we have a risk % of our total eqquity, being the min 0.1 lots , can be changed tho .
+
+We target TP/SL the same 1:1 rr, in this case I use 30 pips for...
+PineScript code:
+
+Pine Script™ strategy
+Koala System EURUSD 15min
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © SoftKill21
+//@version=4
+strategy("Koala Script",initial_capital=1000, 
+     commission_type=strategy.commission.cash_per_contract, 
+     commission_value=0.000065,
+     slippage=3)
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2000, title = "From Year", minval = 1970)
+ 
+// To Date Inputs
+toDay = input(defval = 1, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 8, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2021, title = "To Year", minval = 1970)
+ 
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+len = input(3, minval=1, title="Length")
+src = input(hl2, title="Source")
+smma = 0.0
+sma1 = sma(src, len)
+smma := na(smma[1]) ? sma1 : (smma[1] * (len - 1) + src) / len
+len2 = input(6, minval=1, title="Length")
+src2 = input(hl2, title="Source")
+smma2 = 0.0
+sma2 = sma(src2, len2)
+smma2 := na(smma2[1]) ? sma2 : (smma2[1] * (len2 - 1) + src2) / len2
+len3 = input(9, minval=1, title="Length")
+src3 = input(hl2, title="Source")
+smma3 = 0.0
+sma3 = sma(src3, len3)
+smma3 := na(smma3[1]) ? sma3 : (smma3[1] * (len3 - 1) + src3) / len3
+len4 = input(50, minval=1, title="Length")
+src4 = input(close, title="Source")
+smma4 = 0.0
+sma4 = sma(src4, len4)
+smma4 := na(smma4[1]) ? sma4  : (smma4[1] * (len4 - 1) + src4) / len4
+len5 = input(200, minval=1, title="Length")
+src5 = input(close, title="Source")
+out5 = ema(src5, len5)
+timeinrange(res, sess) => time(res, sess) != 0
+london=timeinrange(timeframe.period, "0300-1045")
+londonEntry=timeinrange(timeframe.period, "0300-0845")
+time_cond = time >= startDate and time <= finishDate and londonEntry
+fast_length = input(title="Fast Length", type=input.integer, defval=12)
+slow_length = input(title="Slow Length", type=input.integer, defval=26)
+srcc = input(title="Source", type=input.source, defval=close)
+signal_length = input(title="Signal Smoothing", type=input.integer, minval = 1, maxval = 50, defval = 9)
+sma_source = input(title="Simple MA(Oscillator)", type=input.bool, defval=false)
+sma_signal = input(title="Simple MA(Signal Line)", type=input.bool, defval=false)
+// Calculating
+fast_ma = sma_source ? sma(srcc, fast_length) : ema(srcc, fast_length)
+slow_ma = sma_source ? sma(srcc, slow_length) : ema(srcc, slow_length)
+macd = fast_ma - slow_ma
+signal = sma_signal ? sma(macd, signal_length) : ema(macd, signal_length)
+hist = macd - signal
+longCond = close > out5 and close > smma4 and close > smma3 and close > smma2 and close > smma and londonEntry and smma > smma2 and smma2>smma3 and smma3>smma4 and smma4>out5 
+shortCond = close < out5 and close < smma4 and close < smma3 and close < smma2 and close < smma and londonEntry and smma < smma2 and smma2<smma3 and smma3<smma4 and smma4<out5 
+//longCond2 = crossover(close,out5) and crossover(close,smma4) and crossover(close,smma3) and crossover(close,smma2) and crossover(close,smma) and time_cond
+//shortCond2 = crossunder(close,out5) and crossunder(close,smma4) and crossunder(close,smma3) and crossunder(close,smma2) and crossunder(close,smma) and time_cond
+length=input(14, title="ATR Length")
+mult=input(1.0, title="Percentage Multiplier (for ex., 0.7 = 70%)", step=0.1, minval=0.1, maxval=5.0)
+oa=input(false, title="Show actual ATR")
+ii=syminfo.pointvalue==0
+s=ii?na:oa?atr(length):(syminfo.pointvalue * mult * atr(length))
+tp=input(300,title="tp")
+sl=input(300,title="sl")
+//tp = s*10000
+//sl= s*10000
+//if(tp>300)
+//    tp:=300
+//if(sl>300)
+//    sl:=300
+//if(sl<150)
+//    sl:=150
+//if(tp<150)
+//    tp:=150
+//MONEY MANAGEMENT--------------------------------------------------------------
+balance = strategy.netprofit + strategy.initial_capital //current balance
+floating = strategy.openprofit          //floating profit/loss
+risk = input(3,type=input.float,title="Risk %")/100           //risk % per trade
+    //Calculate the size of the next trade
+temp01 = balance * risk     //Risk in USD
+temp02 = temp01/sl        //Risk in lots
+temp03 = temp02*100000      //Convert to contracts
+size = temp03 - temp03%1000 //Normalize to 1000s (Trade size)
+if(size < 10000)
+    size := 10000           //Set min. lot size
+strategy.entry("long",1,size,when=longCond )
+strategy.exit("closelong","long", profit=tp,loss=sl)
+//strategy.close("long",when= crossunder(close[4],smma4) and close[4] > close[3] and close[3]>close[2] and close[2] > close[1] and close[1] > close)
+strategy.entry("short",0,size,when=shortCond )
+strategy.exit("closeshort","short", profit=tp,loss=sl)
+//strategy.close("short",when= crossover(close[4],smma4) and close[4] < close[3] and close[3]< close[2] and close[2] < close[1] and close[1] < close)
+strategy.close_all(when = not london)
+maxEntry=input(2,title="max entries")
+strategy.risk.max_intraday_filled_orders(maxEntry)
+Expand (133 lines)

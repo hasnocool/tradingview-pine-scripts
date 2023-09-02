@@ -1,0 +1,130 @@
+Script Name: ADX strategy (considering  ADX and +DI only )
+Author: mohanee
+Description: I have been checking the strategies on ADX indicator.  
+
+I have found that +DI  crossing  above ADX line  under  threshold 30  and   exit on crossdown when ADX above 30 has better results   than just following crossovers of +DI and -DI ,    ADX crossing above 30 .
+
+BUY Rule
+========
+fast ema  is above  slow ema    (default 13 and 55 , you can change these values...
+PineScript code:
+
+Pine Script™ strategy
+ADX strategy (considering ADX and +DI only )
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mohanee
+//@version=4
+//ADX strategy
+SmoothedTrueRange=0.00
+SmoothedDirectionalMovementPlus=0.00
+SmoothedDirectionalMovementMinus=0.00
+strategy(title="ADX strategy", overlay=false,pyramiding=3, default_qty_type=strategy.fixed, default_qty_value=3,    initial_capital=10000, currency=currency.USD)
+len = input(11, title="ADX Length", minval=1)
+threshold = input(30, title="threshold", minval=5)
+fastEma=input(13, title="Fast EMA",minval=1, maxval=50)
+slowEma=input(55, title="Slow EMA",minval=10, maxval=200)
+stopLoss =input(8, title="Stop Loss",minval=1)   //
+TrueRange = max(max(high-low, abs(high-nz(close[1]))), abs(low-nz(close[1])))
+DirectionalMovementPlus = high-nz(high[1]) > nz(low[1])-low ? max(high-nz(high[1]), 0): 0
+DirectionalMovementMinus = nz(low[1])-low > high-nz(high[1]) ? max(nz(low[1])-low, 0): 0
+SmoothedTrueRange:= nz(SmoothedTrueRange[1]) - (nz(SmoothedTrueRange[1])/len) + TrueRange
+SmoothedDirectionalMovementPlus := nz(SmoothedDirectionalMovementPlus[1]) - (nz(SmoothedDirectionalMovementPlus[1])/len) + DirectionalMovementPlus
+SmoothedDirectionalMovementMinus:= nz(SmoothedDirectionalMovementMinus[1]) - (nz(SmoothedDirectionalMovementMinus[1])/len) + DirectionalMovementMinus
+DIPlus = SmoothedDirectionalMovementPlus / SmoothedTrueRange * 100
+DIMinus = SmoothedDirectionalMovementMinus / SmoothedTrueRange * 100
+DX = abs(DIPlus-DIMinus) / (DIPlus+DIMinus)*100
+ADX = sma(DX, len)
+plot(DIPlus, color=color.green, title="DI+")
+//plot(DIMinus, color=color.red, title="DI-")
+plot(ADX, color=color.black, title="ADX")
+hline(threshold, color=color.black, linestyle=hline.style_dashed)
+fastEmaVal=ema(close,fastEma)
+slowEmaVal=ema(close,slowEma)
+//long condition
+longCondition=  ADX < threshold  and crossover(DIPlus,ADX)  and fastEmaVal > slowEmaVal
+barcolor(longCondition ? color.yellow: na)
+strategy.entry(id="ADXLE", long=true,  when= longCondition  and strategy.position_size<1) 
+barcolor(strategy.position_size>1 ? color.blue: na)
+bgcolor(strategy.position_size>1 ? color.blue: na)
+//Add
+strategy.entry(id="ADXLE", comment="Add", long=true,  when= strategy.position_size>1 and close<strategy.position_avg_price and crossover(DIPlus,ADX) ) 
+//calculate stop Loss
+stopLossVal =  strategy.position_avg_price -  (strategy.position_avg_price*stopLoss*0.01)
+strategy.close(id="ADXLE",comment="SL Exit",    when=close<stopLossVal)   //close all on stop loss
+//exit condition
+exitCondition=  ADX > threshold  and crossunder(DIPlus,ADX) // and fastEmaVal > slowEmaVal
+strategy.close(id="ADXLE",comment="TPExitAll",    qty=strategy.position_size ,   when= exitCondition)   //close all     
+Expand (72 lines)

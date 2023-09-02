@@ -1,0 +1,122 @@
+Script Name: Simple and efficient 1h strategy
+Author: SoftKill21
+Description: This strategy is made from a crossover of 2 ema : 4 and 8 in this case, together with a RSI of lenght 10 applied to hl2
+
+The strategy is simple : we enter when we have a cross between the 2 ma's and rsi at the same time is in ascending or descending position crossing the middle line of 50.
+
+For exit we have : at the end of a session( we trade only between london...
+PineScript code:
+
+Pine Script™ strategy
+Simple and efficient 1h strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © SoftKill21
+//@version=4
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2000, title = "From Year", minval = 1970)
+ 
+// To Date Inputs
+toDay = input(defval = 1, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 8, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2021, title = "To Year", minval = 1970)
+ 
+// Calculate start/end date and time condition
+DST = 1 //day light saving for usa
+//--- Europe
+London = iff(DST==0,"0000-0900","0100-1000")
+//--- America
+NewYork = iff(DST==0,"0400-1300","0500-1400")
+//--- Pacific
+Sydney = iff(DST==0,"1300-2200","1400-2300")
+//--- Asia
+Tokyo = iff(DST==0,"1500-2400","1600-0100")
+//-- Time In Range
+timeinrange(res, sess) => time(res, sess) != 0
+london = timeinrange(timeframe.period, London)
+newyork = timeinrange(timeframe.period, NewYork)
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate and (london or newyork)
+strategy("4 8 RSI", overlay=true)
+len = input(10, minval=1, title="Length")
+src = input(hl2, "Source", type = input.source)
+up = rma(max(change(src), 0), len)
+down = rma(-min(change(src), 0), len)
+rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+tp=input(500,"tp pip")
+sl=input(500,"sl pip")
+longCondition = crossover(ema(close, 4), ema(close, 8)) and rsi > rsi[1] and crossover(rsi,50) and time_cond
+if (longCondition)
+    strategy.entry("My Long Entry Id", strategy.long)
+    strategy.exit("longtp","long",profit=tp,loss=sl)
+  // strategy.close("long",when=crossunder(ema(close, 4), ema(close, 8)) or crossover(rsi,50), comment="cross_short")
+shortCondition = crossunder(ema(close, 4), ema(close, 8))  and rsi < rsi[1] and crossunder(rsi,50) and time_cond
+if (shortCondition)
+    strategy.entry("My Short Entry Id", strategy.short)
+    strategy.exit("shorttp","short",profit=tp,loss=sl)
+  //  strategy.close("short", when=crossover(ema(close, 4), ema(close, 8)) or crossover(rsi,50), comment="cross_long")
+    
+strategy.close_all(when = not time_cond, comment="time", alert_message="time")
+Expand (60 lines)

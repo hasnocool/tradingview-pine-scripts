@@ -1,0 +1,68 @@
+Script Name: Volatility System
+Author: EduardoMattje
+Description: Despite its crude name, the volatility system strategy, described by Richard Book­staber in 1984, follows the simple premise that once there is a big volatile movement, the market tends to follow it. Thus, it uses the ATR to measure the volatility, and issues orders when the current change of the closing price exceeds the threshold, calculated by the ATR times a...
+PineScript code:
+
+Pine Script™ strategy
+Volatility System
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © EduardoMattje
+//@version=5
+strategy("Volatility System", overlay=false, margin_long=0, margin_short=0, default_qty_type=strategy.percent_of_equity, 
+ default_qty_value=100, process_orders_on_close=true, initial_capital=20000)
+// Inputs
+var averageLength = input.int(14, "Average length", 2)
+var multiplier = input.float(2.0, "Multiplier", 0.0, step=0.1)
+// Calculations
+atr = ta.atr(averageLength) * multiplier
+closingChange = ta.change(close, 1)
+atrPenetration(int signal) =>
+    res = closingChange * signal > atr[1]
+longCondition = atrPenetration(1)
+shortCondition = atrPenetration(-1)
+// Order calls
+if (longCondition)
+    strategy.entry(strategy.direction.long, strategy.long)
+if (shortCondition)
+    strategy.entry(strategy.direction.short, strategy.short)
+// Visuals
+plot(atr, "ATR", color.white, 2)
+plot(math.abs(closingChange), "Absolute close change", color.red)
+Expand (36 lines)

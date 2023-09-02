@@ -1,0 +1,114 @@
+Script Name: charl macd ema rsi
+Author: CharlmFx
+Description: Trade trend continuation and reversals using this script
+PineScript code:
+
+Pine Script™ strategy
+charl macd ema rsi
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mbuthiacharles4
+//Good with trending markets
+//@version=4
+strategy("CHARL MACD EMA RSI")
+fast = 12, slow = 26
+fastMA = ema(close, fast)
+slowMA = ema(close, slow)
+macd = fastMA - slowMA
+signal = sma(macd, 9)
+ema = ema(close, input(200))
+rsi = rsi(close, input(14))
+//when delta > 0  and close above ema buy
+delta = macd - signal
+buy_entry= close>ema and delta > 0
+sell_entry = close<ema and delta<0 
+var bought = false
+var sold = false
+var reversal = false
+if (buy_entry and bought == false and rsi <= 70) 
+    strategy.entry("Buy",true , when=buy_entry)
+    bought := true
+    
+strategy.close("Buy",when= delta<0 or rsi > 70)
+if (delta<0 and bought==true)
+    bought := false
+//handle sells
+if (sell_entry and sold == false and rsi >= 30)
+    strategy.entry("Sell",false , when=sell_entry)
+    sold := true
+strategy.close("Sell",when= delta>0 or rsi < 30)
+if (delta>0 and sold==true)
+    sold := false
+    
+if (rsi > 70 or rsi < 30)
+    reversal := true
+    placing = rsi > 70 ? high :low
+    label.new(bar_index, placing, style=label.style_flag, color=color.blue, size=size.tiny)
+if (reversal == true)
+    if (rsi < 70 and sold == false and delta < 0)
+        strategy.entry("Sell",false , when= delta < 0)
+        sold := true
+        reversal := false
+    else if (rsi > 30 and bought == false and delta > 0)
+        strategy.entry("Buy",true , when= delta > 0)
+        bought := true
+        reversal := false
+Expand (58 lines)

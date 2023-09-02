@@ -1,0 +1,82 @@
+Script Name: M8 BUY @ END OF DAY
+Author: HermanBrummer
+Description: I've read a couple of times at a couple of different places that most of the move in the market happens after hours, meaning during non-standard trading hours. 
+
+After-market and pre-market hours and have seen data presented showing that systems which bought just before end normal market hours and sold the next morning had really amazing resutls. 
+
+But when...
+PineScript code:
+
+Pine Script™ strategy
+M8 BUY @ END OF DAY
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+//  @version=4
+//  © HermanBrummer
+//  This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+strategy("M8 BUY @ END OF DAY", "", 1)
+///         BUYS AT THE END OF THE DAY
+///         SELLS THE NEXT MORNING IF PRICE IS HIGHER THEN THE ENTRY PRICE
+///         IF PRICE IS NOT HIGHER THEN IT WILL KEEP THE POSITION AND WAIT FOR EITHER A STOP OUT OR FOR PRICE TO BE HIGHER THAN THE ENTRY
+///         USES A 5% STOP LOSS ON THE REDLINE  -- SETTABLE IN SETTINGS
+///         USES A 200 DAY MARKET FILTER        -- SETTABLE IN SETTINGS -- IMPORTS DATA FROM HIGHER TIMEFRAME, BUT USES CLOSE[2] << SO THIS IS FIXED, NON-REPAITING DATA
+MarketFilterLen = input(200)
+StopLossPerc    = input(.95, step=0.01)
+buyTime         = time(timeframe.period, "1429-1500")
+sellTime        = time(timeframe.period, "0925-0935")
+F1              = close > sma(security(syminfo.tickerid, "D", close[2]), MarketFilterLen) // HIGH OF OLD DATA -- SO NO REPAINTING
+enter           = buyTime and F1
+exit            = sellTime
+StopLossLine    = strategy.position_avg_price * StopLossPerc
+plot(StopLossLine, "StopLossLine", color.new(#FF0000, 50))
+strategy.entry("L", true, when=enter)
+strategy.exit("StopLoss", stop=StopLossLine )
+if  close > strategy.position_avg_price
+    strategy.close("L", when=exit)
+barcolor(strategy.opentrades != 0 ? color.new(color.yellow, 0) : na ) 
+Expand (46 lines)

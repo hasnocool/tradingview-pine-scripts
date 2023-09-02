@@ -1,0 +1,498 @@
+Script Name: Ranged Volume DCA Strategy - R3c0nTrader
+Author: R3c0nTrader
+Description: Update: Republishing this as Public Open-Source script.
+
+Credits:
+Thank you "EvoCrypto" for granting me permission to use "Ranged Volume" to create this strategy.
+Thank you "junyou0424" for granting me permission to use "DCA Bot with SuperTrend Emulator" which I used for adding bot inputs, calculations, and strategy
+
+What does this do?
+This script is mainly used...
+PineScript code:
+
+Pine Script™ strategy
+Ranged Volume DCA Strategy - R3c0nTrader
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+// © Ranged Volume DCA Strategy - R3c0nTrader ver 2022-07-30
+// For backtesting with 3Commas DCA Bot settings
+// Thank you "EvoCrypto" for granting me permission to use "Ranged Volume" to create this strategy
+// Thank you "junyou0424" for granting me permission to use "DCA Bot with SuperTrend Emulator" which I used for adding bot inputs, calculations, and strategy
+//@version=5
+strategy("Ranged Volume DCA Strategy - R3c0nTrader", shorttitle="Ranged Vol DCA Strategy", format=format.volume, overlay=true, pyramiding=999, default_qty_type=strategy.cash, initial_capital=10000, commission_value=0.0, max_labels_count=500)
+// Declare Variables
+var pnl_pct = 0.0
+var stopValue = float(0.0)
+var trailing_price = float(0.0)
+Close = 0.0
+Open = 0.0
+buy = bool(false)
+sell = bool(false)
+use_labels = bool(false)
+buy_message = ""
+sell_message = ""
+// INPUTS
+// Start and End Dates----------------------------------------------------------
+i_startTime = input.time(defval=timestamp('01 Jan 2015 00:00 +0000'), title='Start Time', group="Date Range")
+i_endTime = input.time(defval=timestamp('31 Dec 2050 23:59 +0000'), title='End Time', group="Date Range")
+inDateRange = time >= i_startTime and time <= i_endTime
+//------------------------------------------------------------------------------
+// Start: Prevent repainting----------------------------------------------------
+stop_repainting_choice = input.bool(false,title='Disable repainting?', 
+   tooltip='Per Pine v5 User Manual: You can very well decide to use repainting indicators if you understand how they behave, and that behavior meets your trading methodology’s requirements.' +
+   'Don’t be one of those newcomers to trading who slap “repaint” sentences on published scripts as if it discredits them. Doing so only reveals your incomprehension of the subject.' +
+   'What’s important is that you understand how the tools you use work, and if their behavior is compatible with your objectives, repainting or not. Repainting is a complex matter. It has many faces and many causes.',
+   group='Repainting')
+nonRepaintingSecurity(sym, tf, src) =>
+    request.security(sym, tf, src[barstate.isrealtime ? 1 : 0])[barstate.isrealtime ? 0 : 1]
+// End: Prevent repainting------------------------------------------------------
+// Start: Bull/Sell Indicator Options-------------------------------------------
+highlight_trades = input.bool(true, title='Highlight background color for trades?', tooltip='Used to add a green or red background color with the buy and sell arrows.', group="Buy/Sell Indicator Options")
+buy_color = input.color(color.new(color.green, 70), 'Buy background color', group="Buy/Sell Indicator Options")
+sell_color = input.color(color.new(color.red, 70), 'Sell background color', group="Buy/Sell Indicator Options")
+use_labels := input.bool(false, title='Use Labels?', tooltip='Enable to show labels. To remove the other text, you must open the "Style" menu and uncheck "Signal labels" and "Quantity". \n\nOnly 500 labels can be displayed on the chart.', group="Buy/Sell Indicator Options")
+// End: Bull/Sell Indicator Options---------------------------------------------
+// Start: 3Commas Bot ----------------------------------------------------------
+bool cfg_enable_bot_control     = input.bool(title='Enable 3Commas Webhook?', defval=false, group='3commas Bot Settings', 
+   tooltip='If this is enabled the strategy can control some bot operations via Webhook calls.\n\nTo enable Webhook calls, check this option, select the bot type,' + 
+   ' enter the Bot id and Email Token.\n\nAfter the strategy is configured, create an alert on the strategy, select "alert() function calls only", ' + 
+   'check "Webhook URL", enter the 3Commas webhook URL, and enter the "Alert Name"')
+bot_type = input.string("Simple bot", title="Select the bot type", options=["Simple bot", "Composite bot"], group='3commas Bot Settings',
+   tooltip='Select the bot type. If "Simple bot" is selected the currency pair (e.g. BTCUSD or BTCUSDT) will not be passed in the alert. ' +
+   '\nIf "Composite bot" is selected the currency pair will be passed in the alert.')
+string cfg_bot_id               = input.string(title='Bot id', defval='bot_id', tooltip = 'Go to your 3Commas bot settings>Expand "Message for deal start signal"', group='3commas Bot Settings')
+string cfg_email_token          = input.string(title='Email token', defval='email_token', tooltip = 'Go to your 3Commas bot settings>Expand "Message for deal start signal"', group='3commas Bot Settings')
+if cfg_enable_bot_control
+    if bot_type == "Simple bot"
+        buy_message := '{"message_type":"bot", "bot_id":"' + cfg_bot_id + '", "email_token":"' + cfg_email_token + '", "delay_seconds":0}'
+        sell_message := '{"action": "close_at_market_price_all", "message_type":"bot", "bot_id":"' + cfg_bot_id + '", "email_token":"' + cfg_email_token + '", "delay_seconds":0}'
+    else if bot_type == "Composite bot"
+        buy_message := '{"message_type":"bot", "bot_id":"' + cfg_bot_id + '", "email_token":"' + cfg_email_token + '", "delay_seconds":0, "pair":"' + str.tostring(syminfo.currency) + '_' + str.tostring(syminfo.basecurrency) + '"}'
+        sell_message := '{"action": "close_at_market_price_all", "message_type":"bot", "bot_id":"' + cfg_bot_id + '", "email_token":"' + cfg_email_token + '", "delay_seconds":0, "pair":"' + str.tostring(syminfo.currency) + '_' + str.tostring(syminfo.basecurrency) + '"}'
+// End: 3Commas Bot ------------------------------------------------------------
+//Ranged Volume Settings
+Range_Length    =   input.int(5,        title="Volume Range Length",                       minval=1)
+Heikin_Ashi     =   input(false,     title="Heikin Ashi")
+Display_Bars    =   input(true,     title="Show Bar Colors")
+Display_Break   =   input(true,     title="Show Break-Out")
+Display_Range   =   input(true,     title="Show Range")
+truncate(number, decimals) =>
+    factor = math.pow(10, decimals)
+    int(number * factor) / factor
+// 3Commas Inputs
+sourceInput = input.source(close, "Source")
+price_deviation = input.float(6.0, title='Price deviation to open safety orders (%)', step=0.25, minval=0.0) / 100
+take_profit = input.float(22.0, title='Target Take Profit (%)', step=0.5, minval=0.0) / 100
+trailing = input.float(0.0, title='Trailing deviation. Default= 0.0 (%)', step=0.1, minval=0.0) / 100
+base_order = input(100.0, title='Base order')
+safe_order = input(200.0, title='Safety order')
+safe_order_volume_scale = input.float(2.0, step=0.5, title='Safety order volume scale')
+safe_order_step_scale = input.float(1.4, step=0.1, title='Safety order step scale')
+max_safe_order = input(5, title='Max safety orders')
+sourceInput01_func() =>
+    sourceInput01_f = stop_repainting_choice ? nonRepaintingSecurity(syminfo.tickerid, timeframe.period, sourceInput) : sourceInput
+var current_so = 0
+var initial_order = 0.0
+var previous_high_value = 0.0
+var original_ttp_value = 0.0
+// Calculate our key levels
+take_profit_level = strategy.position_avg_price * (1 + take_profit)
+// SETTINGS 
+Close := Heikin_Ashi ? request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, sourceInput01_func()) : sourceInput01_func()
+Open := Heikin_Ashi ? request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, open) : open
+Positive = volume
+Negative = -volume
+Highest = stop_repainting_choice ? ta.highest(volume, Range_Length)[1] : ta.highest(volume, Range_Length)
+Lowest = stop_repainting_choice ? ta.lowest(-volume, Range_Length)[1] : ta.lowest(-volume, Range_Length)
+Up              =   Highest > Highest[1] and Close > Open
+Dn              =   Highest > Highest[1] and Close < Open
+Volume_Color = 
+ Display_Break and Up ? color.new(#ffeb3b, 20) : 
+ Display_Break and Dn ? color.new(#f44336, 20) : 
+ Close > Open ? color.new(#00c0ff, 20) : 
+ Close < Open ? color.new(#0001f6, 20) : na
+//Plot bar color for volume range indicator
+barcolor(Volume_Color, title='Ranged Volume Bar Coloring: (You must disable bar coloring in any studies you added or this may not work properly)')
+// Open First Position
+// if strategy.position_size == 0 and sourceInput > 0 and (Up) and inDateRange
+if strategy.position_size == 0 and sourceInput01_func() > 0 and Up and inDateRange
+    if use_labels
+        label.new(bar_index, sourceInput01_func(), 'Long @ ' + str.tostring(math.round(sourceInput01_func(),4)), style = label.style_label_up, color=color.green)
+        strategy.entry('Long @' + str.tostring(sourceInput01_func())+'💎✋🤚', strategy.long, qty=base_order / sourceInput01_func())
+    else
+        strategy.entry('Long @' + str.tostring(sourceInput01_func())+'💎✋🤚', strategy.long, qty=base_order / sourceInput01_func())
+    initial_order := sourceInput
+    current_so := 1
+    previous_high_value := 0.0
+    original_ttp_value := 0
+    buy := true
+threshold = 0.0
+if safe_order_step_scale == 1.0
+    threshold := initial_order - initial_order * price_deviation * safe_order_step_scale * current_so
+else if current_so <= max_safe_order
+    threshold := initial_order - initial_order * ((price_deviation * math.pow(safe_order_step_scale, current_so) - price_deviation) / (safe_order_step_scale - 1))
+else if current_so > max_safe_order
+    threshold := initial_order - initial_order * ((price_deviation * math.pow(safe_order_step_scale, max_safe_order) - price_deviation) / (safe_order_step_scale - 1))
+    
+// Average down when lowest candle value crosses below threshold
+if current_so > 0 and low <= threshold and current_so <= max_safe_order and previous_high_value == 0.0
+    // Trigger a safety order at the Safety Order "threshold" price
+    strategy.entry('😨🙏 SO ' + str.tostring(current_so) + '@' + str.tostring(threshold), direction=strategy.long, qty=safe_order * math.pow(safe_order_volume_scale, current_so - 1) / threshold)
+    current_so += 1
+// Take Profit!
+// Take profit when take profit level is equal to or higher than the high of the candle
+if take_profit_level <= high and strategy.position_size > 0 or previous_high_value > 0.0
+    pnl_pct := truncate((close - strategy.position_avg_price) / strategy.position_avg_price*100,3)
+    if trailing > 0.0
+        // 'trailing_price' will contain the largest percentage-based stop value
+        trailing_price := if (strategy.position_size > 0)
+            stopValue := close * (1 - trailing)
+            // The 'max' function is what allows the percentage-based stop to 'Trail'.
+            // If the stopValue is higher than the previous trailing_price (which was the old stopValue) then we keep the higher value
+            // The trailing_price can only increase or remain the same.            
+            math.max(stopValue, trailing_price[1])
+        else 
+            0
+        take_profit_level := trailing_price
+        if previous_high_value > 0.0
+            if high >= previous_high_value
+                previous_high_value := sourceInput
+            if high <= trailing_price
+                if use_labels
+                    label.new(bar_index, sourceInput01_func(), text = 'Close (trailing) @ ' + str.tostring(math.round(close,4)) + ', ' + str.tostring(pnl_pct) + '%', style = label.style_label_down, color=color.yellow)                
+                    strategy.close_all(comment= 'Close (trailing) @' + str.tostring(math.round(close,4)) + ', ' + str.tostring(pnl_pct) + '%')
+                else
+                    strategy.close_all(comment= 'Close (trailing) @' + str.tostring(math.round(close,4)) + ', ' + str.tostring(pnl_pct) + '%')
+                sell := true
+                // Send Sell Alert to 3Commas bot
+                alert(sell_message, alert.freq_once_per_bar_close)                
+            else if close <= trailing_price
+                if use_labels
+                    label.new(bar_index, sourceInput01_func(), text = 'Close (trailing) @ ' + str.tostring(math.round(close,4)) + ', ' + str.tostring(pnl_pct) + '%', style = label.style_label_down, color=color.yellow)                
+                    strategy.close_all(comment= 'Close (trailing) @' + str.tostring(math.round(close,4)) + ', ' + str.tostring(pnl_pct) + '%')
+                else
+                    strategy.close_all(comment= 'Close (trailing) @' + str.tostring(math.round(close,4)) + ', ' + str.tostring(pnl_pct) + '%')
+                sell := true
+                // Send Sell Alert to 3Commas bot
+                alert(sell_message, alert.freq_once_per_bar_close)                
+        else
+            previous_high_value := high
+            original_ttp_value := high
+    else
+        if use_labels and strategy.position_size > 0 and sell == false 
+            label.new(bar_index, sourceInput01_func(), text = 'Close @ ' + str.tostring(math.round(high,4)) + ', ' + str.tostring(pnl_pct) + '%', style = label.style_label_down, color=color.yellow)        
+            strategy.close_all(comment= '💰 Close @' + str.tostring(math.round(close,4)) + ', ' + str.tostring(pnl_pct) + '%')
+        else
+            strategy.close_all(comment= '💰 Close @' + str.tostring(math.round(close,4)) + ', ' + str.tostring(pnl_pct) + '%')
+        sell := true
+        // Send Sell Alert to 3Commas bot
+        alert(sell_message, alert.freq_once_per_bar_close)
+        
+// Zero out values after trade is closed
+if sell
+    current_so := 0
+    previous_high_value := 0
+    original_ttp_value := 0
+    stopValue := 0
+    trailing := 0
+    trailing_price := 0
+// End Take Profit--------------------------------------------------------------
+// Start: Clear the trailing values if no open trades---------------------------
+if strategy.opentrades == 0
+    original_ttp_value := 0
+    stopValue := 0
+// End: Clear the trailing values if no open trades-----------------------------
+// Start: Plots-----------------------------------------------------------------
+// Plot Trailing Stop Loss and associated original TTP value
+plot(original_ttp_value > 0 ? original_ttp_value : na, style=plot.style_linebr, color=color.white, linewidth=3, title="Original TTP Value", editable=true)
+plot(stopValue > 0 ? stopValue : na, style=plot.style_linebr, color=color.red, linewidth=3, title="Stop Value", editable=true)
+plot(trailing_price > 0 ? trailing_price : na, style=plot.style_linebr, color=color.yellow, linewidth=3, title="Trailing stop loss", editable=true)
+// Plot TP
+plot(strategy.position_size > 0 ? take_profit_level : na, style=plot.style_linebr, color=color.green, linewidth=2, title="Take Profit")
+// Plot All Safety Order lines except for last one as bright blue
+plot(strategy.position_size > 0 and current_so <= max_safe_order and current_so > 0 ? threshold : na, style=plot.style_linebr, color=color.new(#00ffff,0), linewidth=2, title="Safety Order")
+// Plot Last Safety Order Line as Red
+plot(strategy.position_size > 0 and current_so > max_safe_order ? threshold : na, style=plot.style_linebr, color=color.red, linewidth=2, title="No Safety Orders Left")
+// Plot Average Position Price Line as Orange
+plot(strategy.position_size > 0 ? strategy.position_avg_price : na, style=plot.style_linebr, color=color.orange, linewidth=2, title="Avg Position Price")
+// Fill TP Area and SO Area
+h1 = plot(strategy.position_avg_price, color=color.new(#000000,100), title="Avg Price Plot Area", display=display.none, editable=false)
+h2 = plot(take_profit_level, color=color.new(#000000,100), title="Take Profit Plot Area", display=display.none, editable=false)
+h3 = plot(threshold, color=color.new(#000000,100), title="SO Plot Area", display=display.none, editable=false)
+// TP Area
+fill(h1,h2,color=color.new(#38761d,70), title="Take Profit Plot Area")
+// Current SO Area
+fill(h1,h3,color=color.new(#3d85c6,70), title="SO Plot Area")
+// This will remove the extraneous sell signals before we use them to plot with
+sell := strategy.position_size > 0 ? sell : false
+// Plot Highlight for Buy/Sell Arrows
+sessioncolor = if highlight_trades
+    switch 
+        buy =>  buy_color
+        sell => sell_color
+        => color(na)
+bgcolor(sessioncolor, editable=false)
+// Send Buy Alert to 3Commas bot
+if buy
+    alert(buy_message, alert.freq_once_per_bar_close)
+    buy := false
+// End: Plots-------------------------------------------------------------------
+Expand (259 lines)

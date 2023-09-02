@@ -1,0 +1,269 @@
+Script Name: McClellan Oscillator Strategy
+Author: sparrow_hawk_737
+Description: Buy and sell programs when 5 day EMA goes above and below zero, respectively.
+
+Useful for LEVERAGED ETF trading such as SPXL, TECL, FNGU, etc. Not so much for general portfolio holdings.
+PineScript code:
+
+Pine Script™ strategy
+McClellan Oscillator Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © sparrow_hawk_737
+//@version=3
+strategy("McClellan Oscillator Strategy", default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+exitWhenOscIsZero = input(false, title="Exit when oscillator goes under 0?")
+enterWhenOscIsZero = input(false, title="Enter when oscillator goes over 0?")
+isRA=input(true, title="Stockcharts version (Ratio Adjusted)?")
+rm=input(defval=1000, title="RANA ratio multiplier")
+showEMAs=input(false, title="Show EMAs?")
+showOsc=input(true, title="Show Oscillator?")
+slowLengthSell = input(20, title="Slow Length Sell")
+fastLengthSell = input(9, title="Fast Length Sell")
+slowLengthBuy = input(20, title="Slow Length Buy")
+fastLengthBuy = input(9, title="Fast Length Buy")
+useCTF=input(false, title="Use Custom Timeframe?"), 
+tf=useCTF?input("D", type=resolution, title="Custom Timeframe"):period // Recommend NOT enabling this
+gaps=barmerge.gaps_off // Recommend leaving this OFF
+src=close
+// Varianta doar cu NYSE sau doar cu NASDAQ da semnale long mai proaste decat
+// varianta cu toate bursele, dar uneori (f rar) cea cu NYSE le da mai devreme.
+use_ny=input(100.0,"NYSE %")/100
+use_nq=input(0,"NASDAQ %")/100
+use_us=input(100.0,"US %")/100
+use_dj=input(0,"DJ %")/100
+use_ax=input(100.0,"AX %")/100
+use_am=input(0,"AM %")/100
+ai=0.0, di=0.0
+adv=use_ny*nz(security("ADVN.NY", tf, src, gaps))+use_nq*nz(security("ADVN.NQ", tf, src, gaps))+use_us*nz(security("ADVN.US", tf, src, gaps))+use_dj*nz(security("ADVN.DJ", tf, src, gaps))+use_ax*nz(security("ADVN.AX", tf, src, gaps))+use_am*nz(security("ADVN.AM", tf, src, gaps))
+dec=use_ny*nz(security("DECL.NY", tf, src, gaps))+use_nq*nz(security("DECL.NQ", tf, src, gaps))+use_us*nz(security("DECL.US", tf, src, gaps))+use_dj*nz(security("DECL.DJ", tf, src, gaps))+use_ax*nz(security("DECL.AX", tf, src, gaps))+use_am*nz(security("DECL.AM", tf, src, gaps))
+ai:=ai+adv, di:=di+dec
+rana=rm * (ai-di)/(ai+di)
+moonel = input(16, "mo1 length")
+mtwol = input(36, "mo2 length")
+e1=isRA?ema(rana, moonel):ema(ai-di, moonel),e2=isRA?ema(rana, mtwol):ema(ai-di, mtwol)
+mo=e1-e2
+hline(0, title="0")
+plot(showOsc?mo<0?mo:0:na, style=area, color=white, title="-")
+plot(showOsc?mo>=0?mo:0:na, style=area, color=white, title="+")
+plot(showOsc?mo:na, style=line, color=black, title="MO", linewidth=2)
+plot(showEMAs?e1:na, color=blue, linewidth=2, title="19 EMA")
+plot(showEMAs?e2:na, color=red, linewidth=2, title="39 EMA")
+short= mo>=100 and mo<mo[1]
+long= mo<=-100 and mo>mo[1]
+bgcolor(long ? green : short ? red : white, transp=75)
+alertcondition(long and not long[1], "McC long ", "McC long ")
+alertcondition(short and not short[1], "McC short ", "McC short ")
+exited = false
+inpos = strategy.position_size > 0
+mas1 = ema(mo, fastLengthSell)
+mas2 = ema(mo, slowLengthSell)
+mab1 = ema(mo, fastLengthBuy)
+mab2 = ema(mo, slowLengthBuy)
+plot(mas1, color=blue, linewidth=2, title="39 EMA")
+plot(mas2, color=orange, linewidth=2, title="39 EMA")
+plot(mab1, color=red, linewidth=2, title="39 EMA")
+plot(mab2, color=black, linewidth=2, title="39 EMA")
+get_bbr(x, length) => 
+    mult = 2
+    basis = sma(x, length)
+    dev = mult * stdev(x, length)
+    upper = basis + dev
+    lower = basis - dev
+    (x - lower)/(upper - lower)
+    
+vxx =  security("VXX", "", close)
+vvix = security("VVIX", "", close)
+bbr1 = get_bbr(vvix, input(10, title="vvix bbr length"))
+bbr2 = get_bbr(vxx, input(20,title="vxx bbr length"))
+mmthsell = input(true, "Only sell when percent of X stocks is in downtrend")
+// 25 is the max observed so far
+mmth = sma(security(input("MMOH", "Percent of stocks above X"), "", close), input(20, "percent of stocks length"))
+mmthlow =( ( mmth[0] - mmth[1] ) + ( mmth[1] - mmth[2] ) + ( mmth[2] - mmth[3] ) ) / 3 < 0
+mmfi = security("MMFI", "", close)
+mmfibbr = get_bbr(mmfi, 100)
+buy2 = mmfibbr >= 0 and ( mmfibbr[1] <= 0.01)
+skew = security("SKEW", "", close)
+skewma = sma(skew, input(10, "SKEW MA LENGTH"))
+skewpos = ( ( (skewma - skewma[1]) + (skewma[1] - skewma[2]) + (skewma[2] - skewma[3]) ) / 3) > 0
+skbbr = get_bbr(skew, input(29, "skew bbr length"))
+skewthresh = input(1.1, "skew bbr thresh")
+extremenegativeskew = (skbbr > skewthresh) or (skbbr[1] > skewthresh)
+v1 = security("VX1!", "", close)
+v2 = security("VX2!", "", close)
+vix = security("VIX", "", close)
+roll_yield = (v1 - vix) / vix
+shape =  ( v2 - v1 )
+rysell = roll_yield <= 0.01
+plot(roll_yield * 100, color=orange, linewidth=2,title="ROLL YIELD")
+plot(shape * 10, color=yellow, linewidth=2,title="VIX SHAPE")
+iwm = security("IWM", "", close)
+iwmma12 = sma(iwm, input(12))
+buy3 = iwm > iwmma12
+sell = rysell and mmthlow and ( crossunder(mas1, mas2) or mas1 < mas2 ) and ( bbr1  >= 0.90 or bbr2 >= 0.90 and mas1 < mas1[1]) and not extremenegativeskew and not buy3
+preznobuy = ((year - 2004) % 4 == 0 and month == 10 ? dayofmonth < 10 and dayofmonth > 31 : true) 
+prezsell = ((year - 2004) % 4 == 0 and month == 10 ? dayofmonth >= 10 and dayofmonth <= 17 : false)
+if (preznobuy and extremenegativeskew and strategy.position_size <= 0)
+    strategy.entry("extremenegativeskew", strategy.long)
+if (preznobuy and  ( (crossover(mab1, mab2) or mab1 > mab2)) and strategy.position_size <= 0)
+    strategy.entry("mab cross", strategy.long)
+    
+if (preznobuy and  (buy2 and skewpos) and strategy.position_size <= 0)
+    strategy.entry("mmfi + skew bottom", strategy.long)
+    
+if (preznobuy and  (buy3 and skewpos) and strategy.position_size <= 0)
+    strategy.entry("RUS bottom", strategy.long)
+    
+if ((prezsell or sell) and strategy.position_size > 0)
+    strategy.close_all()
+    
+Expand (149 lines)

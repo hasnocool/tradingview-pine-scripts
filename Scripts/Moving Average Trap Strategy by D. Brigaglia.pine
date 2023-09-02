@@ -1,0 +1,124 @@
+Script Name: Moving Average Trap Strategy by D. Brigaglia
+Author: dadoesploso
+Description: This is a strategy that follows the 200 periods moving average and fades the cross of ma3, ma5 and ma8. It is designed for profiting by mean reversion while at the same time respecting long term trend. It is designed for long term trending markets such as stocks and stock indices.
+In this backtest, the strategy shows the ability to beat the S&P500 index with an...
+PineScript code:
+
+Pine Script™ strategy
+Moving Average Trap Strategy by D. Brigaglia
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+//@version=5
+strategy("Moving Average Trap", overlay=true, pyramiding=0, default_qty_value=100, 
+      default_qty_type=strategy.percent_of_equity)
+//Configure backtest date range
+useDateFilter = input.bool(true, title="Filter Date Range of Backtest",
+     group="Backtest Time Period")
+backtestStartDate = input.time(timestamp("1 Jan 1962"), 
+     title="Start Date", group="Backtest Time Period",
+     tooltip="This start date is in the time zone of the exchange " + 
+     "where the chart's instrument trades. It doesn't use the time " + 
+     "zone of the chart or of your computer.")
+backtestEndDate = input.time(timestamp("1 Jan 2023"),
+     title="End Date", group="Backtest Time Period",
+     tooltip="This end date is in the time zone of the exchange " + 
+     "where the chart's instrument trades. It doesn't use the time " + 
+     "zone of the chart or of your computer.")
+//Check if current bar falls inside the date range
+inTradeWindow = not useDateFilter or (time >= backtestStartDate and
+     time < backtestEndDate)
+//Choose if the strategy should be backtested in long only mode
+LongOnly = input.bool(false, "Long Only Mode")
+//Set Moving Average Periods
+flength = input.int(title="Fast MA Period", minval=1, maxval=2000, defval=3)
+llength = input.int(title="Slower MA Period", minval=1, maxval=2000, defval=5)
+sslength = input.int(title="Slowest MA Period", minval=1, maxval=2000, defval=8)
+tlength = input.int(title="Trend Filter MA Period. 0 = No Filter", minval=0, maxval=2000, defval=200)
+//Create moving averages
+ssma = ta.sma(close, sslength)
+fma = ta.sma(close, flength)
+sma = ta.sma(close, llength)
+tma = tlength != 0 ? ta.sma(close, tlength) : 0
+//Make Trend MA invisible if period is set to 0
+ttransp = tlength != 0 ? 0 : 100
+//Show MAs on chart
+plot(fma, color=color.red)
+plot(sma, color=color.white)
+plot(ssma, color=color.green)
+plot(tma, color=color.rgb(100, 25, 80, ttransp), linewidth=2)
+//Define entry and exit criteria
+short = tlength != 0 ? (fma > sma and sma > ssma) and (close < tma and LongOnly == false) : (fma > sma and sma > ssma) and LongOnly == false
+long = tlength != 0 ? (fma < sma and sma < ssma) and close > tma : fma < sma and sma < ssma
+closeshort = fma < sma and sma < ssma
+closelong = fma > sma and sma > ssma
+//Trigger entries and exits based on defined criteria
+if long and inTradeWindow
+     strategy.entry("long", strategy.long)
+if closelong
+     strategy.close("long")
+if short and inTradeWindow
+     strategy.entry("short", strategy.short)
+if closeshort
+     strategy.close("short")
+Expand (62 lines)

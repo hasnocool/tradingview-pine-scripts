@@ -1,0 +1,148 @@
+Script Name: Momentum Strategy
+Author: PrattyCharts
+Description: This strategy uses momentum to determine when to enter and exit positions. The default settings are set to look for a new 63 day high (~1 trading quarter) and a new 40 day relative high. If the stock is trending above the 50 day moving average it is a candidate to be bought. Stops are triggered when price closes below the 20 day or 50 day EMAs depending on how...
+PineScript code:
+
+Pine Script™ strategy
+Momentum Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © PrattyCharts
+//@version=4
+strategy("Momentum Strategy", overlay=true, process_orders_on_close =true)
+isCrypto = false
+if(syminfo.prefix == "COINBASE" or syminfo.prefix == "BINANCE" or syminfo.prefix == "FTX" or syminfo.prefix == "BITSTAMP")
+    isCrypto := true
+benchmark = syminfo.root == "SPX" or syminfo.root == "BTCUSD"
+// momentum settings
+highPeriod = input(63, type = input.integer, title = "New Highs Period") 
+relativeHighPeriod = input(40, type = input.integer, title = "New Relative Highs Period") 
+trendMovingAverage = input(50, type = input.integer, title = "Uptrend Period")
+trailingMovingAverage = input(20, type = input.integer, title = "First Moving Average Stop")
+bullmarket = rising(ema(close, 200),1) and rising(ema(close, 200),1)
+strategy.risk.allow_entry_in(strategy.direction.long)
+longMA = ema(close, trendMovingAverage)
+shortMA = ema(close, trailingMovingAverage)
+plot(shortMA, transp = 70)
+plot(longMA, transp = 70)
+// check for new relative high 
+comparativeTickerStock = input("SPX", type = input.symbol, title = "Stock Benchmark")
+comparativeTickerCrypto = input("BTCUSD", type = input.symbol, title = "Crypto Benchmark")
+baseSymbol = security(syminfo.tickerid, timeframe.period, close)
+benchmarkStock = security(comparativeTickerStock, timeframe.period, close)
+benchmarkCrypto = security(comparativeTickerCrypto, timeframe.period, close)
+rs = baseSymbol / benchmarkStock
+// check if bitcoin should be used for relative strength 
+if(isCrypto)
+    rs := baseSymbol / benchmarkCrypto
+newRelativeHigh = rs > highest(rs[1], relativeHighPeriod)
+relativeUptrend = rising(ema(rs,trendMovingAverage),1)
+// triggers
+isNewHigh = close > highest(close[1], highPeriod)
+hasRelativeStrength = newRelativeHigh and relativeUptrend
+upperClosingRange = close-open > 0.85 * (open-high) // closing near upper 85% of candle range
+hasBullishRSI = rsi(close, 14) > 60
+inUptrend = rising(longMA,1)
+buyTrigger = isNewHigh and upperClosingRange and inUptrend and hasBullishRSI
+if(not benchmark) // do not do relative analysis for benchmarks
+    buyTrigger := buyTrigger and hasRelativeStrength
+// determine which exit to use
+exitTrigger = close < shortMA
+var trending = false
+// check if the stock is trending nicely
+if(close > strategy.position_avg_price * 1.20)
+    trending := true 
+// if the stock is trending well use a longer moving average
+if(trending)
+    exitTrigger := close <  longMA
+    
+// check if the stock is breaking down on a relative basis
+rsEMA = ema(rs, trendMovingAverage)
+if(rs < rsEMA )
+    exitTrigger :=true
+// strategy
+if (buyTrigger)
+    strategy.entry("buy ", strategy.long, comment = "Buy")
+if(exitTrigger)
+    strategy.entry("sell ", strategy.short, comment = "Exit")
+    trending := false
+Expand (79 lines)

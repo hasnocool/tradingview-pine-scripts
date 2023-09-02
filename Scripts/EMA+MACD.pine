@@ -1,0 +1,66 @@
+Script Name: EMA+MACD
+Author: kicknoob
+Description: A simple script using EMA 25 and EMA 50 with MACD. Enter long when EMA 25 crossover ema 50 and MACD line > 0, enter short when EMA 50 crossover ema 25 and MACD < 0
+PineScript code:
+
+Pine Script™ strategy
+EMA+MACD
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+//@version=4
+strategy(title="EMA+MACD", shorttitle="EMA+MACD", overlay=true)
+// Getting inputs
+fast_length = input(title="Fast Length", type=input.integer, defval=12)
+slow_length = input(title="Slow Length", type=input.integer, defval=26)
+src = input(title="Source", type=input.source, defval=close)
+signal_length = input(title="Signal Smoothing", type=input.integer, minval = 1, maxval = 50, defval = 9)
+sma_source = input(title="Oscillator MA Type", type=input.string, defval="EMA", options=["SMA", "EMA"])
+sma_signal = input(title="Signal Line MA Type", type=input.string, defval="EMA", options=["SMA", "EMA"])
+fast_ma = sma_source == "SMA" ? sma(src, fast_length) : ema(src, fast_length)
+slow_ma = sma_source == "SMA" ? sma(src, slow_length) : ema(src, slow_length)
+macd = fast_ma - slow_ma
+signal = sma_signal == "SMA" ? sma(macd, signal_length) : ema(macd, signal_length)
+hist = macd - signal
+len1 = input(title="Len Ema 1 ",type=input.integer,defval=25)
+len2 = input(title="Len Ema 2 ",type=input.integer,defval=50)
+ema1 = ema(src,len1)
+ema2 = ema(src,len2)
+bull = crossover(ema1,ema2) and macd > 0
+bear = crossover(ema2,ema1) and macd < 0
+l1 = bull ? label.new(x=bar_index,y=low,yloc=yloc.belowbar,text="BUY",color=color.green,textcolor=color.white,style=label.style_triangleup) : na
+l2 = bear ? label.new(x=bar_index,y=high,yloc=yloc.abovebar,text="SELL",color=color.red,textcolor=color.white,style=label.style_triangledown) : na
+strategy.entry("LONG",strategy.long,when=bull)
+strategy.entry("SHORT",strategy.short,when=bear)
+Expand (33 lines)

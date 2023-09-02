@@ -1,0 +1,66 @@
+Script Name: CCI with EMA Strategy
+Author: Whiteform
+Description: I designed it as buy and sell when the cci 0 point cut, but you can optimize it by changing the buy sell points
+
+I used moving average to smooth out cci's movements
+PineScript code:
+
+Pine Script™ strategy
+CCI with EMA Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+//@version=4
+strategy("CCI with EMA Strategy", overlay=false, pyramiding=1, default_qty_type= strategy.percent_of_equity, default_qty_value = 100, calc_on_order_fills=false, slippage=0,commission_type=strategy.commission.percent,commission_value=0.07)
+length = input(20, minval=1)
+src = input(close, title="Source")
+cciSellPoint = input(0, title = 'CCI Sell Point', type = input.integer) 
+cciBuyPoint = input(0, title = 'CCI Buy Buy Point', type = input.integer) 
+lengthcci = input(12,"length cci ema", minval=1)
+ma = sma(src, length)
+cci = (src - ma) / (0.015 * dev(src, length))
+cciema=ema(cci,lengthcci)
+plot(cci, "CCI", color=#996A15)
+plot(cciSellPoint, title = 'CCI  Sell Point', color = color.red, linewidth = 1, style = plot.style_cross, transp = 35)
+plot(cciBuyPoint, title = 'CCI Buy Point', color = color.green, linewidth = 1, style = plot.style_cross, transp = 35)
+plot(cciema, title = 'CCI EMA', color = color.green, linewidth = 1, transp = 35)
+band1 = hline(100, "Upper Band", color=#C0C0C0, linestyle=hline.style_dashed)
+band0 = hline(-100, "Lower Band", color=#C0C0C0, linestyle=hline.style_dashed)
+fill(band1, band0, color=#9C6E1B, title="Background")
+startLongTrade=  cciema >cciBuyPoint 
+startShortTrade= cciema <cciSellPoint
+//exitLong = cciema <cciSellPoint
+//exitShort = cciema >cciBuyPoint 
+strategy.entry("long",strategy.long, when = startLongTrade )
+//strategy.close( "long", when=exitLong)
+strategy.entry("short",strategy.short,when=startShortTrade )
+//strategy.close("short", when=exitShort)
+Expand (30 lines)

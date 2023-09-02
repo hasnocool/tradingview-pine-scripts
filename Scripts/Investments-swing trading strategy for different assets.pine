@@ -1,0 +1,524 @@
+Script Name: Investments-swing trading strategy for different assets
+Author: StrategiesForEveryone
+Description: Stop worrying about catching the lowest price, it's almost impossible!: with this trend-following strategy and protection from bearish phases, you will know how to enter the market properly to obtain benefits in the long term. 
+
+ Backtesting context: 1899-11-01 to 2023-02-16 of SPX by Tvc. Commissions: 0.05% for each entry, 0.05% for each exit. Risk per trade:...
+PineScript code:
+
+Pine Script™ strategy
+Investments/swing trading strategy for different assets
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// Developed by © StrategiesForEveryone
+//@version=5
+strategy('Investments/swing trading strategy for different assets', overlay=true, process_orders_on_close=true, initial_capital = 100000, default_qty_type = strategy.cash, pyramiding = 1, precision = 2, calc_on_every_tick = true, commission_value = 0.05)
+how_to_use = input.bool(defval=true, title="How to use the strategy ----->", group = "Information", tooltip = "When there is a buy signal at the end of the candle, buy. To close, you must wait for the candle to close, exit in breakeven or, failing that, exit through stop loss. Use the amounts and stop loss based on the values ​​provided in the upper left corner by the indicator (choose the candlestick where the signal was produced to obtain the position information). Do not modify the parameters of the indicators as it is the most optimal setting for different assets from different markets. Use the info boxes to see more information about using the strategy")
+// ------ Position amount calculator ------
+initial_actual_capital_c = input.float(defval=1000000.0, title = "Initial/Actual Capital", group = "Position amount calculator", tooltip = "Enter the current amount of your capital. This amount will be used to calculate the size of your position that will be reflected in the upper left corner of the indicator. Remember that to change the amount in the back test you must go to properties. >>The amount in currency units is the green value<<")
+risk_c = input.float(defval = 2.5, title = '% account risk per trade', step=1, group = "Position amount calculator")
+// ------ Date filter ---------
+initial_date = input.time(title="Initial date", defval=timestamp("01 Jan 1800 13:30 +0000"), group="Time filter", tooltip="Enter the start date and time of the strategy")
+final_date   = input.time(title="Final date", defval=timestamp("1 Jan 2030 19:30 +0000"), group="Time filter", tooltip="Enter the end date and time of the strategy")
+dateFilter(int st, int et) => time >= st and time <= et
+colorDate = input.bool(defval=false, title="Date background", tooltip = "Add color to the period of time of the strategy tester")
+bgcolor(colorDate and dateFilter(initial_date, final_date) ? color.new(color.blue, transp=90) : na)
+// ------ Session limits -------
+timeSession = input.session(title="Time session", defval="0000-2400", group="Time filter", tooltip="Session time to operate. It may be different depending on your time zone, you have to find the correct hours manually.")
+colorBG     = input.bool(title="Session background", defval=false, tooltip = "Add color to session time background")
+inSession(sess) => na(time(timeframe.period, sess + ':1234567')) == false
+bgcolor(inSession(timeSession) and colorBG ? color.rgb(0, 38, 255, 84) : na)
+// ------------------ Squeeze momentum Lazy Bear -----------------------
+length = input(20, title='BB Length', group = "Squeeze Momentum", inline = "c")
+mult = input(2.0, title='BB MultFactor', group = "Squeeze Momentum", inline = "c")
+source = close
+lengthKC = input(20, title='KC Length', group = "Squeeze Momentum", inline = "c")
+multKC = input(1.5, title='KC MultFactor', group = "Squeeze Momentum", inline = "c")
+useTrueRange = input(true, title='Use TrueRange (KC)', group = "Squeeze Momentum", inline = "c")
+ma = ta.sma(source, length)
+basis = ma
+dev = mult * ta.stdev(source, length)
+upperBB = basis + dev
+lowerBB = basis - dev
+range_1 = useTrueRange ? ta.tr : high - low
+rangema = ta.sma(range_1, lengthKC)
+upperKC = ma + rangema * multKC
+lowerKC = ma - rangema * multKC
+sqzOn = lowerBB > lowerKC and upperBB < upperKC
+sqzOff = lowerBB < lowerKC and upperBB > upperKC
+noSqz = sqzOn == false and sqzOff == false
+val = ta.linreg(source - math.avg(math.avg(ta.highest(high, lengthKC), ta.lowest(low, lengthKC)), ta.sma(close, lengthKC)), lengthKC, 0)
+iff_1 = val > nz(val[1]) ? #00ff00 : #008000
+iff_2 = val < nz(val[1]) ? #FF0000 : #800000
+bcolor = val > 0 ? iff_1 : iff_2
+green_sqz = val > 0
+red_sqz = val < 0
+show_sqz = input.bool(defval=false, title = "Show squeeze momentum ?", group = "Appearance")
+plot(show_sqz ? val : na, color=bcolor, style=plot.style_columns, linewidth=4, display = display.all-display.price_scale-display.status_line)
+// ----------- Ema ----------------------
+ema = input.int(200, title='Ema length', minval=1, maxval=500, group = "Trend")
+ema200 = ta.ema(close, ema)
+bullish = close > ema200
+bearish = close < ema200
+show_ema = input.bool(defval=true, title="Show Ema ?", group = "Appearance")
+plot(show_ema ? ema200 : na, color=color.white, linewidth=2, display = display.all - display.status_line)
+// --------------- Custom Rsi ------------------
+overbought = input.int(70, title='Over bought line rsi', minval=50, maxval=100, group = "Rsi", inline = "b")
+oversold = input.int(30, title='Over sold line rsi', minval=0, maxval=50, group = "Rsi", inline = "b")
+periods = input.int(5, title='Rsi Length', minval=1, maxval=200, group = "Rsi", inline = "b")
+rsi_filter = ta.rsi(close, periods)
+show_rsi = input.bool(defval=false, title="Show Rsi ?", group = "Appearance")
+plot(show_rsi ? rsi_filter : na, color=color.white, linewidth=2, display = display.all-display.price_scale-display.status_line-display.data_window)
+hline(show_rsi ? overbought : na, color=color.green, linewidth = 1, display = display.all)
+// --------- Macd -----------
+// Getting inputs
+fast_length = input(title="Fast Length", defval=16, group = "Macd")
+slow_length = input(title="Slow Length", defval=26, group = "Macd")
+src = input(title="Source", defval=close)
+signal_length = input.int(title="Signal Smoothing",  minval = 1, maxval = 50, defval = 8, group = "Macd")
+sma_source = input.string(title="Oscillator MA Type",  defval="EMA", options=["SMA", "EMA"], group = "Macd")
+sma_signal = input.string(title="Signal Line MA Type", defval="EMA", options=["SMA", "EMA"], group = "Macd")
+// Plot colors
+col_macd = input(#2962FF, "MACD Line  ", group="Color Settings", inline="MACD")
+col_signal = input(#FF6D00, "Signal Line  ", group="Color Settings", inline="Signal")
+col_grow_above = input(#26A69A, "Above   Grow", group="Histogram", inline="Above")
+col_fall_above = input(#B2DFDB, "Fall", group="Histogram", inline="Above")
+col_grow_below = input(#FFCDD2, "Below Grow", group="Histogram", inline="Below")
+col_fall_below = input(#FF5252, "Fall", group="Histogram", inline="Below")
+// Calculating
+fast_ma = sma_source == "SMA" ? ta.sma(src, fast_length) : ta.ema(src, fast_length)
+slow_ma = sma_source == "SMA" ? ta.sma(src, slow_length) : ta.ema(src, slow_length)
+macd = fast_ma - slow_ma
+signal = sma_signal == "SMA" ? ta.sma(macd, signal_length) : ta.ema(macd, signal_length)
+hist = macd - signal
+//hline(0, "Zero Line", color=color.new(#787B86, 50))
+show_macd = input.bool(defval=false, title = "Show Macd ?", group = "Appearance")
+plot(show_macd ? hist : na, title="Histogram", style=plot.style_columns, color=(hist>=0 ? (hist[1] < hist ? col_grow_above : col_fall_above) : (hist[1] < hist ? col_grow_below : col_fall_below)), display = display.all-display.price_scale-display.status_line-display.data_window)
+//plot(macd, title="MACD", color=col_macd)
+//plot(signal, title="Signal", color=col_signal)
+// -------------- Atr stop loss by Gatherio -----------------
+source_atr = input(close, title='Source', group = "Atr stop loss", inline = "A")
+length_atr = input.int(14, minval=1, title='Period', group = "Atr stop loss" , inline = "A")
+multiplier = input.float(1.6, minval=0.1, step=0.1, title='Atr multiplier', group = "Atr stop loss", inline = "A", tooltip = "Defines the stop loss distance based in the Atr stop loss indicator")
+shortStopLoss = source_atr + ta.atr(length_atr) * multiplier
+longStopLoss = source_atr - ta.atr(length_atr) * multiplier
+atr_past_candle_buy = close[1] - ta.atr(length_atr)[1] * multiplier[1]
+// ------- Money management ---------
+strategy_contracts = strategy.equity / close
+distance_sl_buy = -1 * (longStopLoss - close) / close
+distance_sl_buy_past_candle = -1 * (atr_past_candle_buy - close) / close  // distancia stop loss en porcentaje
+risk = input.float(2.5, '% Account risk per trade for backtesting', step=1, group = "Risk management", tooltip = "Percentage of total account to risk per trade. >>The price of the stop loss is the red value<<. >>The distance of the stop loss is the orange value<<. It is recommended not to use more than 5%")
+amount_1 = strategy_contracts * (risk / 100) / distance_sl_buy
+amount_2 = strategy_contracts * (risk / 100) / distance_sl_buy_past_candle
+// ------- Risk management ---------
+risk_reward_breakeven = input.float(title='Risk reward for break even', defval=1.0, step=0.1, group = "Risk management", tooltip = "Risk/reward level to determine the target price to move the stop loss to the buy price (neither win nor lose). >>It is the light blue value<<")
+var float sl = na
+var float be_buy = na
+var float tp_buy = na
+var float stop_loss_distance = na
+var float buy_amount = na  
+var float asset_amount = na 
+var float be_buy_calculator = na
+var float stoploss_distance = na
+leverage=input.bool(defval=false, title="Use leverage ?", group = "Risk management", tooltip = "If it is activated, there will be no monetary units or amount of assets limit for each operation (That is, each operation will not be affected by the initial / current capital since it would be using leverage). If it is deactivated, the monetary units or the amount of assets to use for each operation will be limited by the initial/current capital.")
+if not leverage and amount_1>strategy_contracts
+    amount_1:=strategy.equity/close
+if not leverage and amount_2>strategy_contracts
+    amount_2:=strategy.equity/close
+// --------- Risk calculator --------------------------
+number_of_contracts = initial_actual_capital_c / close
+buy_amount_atr_actual_candle = close * (number_of_contracts * (risk_c / 100) / distance_sl_buy)
+buy_amount_atr_past_candle = close * (number_of_contracts * (risk_c / 100) / distance_sl_buy_past_candle)
+// Plot purchase currency units amount
+if close>ema200
+    buy_amount:=close * (number_of_contracts * (risk / 100) / distance_sl_buy)
+if close>ema200 and hist[0] > hist[1] and close[0] > close[1] and hist<0 and red_sqz and open[1]>ema200 
+    buy_amount:= close * (number_of_contracts * (risk / 100) / distance_sl_buy_past_candle)
+if close<ema200
+    buy_amount:=close * (number_of_contracts * (risk / 100) / distance_sl_buy)
+if not leverage and buy_amount>initial_actual_capital_c
+    buy_amount:=initial_actual_capital_c
+plot(buy_amount, display = display.all - display.pane, color=color.rgb(0, 255, 55), title="Amount purchase currency units")
+// Plot stop loss price
+draw_sl_be = input.bool(defval=true, title="Show stop loss and break even ?", group = "Appearance")
+if close>ema200 
+    sl:=longStopLoss
+if close>ema200 and hist[0] > hist[1] and close[0] > close[1] and hist<0 and red_sqz and open[1]>ema200 
+    sl:=atr_past_candle_buy
+if close<ema200 
+    sl:=longStopLoss
+// Plot stop loss % distance
+if close>ema200
+    stop_loss_distance:=(-1 * (longStopLoss - close) / close)*100  
+if close>ema200 and hist[0] > hist[1] and close[0] > close[1] and hist<0 and red_sqz and open[1]>ema200 
+    stop_loss_distance:=(-1 * (atr_past_candle_buy - close) / close)*100   
+if close<ema200    
+    stop_loss_distance:=(-1 * (longStopLoss - close) / close)*100  
+plot(stop_loss_distance, title="Stop loss % distance", color=color.rgb(255, 136, 0), display=display.all - display.pane)
+// Plot break even 
+distance_stop_buy_break_even = close - longStopLoss
+distance_stop_buy_break_even_past_candle = close - atr_past_candle_buy
+be_buy_calculator:= close + distance_stop_buy_break_even * risk_reward_breakeven
+if close>ema200
+    be_buy_calculator:= close + distance_stop_buy_break_even * risk_reward_breakeven
+if close>ema200 and hist[0] > hist[1] and close[0] > close[1] and hist<0 and red_sqz and open[1]>ema200 
+    be_buy_calculator:=close + distance_stop_buy_break_even_past_candle * risk_reward_breakeven
+if close<ema200
+    be_buy_calculator:= close + distance_stop_buy_break_even * risk_reward_breakeven 
+// ------- Conditions for buying -----------
+bought = strategy.position_size > 0
+sold = strategy.position_size < 0
+buy_rsi_signal = ta.crossover(rsi_filter, oversold) and red_sqz and bearish 
+buy_macd_signal = hist[0] > hist[1] and close[0] > close[1] and hist<0 and red_sqz and open[1]>ema200
+sell_rsi_signal = ta.crossunder(rsi_filter, overbought) and green_sqz and bought 
+trend_sell_signal_sqz = ta.crossunder(val, 0)
+trend_buy_signal_sqz = ta.crossover(val, 0) or (val>0 and (val[0] > val[1] and val[1] < val[2]))
+positive_close=strategy.openprofit>0
+information = input.bool(defval=true, title="Read ------>", group = "Final information", tooltip = "Thank you for using this model, I hope it can be very useful for you when making decisions in the short/medium and long term. Remember that it is not a crystal ball and it is not the Holy Grail of investments, it is just a model that seeks to adapt to different market situations to position yourself in favor of having the chances in your favor and making management much easier. Any questions you have about the model, feel free to ask :). Don't forget to leave your boost!")
+againts_trend = input.bool(defval=false, title="Againts trend ?", group ="Risk management", tooltip = "Activate to trade when the price is below the EMA of 200 periods. It can be useful in certain assets or timeframes like weelky and risky in others")
+break_even_with_rsi = input.bool(defval=false, title="Break even using rsi ?", group="Risk management", tooltip = "Activate to apply break even when rsi crosses under overbought line. It appears as a blue arrow")
+var float sl_1 = na
+var float sl_2 = na
+var float sl_3 = na
+if not bought
+    sl_1:=na
+    sl_2:=na
+    sl_3:=na
+// --------- Use of strategy conditions  ----------
+// ------------------------ Sqz momentum signal ------------------------
+// ---------------------- Againts Trend ----------------------
+if trend_buy_signal_sqz and dateFilter(initial_date, final_date) and inSession(timeSession) and strategy.opentrades<1 and againts_trend
+    sl_1:=longStopLoss         
+    stoploss_distance:= close - longStopLoss
+    be_buy := close + stoploss_distance * risk_reward_breakeven
+    strategy.entry("Buy", strategy.long,  qty=amount_1)
+    strategy.exit("Cl Buy", "Buy", stop=sl_1)
+if high > be_buy or sell_rsi_signal and positive_close and break_even_with_rsi
+    sl_1:=strategy.position_avg_price
+    strategy.exit("Cl Buy", "Buy", stop=sl_1) 
+if (bought and trend_sell_signal_sqz)        
+    strategy.close("Buy", comment="Cl Buy")
+//---------------In favor of the trend"---------------------
+if trend_buy_signal_sqz and dateFilter(initial_date, final_date) and inSession(timeSession) and strategy.opentrades<1 and bullish and not againts_trend
+    sl_2:=longStopLoss           
+    stoploss_distance:= close - longStopLoss
+    be_buy := close + stoploss_distance * risk_reward_breakeven
+    strategy.entry('Buy', strategy.long,  qty=amount_1)
+    strategy.exit('Cl Buy', 'Buy', stop=sl_2)
+if high > be_buy or sell_rsi_signal and positive_close and break_even_with_rsi
+    sl_2:=strategy.position_avg_price
+    strategy.exit("Cl Buy", "Buy", stop=sl_2) 
+if (trend_sell_signal_sqz)         
+    strategy.close("Buy", comment="Cl Buy")
+// ---------------------- Macd signal ----------------------------------------
+if buy_macd_signal and dateFilter(initial_date, final_date) and inSession(timeSession) and bullish and strategy.opentrades<1
+    sl_3:=atr_past_candle_buy
+    stoploss_distance:= close - atr_past_candle_buy
+    be_buy := close + stoploss_distance * risk_reward_breakeven
+    strategy.entry('Buy.', strategy.long, qty=amount_2)
+    strategy.exit('Cl Buy.', 'Buy.', stop=sl_3)
+if high > be_buy or sell_rsi_signal and positive_close and break_even_with_rsi
+    sl_3:=strategy.position_avg_price
+    strategy.exit("Cl Buy.", "Buy.", stop=sl_3) 
+if (trend_sell_signal_sqz)        
+    strategy.close("Buy.", comment="Cl Buy.")
+// ---------- Draw position on chart -------------
+if high > be_buy
+    be_buy:=na
+show_position_on_chart = input.bool(defval=true, title="Draw position on chart ?", group = "Appearance", tooltip = "Activate to graphically display profit, stop loss and break even")
+position_price = plot(show_position_on_chart? strategy.position_avg_price : na, style=plot.style_linebr, color = color.new(#ffffff, 20), linewidth = 1, display = display.all - display.status_line)
+break_even_price = plot(strategy.position_size>0 and high<be_buy and show_position_on_chart ? be_buy : na , style = plot.style_linebr, color = color.new(#41a3ff, 20), linewidth = 1, display = display.all - display.status_line)
+sl1_price = plot(show_position_on_chart and bought and againts_trend ? sl_1 : na, style = plot.style_linebr, color = color.new(color.red, 20), linewidth = 1, display = display.all - display.status_line)
+sl2_price = plot(show_position_on_chart and bought ? sl_2 : na, style = plot.style_linebr, color = color.new(color.red, 20), linewidth = 1, display = display.all - display.status_line)
+sl3_price = plot(show_position_on_chart and bought ? sl_3 : na, style = plot.style_linebr, color = color.new(color.red, 20), linewidth = 1, display = display.all - display.status_line)
+position_profit_price = plot(strategy.position_size>0 and show_position_on_chart and positive_close ? close : na, style = plot.style_linebr, color = color.new(color.green, 20), linewidth = 1, display = display.all - display.status_line)
+fill(plot1 = position_price, plot2 = position_profit_price, color = color.new(color.green,90))
+fill(plot1 = position_price, plot2 = sl1_price, color = color.new(color.red,90))
+fill(plot1 = position_price, plot2 = sl2_price, color = color.new(color.red,90))
+fill(plot1 = position_price, plot2 = sl3_price, color = color.new(color.red,90))
+// --------- Strategy as indicator -----------
+show_signals = input.bool(defval=true, title="Draw signals on chart ?", group = "Appearance")
+plot(draw_sl_be and trend_buy_signal_sqz and not bought or draw_sl_be and buy_macd_signal and not bought? sl : na, title="Stop loss price", color=color.rgb(255, 255, 255), linewidth=1, style=plot.style_circles, display=display.all - display.price_scale)
+plot(draw_sl_be and trend_buy_signal_sqz and not bought or draw_sl_be and buy_macd_signal and not bought? be_buy_calculator : na, title="Target price for break event", color=color.rgb(72, 210, 245), linewidth=1, style=plot.style_circles, display=display.all - display.price_scale)
+plotshape(show_signals and break_even_with_rsi and bought? sell_rsi_signal : na, style = shape.triangledown, color = color.blue, size = size.tiny, display = display.all - display.price_scale - display.status_line)
+Expand (281 lines)

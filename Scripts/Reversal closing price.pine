@@ -1,0 +1,533 @@
+Script Name: Reversal closing price
+Author: EduardoMattje
+Description: The reversal closing price (RCP) is a candlestick pattern which follows two simples rules:
+
+ 
+ the low price of current candle needs to be  lower  than the low price of the last 2 candles
+ the closing price of current candle needes to be  higher  than the closing price of the last candle
+ 
+
+This generates a signal for a long position. For a short position, the...
+PineScript code:
+
+Pine Script™ strategy
+Reversal closing price
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Coded by Eduardo Mattje
+strategy("Reversal closing price", "RCP", overlay=true, default_qty_type=strategy.cash, default_qty_value=1000, initial_capital=100000, process_orders_on_close=true)
+// Settings
+var I_ORDER_DIRECTION = input("Both", "Order direction", options=["Both", "Long", "Short"], group="Order settings")
+var I_FIRST_RRR = input(1.0, "1st target reward to risk ratio", minval=1.0, step=0.1,tooltip="Please keep this value lower than the second target RRR, otherwise it will mess up the orders.", inline="First RRR", group="Order settings")
+var I_FIRST_PER = input(0.0, "1st target liquidation percent", minval=0.0, maxval=100.0, tooltip="How much of the order, in percentage, to liquidate on the first target.\n\nIf you don't want to liquidate anything, you can keep this as 0.", inline="First RRR", group="Order settings")
+var I_SECOND_RRR = input(2.0, "2nd target reward to risk ratio", minval=1.0, step=0.1, tooltip="Please keep this value higher than the first target RRR, otherwise it will mess up the orders.", group="Order settings")
+var I_ALLOW_RETRACING = input(true, "Allow price retracing",
+ tooltip="Price retracing is the adjustment of the entry price if the order does not get filled immediately after the entry condition.",
+ inline="Retracing settings", group="Order settings")
+var I_RETRACING_TOLERANCE = input(3, "Price retracing tolerance", minval=0,
+ tooltip="This setting only matters if you enabled price retracing.\n\nIt cancels the order if it does not get filled after X bars since the entry condition.\n\nChange it to 0 to be disabled.",
+ inline="Retracing settings", group="Order settings")
+var I_WAIT_CONFIRM = input(true, "Wait for the confirmation of the signal",
+ tooltip="The confirmation is given by the breakout of the bar that started the signal.\n\nIf you don't want to wait for it, and enter at market price when the signal is given, unchek the box.",
+ group="Order settings")
+var I_STOP_TYPE = input("Highest or lowest price", "Stop type", options=["Highest or lowest price", "Highest or lowest pivot"],
+ tooltip="When calculating the highest/lowest, the strategy will take account the stop lookback.\n\nFor example, if you set the type to use the price, set the looback to 3, and a long order is open, it will take the lowest price of the last 3 candles and use it as the stop loss.",
+ group="Stop settings")
+var I_STOP_LOOKBACK = input(3, "Stop loss lookback", minval=1, group="Stop settings")
+var I_MA_CLOSE_ORDER = input(false, "Close open orders if MA trend turns direction", group="Stop settings")
+var I_STOP_RETRACE = input(false, "Stop loss retracing if a new signal is given", group="Stop settings")
+// MA calculation and plot
+i_src = input(close, "Price source", tooltip="For MA and oscillator calculations.", group="MA settings")
+var I_MA_LONG_PERIOD = input(80, "MA long period", minval=1, inline="MA period", group="MA settings")
+var I_MA_SHORT_PERIOD = input(8, "MA short period", minval=1, inline="MA period", group="MA settings")
+var I_MA_DISPLACEMENT = input(0, "MA displacement", minval=0, group="MA settings")
+var I_MA_TYPE = input("EMA", "Moving average type", options=["EMA", "HMA", "KAMA", "SMA", "WMA"], group="MA settings")
+var I_FAST_ALPHA = input(3, "KAMA's slow period", minval=1, tooltip="For fast alpha.", group="MA settings")
+var O_CROSS = "Crossover/crossunder"
+var O_LONG_DIRECT = "Long MA is up/down"
+var O_LONG_SHORT_DIRECT = "Long and short MA are up/down"
+var O_DISREGARD = "Disregard"
+var I_MA_TREND_TYPE = input(O_CROSS, "MA trend type", 
+ options=[O_CROSS, O_LONG_DIRECT, O_LONG_SHORT_DIRECT, O_DISREGARD], group="MA settings")
+fastAlpha = 2.0 / (I_FAST_ALPHA + 1)
+slowAlpha = 2.0 / (31)
+getKama(_period) =>
+    momentum = abs(change(i_src, _period))
+    volatility = sum(abs(change(i_src)), _period)
+    efficiencyRatio = volatility != 0 ? momentum / volatility : 0
+    smoothingConstant = pow((efficiencyRatio * (fastAlpha - slowAlpha)) + slowAlpha, 2)
+    var kama = 0.0
+    kama := nz(kama[1], i_src) + smoothingConstant * (i_src - nz(kama[1], i_src))
+f_ma(_period) => I_MA_TYPE == "EMA" ? ema(i_src, _period) :
+ I_MA_TYPE == "HMA" ? hma(i_src, _period) :
+ I_MA_TYPE == "KAMA" ? getKama(_period) :
+ I_MA_TYPE == "SMA" ? sma(i_src, _period) :
+ wma(i_src, _period)
+longMa = f_ma(I_MA_LONG_PERIOD)[I_MA_DISPLACEMENT]
+shortMa = f_ma(I_MA_SHORT_PERIOD)[I_MA_DISPLACEMENT]
+maDirection = "Neutral"
+crossSign = sign((shortMa / longMa) - 1)
+risingShort = rising(shortMa, 1)
+risingLong = rising(longMa, 1)
+fallingShort = falling(shortMa, 1)
+fallingLong = falling(longMa, 1)
+if I_MA_TREND_TYPE == O_CROSS
+    if crossSign == 1
+        maDirection := "Bull"
+    else if crossSign == -1
+        maDirection := "Bear"
+else if risingLong
+    if I_MA_TREND_TYPE == O_LONG_DIRECT
+        maDirection := "Bull"
+    if risingShort and I_MA_TREND_TYPE == O_LONG_SHORT_DIRECT
+        maDirection := "Bull"
+else if fallingLong
+    if I_MA_TREND_TYPE == O_LONG_DIRECT
+        maDirection := "Bear"
+    if fallingShort and I_MA_TREND_TYPE == O_LONG_SHORT_DIRECT
+        maDirection := "Bear"
+maBull = I_MA_TREND_TYPE == O_DISREGARD ? true : maDirection == "Bull"
+maBear = I_MA_TREND_TYPE == O_DISREGARD ? true : maDirection == "Bear"
+maColor = I_MA_TREND_TYPE == O_DISREGARD or maDirection == "Neutral" ? color.gray : maBull ? color.teal : color.red
+plot(I_MA_TREND_TYPE != O_LONG_DIRECT ? shortMa : na, "MA short", maColor, 3)
+plot(longMa, "MA long", maColor, 3)
+// Oscillator 
+var I_OSC_TYPE = input("Slow stochastic", "Oscillator type", options=["RSI", "Slow stochastic"], group="Oscillator settings")
+var O_TREND_FAVOR = "In favor of the trend"
+var O_TREND_CONTRARY = "Contrary to the trend"
+var I_OSC_TREND_TYPE = input(O_DISREGARD, "Oscillator trend type", options=[O_DISREGARD, O_TREND_FAVOR, O_TREND_CONTRARY], group="Oscillator settings")
+var I_OSC_PERIOD = input(8, "Oscillator period", minval=1, group="Oscillator settings")
+var I_OVERBOUGHT = input(70, "Overbought level", minval=1, maxval=100, inline="Oscillator levels", group="Oscillator settings")
+var I_OVERSOLD = input(30, "Oversold level", minval=1, maxval=100, inline="Oscillator levels", group="Oscillator settings")
+getOsc = I_OSC_TYPE == "Slow stochastic" ? sma(sma(stoch(close, high, low, I_OSC_PERIOD), 3), 3) : rsi(i_src, I_OSC_PERIOD)
+oscBull = I_OSC_TREND_TYPE == O_DISREGARD ? true : I_OSC_TREND_TYPE == "In favor of the trend" ? getOsc >= I_OVERBOUGHT : getOsc <= I_OVERSOLD
+oscBear = I_OSC_TREND_TYPE == O_DISREGARD ? true : I_OSC_TREND_TYPE == "In favor of the trend" ? getOsc <= I_OVERSOLD : getOsc >= I_OVERBOUGHT
+// RCP 
+rcpBull = low[0] < lowest(2)[1] and close[0] > close[1]
+rcpBear = high[0] > highest(2)[1] and close[0] < close[1]
+// Order variables 
+inMarket = strategy.opentrades != 0
+closed = strategy.closedtrades[0] > strategy.closedtrades[1]
+longPosition = strategy.position_entry_name == "Long"
+shortPosition = strategy.position_entry_name == "Short"
+buyPrice = high + syminfo.mintick
+sellPrice = low - syminfo.mintick
+longCondition = rcpBull and I_ORDER_DIRECTION != "Short" and maBull and oscBull and not inMarket
+shortCondition = rcpBear and I_ORDER_DIRECTION != "Long" and maBear and oscBear and not inMarket
+// Get risk size
+var START_PRICE = 0.0
+var RISK_SIZE = 0.0
+if barstate.isfirst
+    strategy.entry("Get risk size", true)
+    START_PRICE := close
+if barssince(barstate.isfirst) >= 1 and strategy.position_entry_name == "Get risk size"
+    RISK_SIZE := round_to_mintick(strategy.position_size * START_PRICE)
+    strategy.close("Get risk size", comment="The risk size is " + tostring(RISK_SIZE) + " " + syminfo.currency)
+// Last top and bottom
+_pivotLow = pivotlow(1, 1)
+_pivotHigh = pivothigh(1, 1)
+f_getPivot(_pivot) =>
+    var _array = array.new_float(I_STOP_LOOKBACK, 0.0)
+    
+    if not na(_pivot)
+        array.remove(_array, 0)
+        array.push(_array, _pivot)
+    _array
+lowPivots = f_getPivot(_pivotLow)
+lowPIvotPrice = array.min(lowPivots) - syminfo.mintick
+highPivots = f_getPivot(_pivotHigh)
+highPivotPrice = array.max(highPivots) + syminfo.mintick
+// Stop loss calculations
+lowPrice = lowest(sellPrice, I_STOP_LOOKBACK)
+highPrice = highest(buyPrice, I_STOP_LOOKBACK)
+var stopPriceLong = 0.0
+var stopPriceShort = 0.0
+var stopTicksLong = 0.0
+var stopTicksShort = 0.0
+tempStopPriceLong = I_STOP_TYPE == "Highest or lowest price" or lowPrice < lowPIvotPrice ? lowPrice : lowPIvotPrice
+tempStopPriceShort = I_STOP_TYPE == "Highest or lowest price" or highPrice > highPivotPrice ? highPrice : highPivotPrice
+    
+if not inMarket
+    stopPriceLong := tempStopPriceLong
+    stopPriceShort := tempStopPriceShort
+    
+    stopTicksLong := abs(buyPrice - stopPriceLong)
+    stopTicksShort := abs(sellPrice - stopPriceShort)
+// Retrace stop if a new signal is given
+newSignalLong = rcpBull and tempStopPriceLong > stopPriceLong and I_STOP_RETRACE
+newSignalShort = rcpBear and tempStopPriceShort < stopPriceShort and I_STOP_RETRACE
+if newSignalLong or newSignalShort
+    stopPriceLong := tempStopPriceLong
+    stopPriceShort := tempStopPriceShort
+orderSizeLong = RISK_SIZE / stopTicksLong
+orderSizeShort = RISK_SIZE / stopTicksShort
+stopPrice = longPosition ? stopPriceLong : shortPosition ? stopPriceShort : na
+f_plotVar(_var) => _var ? _var : _var[1]
+plot(f_plotVar(stopPrice), "Stop price", color.red, 2, plot.style_linebr)
+// Entry orders
+f_enterLong() => strategy.entry("Long", true, orderSizeLong, stop=I_WAIT_CONFIRM ? buyPrice : na,
+ comment="Entry long with a " + tostring(orderSizeLong * buyPrice, format.mintick) + " " + syminfo.currency + " order")
+if longCondition
+    f_enterLong()
+f_enterShort() => strategy.entry("Short", false, orderSizeShort, stop=I_WAIT_CONFIRM ? sellPrice : na,
+ comment="Entry short with a " + tostring(orderSizeShort * sellPrice, format.mintick) + " " + syminfo.currency + " order")
+if shortCondition
+    f_enterShort()
+// Take profit calculations
+var fTakeProfitLong = 0.0
+var fTakeProfitShort = 0.0
+var sTakeProfitLong = 0.0
+var sTakeProfitShort = 0.0
+if not inMarket
+    fTakeProfitLong := buyPrice + stopTicksLong * I_FIRST_RRR
+    fTakeProfitShort := sellPrice - stopTicksShort * I_FIRST_RRR
+    
+    sTakeProfitLong := buyPrice + stopTicksLong * I_SECOND_RRR
+    sTakeProfitShort := sellPrice - stopTicksShort * I_SECOND_RRR
+fTakeProfitPrice = longPosition ? fTakeProfitLong : shortPosition ? fTakeProfitShort : na
+sTakeProfitPrice = longPosition ? sTakeProfitLong : shortPosition ? sTakeProfitShort : na
+plot(I_FIRST_PER ? f_plotVar(fTakeProfitPrice) : na, "First take profit price", color.teal, 1, plot.style_linebr)
+plot(f_plotVar(sTakeProfitPrice), "Second take profit price", color.teal, 2, plot.style_linebr)
+// Exit orders
+strategy.exit("First long", "Long", qty_percent=I_FIRST_PER, limit=fTakeProfitLong, stop=stopPriceLong, comment="First exit", when=I_FIRST_PER)
+strategy.exit("Second long", "Long", limit=sTakeProfitLong, stop=stopPriceLong, comment="Second exit")
+strategy.exit("First short", "Short", qty_percent=I_FIRST_PER, limit=fTakeProfitShort, stop=stopPriceShort, comment="First exit", when=I_FIRST_PER)
+strategy.exit("Second short", "Short", limit=sTakeProfitShort, stop=stopPriceShort, comment="Second exit")
+// Price retracing orders
+if not inMarket
+    if I_ALLOW_RETRACING and I_WAIT_CONFIRM
+        sinceLong = barssince(longCondition)
+        sinceShort = barssince(shortCondition)
+        sinceClosed = barssince(closed)
+        fallingBuyPrice = falling(buyPrice, max(nz(sinceLong), 1))
+        risingSellPrice = rising(sellPrice, max(nz(sinceShort), 1))
+        
+        betterPriceLong = sinceClosed >= sinceLong and sinceLong >= 1 and maBull and oscBull and fallingBuyPrice
+        if betterPriceLong
+            f_enterLong()
+                
+        betterPriceShort = sinceClosed >= sinceShort and sinceShort >= 1 and maBear and oscBear and risingSellPrice
+        if betterPriceShort
+            f_enterShort()
+        
+        if barssince(betterPriceLong) >= 1 and ((I_MA_TREND_TYPE == "Disregard MA trend" ? false : maBear) or (I_OSC_TREND_TYPE == O_DISREGARD ? false : oscBear))
+            strategy.cancel("Long")
+        
+        if barssince(betterPriceShort) >= 1 and ((I_MA_TREND_TYPE == "Disregard MA trend" ? false : maBull) or (I_OSC_TREND_TYPE == O_DISREGARD ? false : oscBull))
+            strategy.cancel("Short")
+        
+        if I_RETRACING_TOLERANCE
+            if sinceLong >= I_RETRACING_TOLERANCE
+                strategy.cancel("Long")
+            
+            if sinceShort >= I_RETRACING_TOLERANCE
+                strategy.cancel("Short")
+        
+    else if longCondition[1] or shortCondition[1]
+        strategy.cancel_all()
+// MA cross close orders
+var CROSS_COMMENT = "MA Cross"
+if I_MA_CLOSE_ORDER
+    if maBull
+        strategy.close("Long", comment=CROSS_COMMENT)
+    
+    if maBear
+        strategy.close("Short", comment=CROSS_COMMENT)
+Expand (296 lines)

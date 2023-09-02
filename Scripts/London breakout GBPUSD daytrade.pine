@@ -1,0 +1,273 @@
+Script Name: London breakout GBPUSD daytrade
+Author: SoftKill21
+Description: Hello,
+
+First I want to WARN THAT YOU NEED A MINIMUM OF 30X LEVERAGE FOR THIS STRATEGY IN ORDER TO WORK.
+THE REASON IS THAT THE SIZE IS CALCULATED BASED ON A VERY SHORT STOP LOSS LEVEL IN PIPS
+
+UTILIZE IT AT YOUR OWN RISK
+
+
+This is a daytrading strategy, that's suited for GBPUSD 1H timechart.
+It a very simple strategy that utilizes 2 moving averages : a very fast...
+PineScript code:
+
+Pine Script™ strategy
+London breakout GBPUSD daytrade
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+//@version=4
+strategy(title="2 ma breakout",shorttitle="2 ma breakout", initial_capital=10000,overlay=true, commission_type = strategy.commission.cash_per_contract, commission_value = 0.00008 )
+timeinrange(res, sess) => time(res, sess) != 0
+//Change false to false = You have to turn on, won't show up by default
+//****Always use lowercase letters
+doNYOpen = input(defval=false, type = input.bool, title="NY Open On")
+doNYSession = input(defval=false, type = input.bool, title="NY Session On")
+doNYClose = input(defval=false, type = input.bool, title="NY Close On")
+doAussieOpen = input(defval=false, type = input.bool, title="Aussie Open On")
+doAussieSession = input(defval=false, type = input.bool, title="Aussie Session On")
+doAussieClose = input(defval=false, type = input.bool, title="Aussie Close On")
+doAsiaOpen = input(defval=false, type = input.bool, title="Asia Open On")
+doAsiaSession = input(defval=false, type = input.bool, title="Asia Session On")
+doAsiaClose = input(defval=false, type = input.bool, title="Asia Close On")
+doEurOpen = input(defval=true, type = input.bool, title="Euro Open On")
+doEurSession = input(defval=true, type = input.bool, title="Euro Session On")
+doEurClose = input(defval=true, type = input.bool, title="Euro Close On")
+//You can copy and paste these colors. white - silver - gray - maroon - red - purple - fuchsia - green - lime
+//   olive - yellow - navy - blue - teal - aqua - orange 
+nySessionStart = color.olive
+nySession = color.olive
+nySessionEnd = color.olive
+asiaSessionStart = color.blue
+asiaSession = color.blue
+asiaSessionEnd = color.blue
+europeSessionStart = color.red
+europeSession = color.red
+europeSessionEnd = color.red
+colorwhite = color.white
+//****Note ---- Use Military Times --- So 3:00PM = 1500
+bgcolor(doAsiaSession and timeinrange(timeframe.period, "1800-0400") ? asiaSession : na, transp=75)
+//bgcolor(timeinrange(timeframe.period, "0000-0300") ? color.white  : na, transp=75)
+bgcolor(doEurSession and timeinrange(timeframe.period, "0300-1100") ? europeSession : na, transp=75)
+bgcolor(doNYSession and timeinrange(timeframe.period, "0800-1600") ? nySession : na, transp=75)
+active = input(true, title="Show On Chart")
+pricehigh = security(syminfo.tickerid, '60', high[0])
+pricelow = security(syminfo.tickerid, '60', low[0])
+//Daily Plots
+offs_daily = 0 
+hiHighs = 0
+loLows = 0
+//plot(timeinrange(timeframe.period, "0000-0300") and pricehigh ? pricehigh  : na, title="Previous Daily High", style=plot.style_line, linewidth=2, color=color.gray)
+//plot(timeinrange(timeframe.period, "0000-0300") and pricelow ? pricelow : na, title="Previous Daily Low", style=plot.style_linebr, linewidth=2, color=color.gray)
+if(timeinrange(timeframe.period, "0000-0300"))
+    hiHighs = highest(high, 3)
+    loLows = lowest(low, 3)
+    
+// From Date Inputs
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2020, title = "From Year", minval = 1970)
+ 
+// To Date Inputs
+toDay = input(defval = 31, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 12, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2020, title = "To Year", minval = 1970)
+ 
+// Calculate start/end date and time condition
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate
+len = input(2)
+src = input(close, title="Source")
+out = sma(src, len)
+lena = input(200, minval=1, title="Length slow")
+srca = input(close, title="Source")
+outa = ema(srca, lena)
+//tp = input(100, title="tp")
+sl = input(66, title="sl")
+// if(smabool)
+//     out := sma(src, len)
+// else if(emabool)
+//     out := ema(src, len)
+// else if(hmabool)
+//     out := hma(src, len)
+// else if(vmabool)
+//     out := wma(src, len)  
+// else if(vwmabool)
+//     out := vwma(src, len)   
+// else if(smmabool)
+//     out := sma(src, len)  
+ 
+plot(out, color=color.white, title="MA")
+plot(outa, color=color.white, title="MA")
+longC = timeinrange(timeframe.period, "0300-0400") and (crossover(close,out) or crossover(high,out)) and close[1] > outa and time_cond
+shortC = timeinrange(timeframe.period, "0300-0400") and (crossunder(close,out) or crossunder(low,out)) and close[1] < outa and time_cond
+//inputlondon = input(false, title="london session")
+//inputny = input(false, title="new york session")
+//if(inputlondon==true)
+//MONEY MANAGEMENT--------------------------------------------------------------
+balance = strategy.netprofit + strategy.initial_capital //current balance
+floating = strategy.openprofit          //floating profit/loss
+risk = input(1,type=input.float,title="Risk % of equity ")/100           //risk % per trade
+temp01 = balance * risk     //Risk in USD
+temp02 = temp01/sl        //Risk in lots
+temp03 = temp02*100000      //Convert to contracts
+size = temp03 - temp03%1000 //Normalize to 1000s (Trade size)
+if(size < 1000)
+    size := 1000           //Set min. lot size
+strategy.entry("long",1,size,when=longC)
+//strategy.close("long", when = crossunder(close,out) or not (timeinrange(timeframe.period, "0300-1000")))
+strategy.close("long", when =  not (timeinrange(timeframe.period, "0300-0945")))
+strategy.exit("x_long","long", loss = sl)
+     
+    
+strategy.entry("short",0,size,when=shortC)
+//strategy.close("short",when = crossover(close,out) or not (timeinrange(timeframe.period, "0300-1000")))
+strategy.close("short",when = not (timeinrange(timeframe.period, "0300-0945")))
+strategy.exit("x_short","short", loss = sl)
+//strategy.exit("closelong", "RSI_BB_LONG" , profit = close * 0.01 / syminfo.mintick, loss = close * 0.01 / syminfo.mintick, alert_message = "closelong")
+//strategy.exit("closeshort", "RSI_BB_SHORT" , profit = close * 0.01 / syminfo.mintick, loss = close * 0.01 / syminfo.mintick, alert_message = "closeshort")
+Expand (144 lines)

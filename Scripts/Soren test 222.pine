@@ -1,0 +1,664 @@
+Script Name: Soren test 222
+Author: sorentin
+Description: Say we use strategy.risk.allow_entry_in() to only trade longs. When our script uses the strategy.entry() function to open a short trade, TradingView of course won’t allow our strategy to go short. But that doesn’t mean the trade is ignored. Instead the ‘enter short’ trade – which is actually a sell command – becomes an ‘exit long’ order.
+
+Another way to think...
+PineScript code:
+
+Pine Script™ strategy
+Soren test 222
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+// This source code to my testing
+// © sgb
+//@version=5
+strategy(title='Soren test 2', overlay=true, initial_capital=100, pyramiding=1, calc_on_order_fills=true, calc_on_every_tick=true, default_qty_type=strategy.percent_of_equity, default_qty_value=50, commission_value=0.04)
+//SOURCE =============================================================================================================================================================================================================================================================================================================
+src = input(open)
+// INPUTS ============================================================================================================================================================================================================================================================================================================
+//ADX --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ADX_options = input.string('MASANAKAMURA', title='Adx Type', options=['CLASSIC', 'MASANAKAMURA'], group='ADX')
+ADX_len = input.int(38, title='Adx lenght', minval=1, group='ADX')
+th = input.float(23, title='Adx Treshold', minval=0, step=0.5, group='ADX')
+// Volume ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+volume_f = input.float(1.2, title='Volume mult.', minval=0, step=0.1, group='Volume')
+sma_length = input.int(35, title='Volume lenght', minval=1, group='Volume')
+//RSI----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+len_3 = input.int(25, title='RSI lenght', group='Relative Strenght Indeks')
+src_3 = input.source(low, title='RSI Source', group='Relative Strenght Indeks')
+RSI_VWAP_length = input(25, title='Rsi vwap lenght')
+// Range Filter ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+per_ = input.int(26, title='SAMPLING PERIOD', minval=1, group='Range Filter')
+mult = input.float(2.3, title='RANGE MULTIPLIER', minval=0.1, step=0.1, group='Range Filter')
+// Cloud --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+len = input.int(1, title='Cloud Length', group='Cloud')
+//RMI ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+RMI_len = input.int(26, title='Rmi Lenght', minval=1, group='Relative Momentum Index')
+mom = input.int(17, title='Rmi Momentum', minval=1, group='Relative Momentum Index')
+RMI_os = input.int(33, title='Rmi oversold', minval=0, group='Relative Momentum Index')
+RMI_ob = input.int(68, title='Rmi overbought', minval=0, group='Relative Momentum Index')
+// Indicators Calculations ========================================================================================================================================================================================================================================================================================================
+// Range Filter ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+var bool L_RF = na
+var bool S_RF = na
+Range_filter(_src, _per_, _mult) =>
+    var float _upward = 0.0
+    var float _downward = 0.0
+    wper = _per_ * 2 - 1
+    avrng = ta.ema(math.abs(_src - _src[1]), _per_)
+    _smoothrng = ta.ema(avrng, wper) * _mult
+    _filt = _src
+    _filt := _src > nz(_filt[1]) ? _src - _smoothrng < nz(_filt[1]) ? nz(_filt[1]) : _src - _smoothrng : _src + _smoothrng > nz(_filt[1]) ? nz(_filt[1]) : _src + _smoothrng
+    _upward := _filt > _filt[1] ? nz(_upward[1]) + 1 : _filt < _filt[1] ? 0 : nz(_upward[1])
+    _downward := _filt < _filt[1] ? nz(_downward[1]) + 1 : _filt > _filt[1] ? 0 : nz(_downward[1])
+    [_smoothrng, _filt, _upward, _downward]
+[smoothrng, filt, upward, downward] = Range_filter(src, per_, mult)
+hband = filt + smoothrng
+lband = filt - smoothrng
+L_RF := high > hband and upward > 0
+S_RF := low < lband and downward > 0
+//ADX-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+calcADX(_len) =>
+    up = ta.change(high)
+    down = -ta.change(low)
+    plusDM = na(up) ? na : up > down and up > 0 ? up : 0
+    minusDM = na(down) ? na : down > up and down > 0 ? down : 0
+    truerange = ta.rma(ta.tr, _len)
+    _plus = fixnan(100 * ta.rma(plusDM, _len) / truerange)
+    _minus = fixnan(100 * ta.rma(minusDM, _len) / truerange)
+    sum = _plus + _minus
+    _adx = 100 * ta.rma(math.abs(_plus - _minus) / (sum == 0 ? 1 : sum), _len)
+    [_plus, _minus, _adx]
+calcADX_Masanakamura(_len) =>
+    SmoothedTrueRange = 0.0
+    SmoothedDirectionalMovementPlus = 0.0
+    SmoothedDirectionalMovementMinus = 0.0
+    TrueRange = math.max(math.max(high - low, math.abs(high - nz(close[1]))), math.abs(low - nz(close[1])))
+    DirectionalMovementPlus = high - nz(high[1]) > nz(low[1]) - low ? math.max(high - nz(high[1]), 0) : 0
+    DirectionalMovementMinus = nz(low[1]) - low > high - nz(high[1]) ? math.max(nz(low[1]) - low, 0) : 0
+    SmoothedTrueRange := nz(SmoothedTrueRange[1]) - nz(SmoothedTrueRange[1]) / _len + TrueRange
+    SmoothedDirectionalMovementPlus := nz(SmoothedDirectionalMovementPlus[1]) - nz(SmoothedDirectionalMovementPlus[1]) / _len + DirectionalMovementPlus
+    SmoothedDirectionalMovementMinus := nz(SmoothedDirectionalMovementMinus[1]) - nz(SmoothedDirectionalMovementMinus[1]) / _len + DirectionalMovementMinus
+    DIP = SmoothedDirectionalMovementPlus / SmoothedTrueRange * 100
+    DIM = SmoothedDirectionalMovementMinus / SmoothedTrueRange * 100
+    DX = math.abs(DIP - DIM) / (DIP + DIM) * 100
+    adx = ta.sma(DX, _len)
+    [DIP, DIM, adx]
+[DIPlusC, DIMinusC, ADXC] = calcADX(ADX_len)
+[DIPlusM, DIMinusM, ADXM] = calcADX_Masanakamura(ADX_len)
+DIPlus = ADX_options == 'CLASSIC' ? DIPlusC : DIPlusM
+DIMinus = ADX_options == 'CLASSIC' ? DIMinusC : DIMinusM
+ADX = ADX_options == 'CLASSIC' ? ADXC : ADXM
+L_adx = DIPlus > DIMinus and ADX > th
+S_adx = DIPlus < DIMinus and ADX > th
+// Volume -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Volume_condt = volume > ta.sma(volume, sma_length) * volume_f
+//RSI------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+up_3 = ta.rma(math.max(ta.change(src_3), 0), len_3)
+down_3 = ta.rma(-math.min(ta.change(src_3), 0), len_3)
+rsi_3 = down_3 == 0 ? 100 : up_3 == 0 ? 0 : 100 - 100 / (1 + up_3 / down_3)
+L_rsi = rsi_3 < 70
+S_rsi = rsi_3 > 30
+RSI_VWAP = ta.rsi(ta.vwap(close), RSI_VWAP_length)
+RSI_VWAP_overSold = 13
+RSI_VWAP_overBought = 68
+L_VAP = ta.crossover(RSI_VWAP, RSI_VWAP_overSold)
+S_VAP = ta.crossunder(RSI_VWAP, RSI_VWAP_overBought)
+//Cloud --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+PI = 2 * math.asin(1)
+hilbertTransform(src) =>
+    0.0962 * src + 0.5769 * nz(src[2]) - 0.5769 * nz(src[4]) - 0.0962 * nz(src[6])
+computeComponent(src, mesaPeriodMult) =>
+    hilbertTransform(src) * mesaPeriodMult
+computeAlpha(src, fastLimit, slowLimit) =>
+    mesaPeriod = 0.0
+    mesaPeriodMult = 0.075 * nz(mesaPeriod[1]) + 0.54
+    smooth = 0.0
+    smooth := (4 * src + 3 * nz(src[1]) + 2 * nz(src[2]) + nz(src[3])) / 10
+    detrender = 0.0
+    detrender := computeComponent(smooth, mesaPeriodMult)
+    I1 = nz(detrender[3])
+    Q1 = computeComponent(detrender, mesaPeriodMult)
+    jI = computeComponent(I1, mesaPeriodMult)
+    jQ = computeComponent(Q1, mesaPeriodMult)
+    I2 = 0.0
+    Q2 = 0.0
+    I2 := I1 - jQ
+    Q2 := Q1 + jI
+    I2 := 0.2 * I2 + 0.8 * nz(I2[1])
+    Q2 := 0.2 * Q2 + 0.8 * nz(Q2[1])
+    Re = I2 * nz(I2[1]) + Q2 * nz(Q2[1])
+    Im = I2 * nz(Q2[1]) - Q2 * nz(I2[1])
+    Re := 0.2 * Re + 0.8 * nz(Re[1])
+    Im := 0.2 * Im + 0.8 * nz(Im[1])
+    if Re != 0 and Im != 0
+        mesaPeriod := 2 * PI / math.atan(Im / Re)
+        mesaPeriod
+    if mesaPeriod > 1.5 * nz(mesaPeriod[1])
+        mesaPeriod := 1.5 * nz(mesaPeriod[1])
+        mesaPeriod
+    if mesaPeriod < 0.67 * nz(mesaPeriod[1])
+        mesaPeriod := 0.67 * nz(mesaPeriod[1])
+        mesaPeriod
+    if mesaPeriod < 6
+        mesaPeriod := 6
+        mesaPeriod
+    if mesaPeriod > 50
+        mesaPeriod := 50
+        mesaPeriod
+    mesaPeriod := 0.2 * mesaPeriod + 0.8 * nz(mesaPeriod[1])
+    phase = 0.0
+    if I1 != 0
+        phase := 180 / PI * math.atan(Q1 / I1)
+        phase
+    deltaPhase = nz(phase[1]) - phase
+    if deltaPhase < 1
+        deltaPhase := 1
+        deltaPhase
+    alpha = fastLimit / deltaPhase
+    if alpha < slowLimit
+        alpha := slowLimit
+        alpha
+    [alpha, alpha / 2.0]
+er = math.abs(ta.change(src, len)) / math.sum(math.abs(ta.change(src)), len)
+[a, b] = computeAlpha(src, er, er * 0.1)
+mama = 0.0
+mama := a * src + (1 - a) * nz(mama[1])
+fama = 0.0
+fama := b * mama + (1 - b) * nz(fama[1])
+alpha = math.pow(er * (b - a) + a, 2)
+kama = 0.0
+kama := alpha * src + (1 - alpha) * nz(kama[1])
+L_cloud = kama > kama[1]
+S_cloud = kama < kama[1]
+// RMI -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+RMI(len, m) =>
+    up = ta.ema(math.max(close - close[m], 0), len)
+    dn = ta.ema(math.max(close[m] - close, 0), len)
+    RMI = dn == 0 ? 0 : 100 - 100 / (1 + up / dn)
+    RMI
+L_rmi = ta.crossover(RMI(RMI_len, mom), RMI_os)
+S_rmi = ta.crossunder(RMI(RMI_len, mom), RMI_ob)
+//STRATEGY ==========================================================================================================================================================================================================================================================================================================
+L_1 = L_VAP and L_RF and not S_adx
+S_1 = S_VAP and S_RF and not L_adx
+L_2 = L_adx and Volume_condt and L_rsi and L_cloud
+S_2 = S_adx and Volume_condt and S_rsi and S_cloud
+L_3 = L_rmi and L_RF and not S_adx
+S_3 = S_rmi and S_RF and not L_adx
+L_basic_condt = L_1 or L_2 or L_3
+S_basic_condt = S_1 or S_2 or S_3
+var bool longCondition = na
+var bool shortCondition = na
+var float last_open_longCondition = na
+var float last_open_shortCondition = na
+var int last_longCondition = 0
+var int last_shortCondition = 0
+longCondition := L_basic_condt
+shortCondition := S_basic_condt
+last_open_longCondition := longCondition ? close : nz(last_open_longCondition[1])
+last_open_shortCondition := shortCondition ? close : nz(last_open_shortCondition[1])
+last_longCondition := longCondition ? time : nz(last_longCondition[1])
+last_shortCondition := shortCondition ? time : nz(last_shortCondition[1])
+in_longCondition = last_longCondition > last_shortCondition
+in_shortCondition = last_shortCondition > last_longCondition
+// SWAP-SL ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+var int last_long_sl = na
+var int last_short_sl = na
+sl = input.float(2, 'Swap % period', minval=0, step=0.1, group='strategy settings')
+long_sl = ta.crossunder(low, (1 - sl / 100) * last_open_longCondition) and in_longCondition and not longCondition
+short_sl = ta.crossover(high, (1 + sl / 100) * last_open_shortCondition) and in_shortCondition and not shortCondition
+last_long_sl := long_sl ? time : nz(last_long_sl[1])
+last_short_sl := short_sl ? time : nz(last_short_sl[1])
+var bool CondIni_long_sl = 0
+CondIni_long_sl := long_sl ? 1 : longCondition ? -1 : nz(CondIni_long_sl[1])
+var bool CondIni_short_sl = 0
+CondIni_short_sl := short_sl ? 1 : shortCondition ? -1 : nz(CondIni_short_sl[1])
+Final_Long_sl = long_sl and nz(CondIni_long_sl[1]) == -1 and in_longCondition and not longCondition
+Final_Short_sl = short_sl and nz(CondIni_short_sl[1]) == -1 and in_shortCondition and not shortCondition
+var int sectionLongs = 0
+sectionLongs := nz(sectionLongs[1])
+var int sectionShorts = 0
+sectionShorts := nz(sectionShorts[1])
+// RE-ENTRY ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+if longCondition or Final_Long_sl
+    sectionLongs += 1
+    sectionShorts := 0
+    sectionShorts
+if shortCondition or Final_Short_sl
+    sectionLongs := 0
+    sectionShorts += 1
+    sectionShorts
+var float sum_long = 0.0
+var float sum_short = 0.0
+if longCondition
+    sum_long := nz(last_open_longCondition) + nz(sum_long[1])
+    sum_short := 0.0
+    sum_short
+if Final_Long_sl
+    sum_long := (1 - sl / 100) * last_open_longCondition + nz(sum_long[1])
+    sum_short := 0.0
+    sum_short
+if shortCondition
+    sum_short := nz(last_open_shortCondition) + nz(sum_short[1])
+    sum_long := 0.0
+    sum_long
+if Final_Short_sl
+    sum_long := 0.0
+    sum_short := (1 + sl / 100) * last_open_shortCondition + nz(sum_short[1])
+    sum_short
+var float Position_Price = 0.0
+Position_Price := nz(Position_Price[1])
+Position_Price := longCondition or Final_Long_sl ? sum_long / sectionLongs : shortCondition or Final_Short_sl ? sum_short / sectionShorts : na
+//TP_1 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+tp = input.float(1.2, 'Tp-1 ', minval=0, step=0.1, group='strategy settings')
+long_tp = ta.crossover(high, (1 + tp / 100) * fixnan(Position_Price)) and in_longCondition and not longCondition
+short_tp = ta.crossunder(low, (1 - tp / 100) * fixnan(Position_Price)) and in_shortCondition and not shortCondition
+var int last_long_tp = na
+var int last_short_tp = na
+last_long_tp := long_tp ? time : nz(last_long_tp[1])
+last_short_tp := short_tp ? time : nz(last_short_tp[1])
+Final_Long_tp = long_tp and last_longCondition > nz(last_long_tp[1])
+Final_Short_tp = short_tp and last_shortCondition > nz(last_short_tp[1])
+fixnan_1 = fixnan(Position_Price)
+ltp = Final_Long_tp ? fixnan_1 * (1 + tp / 100) : na
+fixnan_2 = fixnan(Position_Price)
+stp = Final_Short_tp ? fixnan_2 * (1 - tp / 100) : na
+if Final_Short_tp or Final_Long_tp
+    sum_long := 0.0
+    sum_short := 0.0
+    sectionLongs := 0
+    sectionShorts := 0
+    sectionShorts
+if Final_Long_tp
+    CondIni_long_sl == 1
+if Final_Short_tp
+    CondIni_short_sl == 1
+// COLORS & PLOTS --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ADX_COLOR = L_adx ? color.lime : S_adx ? color.red : color.orange
+barcolor(color=ADX_COLOR)
+hbandplot = plot(hband, title='RF HT', color=ADX_COLOR, transp=50)
+lbandplot = plot(lband, title='RF LT', color=ADX_COLOR, transp=50)
+fill(hbandplot, lbandplot, title='RF TR', color=ADX_COLOR, transp=90)
+plotshape(longCondition, title='Long', style=shape.triangleup, location=location.belowbar, color=color.new(color.blue, 0), size=size.tiny)
+plotshape(shortCondition, title='Short', style=shape.triangledown, location=location.abovebar, color=color.new(color.red, 0), size=size.tiny)
+plot(ltp, style=plot.style_circles, linewidth=5, color=color.new(color.fuchsia, 0), editable=false)
+plot(stp, style=plot.style_circles, linewidth=5, color=color.new(color.fuchsia, 0), editable=false)
+//BACKTESTING--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Q = 50
+SL = input.float(0.4, 'StopLoss ', minval=0, step=0.1)
+strategy.entry('long', strategy.long, when=longCondition)
+strategy.entry('short', strategy.short, when=shortCondition)
+strategy.exit('TP', 'long', qty_percent=Q, limit=fixnan(Position_Price) * (1 + tp / 100))
+strategy.exit('TP', 'short', qty_percent=Q, limit=fixnan(Position_Price) * (1 - tp / 100))
+strategy.exit('SL', 'long', stop=fixnan(Position_Price) * (1 - SL / 100))
+strategy.exit('SL', 'short', stop=fixnan(Position_Price) * (1 + SL / 100))
+//
+//
+//
+//
+//
+//
+// By SGB
+Expand (362 lines)

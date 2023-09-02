@@ -1,0 +1,57 @@
+Script Name: ABUs Euroramp
+Author: aburasa
+Description: This strategy backtests the opening ramp of Europe at 9am European time, which is 2am Chicago time ( CME ES timezone ) on the ES Futures Contract.
+
+The following conditions are embedded in the strategy:
+
+- Market entry at 2 am Chicago time
+- Size = 2 contracts
+- Stop = -5 points
+- TP 1 = +3 points (1 Contract)
+- Stop to Break even (entry + 0.5) after TP 1 is...
+PineScript code:
+
+Pine Script™ strategy
+ABUs Euroramp
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+//@version=4
+strategy("ABU Euroramp", overlay=true)
+//Chicago timezone 9am Europe / 3am EST
+if (hour == 2 and minute == 00)
+    strategy.entry("LE", strategy.long, comment="Long", qty = 2)
+    
+if (strategy.position_avg_price - 5 >= close)
+    strategy.exit("LE", comment = "Stop Loss", stop = strategy.position_avg_price - 5, qty_percent = 100)
+if (strategy.position_size == 2)
+    if (close - strategy.position_avg_price >= 3)
+        strategy.close("LE", comment="TP 1", qty_percent = 50)
+        strategy.exit("LE", comment = "Stop BE", stop = strategy.position_avg_price + 0.5)
+else
+    if (close - strategy.position_avg_price >= 10)
+        strategy.cancel("LE")
+        strategy.exit("LE", comment = "Trail Stop + 5", stop = strategy.position_avg_price + 5)
+    
+    if (hour == 15 and minute == 00)
+        strategy.close_all(comment="Close EOD")
+Expand (21 lines)

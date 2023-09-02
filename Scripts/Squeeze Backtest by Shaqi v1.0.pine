@@ -1,0 +1,223 @@
+Script Name: Squeeze Backtest by Shaqi v1.0
+Author: Shaqi
+Description: The script is for backtesting price gap's with a determined bind to the previous bar.
+PineScript code:
+
+Pine Script™ strategy
+Squeeze Backtest by Shaqi v1.0
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+//@version=4
+strategy(title="Squeeze Backtest by Shaqi v1.0", overlay=true, pyramiding=0, currency="USD", process_orders_on_close=true, commission_type=strategy.commission.percent, commission_value=0.075, default_qty_type=strategy.percent_of_equity, default_qty_value=100, initial_capital=100, backtest_fill_limits_assumption=0)
+strategy.risk.allow_entry_in(strategy.direction.long)
+R0 = "6 Hours"
+R1 = "12 Hours"
+R2 = "24 Hours"
+R3 = "48 Hours"
+R4 = "1 Week"
+R5 = "2 Weeks"
+R6 = "1 Month"
+R7 = "Maximum"
+BL = "low"
+BH = "high"
+BO = "open"
+BC = "close"
+BHL= "mid (hl)"
+BOC = "mid (oc)"
+buyPercent = input( title="Buy, %",             type=input.float,   defval=3,       minval=0.01,                        step=0.05,  inline="Percents",  group="Squeeze Settings") * 0.01
+sellPercent = input(title="Sell, %",            type=input.float,   defval=1,       minval=0.01,                        step=0.05,  inline="Percents",  group="Squeeze Settings") * 0.01
+stopPercent = input(title="Stop Loss, %",       type=input.float,   defval=1,       minval=0.01,        maxval=100,     step=0.05,  inline="Percents",  group="Squeeze Settings") * 0.01
+isMaxBars = input(  title="Max Bars To Sell",   type=input.bool,    defval=true ,                                                   inline="MaxBars",   group="Squeeze Settings")
+maxBars = input(    title="",                   type=input.integer, defval=2,       minval=0,           maxval=1000, step=1,        inline="MaxBars",   group="Squeeze Settings")
+bind = input(       title="Bind",                                   defval=BC,      options=[BL, BH, BO, BC, BHL, BOC],                                 group="Squeeze Settings")
+isRange = input(    title="Fixed Range",        type=input.bool,    defval=true,                                                    inline="Range",     group="Backtesting Period")
+rangeStart = input( title="",                                       defval=R4,      options=[R0, R1, R2, R3, R4, R5, R6, R7],       inline="Range",     group="Backtesting Period")
+periodStart = input(title="Backtesting Start",  type=input.time,    defval=timestamp("01 Aug 2021 00:00 +0000"),                                        group="Backtesting Period")
+periodEnd = input(  title="Backtesting End",    type=input.time,    defval=timestamp("01 Aug 2022 00:00 +0000"),                                        group="Backtesting Period")
+int startDate = na
+int endDate = na
+if isRange
+    if rangeStart == R0
+        startDate := timenow - 21600000
+        endDate := timenow
+    else if rangeStart == R1
+        startDate := timenow - 43200000
+        endDate := timenow
+    else if rangeStart == R2
+        startDate := timenow - 86400000
+        endDate := timenow
+    else if rangeStart == R3
+        startDate := timenow - 172800000
+        endDate := timenow
+    else if rangeStart == R4
+        startDate := timenow - 604800000
+        endDate := timenow
+    else if rangeStart == R5
+        startDate := timenow - 1209600000
+        endDate := timenow
+    else if rangeStart == R6
+        startDate := timenow - 2592000000
+        endDate := timenow
+    else if rangeStart == R7
+        startDate := time
+        endDate := timenow
+else 
+    startDate := periodStart
+    endDate := periodEnd
+    
+float bindOption = na
+if bind == BL
+    bindOption := low
+else if bind == BH
+    bindOption := high
+else if bind == BO
+    bindOption := open
+else if bind == BC
+    bindOption := close
+else if bind == BHL
+    bindOption := hl2
+else
+    bindOption := ohlc4
+afterStartDate = (time >= startDate)
+beforeEndDate = (time <= endDate)
+notInTrade = strategy.position_size == 0
+inTrade = strategy.position_size > 0
+barsFromEntry = barssince(strategy.position_size[0] > strategy.position_size[1])
+entry = strategy.position_size[0] > strategy.position_size[1]
+entryBar = barsFromEntry == 0
+notEntryBar = barsFromEntry != 0
+buyLimitPrice = bindOption - bindOption * buyPercent
+buyLimitFilled = low <= buyLimitPrice
+sellLimitPriceEntry = buyLimitPrice * (1 + sellPercent)
+sellLimitPrice = strategy.position_avg_price * (1 + sellPercent)
+stopLimitPriceEntry = buyLimitPrice - buyLimitPrice * stopPercent
+stopLimitPrice = strategy.position_avg_price - strategy.position_avg_price * stopPercent
+if afterStartDate and beforeEndDate and notInTrade
+    strategy.entry("BUY", true, limit = buyLimitPrice)
+    strategy.exit("INSTANT", limit = sellLimitPriceEntry, stop = stopLimitPriceEntry)
+strategy.cancel("INSTANT", when = inTrade)
+if isMaxBars
+    strategy.close("BUY", when = barsFromEntry >= maxBars, comment = "Don't Sell")
+strategy.exit("SELL", limit = sellLimitPrice, stop = stopLimitPrice)
+showStop = stopPercent <= 0.03
+plot(showStop ? stopLimitPrice : na, title="Stop Loss Limit Order", style=plot.style_linebr, color=color.red, linewidth=1)
+plot(sellLimitPrice, title="Take Profit Limit Order", style=plot.style_linebr, color=color.purple, linewidth=1)
+plot(strategy.position_avg_price, title="Buy Order Filled Price", style=plot.style_linebr, color=color.blue, linewidth=1)
+plot(buyLimitPrice, title="Trailing Buy Limit Order", style=plot.style_stepline, color=color.new(color.blue, 30), offset=1)
+Expand (117 lines)

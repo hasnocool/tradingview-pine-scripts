@@ -1,0 +1,136 @@
+Script Name: Donchian Channel Strategy
+Author: azankaaue
+Description: Donchian Channel Strategy from bitmex bot
+PineScript code:
+
+Pine Script™ strategy
+Donchian Channel Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+//@version=4
+strategy("Donchian Channel Strategy", overlay=true, default_qty_type= strategy.percent_of_equity, initial_capital = 1000, default_qty_value = 20, commission_type=strategy.commission.percent, commission_value=0.036)
+//Long optopns
+buyPeriodEnter = input(10, "Channel Period for Long enter position")
+buyPeriodExit = input(10, "Channel Period for Long exit position")
+isMiddleBuy = input(true, "Is exit on Base Line? If 'no' - exit on bottom line")
+takeProfitBuy = input(2.5, "Take Profit (%) for Long position")
+isBuy = input(true, "Allow Long?")
+//Short Options
+sellPeriodEnter = input(20, "Channel Period for Short enter position")
+sellPeriodExit = input(20, "Channel Period for Short exit position")
+isMiddleSell = input(true, "Is exit on Base Line? If 'no' - exit on upper line")
+takeProfitSell = input(2.5, "Take Profit (%) for Short position")
+isSell = input(true, "Allow Short?")
+// Test Start
+startYear = input(2005, "Test Start Year")
+startMonth = input(1, "Test Start Month")
+startDay = input(1, "Test Start Day")
+startTest = timestamp(startYear,startMonth,startDay,0,0)
+//Test End
+endYear = input(2050, "Test End Year")
+endMonth = input(12, "Test End Month")
+endDay = input(30, "Test End Day")
+endTest = timestamp(endYear,endMonth,endDay,23,59)
+timeRange = time > startTest and time < endTest ? true : false
+// Long&Short Levels
+BuyEnter = highest(buyPeriodEnter)
+BuyExit = isMiddleBuy ? ((highest(buyPeriodExit) + lowest(buyPeriodExit)) / 2): lowest(buyPeriodExit)
+SellEnter = lowest(sellPeriodEnter)
+SellExit = isMiddleSell ? ((highest(sellPeriodExit) + lowest(sellPeriodExit)) / 2): highest(sellPeriodExit)
+// Plot Data
+plot(BuyEnter, style=plot.style_line, linewidth=2, color=color.blue, title="Buy Enter")
+plot(BuyExit, style=plot.style_line, linewidth=1, color=color.blue, title="Buy Exit", transp=50)
+plot(SellEnter, style=plot.style_line, linewidth=2, color=color.red, title="Sell Enter")
+plot(SellExit, style=plot.style_line, linewidth=1, color=color.red, title="Sell Exit", transp=50)
+// Calc Take Profits
+TakeProfitBuy = 0.0
+TakeProfitSell = 0.0
+if strategy.position_size > 0
+    TakeProfitBuy := strategy.position_avg_price*(1 + takeProfitBuy/100)
+    
+if strategy.position_size < 0
+    TakeProfitSell := strategy.position_avg_price*(1 - takeProfitSell/100)
+// Long Position    
+if isBuy and timeRange
+    strategy.entry("Long", strategy.long, stop = BuyEnter, when = strategy.position_size == 0) 
+    
+strategy.exit("Long Exit", "Long", stop=BuyExit, limit = TakeProfitBuy, when = strategy.position_size > 0)
+// Short Position
+if isSell and timeRange
+    strategy.entry("Short", strategy.short, stop = SellEnter, when = strategy.position_size == 0) 
+    
+strategy.exit("Short Exit", "Short", stop=SellExit, limit = TakeProfitSell, when = strategy.position_size < 0)
+// Close & Cancel when over End of the Test
+if time > endTest
+    strategy.close_all()
+    strategy.cancel_all()
+Expand (70 lines)

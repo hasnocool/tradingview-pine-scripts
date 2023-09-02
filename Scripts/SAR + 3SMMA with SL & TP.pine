@@ -1,0 +1,258 @@
+Script Name: SAR + 3SMMA with SL & TP
+Author: ajahanbin1374
+Description: This script is a combination of SAR strategy and 3 Smoothed Moving Averages.
+
+ Strategy: 
+Takes SAR longs when all 3 SMMAs are rising. Take SAR short when all 3 SMMAs are falling. 
+
+Supports StopLoss and TakeProfit.
+
+If you have found a profitable setup for it, please share in the comments or private chat.
+PineScript code:
+
+Pine Script™ strategy
+SAR + 3SMMA with SL & TP
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+//@version=5
+strategy(title="SAR + 3SMMA with SL & TP", overlay=true, calc_on_order_fills=false, calc_on_every_tick=false, default_qty_type=strategy.percent_of_equity, default_qty_value=100, currency=currency.USD, commission_type= strategy.commission.percent, commission_value=0.03)
+start = input.float(0.02, step=0.01, group="SAR")
+increment = input.float(0.02, step=0.01, group="SAR")
+maximum = input.float(0.2, step=0.01, group="SAR")
+//Take Profit Inputs     
+take_profit = input.float(title="Take Profit (%)", minval=0.0, step=0.1, defval = 0.1, group="Stop Loss and Take Profit", inline="TP") * 0.01
+//Stop Loss Inputs
+stop_loss = input.float(title="StopLoss (%)", minval=0.0, step=0.1, defval=1, group="Stop Loss and Take Profit", inline="SL") * 0.01
+// Smooth Moving Average
+fastSmmaLen = input.int(21, minval=1, title="Fast Length", group = "Smooth Moving Average")
+midSmmaLen = input.int(50, minval=1, title="Mid Length", group = "Smooth Moving Average")
+slowSmmaLen = input.int(200, minval=1, title="Slow Length", group = "Smooth Moving Average")
+src = input(close, title="Source", group = "Smooth Moving Average")
+smma(ma, src, len) => 
+    smma = 0.0
+    smma := na(smma[1]) ? ma : (smma[1] * (len - 1) + src) / len
+    smma
+fastSma = ta.sma(src, fastSmmaLen)
+midSma = ta.sma(src, midSmmaLen)
+slowSma = ta.sma(src, slowSmmaLen)
+fastSmma = smma(fastSma, src, fastSmmaLen)
+midSmma = smma(midSma, src, midSmmaLen)
+slowSmma = smma(slowSma, src, slowSmmaLen)
+isSmmaUpward = ta.rising(fastSmma, 1) and ta.rising(midSmma, 1) and ta.rising(slowSmma, 1)
+var bool uptrend = na
+var float EP = na
+var float SAR = na
+var float AF = start
+var float nextBarSAR = na
+if bar_index > 0
+    firstTrendBar = false
+    SAR := nextBarSAR
+    if bar_index == 1
+        float prevSAR = na
+        float prevEP = na
+        lowPrev = low[1]
+        highPrev = high[1]
+        closeCur = close
+        closePrev = close[1]
+        if closeCur > closePrev
+            uptrend := true
+            EP := high
+            prevSAR := lowPrev
+            prevEP := high
+        else
+            uptrend := false
+            EP := low
+            prevSAR := highPrev
+            prevEP := low
+        firstTrendBar := true
+        SAR := prevSAR + start * (prevEP - prevSAR)
+    if uptrend
+        if SAR > low
+            firstTrendBar := true
+            uptrend := false
+            SAR := math.max(EP, high)
+            EP := low
+            AF := start
+    else
+        if SAR < high
+            firstTrendBar := true
+            uptrend := true
+            SAR := math.min(EP, low)
+            EP := high
+            AF := start
+    if not firstTrendBar
+        if uptrend
+            if high > EP
+                EP := high
+                AF := math.min(AF + increment, maximum)
+        else
+            if low < EP
+                EP := low
+                AF := math.min(AF + increment, maximum)
+    if uptrend
+        SAR := math.min(SAR, low[1])
+        if bar_index > 1
+            SAR := math.min(SAR, low[2])
+    else
+        SAR := math.max(SAR, high[1])
+        if bar_index > 1
+            SAR := math.max(SAR, high[2])
+    nextBarSAR := SAR + AF * (EP - SAR)
+sarIsUpTrend = uptrend ? true : false
+sarFlippedDown = sarIsUpTrend and not sarIsUpTrend[1] ? true : false
+sarFlippedUp = not sarIsUpTrend and sarIsUpTrend[1] ? true : false
+longEntryCondition = isSmmaUpward and sarFlippedDown
+shortEntryCondition = not isSmmaUpward and sarFlippedUp
+if(longEntryCondition)
+    strategy.entry("L", strategy.long, stop=nextBarSAR, comment="L")
+if(shortEntryCondition)
+    strategy.entry("S", strategy.short, stop=nextBarSAR, comment="S")
+strategy.exit("CL", when=strategy.position_size > 0, limit=strategy.position_avg_price * (1+take_profit), stop=strategy.position_avg_price*(1-stop_loss))
+strategy.exit("CS", when=strategy.position_size < 0, limit=strategy.position_avg_price * (1-take_profit), stop=strategy.position_avg_price*(1+stop_loss))
+plot(SAR, style=plot.style_cross, linewidth=1, color=color.orange)
+plot(nextBarSAR, style=plot.style_cross, linewidth=1, color=color.aqua)
+plot(series = fastSmma, title="fastSmma", linewidth=1)
+plot(series = midSmma, title="midSmma", linewidth=2)
+plot(series = slowSmma, title="slowSmma", linewidth=3)
+plotchar(series = isSmmaUpward, title="isSmmaUpward", char='')
+plotchar(series=sarIsUpTrend, title="sarIsUpTrend", char='')
+plotchar(series=sarFlippedUp, title="sarFlippedUp", char='')
+plotchar(series=sarFlippedDown, title="sarFlippedDown", char='')
+plotchar(series=longEntryCondition, title="longEntryCondition", char='')
+plotchar(series=shortEntryCondition, title="shortEntryCondition", char='')
+plotchar(series=strategy.position_size > 0, title="inLong", char='')
+plotchar(series=strategy.position_size < 0, title="inShort", char='')
+//plot(strategy.equity, title="equity", color=color.red, linewidth=2, style=plot.style_areabr)
+Expand (133 lines)

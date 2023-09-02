@@ -1,0 +1,136 @@
+Script Name: Fib and RSI Strategy Pineconnector
+Author: Wicked-Pro
+Description: Use on 1m only For best results
+strategy check for RSI overbought or oversold when key Fib levels are hit
+Optimisez to use with Pineconnector using alerts with {{strategy.order.alert_message}}
+Feel free to comment or DM if you want to improve
+
+Enjoy
+PineScript code:
+
+Pine Script™ strategy
+Fib and RSI Strategy Pineconnector
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+//@version=4
+strategy(title="Gab Fib  + RSI", overlay=true, default_qty_type=strategy.cash, default_qty_value=100000, initial_capital=1000, currency=currency.USD, commission_type=strategy.commission.cash_per_order, commission_value=4)
+// Inputs
+timeFilter = year >= 2000
+    // Stop Loss 
+stop_loss = input(title="SL in % of Instrum. i.e 1.5%=150pips", minval=0, step=0.1, defval=1.5) /100
+    // RSI Inputs
+len = input(title="[RSI] Length", minval=0, step=1, defval=14)
+overSold = input(title="[RSI] Over Sold %", defval=30)
+overBought = input(title="[RSI] Over Bought %", defval=70)
+    // Fibonacci Levels
+length = input(title="[Fibonacci] Length", defval=200, minval=1)
+src = input(hlc3, title="[Fibonacci] Source")
+mult = input(title="[Fibonacci] Multiplier", defval=3.0, minval=0.001, maxval=50)
+level = input(title="[Fibonacci] Level", defval=764)
+// Calculate Fibonacci
+basis = vwma(src, length)
+dev = mult * stdev(src, length)
+fu764= basis + (0.001*level*dev)
+fu1= basis + (1*dev)
+fd764= basis - (0.001*level*dev)
+fd1= basis - (1*dev)
+// Calculate RSI
+vrsi = rsi(close, len)
+// Calculate the Targets
+targetUp = fd764
+targetDown = fu764
+    // Actual Targets
+bought = strategy.position_size[0] > strategy.position_size[1]
+exit_long = valuewhen(bought, targetUp, 0)
+sold = strategy.position_size[0] < strategy.position_size[1]
+exit_short = valuewhen(sold, targetDown, 0)
+// Calculate Stop Losses
+sl_long = close * (1-stop_loss)
+sl_short = close * (1+stop_loss)
+// Conditions to Open Trades
+openLong = low < fd1 and crossover(vrsi[1], overSold)
+openShort = high > fu1 and crossunder(vrsi[1], overBought)
+// Conditions to Close Trades
+closeLong = high > exit_long or sl_long
+closeShort = low < exit_short or sl_short
+//Rounding to MinTick value
+roundtargetUp = round_to_mintick(targetUp)
+roundtargetDown = round_to_mintick(targetDown)
+roundsllong = round_to_mintick(sl_long)
+roundslshort = round_to_mintick(sl_short)
+// Strategy Orders
+if timeFilter
+    // Entry Orders
+    strategy.entry(id="buy", long=true, when=openLong and high < targetUp, limit=close, alert_message="buy,"+tostring(syminfo.ticker)+",tp="+tostring(roundtargetUp)+",sl="+tostring(roundsllong))
+    strategy.entry(id="sell", long=false, when=openShort and low > targetDown, limit=close,  alert_message="sell,"+tostring(syminfo.ticker)+",tp="+tostring(roundtargetDown)+",sl="+tostring(roundslshort))
+    // Exit Orders
+    strategy.exit(id="closelong", when=closeLong and strategy.position_size > 0, limit=exit_long, stop=sl_long, alert_message="closelong,"+tostring(syminfo.ticker))
+    strategy.exit(id="closeshort", when=closeShort and strategy.position_size < 0, limit=exit_short, stop=sl_short, alert_message="closeshort,"+tostring(syminfo.ticker))
+Expand (68 lines)

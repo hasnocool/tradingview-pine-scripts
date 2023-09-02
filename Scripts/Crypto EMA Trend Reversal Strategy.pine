@@ -1,0 +1,182 @@
+Script Name: Crypto EMA Trend Reversal Strategy
+Author: ADHDCRYPT0
+Description: This is an EMA crossover strategy which involves 5 EMAs to trigger trades. The strategy has two take profit settings and uses a stop loss.
+
+TP1 and SL are based on ATR and TP2 is an EMA crossover.
+
+The strategy goes both long and short and the default settings work particularly well as a scalping strategy for ETHUSDT on the 5M time frame.
+
+I have also created...
+PineScript code:
+
+Pine Script™ strategy
+Crypto EMA Trend Reversal Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// @author ADHDCRYPT0
+//@version=4
+strategy(title = "EMA double crossover", shorttitle = "(TEST) double cross over", overlay = true, default_qty_value = 100, initial_capital = 1000,default_qty_type=strategy.percent_of_equity, pyramiding=0, process_orders_on_close=true)
+// Variables
+ema_len1 = input(9 , title="Fast EMA")
+ema_len2 = input(21, title="Slow EMA")
+ema_len3 = input(5, title="Exit EMA")
+ema_len4 = input(1, title="FastConf EMA")
+ema_len5 = input(4, title="SlowConf EMA")
+fastEMA = ema(open, ema_len1)
+slowEMA = ema(open, ema_len2)
+exitEMA = ema(open, ema_len3)
+conf1EMA = ema(open, ema_len4)
+conf2EMA = ema(open, ema_len5)
+plot(fastEMA, title='fastEMA', transp=0, color=color.green)
+plot(slowEMA, title='slowEMA', transp=0, color=color.red  )
+plot(exitEMA, title='exitEMA', transp=0, color=color.orange)
+plot(conf1EMA, title='conf1EMA', transp=0, color=color.blue)
+plot(conf2EMA, title='conf2EMA', transp=0, color=color.black)
+vol = volume 
+volma = sma(volume,7)
+vol_cond = vol>volma
+atr = atr(5)
+// Entry Conditions and vol_cond
+long = crossover(fastEMA, slowEMA) and (conf1EMA > conf2EMA) and (fastEMA < exitEMA)
+short= crossunder(fastEMA, slowEMA) and (conf1EMA < conf2EMA) and (fastEMA > exitEMA)
+tradeType = input("BOTH", title="What trades should be taken : ", options=["LONG", "SHORT", "BOTH", "NONE"])
+pos = 0.0
+if tradeType=="BOTH"
+    pos:= long? 1 : short? -1 : pos[1]
+if tradeType=="LONG"
+    pos:= long? 1 : pos[1]
+if tradeType=="SHORT"
+    pos:=short? -1 : pos[1]
+longCond  = long  and (pos[1]!= 1 or na(pos[1]))
+shortCond = short and (pos[1]!=-1 or na(pos[1]))
+// EXIT FUNCTIONS //
+sl  = input(1, title="Stop Loss (ATR)", minval=0)
+tp  = input(6, title="Take Profit 1 (ATR)", minval=0)
+// Simple Stop Loss + 2 Take Profits
+sl_long   =  valuewhen(longCond , low - atr * sl, 0)
+sl_short  =  valuewhen(shortCond, high+ atr * sl, 0)
+tp_long  = valuewhen(longCond , high + atr * tp, 0)
+tp_short = valuewhen(shortCond, low  - atr * tp, 0)
+long_exit = crossover(fastEMA, exitEMA) and pos[1]==1
+short_exit= crossover(exitEMA, fastEMA) and pos[1]==-1
+if long_exit or short_exit
+    pos:=0
+// Position Adjustment
+long_sl  = low <sl_long [1] and pos[1]==1
+short_sl = high>sl_short[1] and pos[1]==-1
+if long_sl or short_sl
+    pos:=0
+    
+//  Strategy Backtest Limiting Algorithm
+i_startTime = input(defval = timestamp("01 Sep 2002 13:30 +0000"), title = "Backtesting Start Time", type = input.time)
+i_endTime = input(defval = timestamp("30 Sep 2099 19:30 +0000"), title = "Backtesting End Time", type = input.time)
+timeCond = (time > i_startTime) and (time < i_endTime)
+// Make sure we are within the bar range, Set up entries and exit conditions
+if strategy.equity >0
+    strategy.entry("long" , strategy.long , when=longCond  and timeCond and tradeType!="SHORT" , alert_message="INSERT MESSAGE HERE")
+    strategy.entry("short", strategy.short, when=shortCond and timeCond and tradeType!="LONG" , alert_message="INSERT MESSAGE HERE")
+    
+    strategy.exit("SL/TP1", from_entry = "long" , stop=sl_long , limit=tp_long , alert_message="INSERT MESSAGE HERE")
+    strategy.exit("SL/TP1", from_entry = "short", stop=sl_short, limit=tp_short, alert_message="INSERT MESSAGE HERE")
+    strategy.exit("SL", from_entry = "long" , stop=sl_long, alert_message="INSERT MESSAGE HERE")
+    strategy.exit("SL", from_entry = "short", stop=sl_short, alert_message="INSERT MESSAGE HERE")
+    
+    strategy.close("long", when=long_exit , comment="TP2", alert_message="INSERT MESSAGE HERE")
+    strategy.close("short", when=short_exit, comment="TP2", alert_message="INSERT MESSAGE HERE")
+Expand (96 lines)

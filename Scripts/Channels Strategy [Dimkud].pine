@@ -1,0 +1,1156 @@
+Script Name: Channels Strategy [Dimkud]
+Author: dimkud
+Description: Channels trading Strategy. Based on "Channels Strategy" by JoseMetal.
+
+To the original strategy added additional options and filters : Static SL/TP in percents (%),  time delay between orders, ATR Filter, second Keltner Channel (Multi TimeFrame).
+Interface translated to English.
+
+Were good backtest results on many crypto tokens on 15m - 45m - 1h periods.
+Mostly...
+PineScript code:
+
+Pine Script™ strategy
+Channels Strategy [Dimkud]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+540
+541
+542
+543
+544
+545
+546
+547
+548
+549
+550
+551
+552
+553
+554
+555
+556
+557
+558
+559
+560
+561
+562
+563
+564
+565
+566
+567
+568
+569
+570
+571
+572
+573
+574
+575
+576
+577
+578
+579
+580
+581
+582
+583
+584
+585
+586
+587
+588
+589
+590
+591
+592
+593
+594
+595
+596
+597
+598
+599
+600
+601
+602
+603
+604
+605
+606
+607
+608
+609
+610
+611
+612
+613
+614
+615
+616
+617
+618
+619
+620
+621
+622
+623
+624
+625
+626
+627
+628
+629
+630
+631
+632
+633
+634
+635
+636
+637
+638
+639
+640
+641
+642
+643
+644
+645
+646
+647
+648
+649
+650
+651
+652
+653
+654
+655
+656
+657
+658
+659
+660
+661
+662
+663
+664
+665
+666
+667
+668
+669
+670
+671
+672
+673
+674
+675
+676
+// Based on Channels Strategy [JoseMetal]
+// Edited by Dimkud
+//@version=5
+strategy("Channels Strategy [Dimkud]", overlay=true, calc_on_order_fills=true, use_bar_magnifier=true, pyramiding=0, commission_type=strategy.commission.percent, commission_value=0.04, max_labels_count=500, default_qty_type=strategy.cash, default_qty_value=200, initial_capital=1000 )
+// DIMAK  Static SL/TP - Begin
+GRUPO_statSLTP = "Static SL/TP"
+USEdisplTPSL =  input(defval=false, title='Display Visualisation for TP/SL ?', group = GRUPO_statSLTP)
+// Make inputs that set the take profit % (optional)
+var longProfitPerc = input.float(defval=2.6, title="Take Profit (%)", group=GRUPO_statSLTP, minval=0.0, step=0.1) / 100
+var shortProfitPerc = longProfitPerc
+var longSLPerc = input.float(defval=1.3, title="Stop Loss (%)", group=GRUPO_statSLTP, minval=0.0, step=0.1) / 100
+var shortSLPerc = longSLPerc
+// Figure out take profit price  (placed after strategy.entry("Abrir Long", strategy.long) )
+longExitPrice  = strategy.position_avg_price * (1 + longProfitPerc)
+shortExitPrice = strategy.position_avg_price * (1 - shortProfitPerc)
+longSLExitPrice  = strategy.position_avg_price * (1 - longSLPerc)
+shortSLExitPrice = strategy.position_avg_price * (1 + shortSLPerc)
+// use tak: limit=shortExitPrice, stop=shortSLExitPrice
+SendSLsingonReal =  input(defval=false, title='Send SL alerts on Real Trading ?', group = GRUPO_statSLTP)
+// DIMAK  Static SL/TP - END
+// Time filter =================================
+testPeriod() =>
+    // Testing Start dates
+    grTIME = "============Time Filter (use for Tests)==============="
+    testStartYear = input.int(2022, 'Start Year', inline='date1', group=grTIME)
+    testStartMonth = input.int(5, '', inline='date1', group=grTIME)
+    testStartDay = input.int(1, '', inline='date1', group=grTIME)
+    testPeriodStart = timestamp(testStartYear, testStartMonth, testStartDay, 0, 0)
+    //Stop date if you want to use a specific range of dates
+    testStopYear = input.int(2030, 'Stop Year', inline='date2', group=grTIME)
+    testStopMonth = input.int(12, '', inline='date2', group=grTIME)
+    testStopDay = input.int(30, '', inline='date2', group=grTIME)
+    testPeriodStop = timestamp(testStopYear, testStopMonth, testStopDay, 0, 0)
+    //time >= testPeriodStart and time < testPeriodStop ? true : false
+    // pass some date
+    testPeriodStop2 =  timestamp(2022,11,7,0,0)
+    testPeriodStop3 =  timestamp(2022,11,9,0,0)
+    (time >= testPeriodStart) and (time < testPeriodStop) and ((time < testPeriodStop2) or (time > testPeriodStop3)) ? true : false
+// Time filter =================================
+// Two ATR (Volatility Check)
+grDATR="=======Two ATR (Volatility Check) Base Settings========="
+//useDATR = input(defval=false, title='Use Two ATR (Volatility Check) ?', group = grDATR)
+lengthDATR = input.int(title='ATR length1 (20)(5)', defval=20, minval=1, group = grDATR)
+length2DATR = input.int(title='ATR length2 (100)(20)', defval=100, minval=1, group = grDATR)
+smoothingDATR = input.string(title='ATR Smoothing', defval='WMA', options=['RMA', 'SMA', 'EMA', 'WMA'], group = grDATR)
+DATR_ma_function(sourceDATR, lengthDATR1) =>
+    if smoothingDATR == 'RMA'
+        ta.rma(sourceDATR, lengthDATR1)
+    else
+        if smoothingDATR == 'SMA'
+            ta.sma(sourceDATR, lengthDATR1)
+        else
+            if smoothingDATR == 'EMA'
+                ta.ema(sourceDATR, lengthDATR1)
+            else // WMA
+                ta.wma(sourceDATR, lengthDATR1)
+datr1 = DATR_ma_function(ta.tr(true), lengthDATR)
+datr2 = DATR_ma_function(ta.tr(true), length2DATR)
+// ATR Histograme
+datr_hist = datr1-datr2
+//plot(datr1+0.4, title='ATR', color=color.new(#77C5E1, 0))
+//plot(datr2+0.4, title='ATR', color=color.new(#FF5252, 0))
+//plot(datr_hist, color=color.red, style=plot.style_histogram)
+// block for filters "ATR1 < ATR2" BEGIN
+// "ATR1 < ATR2 - Volatility is Small in last bars, ATR1 > ATR2 - Volatility is High in last bars"
+grATR1ATR2 = "=============== Two ATR (ATR1 <> ATR2)=============="
+use_atr1toart2_more_less = input(defval=false, title='Use ATR1 <> ATR2 ? ', group = grATR1ATR2)
+atr1toart2_more_less = input.string(title='ATR1 to ATR2', defval='ATR1 < ATR2', options=['ATR1 < ATR2', 'ATR1 > ATR2'], group = grATR1ATR2, tooltip = "ATR1 < ATR2 - Volatility is Small in last bars, ATR1 > ATR2 - Volatility is High in last bars")
+datr1todatr3 = use_atr1toart2_more_less and (atr1toart2_more_less == "ATR1 < ATR2") and (datr1 < datr2) ? true :  use_atr1toart2_more_less and (atr1toart2_more_less == "ATR1 > ATR2") and (datr1 > datr2) ? true : false
+longCondition2 = true
+shortCondition2 = true
+if use_atr1toart2_more_less
+    longCondition2 := false
+    shortCondition2 := false
+   
+    longCondition2 := datr1todatr3
+    shortCondition2 := longCondition2 
+else
+    longCondition2 := true
+    shortCondition2 := true
+// shortCondition2 and longCondition2 is if Fast ATR Must be higher (or Lower) than Slow ATR !!!
+// block for filters "ATR1 < ATR2" END
+// ==========================================================================
+// NOTE "ATR1 < ATR2" and ( Barssince_Highest/Lowest + falling/rising ) are working separately. But Same ATR settings
+// ==========================================================================
+// ========== Two Average True Range ===============================
+c_verde_radiactivo = color.rgb(0, 255, 0, 0)
+c_verde            = color.rgb(0, 128, 0, 0)
+c_verde_oscuro     = color.rgb(0, 80, 0, 0)
+c_rojo_radiactivo  = color.rgb(255, 0, 0, 0)
+c_rojo             = color.rgb(128, 0, 0, 0)
+c_rojo_oscuro      = color.rgb(80, 0, 0, 0)
+noneColor          = color.new(color.white, 100)
+// GRUPO_per_pruebas = "Tests period"
+// fecha_inicio     = input.time(0, "Start date", group=GRUPO_per_pruebas) 
+// fecha_fin_usar   = input.bool(false, "Finish date", group=GRUPO_per_pruebas, inline="fecha_finalizacion") 
+// fecha_fin        = input.time(timestamp("1 Jan 2022"), "", group=GRUPO_per_pruebas, inline="fecha_finalizacion")
+// vela_en_fecha    = time >= fecha_inicio and (fecha_fin_usar ? time <= fecha_fin : true)
+posicion_abierta = strategy.position_size != 0
+LONG_abierto     = strategy.position_size > 0
+SHORT_abierto    = strategy.position_size < 0
+//== Strategy entry and exit conditions
+GRUPO_P           = "Main Channel Settings"
+P_indicador       = input.string("Keltner Channel", "Indicator", ["Bollinger Bands", "Keltner Channel"], group=GRUPO_P)
+P_permitir_LONGS  = input.bool(title="Use LONGS ?", group=GRUPO_P, defval=true)
+P_permitir_SHORTS = input.bool(title="Use SHORTS ?", group=GRUPO_P, defval=false)
+P_cond_entrada    = input.string("Wick out of band", "Enter Condition", ["Wick out of band", "Wick out of the band then close in", "Out-of-band closure", "Close out of the band then close in"], "Se puede escoger (en orden) que el precio haya salido de la banda, que además la siguiente vela cierre de nuevo dentro de la misma, que el precio tenga que cerrar fuera, y que además la siguiente vela tenga que cerrar dentro de nuevo.", group=GRUPO_P)
+GRUPO_TPSL       = "Stop Loss and Take Profit"
+TP_SL_tipo_SL    = input.string("useStaticSLTP", "Stop Loss Type", options=["Previous Wick", "Extended Band", "ATR", "useStaticSLTP"], group=GRUPO_TPSL)
+TP_SL_tipo_TP    = input.string("useStaticSLTP",  "Take Profit Type", options=["Opposite Band", "Moving Average", "ATR", "useStaticSLTP"], group=GRUPO_TPSL)
+TPSL_SL_ATR_mult = input.float(title="• (Solo ATR) Multiplicador Stop Loss", group=GRUPO_TPSL, defval=1, minval=0.1, step=0.1, inline="tp_sl", tooltip="These are the ATR multipliers to calculate STOP LOSS and TAKE PROFIT if selected as such.")
+TPSL_TP_ATR_mult = input.float(title="• (Solo ATR) Multiplicador Take Profit", group=GRUPO_TPSL, defval=1.8, minval=0.1, step=0.1, inline="tp_sl")
+TPSL_SL_BB_dev   = input.float(title="• (Solo STOP LOSS con BB) Desviación estándar", group=GRUPO_TPSL, defval=4.0, minval=0.01, step=0.5, tooltip="In case of using Bollinger Bands as STOP LOSS, this will be the value of its standard deviation.")
+TPSL_SL_KC_mult  = input.float(title="• (Solo STOP LOSS con KC) Multiplicador", group=GRUPO_TPSL, defval=3, minval=0.01, step=0.5, tooltip="In case of using Keltner channels as STOP LOSS, this will be the value of your ATR multiplier.")
+TP_SL_TP_dinamico = input.bool(title="Take Profit dinámico", group=GRUPO_TPSL, defval=false, tooltip="This will make the Take Profit adjust bar by bar instead of staying fixed at its initial value.")
+GRUPO_KC  = "Keltner Channel"
+KC_length = input.int(title="Keltner Long.", group=GRUPO_KC, defval=14, minval=1, inline="kc")
+KC_mult   = input.float(title="Keltner Mult.", group=GRUPO_KC, defval=1.5, minval=0.01, step=0.05, inline="kc")
+[KC_mid, KC_upper, KC_lower]  = ta.kc(close, KC_length, KC_mult, true)
+[_, KC_upper_SL, KC_lower_SL] = ta.kc(close, KC_length, TPSL_SL_KC_mult, true)
+GRUPO_BB  = "Bollinger Bands"
+BB_length = input.int(title="BB Long. ", group=GRUPO_BB, defval=20, minval=1, inline="bb")
+BB_dev   = input.float(title="BB Deviation (Desv.)", group=GRUPO_BB, defval=2.0, minval=0.01, step=0.05, inline="bb")
+[BB_mid, BB_upper, BB_lower]  = ta.bb(close, BB_length, BB_dev)
+[_, BB_upper_SL, BB_lower_SL] = ta.bb(close, BB_length, TPSL_SL_BB_dev)
+// dimak KC timeframe
+// NOT USED
+// GRUPO_KC_TF  = "Keltner Channel - Multi TimeFrame"
+// useTF_KC   = input.bool(false, "Use KC TimeFrame", group=GRUPO_KC_TF) 
+// KC_TF_length = input.int(title="Keltner TF Long:", group=GRUPO_KC_TF, defval=20, minval=1, inline="kc")
+// KC_TF_mult   = input.float(title="Keltner TF Mult:", group=GRUPO_KC_TF, defval=2, minval=0.01, step=0.05, inline="kc")
+// tf_indicator = input.timeframe(title="KC TimeFrame:", defval = '', group=GRUPO_KC_TF, inline = "03")
+// //EMAi   = ta.ema(close, KC_TF_length)
+// [Keltmiddle, Keltupper, Keltlower] = ta.kc(close, KC_TF_length, KC_TF_mult)
+// KC_TF_upper  = request.security(syminfo.tickerid, tf_indicator, Keltupper, gaps=barmerge.gaps_off)
+// KC_TF_lower  = request.security(syminfo.tickerid, tf_indicator, Keltlower, gaps=barmerge.gaps_off)
+// //KC_TF_mid = request.security(syminfo.tickerid, tf_indicator, EMAi, gaps=barmerge.gaps_off)
+// // =================================================================
+// longCondition3  = true
+// shortCondition3 = true
+// if (useTF_KC)
+//     longCondition3  := false
+//     shortCondition3 := false
+//     if (P_cond_entrada == "Mecha fuera de la banda")
+//         longCondition3  :=  low < KC_TF_lower
+//         shortCondition3 :=  high > KC_TF_upper
+//     else if (P_cond_entrada == "Mecha fuera de la banda y luego cierre dentro")
+//         longCondition3  := low[1] < KC_TF_lower and close > KC_TF_lower
+//         shortCondition3 := high[1] > KC_TF_upper and close < KC_TF_upper
+//     else if (P_cond_entrada == "Cierre fuera de la banda")
+//         longCondition3  := close < KC_TF_lower
+//         shortCondition3 := close > KC_TF_upper
+//     else // Cierre fuera de la banda y luego cierre dentro
+//         longCondition3  := close[1] < KC_TF_lower and close > KC_TF_lower
+//         shortCondition3 := close[1] > KC_TF_upper and close < KC_TF_upper
+// else 
+//     longCondition3  := true
+//     shortCondition3 := true
+// // KC TF
+// plot(KC_TF_upper, "Banda superior", color.rgb(3, 81, 92))
+// //plot(KC_TF_mid, "Media móvil", color.rgb(192, 122, 17))
+// plot(KC_TF_lower, "Banda inferior", color.rgb(3, 81, 92))
+// ===============dimak KC timeframe ================  END
+//== Inputs de indicadores
+// ATR
+GRUPO_ATR      = "ATR (only for ATR SL/TP)"
+//ATR_referencia = input.source(title="ATR Reference", group=GRUPO_ATR, defval=close, inline="atr_calc") // The font is not applied to the ATR calculation, it is for the positioning with respect to the price on the chart
+ATR_referencia = close
+ATR_length     = input.int(title="ATR Length", group=GRUPO_ATR, defval=7, minval=1, inline="atr_calc")
+ATR            = ta.atr(ATR_length)
+ATR_sl         = ATR * TPSL_SL_ATR_mult
+ATR_tp         = ATR * TPSL_TP_ATR_mult
+ATR_LONG_sl    = ATR_referencia - ATR_sl // Conversely, the lower one can be used as STOP LOSS or TRAILING STOP
+ATR_LONG_tp    = ATR_referencia + ATR_tp // The ATR on the candles can be used as TAKE PROFIT
+ATR_SHORT_sl   = ATR_referencia + ATR_sl // ""
+ATR_SHORT_tp   = ATR_referencia - ATR_tp // For Shorts it's the other way around
+//== Calculation of conditions
+// Assign common variables based on the selected indicator
+banda_superior = BB_upper
+media_movil    = BB_mid
+banda_inferior = BB_lower
+banda_extendida_sup_SL = BB_upper_SL
+banda_extendida_inf_SL = BB_lower_SL
+if (P_indicador == "Keltner Channel")
+    banda_superior := KC_upper
+    media_movil    := KC_mid
+    banda_inferior := KC_lower
+    banda_extendida_sup_SL := KC_upper_SL
+    banda_extendida_inf_SL := KC_lower_SL
+// Calcular condiciones de entrada
+longCondition1  = false
+shortCondition1 = false
+if (P_cond_entrada == "Wick out of band")
+    longCondition1  := low < banda_inferior
+    shortCondition1 := high > banda_superior
+else if (P_cond_entrada == "Wick out of the band then close in")
+    longCondition1  := low[1] < banda_inferior and close > banda_inferior
+    shortCondition1 := high[1] > banda_superior and close < banda_superior
+else if (P_cond_entrada == "Out-of-band closure")
+    longCondition1  := close < banda_inferior
+    shortCondition1 := close > banda_superior
+else // Close out of the band then close in
+    longCondition1  := close[1] < banda_inferior and close > banda_inferior
+    shortCondition1 := close[1] > banda_superior and close < banda_superior
+//== Entrada (deben cumplirse todas para entrar)
+//==================================================================================
+//======Dimak Delay ======================================================================
+i_qtyTimeUnits  = - input.float(1, "Delay between orders:", inline = "1", minval = 0, tooltip = "Use 0 for no delay", group="Time_Delay")
+i_timeUnits     = input.string("minutes", "", inline = "1", options = ["seconds", "minutes", "hours", "days", "chart"], group="Time_Delay")
+useDelay   = input.bool(false, "UseDelay", group="Time_Delay") 
+// ————— Converts current chart timeframe into a float minutes value.
+f_tfInMinutes() => 
+    _tfInMinutes = timeframe.multiplier * (
+      timeframe.isseconds ? 1. / 60             :
+      timeframe.isminutes ? 1.                  :
+      timeframe.isdaily   ? 60. * 24            :
+      timeframe.isweekly  ? 60. * 24 * 7        :
+      timeframe.ismonthly ? 60. * 24 * 30.4375  : na)
+f_timeFrom(_from, _qty, _units) =>
+    int _timeFrom = na
+    // Remove any "s" letter in the _units argument, so we don't need to compare singular and plural unit names.
+    _unit = str.replace_all(_units, "s", "")
+    // Determine if we will calculate offset from the bar's time or from current time.
+    _t = _from == "bar" ? time : _from == "close" ? time_close : timenow
+    // Calculate time at offset.
+    if _units == "chart"
+        // Offset in chart res multiples.
+        _timeFrom := int(_t + (f_tfInMinutes() * 60 * 1000 * _qty))
+    else
+        // Add the required _qty of time _units to the _from starting time.
+        _year   = year(_t)       + (_unit == "year"   ? int(_qty) : 0)
+        _month  = month(_t)      + (_unit == "month"  ? int(_qty) : 0)
+        _day    = dayofmonth(_t) + (_unit == "day"    ? int(_qty) : 0)
+        _hour   = hour(_t)       + (_unit == "hour"   ? int(_qty) : 0)
+        _minute = minute(_t)     + (_unit == "minute" ? int(_qty) : 0)
+        _second = second(_t)     + (_unit == "econd"  ? int(_qty) : 0)
+        // Return the resulting time in ms Unix time format.
+        _timeFrom := timestamp(_year, _month, _day, _hour, _minute, _second)
+// Time delay filter
+var float lastTradeTime = na
+if nz(ta.change(strategy.position_size), time) != 0
+    // An order has been executed; save the bar's time.
+    lastTradeTime := time
+// If user has chosen to do so, wait `i_qtyTimeUnits` `i_timeUnits` between orders
+delayElapsed = useDelay ? f_timeFrom("close", i_qtyTimeUnits, i_timeUnits) >= lastTradeTime : true
+// ==== Dimak Delay End ======================================================================
+// ======================= dimak RSI timeframe   Begin 1111111 ====================
+GRUPO_RSI_TF  = "==========RSI - Multi TimeFrame [1] ============"
+lengthRSI = input.int(title="RSI TF Long(14):", group=GRUPO_RSI_TF, defval=14, minval=1)
+tf_rsi_indicator = input.timeframe("",title="RSI TimeFrame:", group=GRUPO_RSI_TF)
+useRSITFoverSold = input.bool(false, 'Use RSI LONG Range', group=GRUPO_RSI_TF)
+overSoldRSITF = input.int(title='(LONG) RSI is More', group=GRUPO_RSI_TF, defval=30, step=5, minval=1, inline='22')
+overSold2RSITF = input.int(title='& Less', group=GRUPO_RSI_TF, defval=70, minval=1, maxval = 100, step=5, inline='22')
+useRSITFFoverBought = input.bool(false, 'Use RSI SHORT Range', group=GRUPO_RSI_TF)
+overBoughtRSITF = input.int(title='(SHORT) RSI is Less', group=GRUPO_RSI_TF, defval=70, step=5, minval=1, maxval = 100, inline='33')
+overBought2RSITF = input.int(title='& More', group=GRUPO_RSI_TF, defval=30, minval=1, step=5, inline='33')
+rsi_tf1 = request.security(syminfo.tickerid, tf_rsi_indicator, ta.rsi(close, lengthRSI), barmerge.gaps_off)
+//=====================================================    
+longCondition8  = true
+shortCondition8 = true
+if useRSITFoverSold or useRSITFFoverBought
+    longCondition8  := false
+    shortCondition8 := false
+    if useRSITFoverSold and (rsi_tf1 >= overSoldRSITF) and (rsi_tf1 <= overSold2RSITF)
+        longCondition8  := true
+    
+    if useRSITFFoverBought and (rsi_tf1 <= overBoughtRSITF)  and (rsi_tf1 >= overBought2RSITF)
+        shortCondition8 := true
+else 
+    longCondition8  := true
+    shortCondition8 := true
+//dimak RSI timeframe  END
+//=====================================================
+// ======================= dimak RSI timeframe   Begin 22222222 ====================
+GRUPO_RSI_TF2  = "==========RSI - Multi TimeFrame [2] ============"
+lengthRSI2 = input.int(title="RSI TF Long(14)[2]:", group=GRUPO_RSI_TF2, defval=14, minval=1)
+tf_rsi_indicator2 = input.timeframe("",title="RSI TimeFrame[2]:", group=GRUPO_RSI_TF2)
+useRSITFoverSold2 = input.bool(false, 'Use RSI LONG Range[2]', group=GRUPO_RSI_TF2)
+overSoldRSITF2 = input.int(title='(LONG) RSI is More[2]', group=GRUPO_RSI_TF2, defval=30, step=5, minval=1, inline='22')
+overSold2RSITF2 = input.int(title='& Less[2]', group=GRUPO_RSI_TF2, defval=70, minval=1,  maxval = 100, step=5, inline='22')
+useRSITFFoverBought2 = input.bool(false, 'Use RSI SHORT Range[2]', group=GRUPO_RSI_TF2)
+overBoughtRSITF2 = input.int(title='(SHORT) RSI is Less[2]', group=GRUPO_RSI_TF2, defval=70, maxval = 100, step=5, minval=1, inline='33')
+overBought2RSITF2 = input.int(title='& More[2]', group=GRUPO_RSI_TF2, defval=30, minval=1, step=5, inline='33')
+rsi_tf2 = request.security(syminfo.tickerid, tf_rsi_indicator2, ta.rsi(close, lengthRSI2), barmerge.gaps_off)
+//=====================================================    
+longCondition10  = true
+shortCondition10 = true
+if useRSITFoverSold2 or useRSITFFoverBought2 and not na(rsi_tf2)
+    longCondition10  := false
+    shortCondition10 := false
+    if useRSITFoverSold2 and (rsi_tf2 >= overSoldRSITF2) and (rsi_tf2 <= overSold2RSITF2)
+        longCondition10  := true
+    
+    if useRSITFFoverBought2 and (rsi_tf2 <= overBoughtRSITF2)  and (rsi_tf2 >= overBought2RSITF2)
+        shortCondition10 := true
+else 
+    longCondition10  := true
+    shortCondition10 := true
+//dimak RSI timeframe  END
+//=====================================================
+// ============ dimak "Money Flow Index" Filter Timeframe  [111]  =============
+GRUPO_MFI_TF = '===========Money Flow Index Filter TimeFrame [1] ==========='
+lengthMFI = input.int(title='MFI TF Long:', group=GRUPO_MFI_TF, defval=14, minval=1)
+tf_mfi_indicator = input.timeframe('', title='MFI TimeFrame:', group=GRUPO_MFI_TF)
+useMFITFoverSold = input.bool(false, 'Use MFI LONG Range', group=GRUPO_MFI_TF)
+overSold = input.int(title='(LONG) MFI is More', group=GRUPO_MFI_TF, defval=10, step=5, minval=1, inline='22')
+overSold2 = input.int(title='& Less', group=GRUPO_MFI_TF, defval=60, maxval = 100, step=5, minval=1, inline='22')
+useMFITFoverBought = input.bool(false, 'Use MFI SHORT Range', group=GRUPO_MFI_TF)
+overBought = input.int(title='(SHORT) MFI is Less', group=GRUPO_MFI_TF, defval=95, maxval = 100, step=5, minval=1, inline='33')
+overBought2 = input.int(title='& More', group=GRUPO_MFI_TF, defval=50, maxval = 100, step=5, minval=1, inline='33')
+mfi_tf1 = request.security(syminfo.tickerid, tf_mfi_indicator, ta.mfi(hlc3, lengthMFI), barmerge.gaps_off)
+//mfi_tf1-test = ta.mfi(hlc3, lengthMFI)
+// use_mfi_tf1_rising = input.bool(false, 'Use MFI TF Rising ?', group=GRUPO_MFI_TF)
+// mfi_tf1_rising_len = input.int(3, title='MFI TF Rising Bars:', group=GRUPO_MFI_TF, minval=1, maxval=20)
+// use_mfi_tf1_falling = input.bool(false, 'Use MFI TF Falling ?', group=GRUPO_MFI_TF)
+// mfi_tf1_falling_len = input.int(3, title='MFI TF Falling Bars:', group=GRUPO_MFI_TF, minval=1, maxval=20)
+// //mfi_tf1_falling = ta.falling(mfi_tf1, mfi_tf1_falling_len)
+// //mfi_tf1_rising = ta.rising(mfi_tf1, mfi_tf1_rising_len)
+// mfi_tf1_falling = ta.falling(ta.mfi(hlc3, lengthMFI), mfi_tf1_falling_len)
+// mfi_tf1_rising = ta.rising(ta.mfi(hlc3, lengthMFI), mfi_tf1_rising_len)
+// mfi_tf1_falling_tf = request.security(syminfo.tickerid, tf_mfi_indicator, mfi_tf1_falling, barmerge.gaps_off)
+// mfi_tf1_rising_tf = request.security(syminfo.tickerid, tf_mfi_indicator, mfi_tf1_rising, barmerge.gaps_off)
+//plot(mfi_tf1)
+//plot(mfi_tf2, color=color.new(#f84343, 1))
+// =====================================================    
+longCondition4 = true
+shortCondition4 = true
+    
+if useMFITFoverSold or useMFITFoverBought
+    longCondition4 := false
+    shortCondition4 := false
+    if useMFITFoverSold and (mfi_tf1 > overSold) and (mfi_tf1 < overSold2)
+        longCondition4 := true
+      
+    if useMFITFoverBought and (mfi_tf1 < overBought) and (mfi_tf1 > overBought2) 
+        shortCondition4 := true
+      
+    
+    // if (use_mfi_tf1_falling and mfi_tf1_falling_tf) or (use_mfi_tf1_rising and mfi_tf1_rising_tf)
+    //     shortCondition4 := true
+            
+    // if (use_mfi_tf1_falling and mfi_tf1_falling_tf) or (use_mfi_tf1_rising and mfi_tf1_rising_tf)
+    //     longCondition4 := true
+        
+else
+    longCondition4 := true
+    shortCondition4 := true
+   
+// dimak MFI timeframe [111] END
+// =====================================================
+// ============ dimak "Money Flow Index" Filter Timeframe  [222]  =============
+GRUPO_MFI_TF2 = '===========Money Flow Index Filter TimeFrame [2] ==========='
+lengthMFI2 = input.int(title='MFI TF Long:[2]', group=GRUPO_MFI_TF2, defval=14, minval=1)
+tf_mfi_indicator2 = input.timeframe('', title='MFI TimeFrame[2]:', group=GRUPO_MFI_TF2)
+useMFITFoverSold2 = input.bool(false, 'Use MFI LONG Range[2]', group=GRUPO_MFI_TF2)
+overSold12 = input.int(title='(LONG) MFI is More[2]', group=GRUPO_MFI_TF2, defval=10, step=5, minval=1, inline='22')
+overSold22 = input.int(title='& Less[2]', group=GRUPO_MFI_TF2, defval=60, maxval = 100, step=5, minval=1, inline='22')
+useMFITFoverBought2 = input.bool(false, 'Use MFI SHORT Range[2]', group=GRUPO_MFI_TF2)
+overBought12 = input.int(title='(SHORT) MFI is Less[2]', group=GRUPO_MFI_TF2, defval=95, maxval = 110, step=5, minval=1, inline='33')
+overBought22 = input.int(title='& More[2]', group=GRUPO_MFI_TF2, defval=50, maxval = 100, step=5, minval=1, inline='33')
+mfi_tf2 = request.security(syminfo.tickerid, tf_mfi_indicator2, ta.mfi(hlc3, lengthMFI2), barmerge.gaps_off)
+// =====================================================    
+longCondition5 = true
+shortCondition5 = true
+    
+if useMFITFoverSold2 or useMFITFoverBought2
+    longCondition5 := false
+    shortCondition5 := false
+    if useMFITFoverSold2 and (mfi_tf2 >= overSold12) and (mfi_tf2 <= overSold22)
+        longCondition5 := true
+      
+    if useMFITFoverBought2 and (mfi_tf2 <= overBought12) and (mfi_tf2 >= overBought22) 
+        shortCondition5 := true
+            
+else
+    longCondition5 := true
+    shortCondition5 := true
+   
+// dimak MFI timeframe [222]  END
+// =====================================================
+// ======================= dimak CCI timeframe   Begin 1111111 ====================
+GRUPO_CCI_TF  = "==========CCI - Multi TimeFrame [1] ============"
+lengthCCI = input.int(title="CCI TF Long(14):", group=GRUPO_CCI_TF, defval=14, minval=1)
+tf_CCI_indicator = input.timeframe("",title="CCI TimeFrame:", group=GRUPO_CCI_TF)
+useCCITFoverSold = input.bool(false, 'Use CCI LONG Range', group=GRUPO_CCI_TF)
+overSoldCCITF = input.int(title='(LONG) CCI is More', group=GRUPO_CCI_TF, defval=-400, step=5, minval=-400, inline='22')
+overSold2CCITF = input.int(title='& Less', group=GRUPO_CCI_TF, defval=400, minval=-401, maxval = 400, step=5, inline='22')
+useCCITFFoverBought = input.bool(false, 'Use CCI SHORT Range', group=GRUPO_CCI_TF)
+overBoughtCCITF = input.int(title='(SHORT) CCI is Less', group=GRUPO_CCI_TF, defval=400, step=5, minval=-401, maxval = 400, inline='33')
+overBought2CCITF = input.int(title='& More', group=GRUPO_CCI_TF, defval=10, minval=-401, step=5, inline='33')
+CCI_tf1 = request.security(syminfo.tickerid, tf_CCI_indicator, ta.cci(close, lengthCCI), barmerge.gaps_off)
+//=====================================================    
+longCondition15  = true
+shortCondition15 = true
+if useCCITFoverSold or useCCITFFoverBought
+    longCondition15  := false
+    shortCondition15 := false
+    if useCCITFoverSold and (CCI_tf1 >= overSoldCCITF) and (CCI_tf1 <= overSold2CCITF)
+        longCondition15  := true
+    
+    if useCCITFFoverBought and (CCI_tf1 <= overBoughtCCITF)  and (CCI_tf1 >= overBought2CCITF)
+        shortCondition15 := true
+else 
+    longCondition15  := true
+    shortCondition15 := true
+//dimak CCI timeframe  END
+//=====================================================
+// ===================================================================================
+long_conditions = longCondition1 and longCondition2  and longCondition4  and longCondition5 and longCondition8 and longCondition10 and longCondition15
+entrar_en_LONG  = P_permitir_LONGS and long_conditions and testPeriod() and ATR > 0.0                            // Lo del ATR > 0.0 es por seguridad ya que puede darse una entrada donde aún no es calculable el ATR porque no existan velas y nunca cerrar posición pues no se creó correctamente // Solo permitir 1 posición al mismo tiempo
+short_conditions = shortCondition1 and shortCondition2  and shortCondition4  and shortCondition5 and shortCondition8 and shortCondition10  and shortCondition15 
+entrar_en_SHORT  = P_permitir_SHORTS and short_conditions and testPeriod() and ATR > 0.0 // Lo del ATR > 0.0 es por seguridad ya que puede darse una entrada donde aún no es calculable el ATR porque no existan velas y nunca cerrar posición pues no se creó correctamente // Solo permitir 1 posición al mismo tiempo
+var LONG_take_profit  = 0.0
+var LONG_stop_loss    = 0.0
+var SHORT_take_profit = 0.0
+var SHORT_stop_loss   = 0.0
+//if (entrar_en_LONG and not posicion_abierta and delayElapsed)
+if (entrar_en_LONG and not posicion_abierta and delayElapsed and ((strategy.closedtrades == 0) or (bar_index != strategy.closedtrades.entry_bar_index(strategy.closedtrades - 1))))
+    strategy.entry("L", strategy.long, alert_message="enter_cycle")
+ 
+//else if (entrar_en_SHORT and not posicion_abierta and delayElapsed)
+else if (entrar_en_SHORT and not posicion_abierta and delayElapsed and ((strategy.closedtrades == 0) or (bar_index != strategy.closedtrades.entry_bar_index(strategy.closedtrades - 1))) )
+    strategy.entry("S", strategy.short, alert_message="enter_cycle")
+SHORT_stop_loss   := TP_SL_tipo_SL == "useStaticSLTP" ? shortSLExitPrice : TP_SL_tipo_SL == "Previous Wick" ? (P_cond_entrada == "Wick out of band" or P_cond_entrada == "Out-of-band closure" ? high[1] : high) : TP_SL_tipo_SL == "Extended Band" ? banda_extendida_sup_SL : ATR_SHORT_sl
+SHORT_take_profit := TP_SL_tipo_TP == "useStaticSLTP" ? shortExitPrice : TP_SL_tipo_TP == "Opposite Band" ? banda_inferior : TP_SL_tipo_TP == "Moving Average" ? media_movil : ATR_SHORT_tp
+    
+LONG_stop_loss   := TP_SL_tipo_SL == "useStaticSLTP" ? longSLExitPrice : TP_SL_tipo_SL == "Previous Wick" ? (P_cond_entrada == "Wick out of band" or P_cond_entrada == "Out-of-band closure" ? low[1] : low) : TP_SL_tipo_SL == "Extended Band" ? banda_extendida_inf_SL : ATR_LONG_sl
+LONG_take_profit := TP_SL_tipo_TP == "useStaticSLTP" ? longExitPrice : TP_SL_tipo_TP == "Opposite Band" ? banda_superior : TP_SL_tipo_TP == "Moving Average" ? media_movil : ATR_LONG_tp
+if barstate.ishistory or SendSLsingonReal   
+    strategy.exit("CL", "L", limit=LONG_take_profit, stop=LONG_stop_loss, alert_message="stoploss")
+    strategy.exit("CS", "S", limit=SHORT_take_profit, stop=SHORT_stop_loss, alert_message="stoploss")
+// use {{strategy.order.alert_message}} in Alerts
+// Not using by Dimak
+if (posicion_abierta and TP_SL_TP_dinamico)
+    if (LONG_abierto)
+        LONG_take_profit := TP_SL_tipo_TP == "Opposite Band" ? banda_superior : TP_SL_tipo_TP == "Moving Average" ? media_movil : ATR_LONG_tp
+        strategy.exit("Cerrar Long", "Abrir Long", limit=LONG_take_profit, stop=LONG_stop_loss, alert_message="stoploss")
+    else
+        SHORT_take_profit := TP_SL_tipo_TP == "Opposite Band" ? banda_inferior : TP_SL_tipo_TP == "Moving Average" ? media_movil : ATR_SHORT_tp
+        strategy.exit("Cerrar Short", "Abrir Short", limit=SHORT_take_profit, stop=SHORT_stop_loss, alert_message="stoploss")
+//== Ploteo en pantalla
+bgcolor(entrar_en_LONG ? color.new(color.green, 90) : entrar_en_SHORT ? color.new(color.red, 90) : noneColor)
+// ATR
+plot(TP_SL_tipo_TP == "ATR" ? ATR_LONG_tp : na, style=plot.style_stepline, color=color.new(color.green, 80), linewidth=1)
+plot(TP_SL_tipo_SL == "ATR" ? ATR_LONG_sl : na, style=plot.style_stepline, color=color.new(color.red, 80), linewidth=1)
+plot(TP_SL_tipo_TP == "ATR" ? ATR_SHORT_tp : na, style=plot.style_stepline, color=color.new(color.green, 80), linewidth=1)
+plot(TP_SL_tipo_SL == "ATR" ? ATR_SHORT_sl : na, style=plot.style_stepline, color=color.new(color.red, 80), linewidth=1)
+// Canal y media
+plot(banda_superior, "Banda superior", color.aqua)
+plot(media_movil, "Moving Average", color.orange)
+plot(banda_inferior, "Banda inferior", color.aqua)
+// Bandas extendidas
+plot(TP_SL_tipo_SL == "Extended Band" ? banda_extendida_sup_SL : na, "Banda superior extendida (Stop Loss)", color.red, style=plot.style_circles)
+plot(TP_SL_tipo_SL == "Extended Band" ? banda_extendida_inf_SL : na, "Banda inferior extendida (Stop Loss)", color.red, style=plot.style_circles)
+displTPSL = not USEdisplTPSL ? display.none : display.all
+// visual TP SL
+avg_position_price_plot = plot(series=strategy.position_size != 0 ? strategy.position_avg_price : na, color=color.new(#c2bfbf, 25), style=plot.style_linebr, linewidth=2, title="Precio Entrada", display = displTPSL)
+LONG_tp_plot            = plot(strategy.position_size > 0 and longExitPrice > 0.0 ? longExitPrice : na, color=color.new(color.lime, 60), style=plot.style_linebr, linewidth=2, title="LONG Take Profit", display = displTPSL)
+LONG_sl_plot            = plot(strategy.position_size > 0 and longSLExitPrice > 0.0? longSLExitPrice : na, color=color.new(color.red, 60), style=plot.style_linebr, linewidth=2, title="Long Stop Loss", display = displTPSL)
+fill(avg_position_price_plot, LONG_tp_plot, color=color.new(color.olive, 90), display = displTPSL)
+fill(avg_position_price_plot, LONG_sl_plot, color=color.new(color.maroon, 90), display = displTPSL)
+SHORT_tp_plot            = plot(strategy.position_size < 0 and shortExitPrice > 0.0 ? shortExitPrice : na, color=color.new(color.lime, 60), style=plot.style_linebr, linewidth=2, title="SHORT Take Profit", display = displTPSL)
+SHORT_sl_plot            = plot(strategy.position_size < 0 and shortSLExitPrice > 0.0 ? shortSLExitPrice : na, color=color.new(color.red, 60), style=plot.style_linebr, linewidth=2, title="Short Stop Loss", display = displTPSL)
+fill(avg_position_price_plot, SHORT_tp_plot, color=color.new(color.olive, 90), display = displTPSL)
+fill(avg_position_price_plot, SHORT_sl_plot, color=color.new(color.maroon, 90), display = displTPSL)
+Expand (676 lines)

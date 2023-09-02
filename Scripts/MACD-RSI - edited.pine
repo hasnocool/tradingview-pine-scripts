@@ -1,0 +1,153 @@
+Script Name: MACD-RSI - edited
+Author: AlphaTradingAcademy
+Description: This strategy checks MACDcrossover and RSI crossover. When MACD crosses up or down the signal line, it checks if RSI is crossing back OverSold or OverBought lines, respectively, over the past few candles. The period can be changed by the parameter "RSI lookback". 
+
+The strategy seems to work better for reversal—still a work in progress.
+PineScript code:
+
+Pine Script™ strategy
+MACD/RSI - edited
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+//@version=5
+//based on Range Strat - MACD/RSI 
+strategy("MACD/RSI - edited", 
+     overlay=true,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=10, precision=2, initial_capital=100000,
+     pyramiding=2,
+     commission_value=0.05)
+//Backtest date range
+StartDate = input.time(timestamp("13 Jun 2022"), title="Start Date")
+EndDate = input.time(timestamp("13 Jun 2024"), title="Start Date")
+inDateRange = (time >= StartDate) and (time < EndDate)
+// RSI Input Settings
+rsisrc = input(title="RSI Source", defval=close, group="RSI Settings")
+length = input(title="Length", defval=14, group="RSI Settings" )
+overSold = input(title="Over Sold Threshold", defval=30, group="RSI Settings" )
+overBought = input(title="Over Bought Threshold", defval=70, group="RSI Settings" )
+rsi_lookback = input(title="RSI cross lookback period", defval=7, group="RSI Settings")
+// Calculating RSI
+vrsi = ta.rsi(rsisrc, length)
+co = ta.crossover(vrsi, overSold)
+cu = ta.crossunder(vrsi, overBought)
+// Function looking for a happened condition during lookback period
+f_somethingHappened(_cond, _lookback) =>
+    bool _crossed = false
+    for i = 1 to _lookback
+        if _cond[i]
+            _crossed := true
+    _crossed
+coCheck = f_somethingHappened(co, rsi_lookback)
+cuCheck = f_somethingHappened(cu, rsi_lookback)
+// MACD Input Settings
+macdsrc = input(title="MACD Source", defval=close, group="MACD Settings")
+fast_length = input(title="Fast Length", defval=12, group="MACD Settings")
+slow_length = input(title="Slow Length", defval=26, group="MACD Settings")
+signal_length = input.int(title="Signal Smoothing",  minval = 1, maxval = 50, defval = 9, group="MACD Settings")
+sma_source = input.string(title="Oscillator MA Type",  defval="EMA", options=["SMA", "EMA"], group="MACD Settings")
+sma_signal = input.string(title="Signal Line MA Type", defval="EMA", options=["SMA", "EMA"], group="MACD Settings")
+// Calculating MACD
+fast_ma = sma_source == "SMA" ? ta.sma(macdsrc, fast_length) : ta.ema(macdsrc, fast_length)
+slow_ma = sma_source == "SMA" ? ta.sma(macdsrc, slow_length) : ta.ema(macdsrc, slow_length)
+macd = fast_ma - slow_ma
+signal = sma_signal == "SMA" ? ta.sma(macd, signal_length) : ta.ema(macd, signal_length)
+delta = macd - signal
+MACDcrossover = ta.crossover(delta, 0)
+MACDcrossunder = ta.crossunder(delta, 0)
+// Stop Loss Input Settings
+longLossPerc = input(title="Long Stop Loss (%)", defval=15, group="Stop Loss Settings") * 0.01
+shortLossPerc = input(title="Short Stop Loss (%)", defval=15, group="Stop Loss Settings") * 0.01
+// Calculating Stop Loss
+longStopPrice  = strategy.position_avg_price * (1 - longLossPerc)
+shortStopPrice = strategy.position_avg_price * (1 + shortLossPerc)
+// Strategy Entry
+if (not na(vrsi))
+    if (inDateRange and MACDcrossover and coCheck)
+        strategy.entry("LONG", strategy.long, comment="LONG")
+    if (inDateRange and MACDcrossunder and cuCheck)
+        strategy.entry("SHORT", strategy.short, comment="SHORT")
+// Submit exit orders based on calculated stop loss price
+if (strategy.position_size > 0)
+    strategy.exit(id="LONG STOP", stop=longStopPrice)
+if (strategy.position_size < 0)
+    strategy.exit(id="SHORT STOP", stop=shortStopPrice)
+Expand (79 lines)

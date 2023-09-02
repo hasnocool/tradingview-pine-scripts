@@ -1,0 +1,83 @@
+Script Name: Low-High-Trend Strategy
+Author: TradeAutomation
+Description: When asked what the key to successful investing was, Warren Buffet famously said “buy low, sell high.” Was he onto something? Today I am sharing with the community a simple “buy low, sell high” strategy with an optional trend filter and take-profit target. I’ve found that this strategy works well in a variety of markets but has a higher tendency to out-perform buy...
+PineScript code:
+
+Pine Script™ strategy
+Low-High-Trend Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// @version=5
+// Author = TradeAutomation
+strategy(title="Low-High-Trend Strategy", shorttitle="Low-High-Trend Strategy", process_orders_on_close=true, overlay=true, commission_type=strategy.commission.cash_per_order, commission_value=1, slippage=1, initial_capital = 100000000, margin_long=50, margin_short=50, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+// Backtest Date Range Inputs // 
+StartTime = input.time(defval=timestamp('01 Jan 2000 05:00 +0000'), title='Start Time')
+EndTime = input.time(defval=timestamp('01 Jan 2099 00:00 +0000'), title='End Time')
+InDateRange = time>=StartTime and time<=EndTime
+// Strategy Calculations //
+lowcriteria = ta.lowest(close, input(20, "Lowest Price Lookback", tooltip="The strategy will BUY when the price crosses over the lowest it has been in the last X amount of bars"))[1]
+highcriteria = ta.highest(close, input(10, "Highest Price Lookback", tooltip="If Take-Profit is not checked, the strategy will SELL when the price crosses under the highest it has been in the last X amount of bars"))[1]
+plot(highcriteria, color=color.green)
+plot(lowcriteria, color=color.red)
+// Take Profit //
+TakeProfitInput = input(true, "Sell with Take-Profit % intead of highest price cross?")
+TakeProfit = ta.crossover(close,strategy.position_avg_price*(1+(.01*input.float(8, title="Take Profit %", step=.25))))
+// Operational Functions //
+TrendFilterInput = input(true, "Only buy when price is above EMA trend?")
+ema = ta.ema(close, input(200, "EMA Length"))
+TrendisLong = (close>ema)
+plot(ema)
+// Entry & Exit Functions//
+if (InDateRange and TrendFilterInput==true)
+    strategy.entry("Long", strategy.long, when = ta.crossover(close, lowcriteria) and TrendisLong)
+if (InDateRange and TrendFilterInput==false)
+    strategy.entry("Long", strategy.long, when = ta.crossover(close, lowcriteria))
+if (InDateRange and TakeProfitInput==true)
+    strategy.close("Long", when = TakeProfit)
+if (InDateRange and TakeProfitInput==false)
+    strategy.close("Long", when = ta.crossunder(close, highcriteria))
+if (not InDateRange)
+    strategy.close_all()
+    
+Expand (41 lines)

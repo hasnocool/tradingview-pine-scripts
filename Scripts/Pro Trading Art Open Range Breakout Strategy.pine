@@ -1,0 +1,307 @@
+Script Name: Pro Trading Art Open Range Breakout Strategy
+Author: protradingart
+Description: This strategy is based on Selected Candle High Low Breakout with buffer point.
+
+You can select specific candle from input tab by giving time of  that candle.
+
+Default Settings:
+
+Start Hour : Hour of starting candle means from this input you can specify opening candle. Default is 9.
+Start Minute: Minute of starting candle. Default is 15. Means Default opening...
+PineScript code:
+
+Pine Script™ strategy
+Pro Trading Art Open Range Breakout Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © protradingart
+//@version=5
+strategy('Pro Trading Art Open Range Breakout Strategy', 'PTA - Open Range Breakout Strategy', overlay=true)
+//#region ///////////// User INput Section ////////////////////////////
+openRange = input.float(0.4, "Open Range %", step=0.1, group="=============== Indicator Settings ===============")
+///////////////////////////////////// Start, Stop & Close Time Input Section /////////////////////////////////////////////////
+startH = input.int(9, "Start Hour", inline='start', group="========= Start Trade AT =========")
+startM = input.int(15, "Start Minute", inline='start', group="========= Start Trade AT =========")
+stopNewTrade = input.int(14, "Stop Hour", inline='start', group="========= Stop New Trade At =========")
+endH = input.int(15, "End Hour", inline='end', group="========= Close All Trade At =========")
+endM = input.int(0, "End Minute", inline='end', group="========= Close All Trade At =========")
+isCloseAll = input.bool(true, "Close All Trade",  group="========= Close All Trade At =========")
+isHighV = input.bool(true, "Show High", inline="range", group="========= Plot Range =========")
+isLowV = input.bool(true, "Show Low", inline="range", group="========= Plot Range =========")
+buffer = input.float(0.0, "Buffer", group="========= Strategy Settings =========")
+tradeGap = input.float(100, "Trade Gap", group="========= Strategy Settings =========")
+gapBook = input.float(50, "Min Profit Point After Trade Gap", group="========= Strategy Settings =========")
+//#endregion
+///////////////////////////////////// Configure isStart & isEnd /////////////////////////////////////////////////
+isStart = hour == startH and minute == startM
+isEnd = hour == endH and minute == endM
+var High = 0.0
+var Low = 0.0
+if isStart
+    Low := low - buffer
+    High := high + buffer
+plot(isHighV ? High : na, color=color.lime)
+plot(isLowV ? Low : na, color=color.red)
+validOpen = math.abs((High - Low)/Low*100) >= openRange
+//#region ////////////////////// Session ///////////////////////////////////
+var start = false
+if isStart
+    start := true
+if isEnd
+    start := false
+var longCondition = false
+var shortCondition = false
+var isLongTrade = false
+var isShortTrade = false
+if strategy.position_size > 0
+    isLongTrade := true
+if strategy.position_size < 0
+    isShortTrade := true
+    
+    
+if close > High and start
+    longCondition := true
+if close < Low and start
+    shortCondition := true
+if isLongTrade
+    longCondition := false
+if isShortTrade
+    shortCondition := false
+    
+if isEnd
+    isLongTrade := false
+    isShortTrade := false
+    longCondition := false
+    shortCondition := false
+//#endregion
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//Message alert inputs
+alertGroup = "========= Alert Message Settings ========="
+longMsg = input.string("Long", "Long MSG", group = alertGroup)
+shortMsg = input.string("Short", "Short SMG", group = alertGroup)
+longExitMsg = input.string("Long Exit", "Long Exit SMG", group = alertGroup)
+shortExitMsg = input.string("Short Exit", "Short Exit MSG", group = alertGroup)
+//#region ////////////////////////////////////////// Execute Trade Section ////////////////////////////////////////////////////////
+tradeMode = input.string("Percent", "Trade Mode", options=["Point", "Percent"], group="========= Strategy Settings =========")
+sl = input.float(1, "Stop Loss Point Or Percent", group="========= Strategy Settings =========")
+target = input.float(2, "Target Point Or Percent", group="========= Strategy Settings =========")
+entry_price = strategy.opentrades.entry_price(strategy.opentrades - 1)
+ 
+longSL = 0.0
+shortSL = 0.0
+longTarget = 0.0
+shortTarget = 0.0
+if tradeMode == "Percent"
+    longSL := entry_price - entry_price * sl/100
+    shortSL := entry_price + entry_price * sl/100
+    longTarget := entry_price + entry_price * target/100
+    shortTarget := entry_price - entry_price * target/100
+if tradeMode == "Point"
+    longSL := entry_price - sl
+    shortSL := entry_price + sl
+    longTarget := entry_price + target
+    shortTarget := entry_price - target
+if strategy.position_size > 0 and close[1] > (entry_price + tradeGap)
+    longSL := entry_price + gapBook
+if strategy.position_size < 0 and close[1] < (entry_price - tradeGap)
+    shortSL := entry_price - gapBook
+if longCondition and validOpen
+    strategy.entry("Long", strategy.long, alert_message=longMsg)
+if shortCondition and validOpen
+    strategy.entry("Short", strategy.short, alert_message=shortMsg)
+if strategy.position_size > 0
+    strategy.exit("Long Exit", "Long", stop=longSL, limit= longTarget, comment_loss="Long SL", comment_profit="Long Profit", alert_message=longExitMsg)
+if strategy.position_size < 0
+    strategy.exit("Short Exit", "Short", stop=shortSL, limit= shortTarget, comment_loss="Short SL", comment_profit="Short Profit", alert_message=shortExitMsg)
+    
+    
+if isEnd and isCloseAll
+    strategy.close_all(comment="Closing Bell")
+    
+//#endregion
+    
+//#region ////////////////////////////////////////// Alert Section ////////////////////////////////////////////////////////
+if longCondition and validOpen
+    alert(longMsg, alert.freq_once_per_bar_close)
+if shortCondition and validOpen
+    alert(shortMsg, alert.freq_once_per_bar_close)
+//#endregion
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+Expand (167 lines)

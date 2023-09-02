@@ -1,0 +1,162 @@
+Script Name: Moving Average Color Strategy
+Author: redlinesd
+Description: Hello,
+
+Strategy based on scrips "Moving Average Color Direction Detection" from Dreadblitz published on Aug 9, 2019.
+You can chose MA type, length and reaction setting to adjust to time frame/ticker. Always seemed like RSI is ahead of actual price action
+and just messing around with MA on the RSI .
+
+Couple I found:
+
+SPXS / SPXL 20M timeframe, MA 32 Reaction 2...
+PineScript code:
+
+Pine Script™ strategy
+Moving Average Color Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+//@version=3
+strategy(shorttitle="MA_color strategy", title="Moving Average Color", overlay=true)
+// === INPUTS
+ma_type   = input(defval="HullMA", title="MA Type: ", options=["SMA", "EMA", "WMA", "VWMA", "SMMA", "DEMA", "TEMA", "HullMA", "ZEMA", "TMA", "SSMA"])
+ma_len    = input(defval=32, title="MA Lenght", minval=1)
+ma_src    = input(close, title="MA Source")
+reaction  = input(defval=2, title="MA Reaction", minval=1)
+// SuperSmoother filter
+// © 2013  John F. Ehlers
+variant_supersmoother(src,len) =>
+    a1 = exp(-1.414*3.14159 / len)
+    b1 = 2*a1*cos(1.414*3.14159 / len)
+    c2 = b1
+    c3 = (-a1)*a1
+    c1 = 1 - c2 - c3
+    v9 = 0.0
+    v9 := c1*(src + nz(src[1])) / 2 + c2*nz(v9[1]) + c3*nz(v9[2])
+    v9
+    
+variant_smoothed(src,len) =>
+    v5 = 0.0
+    v5 := na(v5[1]) ? sma(src, len) : (v5[1] * (len - 1) + src) / len
+    v5
+variant_zerolagema(src,len) =>
+    ema1 = ema(src, len)
+    ema2 = ema(ema1, len)
+    v10 = ema1+(ema1-ema2)
+    v10
+    
+variant_doubleema(src,len) =>
+    v2 = ema(src, len)
+    v6 = 2 * v2 - ema(v2, len)
+    v6
+variant_tripleema(src,len) =>
+    v2 = ema(src, len)
+    v7 = 3 * (v2 - ema(v2, len)) + ema(ema(v2, len), len)              
+    v7
+    
+variant(type, src, len) =>
+    type=="EMA"     ? ema(src,len) : 
+      type=="WMA"   ? wma(src,len): 
+      type=="VWMA"  ? vwma(src,len) : 
+      type=="SMMA"  ? variant_smoothed(src,len) : 
+      type=="DEMA"  ? variant_doubleema(src,len): 
+      type=="TEMA"  ? variant_tripleema(src,len): 
+      type=="HullMA"? wma(2 * wma(src, len / 2) - wma(src, len), round(sqrt(len))) :
+      type=="SSMA"  ? variant_supersmoother(src,len) : 
+      type=="ZEMA"  ? variant_zerolagema(src,len) : 
+      type=="TMA"   ? sma(sma(src,len),len) : sma(src,len)
+// === Moving Average
+ma_series = variant(ma_type,ma_src,ma_len)
+direction = 0
+direction := rising(ma_series,reaction) ? 1 : falling(ma_series,reaction) ? -1 : nz(direction[1])
+change_direction= change(direction,1)
+change_direction1= change(direction,1)
+pcol = direction>0 ? lime : direction<0 ? red : na
+plot(ma_series, color=pcol,style=line,join=true,linewidth=3,transp=10,title="MA PLOT")
+/////// Alerts ///////
+alertcondition(change_direction,title="Change Direction MA",message="Change Direction MA")
+longCondition = direction>0
+shortCondition = direction<0
+if (longCondition)
+    strategy.entry("BUY", strategy.long)
+if (shortCondition)
+    strategy.entry("SELL", strategy.short)
+Expand (80 lines)

@@ -1,0 +1,367 @@
+Script Name: The Only EURUSD Trading Strategy You Need - Kaspricci
+Author: Kaspricci
+Description: The Only EURUSD Trading Strategy You Need 
+I got the idea to this strategy from a youtube video uploaded by Trade Beta. It is designed to capture the early market move of major forex pair EURUSD at beginning of New York Stock Exchange (13:30 GMT). Trade Beta tested his strategy on the 5 minute chart. I have set all parameters to same values as shown in the video....
+PineScript code:
+
+Pine Script™ strategy
+The Only EURUSD Trading Strategy You Need - Kaspricci
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Kaspricci
+//@version=5
+strategy(
+     title = "Trade Beta - The Only EURUSD Trading Strategy You Need - Kaspricci", 
+     shorttitle = "The Only EURUSD Trading Strategy You Need - Kaspricci", 
+     overlay=true, 
+     initial_capital = 1000, 
+     currency = currency.USD, 
+     default_qty_type = strategy.percent_of_equity, 
+     default_qty_value = 100, 
+     calc_on_every_tick = true, 
+     close_entries_rule = "ANY")
+headlineEntry   = "Entry Seettings"
+tooltipTF       = "New York Stock Exchange opening hours from 13:30 - 20:00 GMT"
+session         = input.session(defval="1330-2000:23456", title="Trading Time", group=headlineEntry, tooltip=tooltipTF)
+sessionTime     = time(timeframe.period, session, "GMT")
+// swing high
+shSource        = input.source(defval = high, title = "Swing High Source ", group = headlineEntry, inline = "SH")
+shBars          = input.int(   defval = 5,    title = "Bars ",              group = headlineEntry, inline = "SH")
+// swing low
+slSource        = input.source(defval = low,  title = "Swing Low Source  ", group = headlineEntry, inline = "SL")
+slBars          = input.int(   defval = 5,    title = "Bars ",              group = headlineEntry, inline = "SL")
+headlineTrade   = "Trade Seettings"
+stopLossType    = input.string(defval = "ATR", title = "Stop Loss Type", options = ["ATR", "FIX"], group = headlineTrade)
+atrLength       = input.int(defval = 14, title = "   ATR: Length        ",   inline = "ATR", group = headlineTrade, minval = 1)
+atrFactor       = input.float(defval = 2.0, title = "Factor        ", inline = "ATR", group = headlineTrade, tooltip = "multiplier for ATR value", minval = 0, step = 0.05)
+takeProfitRatio = input.float(defval = 2.0, title = "            TP Ration", group = headlineTrade, tooltip = "Multiplier for Take Profit calculation", minval = 0, step = 0.05)
+fixStopLoss     = input.float(defval = 10.0, title = "   FIX: Stop Loss    ",   inline = "FIX", group = headlineTrade, minval = 0, step = 0.5) * 10 // need this in ticks
+fixTakeProfit   = input.float(defval = 20.0, title = "Take Profit", inline = "FIX", group = headlineTrade, tooltip = "in pips", minval = 0, step = 0.5) * 10 // need this in ticks
+useRiskMagmt    = input.bool(  title = "", defval = false, group = headlineTrade, inline = "RM")
+riskPercent     = input.float( title = "Risk in %       ", defval = 1.0, minval = 0.0, step = 0.5, group = headlineTrade, inline = "RM", tooltip = "This will overwrite quantity from startegy settings and calculate the trade size based on stop loss and risk percent") / 100
+stopLoss        = switch stopLossType
+    "ATR" => math.round(ta.atr(atrLength) * atrFactor / syminfo.mintick, 0)
+    "FIX" => fixStopLoss
+takeProfit      = switch stopLossType
+    "ATR" => math.round(stopLoss * takeProfitRatio, 0)
+    "FIX" => fixTakeProfit
+inSession       = not na(sessionTime)
+var float buyStopPrice  = na
+var float sellStopPrice = na
+plot(inSession ? buyStopPrice  : na, title = "Buy Stop Price",  color = color.green, style = plot.style_linebr)
+plot(inSession ? sellStopPrice : na, title = "Sell Stop Price", color = color.red,   style = plot.style_linebr)
+var float swingHigh = na
+var float swingLow  = na
+swingHigh := nz(ta.pivothigh(shSource, shBars, shBars), swingHigh[1])
+swingLow  := nz(ta.pivotlow( slSource, slBars, slBars), swingLow[1])
+///////////////////////////////////////////////////////////////////////////////
+// api bot values
+longSL          = buyStopPrice - stopLoss * syminfo.mintick
+longTP1         = buyStopPrice + takeProfit * syminfo.mintick * 0.5 // 50% of total take profit
+longTP2         = buyStopPrice + takeProfit * syminfo.mintick // same as full
+longTPFull      = buyStopPrice + takeProfit * syminfo.mintick
+shortSL         = sellStopPrice + stopLoss * syminfo.mintick
+shortTP1        = sellStopPrice - takeProfit * syminfo.mintick * 0.5 // 50% of total take profit
+shortTP2        = sellStopPrice - takeProfit * syminfo.mintick
+shortTPFull     = sellStopPrice - takeProfit * syminfo.mintick
+takeAmount1     = riskPercent / 2
+takeAmount2     = riskPercent
+takeAmountFull  = riskPercent
+headlineAlerts  = "Alert Settings"
+i_apiEnterLong  = input.text_area('Enter Long - 3commas,alerteron etc', 'API Entry - Long',   group = headlineAlerts)
+i_apiExitLong   = input.text_area('Exit Long - 3commas,alerteron etc', 'API Exit - Long',     group = headlineAlerts)
+i_apiEnterShort = input.text_area('Enter Short - 3commas,alerteron etc', 'API Entry - Short', group = headlineAlerts)
+i_apiExitShort  = input.text_area('Exit Short - 3commas,alerteron etc', 'API Exit - Short',   group = headlineAlerts)
+// #nl# => New line
+// #side# => Buy or Sell (Long or Short)
+// #symbol# => The ticker e.g. BTCUSDT
+f_replaceKeys (_str) =>
+    _value = _str
+    _value := str.replace_all(_value, "#nl#", "\n")
+//    _value := str.replace_all(_value, "#side#", "\n") // does not make sense to me...
+    _value := str.replace_all(_value, "#symbol#", syminfo.ticker)
+// #LongSL# => Long Stop loss
+// #LongTP1# => Long Take Profit 1
+// #LongTP2# => Long Take Profit 2
+// #LongTPFULL# => Long Take Profit in FULL
+// #TakeAmount1# => Percent to remove from trade on hitting TP1
+// #TakeAmount2# => Percent to remove from trade on hitting TP2
+// #TakeAmountFULL# => Percent to remove from trade on hitting TP3 (should be 100%)
+f_replaceLongTokens (_str, _sl, _tp1, _tp2, _tpFull, _ta1, _ta2, _taFull) =>
+    _value = _str
+    _value := str.replace_all(_value, "#LongSL#", str.tostring(_sl))
+    _value := str.replace_all(_value, "#LongTP1#", str.tostring(_tp1))
+    _value := str.replace_all(_value, "#LongTP2#", str.tostring(_tp2))
+    _value := str.replace_all(_value, "#LongTPFULL#", str.tostring(_tpFull))
+    _value := str.replace_all(_value, "#TakeAmount1#", str.tostring(_ta1))
+    _value := str.replace_all(_value, "#TakeAmount2#", str.tostring(_ta2))
+    _value := str.replace_all(_value, "#TakeAmountFULL#", str.tostring(_taFull))
+// #ShortSL# => Short Stop loss
+// #ShortTP1# => Short Take Profit 1
+// #ShortTP2# => Short Take Profit 2
+// #ShortTPFULL# => Short Take Profit in FULL
+// #TakeAmount1# => Percent to remove from trade on hitting TP1
+// #TakeAmount2# => Percent to remove from trade on hitting TP2
+// #TakeAmountFULL# => Percent to remove from trade on hitting TP3 (should be 100%)
+f_replaceShortTokens (_str, _sl, _tp1, _tp2, _tpFull, _ta1, _ta2, _taFull) =>
+    _value = _str
+    _value := str.replace_all(_value, "#ShortSL#", str.tostring(_sl))
+    _value := str.replace_all(_value, "#ShortTP1#", str.tostring(_tp1))
+    _value := str.replace_all(_value, "#ShortTP2#", str.tostring(_tp2))
+    _value := str.replace_all(_value, "#ShortTPFULL#", str.tostring(_tpFull))
+    _value := str.replace_all(_value, "#TakeAmount1#", str.tostring(_ta1))
+    _value := str.replace_all(_value, "#TakeAmount2#", str.tostring(_ta2))
+    _value := str.replace_all(_value, "#TakeAmountFULL#", str.tostring(_taFull))
+i_apiEnterLong  := f_replaceKeys (i_apiEnterLong)
+i_apiEnterLong  := f_replaceLongTokens (i_apiEnterLong, longSL, longTP1, longTP2, longTPFull, takeAmount1, takeAmount2, takeAmountFull)
+i_apiExitLong   := f_replaceKeys (i_apiExitLong)
+i_apiExitLong   := f_replaceLongTokens (i_apiExitLong, longSL, longTP1, longTP2, longTPFull, takeAmount1, takeAmount2, takeAmountFull)
+i_apiEnterShort := f_replaceKeys (i_apiEnterShort)
+i_apiEnterShort := f_replaceShortTokens (i_apiEnterShort, shortSL, shortTP1, shortTP2, shortTPFull, takeAmount1, takeAmount2, takeAmountFull)
+i_apiExitShort  := f_replaceKeys (i_apiExitShort)
+i_apiExitShort  := f_replaceShortTokens (i_apiExitShort, shortSL, shortTP1, shortTP2, shortTPFull, takeAmount1, takeAmount2, takeAmountFull)
+// ----- handline trade entries and exits --------------------------------------------------------------------------------------------------------------------------
+// as soon as the session starts calculate stop prices based on recent swing high / low, create pending orders
+if barstate.isconfirmed and inSession and not inSession[1]
+    buyStopPrice  := swingHigh
+    sellStopPrice := swingLow
+    tradeID = str.tostring(strategy.closedtrades + strategy.opentrades + 1)
+    quantity = useRiskMagmt ? math.round(strategy.equity * riskPercent / stopLoss, 2) / syminfo.mintick : na
+    commentTemplate = "{0} QTY: {1,number,#.##} SL: {2} TP: {3}"
+    // price between recent swing high and low, a buy and sell stop order at swing high and low
+    if sellStopPrice < close and close < buyStopPrice
+        longComment = str.format(commentTemplate, tradeID + "L", quantity, stopLoss / 10, takeProfit / 10)
+        strategy.entry(tradeID + "L", strategy.long, qty = quantity, stop = buyStopPrice, comment = longComment, alert_message = i_apiEnterLong)
+        strategy.exit(tradeID + "SL", tradeID + "L", profit = takeProfit, loss = stopLoss, comment_loss = "SL", comment_profit = "TP",  alert_message = i_apiExitLong)
+        shortComment = str.format(commentTemplate, tradeID + "S", quantity, stopLoss / 10, takeProfit / 10)
+        strategy.entry(tradeID + "S", strategy.short, qty = quantity, stop = sellStopPrice, comment = shortComment, alert_message = i_apiEnterShort)
+        strategy.exit(tradeID + "SL", tradeID + "S", profit = takeProfit, loss = stopLoss, comment_loss = "SL", comment_profit = "TP", alert_message = i_apiExitShort)
+    // price above swing high, only one sell stop order at swingg high
+    if close > buyStopPrice
+        shortComment = str.format(commentTemplate, tradeID + "S", quantity, stopLoss / 10, takeProfit / 10)
+        strategy.entry(tradeID + "S", strategy.short, qty = quantity, stop = buyStopPrice, comment = shortComment, alert_message = i_apiEnterShort)
+        strategy.exit(tradeID + "SL", tradeID + "S", profit = takeProfit, loss = stopLoss, comment_loss = "SL", comment_profit = "TP", alert_message = i_apiExitShort)
+    // price below swing low, only one buy stop order at swing low
+    if close < sellStopPrice
+        longComment = str.format(commentTemplate, tradeID + "L", quantity, stopLoss / 10, takeProfit / 10)
+        strategy.entry(tradeID + "L", strategy.long, qty = quantity, stop = sellStopPrice, comment = longComment, alert_message = i_apiEnterLong)
+        strategy.exit(tradeID + "SL", tradeID + "L", profit = takeProfit, loss = stopLoss, comment_loss = "SL", comment_profit = "TP",  alert_message = i_apiExitLong)
+// once the session is gone, reset prices and cancel all remaining pending orders, close open orders
+if barstate.isconfirmed and not inSession
+    buyStopPrice := na
+    sellStopPrice := na
+    strategy.cancel_all()
+    currentTradeID = str.tostring(strategy.closedtrades + strategy.opentrades)
+    strategy.close(currentTradeID + "L", immediately = true, comment = "L: session end", alert_message = i_apiExitLong)
+    strategy.close(currentTradeID + "S", immediately = true, comment = "S: session end", alert_message = i_apiExitShort)
+// as soon as the first pending order has been entered the remaing pending order shall be cancelled 
+if strategy.opentrades > 0
+    currentTradeID = str.tostring(strategy.closedtrades + strategy.opentrades)
+    strategy.cancel(currentTradeID + "S")
+    strategy.cancel(currentTradeID + "L")
+Expand (205 lines)

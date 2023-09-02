@@ -1,0 +1,216 @@
+Script Name: Crypto BTC Correlation Scalper Gaps Strategy
+Author: exlux99
+Description: This strategy is based on the gaps theory.
+In this case we have the BTC futures from CME, which acts in a way similar to stocks, and we can have gaps present between close/open session, and also sometimes between same candle due to huge movements intra candle.
+
+At the same time I have combined this with a daily moving average, to help out a bit with the trend,...
+PineScript code:
+
+Pine Script™ strategy
+Crypto BTC Correlation Scalper Gaps Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © exlux99
+//@version=5
+strategy("Crypto BTC Correlation Scalper Gaps Strategy", overlay = true)
+inverse=input.bool(false, title="Inverse Mode / Long = Short or Long = Long")
+ex_symbol = input.symbol("CME:BTC1!")
+ex_high = request.security(ex_symbol, timeframe.period,high)
+ex_low = request.security(ex_symbol, timeframe.period,low)
+ex_open = request.security(ex_symbol, timeframe.period,open)
+ex_close = request.security(ex_symbol, timeframe.period,close)
+apply_correlation = input.bool(true, title="Correlation Candles")
+def_high = 0.0
+def_low =0.0
+def_open =0.0
+def_close =0.0
+def_high := apply_correlation? ex_high : high
+def_low := apply_correlation? ex_low : low
+def_open := apply_correlation? ex_open : open
+def_close := apply_correlation? ex_close : close
+daily_sma = request.security(ex_symbol, "D", ta.sma(request.security(ex_symbol, "D", close), input(1)))
+//plot(daily_sma)
+legnth_tp_sl = input(50, title="Length for Checking Highest High/Lowest Low Points")
+minimalDeviationInput = nz(input.float(30.0, "Minimal Deviation (%)", minval=1, maxval=100) / 100 * ta.sma(def_high-def_low, 14))
+// Detect gaps.
+isGapDown = def_high < def_low[1] and def_low[1] - def_high >= minimalDeviationInput
+isGapUp = def_low > def_high[1] and def_low - def_high[1] >= minimalDeviationInput
+isGap = isGapDown or isGapUp
+isGapClosed = false
+lowest_low=ta.lowest(def_low, legnth_tp_sl)
+highest_high=ta.highest(def_high, legnth_tp_sl)
+long = isGapUp and def_close > daily_sma
+short = isGapDown and def_close < daily_sma
+var longOpened = false
+var int timeOfBuyLong = na
+var float lowest_low_var_tp = na
+var float lowest_low_var_sl = na
+var bool longEntry = na
+longEntry := long and not longOpened 
+if longEntry
+    longOpened := true
+    timeOfBuyLong := time
+    lowest_low_var_tp := def_close * (1 + ((def_close / lowest_low) -1))
+    lowest_low_var_sl := lowest_low
+longExitSignal = short or  def_high > lowest_low_var_tp //or def_low < lowest_low_var_sl
+longExit = longOpened[1] and longExitSignal
+if longExit 
+    longOpened := false
+    timeOfBuyLong := na
+    lowest_low_var_tp:=na
+    lowest_low_var_sl :=na
+ 
+    
+//-------------------------------------------------------------------------------
+var shortOpened = false
+var int timeOfBuyShort = na
+var float highest_high_var_tp = na
+var float highest_high_var_sl = na
+var bool shortEntry = na
+shortEntry := short and not shortOpened  
+if shortEntry
+    shortOpened := true
+    timeOfBuyShort := time
+    timeOfBuyShort
+    highest_high_var_tp := def_close * (1 - ((highest_high / def_close) - 1  ))
+    highest_high_var_sl := highest_high
+ 
+shortExitSignal = long  or  def_low < highest_high_var_tp //or def_high > highest_high_var_sl
+shortExit = shortOpened[1] and shortExitSignal 
+if shortExit
+  
+    shortOpened := false
+    timeOfBuyShort := na
+    highest_high_var_tp := na
+    highest_high_var_sl := na
+    
+if(inverse)
+    strategy.entry("long",strategy.short,when=longEntry)
+    strategy.close("long",when=longExit)
+    
+    strategy.entry("short",strategy.long,when=shortEntry)
+    strategy.close("short",when=shortExit)
+if(not inverse)
+    strategy.entry("long",strategy.long,when=longEntry)
+    strategy.close("long",when=longExit)
+    
+    strategy.entry("short",strategy.short,when=shortEntry)
+    strategy.close("short",when=shortExit)
+Expand (117 lines)

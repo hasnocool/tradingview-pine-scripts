@@ -1,0 +1,84 @@
+Script Name: Pairs Trading (basic OLS regression)
+Author: wa1one
+Description: Pairs trading using hedge ratio.
+
+Firstly, it calculates hedge ration using OLS linear regression.
+Then it calculates spread and z-score of spread.
+if spread in specific range (which it's possible to change in settings) it makes Long/Short orders.
+
+The very basic script.
+PineScript code:
+
+Pine Script™ strategy
+Pairs Trading (basic OLS regression)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+// © vladimirkovalchuk wa1
+//@version=4
+strategy("Pair Trade", overlay=false, pyramiding=0, initial_capital=100, default_qty_type=strategy.fixed, default_qty_value=100, commission_type=strategy.commission.cash_per_order, commission_value=0.08, slippage=2)
+longThreshold = input(title="Enter Long Threshold", type=input.float, defval=-1.85)
+shortThreshold = input(title="Enter Short Threshold", type=input.float, defval=1.85)
+exitLongThreshold = input(title="Exit Long Threshold", type=input.float, defval=-0.05)
+exitShortThreshold = input(title="Exit Short Threshold", type=input.float, defval=0.05)
+length = input(42, "SMA length", input.integer)
+//
+x = security("SPY", timeframe.period, close)
+y = security("IVI", timeframe.period, close)
+beta =  correlation(x, y, length) * stdev(y, length) / stdev(x, length)
+spread = sma(y, length) - beta * sma(x, length) 
+ms = sma(spread,length)
+spreadfinal = (spread - ms) / stdev(spread,length)
+plot(spreadfinal, color=color.red)
+hline(price=longThreshold, color=color.green, linestyle=hline.style_solid)
+hline(price=shortThreshold, color=color.red, linestyle=hline.style_solid)
+hline(price=exitLongThreshold, color=color.new(color.green, 25), linestyle=hline.style_dotted)
+hline(price=exitShortThreshold, color=color.new(color.red, 25), linestyle=hline.style_dotted)
+enterLong = spreadfinal < longThreshold
+exitLong = spreadfinal > exitLongThreshold and strategy.position_size > 0
+enterShort = spreadfinal > shortThreshold
+exitShort = spreadfinal < exitShortThreshold and strategy.position_size < 0
+strategy.entry("SE", strategy.short, when=enterShort)
+strategy.close("SE", when=exitShort)
+strategy.entry("LE", strategy.long, when=enterLong)
+strategy.close("LE", when=exitLong)
+Expand (41 lines)

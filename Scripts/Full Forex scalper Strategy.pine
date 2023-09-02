@@ -1,0 +1,198 @@
+Script Name: Full Forex scalper Strategy
+Author: exlux99
+Description: THis is a FOREX scalping system that can be optimized with almost all majors and crosses pairs.
+
+Its made of multiple elements such as :
+MACD
+Stochastic RSI
+Fast VW moving average
+Slow VW moving average
+Time management( forex sessions as inputs)
+
+Rules for entry
+Long
+Last 2 MACD values were ascending, fast moving average is below moving average and stochastic RSI...
+PineScript code:
+
+Pine Script™ strategy
+Full Forex scalper Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+//@version=4
+strategy("FOrex scalper Strategy", overlay=true)
+fromDay = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+fromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+fromYear = input(defval = 2020, title = "From Year", minval = 1970)
+ 
+// To Date Inputs
+toDay = input(defval = 1, title = "To Day", minval = 1, maxval = 31)
+toMonth = input(defval = 12, title = "To Month", minval = 1, maxval = 12)
+toYear = input(defval = 2021, title = "To Year", minval = 1970)
+ 
+// Calculate start/end date and time condition
+DST = 1 //day light saving for usa
+//--- Europe
+London = iff(DST==0,"0000-0900","0100-1000")
+//--- America
+NewYork = iff(DST==0,"0400-1400","0500-1500")
+//--- Pacific
+Sydney = iff(DST==0,"1300-2200","1400-2300")
+//--- Asia
+Tokyo = iff(DST==0,"1500-2400","1600-0100")
+customTime =iff(DST==0,"0000-1200","0100-1300")
+customTime2 =iff(DST==0,"0900-1200","1000-1300")
+//-- Time In Range
+timeinrange(res, sess) => time(res, sess) != 0
+london = timeinrange(timeframe.period, London)
+newyork = timeinrange(timeframe.period, NewYork)
+c_time = timeinrange(timeframe.period,customTime)
+c_time2 = timeinrange(timeframe.period,customTime2)
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear, toMonth, toDay, 00, 00)
+time_cond = time >= startDate and time <= finishDate and (london or newyork)
+fastLength = input(21)
+slowlength = input(58)
+MACDLength = input(8)
+smallEMA = ema(close, fastLength)
+largeEMA = ema(close, slowlength)
+MACD = smallEMA - largeEMA
+aMACD = ema(MACD, MACDLength)
+delta = MACD - aMACD
+smoothK = input(12, minval=1)
+smoothD = input(5, minval=1)
+lengthRSI = input(8, minval=1)
+lengthStoch = input(20, minval=1)
+src = input(close, title="RSI Source")
+vFast = stoch(close, high, low, 8)
+vSlow = sma(vFast, 5)
+rsi1 = rsi(src, lengthRSI)
+k = sma(stoch(rsi1, rsi1, rsi1, lengthStoch), smoothK)
+d = sma(k, smoothD)
+fiftyVWMA = vwma(close, 55)
+twohunVWMA = vwma(close, 144)
+tp = input(0.0044, "tp in 0.x-> EX 0.01 = 1%")
+sl = input(0.005, "sl in 0.x")
+timerange = input(true, "Europe + NewYork only ?")
+if(timerange==true and c_time and not(c_time2))
+    if MACD > MACD[1] and MACD[1] > MACD[2] and fiftyVWMA < twohunVWMA and time_cond
+        if vFast > vSlow and k < 30  //and (vSlow < 40)
+            strategy.entry("long", strategy.long, comment='long' , alert_message = 'long')
+    if MACD < MACD[1] and MACD[1] < MACD[2] and fiftyVWMA > twohunVWMA and time_cond
+        if vFast < vSlow and k > 70  //and (vSlow > 60) //and (rsi1 > 60)
+            strategy.entry("short", strategy.short, comment='short' , alert_message = 'short')
+  
+            
+if(timerange==false)
+    if MACD > MACD[1] and MACD[1] > MACD[2] and fiftyVWMA < twohunVWMA 
+        if vFast > vSlow and k < 30  //and (vSlow < 40)
+            strategy.entry("long", strategy.long, comment='long' , alert_message = 'long')
+    if MACD < MACD[1] and MACD[1] < MACD[2] and fiftyVWMA > twohunVWMA 
+        if vFast < vSlow and k > 70  //and (vSlow > 60) //and (rsi1 > 60)
+            strategy.entry("short", strategy.short, comment='short' , alert_message = 'short')
+            
+strategy.exit("long_tp/sl", "long", profit=close * tp / syminfo.mintick, loss=close * sl / syminfo.mintick, comment='long_tp/sl', alert_message = 'closelong')
+strategy.exit("short_tp/sl", "short", profit=close * tp / syminfo.mintick, loss=close * sl / syminfo.mintick, comment='short_tp/sl',  alert_message = 'closeshort')
+if(not(c_time) and timerange==true) //or newyork))
+    strategy.close("long", comment="long_time", alert_message='closelong')
+    strategy.close("short", comment="short_time", alert_message='closeshort')
+//plot(strategy.equity, title="equity", color=red, linewidth=2, style=areabr)
+Expand (100 lines)

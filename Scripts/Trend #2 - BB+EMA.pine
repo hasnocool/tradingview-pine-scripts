@@ -1,0 +1,110 @@
+Script Name: Trend #2 - BB+EMA
+Author: zxcv55602
+Description: What is the Trend #2 - BB+EMA?
+This strategy uses a combination of Bollinger Bands and Exponential Moving Averages, and adds the position management skills.
+When a position is established, if the price moves in the wrong direction, EMA will move the stop price closer to the opening price, which will reduce losses during the shocks.
+If the price moves in the right...
+PineScript code:
+
+Pine Script™ strategy
+Trend #2 - BB+EMA
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © zxcv55602
+//@version=4
+strategy(shorttitle="Trend #2 - BB+EMA v4", title="Bollinger Bands", overlay=true)
+date1 = input(title="Start Date", type=input.time, defval=timestamp("2000-01-01T00:00:00"))
+date2 = input(title="Stop Date", type=input.time, defval=timestamp("2030-01-01T00:00:00"))
+length = input(100, minval=1,step=10)
+mult = input(1.5,title="StdDev",step=0.1)
+//------------------
+basis = ema(close, length)
+dev = mult * stdev(close, length)
+upper = basis + dev
+lower = basis - dev
+//------------------
+stopcon=input(title="stopcon/lot", type=input.bool, defval=true)
+lot1=input(title="lot",defval=1)
+stoploss=input(title="stoploss",defval=1000)
+emacon=input(title="EMA", type=input.bool, defval=true)
+ema_value=input(title="EMA value",defval=100, minval=2,step=1)
+sarcon=input(title="SAR boost", type=input.bool, defval=true)
+start = input(0.1, minval=0, maxval=10, title="Start",step=0.1)
+increment = input(0.3, minval=0, maxval=10, title="Step Setting" ,step=0.1)
+maximum = input(1, minval=1, maxval=10, title="Maximum Step",step=0.1)
+plot(basis, "Basis", color=sarcon?na:color.new(#FF6D00,50))
+p1 = plot(upper, "Upper", color=color.new(color.blue,30))
+p2 = plot(lower, "Lower", color=color.new(color.blue,30))
+ema1=ema(close,ema_value)
+sarUp = sar(start*0.01, increment*0.01, maximum*0.1)
+sarDown = sar(start*0.01, increment*0.01, maximum*0.1)
+var ema2=0.0
+if strategy.position_size>0
+    ema2:=ema1>sarUp?ema1:(close<sarUp?na:sarUp)
+else
+    ema2:=ema1>sarDown?(close>sarDown?na:sarDown):ema1
+plot(sarcon ? ema2 : na, title="EMA", color=color.red,style=plot.style_stepline)
+plot(emacon?ema1:na, title="EMA", color=sarcon?na:color.blue)
+if time >= date1 and time <= date2
+    if ema1<upper and close>upper
+        strategy.cancel("short")
+        lot_L=stoploss/(close-basis)
+        strategy.entry("long",strategy.long,qty=stopcon?lot_L:lot1,stop=emacon?sarcon?max(basis,ema1,sarUp):max(basis,ema1):basis)
+    if ema1>lower and close<lower
+        strategy.cancel("long")
+        lot_S=stoploss/(basis-close)
+        strategy.entry("short",strategy.short,qty=stopcon?lot_S:lot1,stop=emacon?sarcon?min(basis,ema1,sarDown):min(basis,ema1):basis)
+if strategy.position_size>0
+    strategy.exit("long",from_entry="long",stop=emacon?sarcon?max(basis,ema1,sarUp):max(basis,ema1):basis,comment="close_L")
+if strategy.position_size<0
+    strategy.exit("short",from_entry="short",stop=emacon?sarcon?min(basis,ema1,sarDown):min(basis,ema1):basis,comment="close_S")
+Expand (49 lines)

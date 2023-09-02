@@ -1,0 +1,275 @@
+Script Name: ADX - DMI Trend Strategy
+Author: millerrh
+Description: This strategy takes the ADX Indicator I wrote and applies it to a strategy for back testing purposes.
+
+I've also applied a date filter so you can back test specific date ranges and a moving average filter so you can choose whether to filter your longs/shorts based on a moving average.
+PineScript code:
+
+Pine Script™ strategy
+ADX | DMI Trend Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © millerrh with inspiration from @9e52f12edd034d28bdd5544e7ff92e 
+//The intent behind this study is to look at ADX when it has an increasing slope and is above a user-defined key level (23 default). 
+//This is to identify when it is trending.
+//It then looks at the DMI levels.  If D+ is above D- and the ADX is sloping upwards and above the key level, it triggers a buy condition.  Opposite for short.
+//Can use a user-defined moving average to filter long/short if desried.
+// NOTE: THIS IS MEANT TO BE USED IN CONJUNCTION WITH MY "ATX TRIGGER" INDICATOR FOR VISUALIZATION. MAKE SURE SETTINGS ARE THE SAME FOR BOTH.
+strategy("ADX | DMI Trend", overlay=true, initial_capital=10000, currency='USD', 
+   default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent, commission_value=0.04)
+// === BACKTEST RANGE ===
+From_Year  = input(defval = 2019, title = "From Year")
+From_Month = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+From_Day   = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+To_Year    = input(defval = 9999, title = "To Year")
+To_Month   = input(defval = 1, title = "To Month", minval = 1, maxval = 12)
+To_Day     = input(defval = 1, title = "To Day", minval = 1, maxval = 31)
+Start  = timestamp(From_Year, From_Month, From_Day, 00, 00)  // backtest start window
+Finish = timestamp(To_Year, To_Month, To_Day, 23, 59)        // backtest finish window
+// == INPUTS ==
+shortTrades = input(title = "Allow short trades?", type = input.bool, defval = true)
+// ADX Info
+adxlen = input(14, title="ADX Smoothing")
+dilen = input(14, title="DI Period")
+keyLevel = input(23, title="Keylevel for ADX")
+adxLookbackEntry = input(3, title="Lookback Period for Slope (Entry)")
+adxLookbackExit = input(1, title="Lookback Period for Slope (Exit)")
+// == VOLUME FILTERING ==
+// Inputs
+volFilter = input(title = "Use Volume as Entry Filter?", type = input.bool, defval = true)
+volType = input(defval="Multiplier * Average", options=["Multiplier * Average", "Manual", "Multiplier * Average AND Manual"], title = "Volume Filtering Method")
+volMult = input(title = "Volume Trigger Multiplier", defval = 2, step = 0.1)
+volSMA = input(title = "Volume Trigger Average Bars Back", defval = 20, step = 1)
+volManual = input(20000, title="Manual Volume Value", step = 1000)
+// Check that volume is high before entering trade
+xVol = sma(volume, volSMA)
+xVolMult = xVol * volMult
+manualCompare = volManual > xVolMult
+xVolManual = manualCompare == true ? volManual : xVolMult
+volCheck = (volFilter == true and volType == "Multiplier * Average") ? xVolMult : (volFilter == true and volType == "Manual") ? volManual : (volFilter == true and volType == "Multiplier * Average AND Manual") ? xVolManual : 0
+//     xVol * volMult
+// else
+//     0
+// == MOVING AVERAGE FILTERING ==
+// Inputs
+useMaFilter = input(title = "Use MA for Entry Filtering?", type = input.bool, defval = true)
+maType = input(defval="EMA", options=["EMA", "SMA"], title = "MA Type For Filtering")
+maLength   = input(defval = 200, title = "MA Period for Filtering", minval = 1)
+// Declare function to be able to swap out EMA/SMA
+ma(maType, src, length) =>
+    maType == "EMA" ? ema(src, length) : sma(src, length) //Ternary Operator (if maType equals EMA, then do ema calc, else do sma calc)
+maFilter = ma(maType, close, maLength)
+plot(maFilter, title = "Trend Filter MA", color = color.green, linewidth = 3, style = plot.style_line, transp = 50)
+// Check to see if the useMaFilter check box is checked, this then inputs this conditional "maFilterCheck" variable into the strategy entry 
+maFilterCheck = if useMaFilter == true
+    maFilter
+else
+    close
+    
+// == ATR TRAILING STOPS ==
+// Inputs
+useATR = input(title = "Use ATR for Trailing Stop?", type = input.bool, defval = true)
+atrLookback = input(defval=14,title="ATR Lookback Period",type=input.integer)
+multiplier = input(defval=2,title="ATR Multiplier",type=input.float, step=0.1, minval=0.5, maxval=4)
+trigInput = input(title = "Execute Trades On...", defval = "Wick", options=["Wick","Close"]) // Useful for comparing standing stop orders vs. waiting for candle closes prior to action
+showInput = input(title="Show Trailing ATR", defval="Both", options=["Support","Resistance","Both"]) 
+// Calculate the trailing ATR
+atrValue = atr(atrLookback)
+atrMultiplied = atrValue * multiplier
+// Plot the price plus or minus the ATR
+atrLow = low - atrMultiplied
+atrHigh = high + atrMultiplied
+// Calculate both the low and high trailing ATRs every time. The low one never goes down, and the high one never goes up
+// Set them to something to start with
+trailAtrLow = atrLow
+trailAtrHigh = atrHigh
+// If the ATR Low has gone up AND it has gone above the trail, the low trailing ATR should also go up. If the ATR Low has gone up or down, but not below the trail, the ATR trail stays where it is
+trailAtrLow := na(trailAtrLow[1]) ? trailAtrLow : atrLow >= trailAtrLow[1] ? atrLow : trailAtrLow[1]
+// Same for the High
+trailAtrHigh := na(trailAtrHigh[1]) ? trailAtrHigh : atrHigh <= trailAtrHigh[1] ? atrHigh : trailAtrHigh[1]
+// Trigger stop based on candle close or High/Low
+trigResistance = trigInput == "Close" ? close : trigInput == "Wick" ? high : na
+trigSupport = trigInput == "Close" ? close : trigInput == "Wick" ? low : na
+// Determine if price is above resistance or below support
+atrResistanceHit = trigResistance >= trailAtrHigh and useATR == true
+atrSupportHit = trigSupport <= trailAtrLow and useATR == true
+// If price is above resistance or below support, reset the trailing ATR
+trailAtrLow := atrSupportHit ? atrLow : trailAtrLow
+trailAtrHigh := atrResistanceHit ? atrHigh : trailAtrHigh
+// Plot ATR Lines
+plotLow = useATR == true and showInput == "Support" ? trailAtrLow : useATR == true and showInput == "Both" ? trailAtrLow : na
+plotHigh = useATR == true and showInput == "Resistance" ? trailAtrHigh : useATR == true and showInput == "Both" ? trailAtrHigh : na
+plot(plotLow, color=color.gray, style=plot.style_linebr, linewidth=1)
+plot(plotHigh, color=color.gray, style=plot.style_linebr, linewidth=1)
+// == LOOK AT PARABOLIC SAR AS AN EXIT OPTION ==
+useSAR = input(title = "Use SAR for Trailing Stop?", type = input.bool, defval = true)
+sarStart = input(0.02, "Start")
+sarIncrement = input(0.02, "Increment")
+sarMaximum = input(0.2, "Max Value")
+sarOut = useSAR ? sar(sarStart, sarIncrement, sarMaximum) : na
+plot(sarOut, "ParabolicSAR", style=plot.style_cross, color=#3A6CA8)
+// Determine if price is above resistance or below support
+sarResistanceHit = trigResistance >= sarOut and useSAR == true
+sarSupportHit = trigSupport <= sarOut and useSAR == true
+// == USE BUILT-IN DMI FUNCTION TO DETERMINE ADX AND BULL/BEAR STRENGTH
+[diplus, diminus, adx] = dmi(dilen, adxlen)
+buySignal = (adx[0]-adx[adxLookbackEntry] > 0) and adx > keyLevel and diplus > diminus and time > Start and time < Finish and close >= maFilterCheck and volume > volCheck
+shortSignal = (adx[0]-adx[adxLookbackEntry] > 0) and adx > keyLevel and diplus < diminus and time > Start and time < Finish and close <= maFilterCheck and shortTrades and volume > volCheck
+sellSignal = (adx[0]-adx[adxLookbackExit] < 0) or atrSupportHit or sarSupportHit
+coverSignal = (adx[0]-adx[adxLookbackExit] < 0) or atrResistanceHit or sarResistanceHit
+// == STRATEGY ENTRIES/EXITS == 
+strategy.entry("Long", strategy.long, when = buySignal)
+strategy.close("Long", when = sellSignal)
+strategy.entry("Short", strategy.short, when = shortSignal)
+strategy.close("Short", when = coverSignal)
+    
+// == ALERTS == 
+alertcondition(buySignal, title='ADX | DMI Long', message='ADX | DMI Long')
+alertcondition(shortSignal, title='ADX | DMI Short', message='ADX | DMI Short')
+alertcondition(sellSignal, title='ADX | DMI Sell', message='ADX | DMI Sell')
+alertcondition(coverSignal, title='ADX | DMI Cover', message='ADX | DMI Cover')
+Expand (143 lines)

@@ -1,0 +1,402 @@
+Script Name: Bear & Bull Zone Signal Strategy
+Author: Solutions1978
+Description: Since I love to mix and match, here is something fresh and that actually works on the breakout of Ethereum without losing your ass on lagging indicators. 
+
+It blends some of the nice parts of my previous scripts while moving to big boy pants with a twist on the Fibonacci retracement using SMA and EMA at multiple levels to do a sanity check. 
+
+Is it too good to be...
+PineScript code:
+
+Pine Script™ strategy
+Bear & Bull Zone Signal Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//@version=4
+strategy(shorttitle='BBZS',title='Bear & Bull Zone Signal Strategy', overlay=true, initial_capital = 1000, process_orders_on_close=true, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type=strategy.commission.percent, commission_value=0.18, calc_on_every_tick=true)
+kcolor = #0094FF
+dcolor = #FF6A00
+// -----------------  Strategy Inputs -------------------------------------------------------------
+//Backtest dates with auto finish date of today
+start = input(defval = timestamp("01 April 2021 00:00 -0500"), title = "Start Time", type = input.time)
+finish = input(defval = timestamp("31 December 2021 00:00 -0600"), title = "Start Time", type = input.time)
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+// Strategy Selection - Long, Short, or Both
+strat = input(title="Strategy", defval="Long/Short", options=["Long Only", "Long/Short", "Short Only"])
+strat_val = strat == "Long Only" ? 1 : strat == "Long/Short" ? 0 : -1
+// Risk Management Inputs
+sl= input(10.0, "Stop Loss %", minval = 0, maxval = 100, step = 0.01)
+stoploss = sl/100
+tp = input(20.0, "Target Profit %", minval = 0, maxval = 100, step = 0.01)
+TargetProfit = tp/100
+// RSI and Stochastic Inputs
+length = input(14, "RSI Length", minval=1)
+source = input(title="RSI Source", type=input.source, defval=close)
+overbought= input(62, "Overbought")
+oversold= input(35, "Oversold")
+look_back = input(9,"Look Back Bars")
+high_source = input(high,"High Source")
+low_source= input(low,"Low Source")
+// EMA and SMA Background Inputs
+smoothK     = input(3, "K", minval=1)
+smoothD     = input(3, "D", minval=1)
+k_mode      = input("SMA", "K Mode", options=["SMA", "EMA", "WMA"])
+// MACD Inputs
+fastLength = input(5, minval=1, title="EMA Fast Length")
+slowLength = input(10, minval=1, title="EMA Slow Length")
+// Selections to show or hide the overlays
+showZones = input(true, title="Show Bullish/Bearish Zones")
+showStoch = input(true, title="Show Stochastic Overlays")
+// ------------------ Background Colors based on EMA Indicators -----------------------------------
+// Uses standard lengths of 9 and 21, if you want control delete the constant definition and uncomment the inputs
+haClose(gap) => (open[gap] + high[gap] + low[gap] + close[gap]) / 4
+rsi_ema = rsi(haClose(0), length)
+v2 = ema(rsi_ema, length)                                                
+v3 = 2 * v2 - ema(v2, length)  
+emaA = ema(rsi_ema, fastLength)                                     
+emaFast = 2 * emaA - ema(emaA, fastLength)
+emaB = ema(rsi_ema, slowLength)                                     
+emaSlow = 2 * emaB - ema(emaB, slowLength)  
+// bullish signal rule: 
+bullishRule =emaFast > emaSlow
+// bearish signal rule: 
+bearishRule =emaFast < emaSlow
+// current trading State
+ruleState = 0
+ruleState := bullishRule ? 1 : bearishRule ? -1 : nz(ruleState[1])
+bgcolor(showZones ? ( ruleState==1 ? color.blue : ruleState==-1 ? color.red : color.gray ) : na , title=" Bullish/Bearish Zones", transp=95)
+// ------------------  Stochastic Indicator Overlay -----------------------------------------------
+// Calculation
+// Use highest highs and lowest lows
+h_high = highest(high_source ,look_back)
+l_low = lowest(low_source ,look_back)
+RSI = rsi(source, length)
+stoch = stoch(RSI, RSI, RSI, length)
+k =
+ k_mode=="EMA" ? ema(stoch, smoothK) :
+ k_mode=="WMA" ? wma(stoch, smoothK) :
+ sma(stoch, smoothK)
+d = sma(k, smoothD)
+k_c = change(k)
+d_c = change(d)
+kd = k - d
+// Plot
+signalColor = k>oversold and d<overbought and k>d and k_c>0 and d_c>0 ? kcolor : 
+ k<overbought and d>oversold and k<d and k_c<0 and d_c<0 ? dcolor : na
+kp = plot(showStoch ? k : na, "K", transp=80, color=kcolor)
+dp = plot(showStoch ? d : na, "D", transp=80, color=dcolor)
+fill(kp, dp, color = signalColor, title="K-D", transp=88)
+signalUp = showStoch ? not na(signalColor) and kd>0 : na
+signalDown = showStoch ? not na(signalColor) and kd<0 : na
+plot(signalUp ? kd : na, "Signal Up", color=kcolor, transp=90, style=plot.style_columns)
+plot(signalDown ? (kd+100) : na , "Signal Down", color=dcolor, transp=90, style=plot.style_columns, histbase=100)
+// -------------- Add Price Movement to Strategy for better visualization -------------------------
+// Calculations
+h1 = vwma(high, length)
+l1 = vwma(low, length)
+hp = h_high[1]
+lp = l_low[1]
+// Plot
+var plot_color=#353535
+var sig = 0
+if (h1 >hp)
+    sig:=1
+    plot_color:=color.lime
+else if (l1 <lp)
+    sig:=-1
+    plot_color:=color.maroon
+bgcolor(plot_color, transp=75)
+// --------------------------------------- RSI Plot ----------------------------------------------
+// Plot Oversold and Overbought Lines
+over = hline(oversold, title="Oversold", color=color.green)
+under = hline(overbought, title="Overbought", color=color.red)
+fill(over, under, color=#9915FF, transp=90, title="Band Background")
+// Plot colored RSI Line
+plot(RSI, title="RSI", linewidth=3, color=color.yellow)
+//---------------- Signal Trigger Definitions -----------------------------------------
+SignalA = bearishRule and signalDown and window()
+SignalB = bullishRule and signalDown and window()
+SignalC = bearishRule and signalUp and window()
+SignalD = bullishRule and signalUp and window()
+//---------------- Signal Alerts ------------------------------------------------------
+//alertcondition(SignalA, title='Bear & Signal Down', message='Bearish Down')
+//alertcondition(SignalB, title='Bull & Signal Down', message='Bullish Down')
+//alertcondition(SignalC, title='Bear & Signal Up', message='Bearish Up')
+//alertcondition(SignalD, title='Bull & Signal Up', message='Bullish Up')
+//---------------- Fibonacci Sanity Check of Signals ---------------------------------
+sma24 = sma(close, 24)
+sma38 = sma(close, 38)
+sma50 = sma(close, 50)
+sma62 = sma(close, 62)
+sma76 = sma(close, 76)
+sma100 = sma(close, 100)
+sma236 = sma(close, 236)
+sma382= sma(close, 382)
+sma500 = sma(close, 500)
+sma618 = sma(close, 618)
+sma764 = sma(close, 764)
+sma1000 = sma(close, 1000)
+ema24 = ema(close, 24)
+ema38 = ema(close, 38)
+ema50 = ema(close, 50)
+ema62 = ema(close, 62)
+ema76 = ema(close, 76)
+ema100 = ema(close, 100)
+ema236 = ema(close, 236)
+ema382= ema(close, 382)
+ema500 = ema(close, 500)
+ema618 = ema(close, 618)
+ema764 = ema(close, 764)
+ema1000 = ema(close, 1000)
+Higher50 = close > sma50 or close > ema50
+Lower50 = close < sma50 or close < ema50
+Higher100 = close > sma100 or close > ema100
+Lower100 = close < sma100 or close < ema100
+Higher236 = close > sma236 or close > ema236
+Lower236 = close < sma236 or close < ema236
+Higher500 = close > sma500 or close > ema500
+Lower500 = close < sma500 or close < ema500
+Higher1000 = close > sma1000 or close > ema1000
+Lower1000 = close < sma1000 or close < ema1000
+// ------------------------------------- Alerts and Entry Strategy ----------------------------
+GoLong = strat_val > -1 ? (SignalC or SignalD and ((Higher50 or Higher100 or Higher236 or Higher500 or Higher1000) and not (Higher50[1] or Higher100[1] or Higher236[1] or Higher500[1] or Higher1000[1]))) : false
+//alertcondition(GoLong, title='True Long Signal', message='Go Long')
+GoShort = strat_val < 1 ? (SignalA or SignalB and ((Lower50 or Lower100 or Lower236 or Lower500 or Lower1000) and not (Lower50[1] or Lower100[1] or Lower236[1] or Lower500[1] or Lower1000[1]))) : false
+//alertcondition(GoShort, title='True Short Signal', message='Go Short')
+// ------------------------------------- Backtesting of Strategy --------------------------------
+convert_percent_to_points(percent) =>
+    strategy.position_size != 0 ? round(percent * strategy.position_avg_price / syminfo.mintick) : float(na)
+    
+setup_percent(percent) =>
+    convert_percent_to_points(percent)
+if (GoLong)
+    strategy.entry("LONG", strategy.long)
+    strategy.exit(id="Exit Long", from_entry = "LONG", loss=setup_percent(stoploss), profit=setup_percent(TargetProfit))
+CloseLong = strat_val > -1 ? strategy.position_size > 0 and GoShort : false
+if(CloseLong)
+    strategy.close("LONG")
+if (GoShort) 
+    strategy.entry("SHORT", strategy.short)
+    strategy.exit(id="Exit Short", from_entry = "SHORT", loss=setup_percent(stoploss), profit=setup_percent(TargetProfit))
+        
+CloseShort = strat_val < 1 ? strategy.position_size < 0 and GoLong : false
+if(CloseShort)
+    strategy.close("SHORT")
+Expand (218 lines)

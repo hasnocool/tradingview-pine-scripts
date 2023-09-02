@@ -1,0 +1,87 @@
+Script Name: Take America Back Version 1.0
+Author: Crystal_Catalyst
+Description: So basically, the when the price goes down a little, it buys, and when it goes up a little it buys. The only indicators are account balances, and the price, that’s it. Now I wish that Pine Script had a function or variable in which I could recall the balances of specific portions of the portfolio, but it doesn’t. So, I had to improvise. Now for this to work...
+PineScript code:
+
+Pine Script™ strategy
+Take America Back Version 1.0
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Crystal_Catalyst
+//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Crystal_Catalyst
+//@version=4
+strategy("Take America Back Version 1.0", close_entries_rule="ANY")
+default_qty_value=input(defval=20, title="Quantity Value")
+var float saved=input(defval=0, title="Saved")
+var price = close
+var float asset = na
+var float base = na
+var float ratio = na
+fees = input(defval=.0025, title="Fees")
+asset := (strategy.opentrades*default_qty_value+strategy.openprofit)/open
+base := strategy.initial_capital-strategy.opentrades*default_qty_value+strategy.netprofit
+ratio := asset*open/(default_qty_value*strategy.opentrades)
+if ratio>1
+    ratio := 1
+var initial_asset = asset
+var initial_base = base
+var previous_asset = asset
+var previous_base = base
+if strategy.opentrades != strategy.opentrades[1]
+    price := open[1]
+if strategy.netprofit>strategy.netprofit[1]
+    saved := saved+(strategy.netprofit-strategy.netprofit[1])*(base-saved)/base
+buy = "Take America Back" + tostring(strategy.opentrades)
+sell = "Take America Back" + tostring(strategy.opentrades-1)
+if open>price and asset*open<default_qty_value
+    price := open
+if open<price and base<default_qty_value+saved
+    price := open
+if open>(asset*price+default_qty_value*2*fees)/(asset*ratio) and asset*open>default_qty_value
+    strategy.exit(sell, limit=open, stop=open)
+if open<price*(1-2*fees/(base/default_qty_value)) and base>default_qty_value+saved
+    strategy.entry(buy, true, limit=open, stop=open, qty=default_qty_value/close, when = close<price*(1-fees))
+plot(saved, title="Saved", color=color.black, style=plot.style_line)
+Expand (40 lines)

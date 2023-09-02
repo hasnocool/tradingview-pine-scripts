@@ -1,0 +1,158 @@
+Script Name: Sine Wave Theory
+Author: Gentleman-Goat
+Description: There are some ideas out there that the market is like a collection of quantum events and that it could all be broken down into sine waves.  I created this script to put that to the test.
+
+The idea is simple, I tested 3 different factors that could be put into sine wave form.
+
+1.)  Bar Change 
+2.)  Volume Average Change 
+3.)  Coin Flip 
+
+For the bar change, I...
+PineScript code:
+
+Pine Script™ strategy
+Sine Wave Theory
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Gentleman-Goat
+//@version=5
+strategy("Sine Wave Theory",overlay=false, precision = 2, initial_capital = 1000,shorttitle = "SINE_W_T")
+var bar_change_wave_direction = input.int(defval=1,title="Starting Wave Direction",group="Bar Change")
+bar_change_sine_wave_number = input.int(defval=28,title="Sine Wave #",group="Bar Change")
+bar_change_sine_wave_res = input.timeframe(defval="D",title="Resolution",group="Bar Change")
+bar_change_trade = input.bool(defval=true,title="Trade",group="Bar Change")
+var volume_wave_direction = input.int(defval=1,title="Starting Wave Direction",group="Volume")
+avg_volume_length = input.int(7,title="Lookback Length",group="Volume")
+volume_sine_wave_number = input.int(defval=28,title="Sine Wave #",group="Volume")
+volume_sine_wave_res = input.timeframe(defval="D",title="Resolution",group="Volume")
+volume_trade = input.bool(defval=false,title="Trade",group="Volume")
+var coin_flip_wave_direction = input.int(defval=1,title="Starting Wave Direction",group="Coin Flip")
+coin_flip_sine_wave_number = input.int(defval=28,title="Sine Wave #",group="Coin Flip")
+coin_flip_seed = input.int(defval=1,title="Seed #",group="Coin Flip")
+coin_flip_trade = input.bool(defval=false,title="Trade",group="Coin Flip")
+avg_volume = ta.sma(volume,avg_volume_length)
+//Green or Red Candle
+bar_color = close>open ? color.green : color.red
+bar_color_time_adj = request.security(syminfo.tickerid, bar_change_sine_wave_res, bar_color)
+//Above or Below Average
+volume_state = (volume>avg_volume) ? color.blue : color.purple
+volume_state_time_adj = request.security(syminfo.tickerid, volume_sine_wave_res, volume_state)
+ 
+//Coinflip
+coin_flip = math.random(0,100,coin_flip_seed)>=50 ? color.teal : color.yellow
+var bar_change_wave_count = 0
+var volume_wave_count = 0
+var coin_flip_wave_count = 0
+//Wave Counters
+if(volume_state_time_adj[1] != volume_state_time_adj)
+    volume_wave_count := volume_wave_count + volume_wave_direction
+if(bar_color_time_adj[1] != bar_color_time_adj)
+    bar_change_wave_count := bar_change_wave_count + bar_change_wave_direction
+if(coin_flip[1] != coin_flip)
+    coin_flip_wave_count := coin_flip_wave_count + coin_flip_wave_direction
+//Direction changers
+if(math.abs(bar_change_wave_count) == bar_change_sine_wave_number and bar_color_time_adj[1] != bar_color_time_adj)
+    bar_change_wave_direction := bar_change_wave_direction * -1
+if(math.abs(volume_wave_count) == volume_sine_wave_number and volume_state_time_adj[1] != volume_state_time_adj)
+    volume_wave_direction := volume_wave_direction * -1
+if(math.abs(coin_flip_wave_count) == coin_flip_sine_wave_number and coin_flip[1] != coin_flip)
+    coin_flip_wave_direction := coin_flip_wave_direction * -1
+//Entry positions
+if(bar_change_wave_count==bar_change_sine_wave_number and bar_change_trade==true)
+    strategy.entry(id="short",direction=strategy.short)
+if(bar_change_wave_count==bar_change_sine_wave_number*-1 and bar_change_trade==true)
+    strategy.entry(id="long",direction=strategy.long)
+if(volume_wave_count==volume_sine_wave_number and volume_trade==true)
+    strategy.entry(id="short-volume",direction=strategy.short)
+if(volume_wave_count==volume_sine_wave_number*-1 and volume_trade==true)
+    strategy.entry(id="long-volume",direction=strategy.long)
+if(coin_flip_wave_count==coin_flip_sine_wave_number and coin_flip_trade==true)
+    strategy.entry(id="short-coinflip",direction=strategy.short)
+if(coin_flip_wave_count==coin_flip_sine_wave_number*-1 and coin_flip_trade==true)
+    strategy.entry(id="long-coinflip",direction=strategy.long)
+hline(0, title='Center', color=color.white, linestyle=hline.style_dashed, linewidth=1)
+plot(bar_change_wave_count,title="Bar Change", color=bar_color, linewidth=2)
+plot(volume_wave_count,title="Volume Average Change", color=volume_state, linewidth=2)
+plot(coin_flip_wave_count,title="Coin Flip Change", color=coin_flip, linewidth=2)
+Expand (80 lines)

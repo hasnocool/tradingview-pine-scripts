@@ -1,0 +1,66 @@
+Script Name: Striker Play
+Author: RickyCadan
+Description: Bullish Entry Trigger = Current candle closes above last 3 candles highs
+Bullish Entry Trigger = 50% retracement of bullish signal candle 
+Bearish Entry Trigger = Current candle closes below last 3 candles lows
+Bearish Entry Trigger = 50% retracement of bearish signal candle
+PineScript code:
+
+Pine Script™ strategy
+Striker Play
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © RickyCadan
+//@version=5
+strategy("Striker Play", overlay=true)
+// Define the input for the number of previous candles to use
+iPrevCandles = input.int(defval=3, title="Number of Previous Candles", minval=1, maxval=50)
+// Calculate the high and low of the previous candles
+high1 = ta.highest(high, iPrevCandles)
+high2 = ta.highest(high, iPrevCandles)[1]
+high3 = ta.highest(high, iPrevCandles)[2]
+low1 = ta.lowest(low, iPrevCandles)
+low2 = ta.lowest(low, iPrevCandles)[1]
+low3 = ta.lowest(low, iPrevCandles)[2]
+// Determine if a bullish breakout occurred
+bullishBreakout = close > high2 and high3
+// Determine if a bearish breakout occurred
+bearishBreakout = close < low2 and low3
+// Plot buy and sell signals
+plotshape(series=bullishBreakout ? 1 : 0, style=shape.triangleup, location=location.belowbar, color=color.green, size=size.small, text="Buy", textcolor = color.green)
+plotshape(series=bearishBreakout ? 1 : 0, style=shape.triangledown, location=location.abovebar, color=color.red, size=size.small, text="Sell", textcolor = color.red)
+// Calculate the 50% retracement of the breakout candle
+retracePrice = bullishBreakout ? (high1 + low1) / 2 : bearishBreakout ? (high1 + low1) / 2 : na
+// Enter limit orders at the 50% retracement of the breakout candle
+if bullishBreakout and strategy.position_size <= 3
+    strategy.entry("Buy", strategy.long, limit=retracePrice, comment="Buy Limit")
+if bearishBreakout and strategy.position_size <= 3
+    strategy.entry("Sell", strategy.short, limit=retracePrice, comment="Sell Limit")
+Expand (27 lines)

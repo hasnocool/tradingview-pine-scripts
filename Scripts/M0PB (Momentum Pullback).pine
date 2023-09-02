@@ -1,0 +1,250 @@
+Script Name: M0PB (Momentum Pullback)
+Author: Marcns_
+Description: Long/short strategy that identifies extreme readings on the rsi as a *momentum signal*, unlike most RSI strategies the script will look to buy or sell the first pullback in the direction of the extreme RSI reading.
+
+Enters positions on the first pullback to the 5ema(low)/ 5ema(high) and exits at rolling 12 bar high/ low. The rolling high/ low feature means that if...
+PineScript code:
+
+Pine Script™ strategy
+M0PB (Momentum Pullback)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Marcns_
+//@version=5
+strategy("M0PB", commission_value = 0.0004, slippage = 1, initial_capital=30000)
+// commision is equal to approx $3.8 per round trip which is accurate for ES1! futures and slippage per trade is conservatively 1 tick in and 1 tick out. 
+// *momentum pull back* //
+// long / short strategy that identifies extreme readings on the rsi as a *momentum signal*
+//Strategy buys/ sells a pullback to the 5ema(low)/ 5ema(high) and exits at rolling 12 bar high/ low. The rolling high/ low feature means that 
+//if price enters into a pronlonged consolidation the profit target will begin to reduce with each new bar. The best trades tend to work within 2-6 bars
+// hard stop is X atr's from postion average price. This can be adjusted in user inputs.
+// built for use on 5 min & 1min intervals on: FX, Indexes, Crypto
+// there is a lot of slack left in entries and exits but the overall strategy is fairly robust across timeframes and markets and has between 60%-70% winrate with larger winners.
+// signals that occur from economic news volatility are best avoided.  
+// define rsi
+r = ta.rsi(close,6) 
+// find rsi > 90
+b = 0.0
+if r >= 90
+    b := 1.0
+else
+    na
+// find rsi < 10
+s = 0.0
+if r <= 10
+    s := -1.0
+else
+    na
+// plot rsi extreme as painted background color
+bgcolor(b ? color.rgb(255, 82, 82, 49): na)
+bgcolor(s? color.rgb(76, 175, 79, 51): na)
+// exponential moving averages for entries. note that source is high and low (normally close is def input) this creates entry bands
+//entry short price using high as a source ta.ema(high,5)
+es = ta.ema(high,5)
+//entry long price using low as a source ta.ema(low,5)
+el = ta.ema(low,5)
+// long pullback entry trigger: last period above ema and current low below target ema entry 
+let = 0.0
+if low[1] > el[1] and low <= el
+    let := 1.0
+else
+    na
+//short entry trigger ""
+set = 0.0
+if high[1] < es[1] and high >= es
+    set := -1.0
+else
+    na
+// create signal "trade_l" if RSI > 90 and price pulls back to 5ema(low) within 6 bars
+trade_l = 0.0
+if ta.barssince(b == 1.0) < 6 and let == 1.0
+    trade_l := 1.0
+else
+    na
+plot(trade_l, "l_entry", color.green)
+//create short signal "trade_s" if rsi < 10 and prices pullback to 5em(high) wihthin 6 bars
+trade_s = 0.0
+if ta.barssince(s == -1.0) < 6 and set == -1.0
+    trade_s := -1.0
+else
+    na
+plot(trade_s, "s_entry", color.purple)
+// define price at time of trade_l signal and input value into trade_p to use for stop parems later
+trade_p = strategy.position_avg_price
+//indentify previous 12 bar high as part of long exit strat
+// this creates a rolling 12 bar high target... a quick move back up will exit at previous swing high but if a consolidation occurs system will exit on a new 12 bar high which may be below prev local high
+ph = ta.highest(12)
+// inverse of above for short exit strat - previous lowest low of 12 bars as exit (rolling)
+pl = ta.lowest(12)
+// 1.5 atr stop below entry price (trade_p defined earlier) as part of exit strat
+atr_inp = input.float(2.75, "atr stop", minval = 0.1, maxval = 6.0)
+atr = ta.atr(10)
+stop_l = trade_p - (atr* atr_inp)
+stop_s = trade_p + (atr* atr_inp)
+//strat entry long
+strategy.entry("EL", strategy.long, 2, when = trade_l == 1.0)
+//strat entry short
+strategy.entry("ES", strategy.short, 2, when = trade_s == -1.0)   
+    
+//strat long exit
+if strategy.position_size == 2
+    strategy.exit(id = "ph", from_entry = "EL", qty = 2, limit = ph)
+    if strategy.position_size == 2
+        strategy.close_all(when = low[1] > stop_l[1] and low <= stop_l)
+// strat short exit
+if strategy.position_size == -2
+    strategy.exit(id = "pl", from_entry = "ES", qty = 2, limit =pl)
+    if strategy.position_size == -2
+        strategy.close_all(when = high[1] < stop_s[1] and high >= stop_s)
+// code below to trail remaining 50% of position //
+ //if strategy.position_size == 1 
+        //strategy.exit(id ="trail", from_entry = "EL", qty = 1, stop = el)
+        
+Expand (147 lines)

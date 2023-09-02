@@ -1,0 +1,58 @@
+Script Name: DMI Swings (by Coinrule)
+Author: Coinrule
+Description: The Directional Movement Index is a handy indicator that helps catch the direction in which the price of an asset is moving. It compares the prior highs and lows to draw three lines:
+ 
+ Positive directional line (+DI)
+ Negative directional line (-DI)
+ Average direction index (ADX)
+ 
+
+DMI is simple to interpret. When +DI > - DI, it means the price is trending up....
+PineScript code:
+
+Pine Script™ strategy
+DMI Swings (by Coinrule)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+//@version=4
+strategy(shorttitle='DMI swings',title='DMI swings', overlay=true, initial_capital = 100, process_orders_on_close=true, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type=strategy.commission.percent, commission_value=0.1)
+//Backtest dates
+fromMonth = input(defval = 1,    title = "From Month",      type = input.integer, minval = 1, maxval = 12)
+fromDay   = input(defval = 1,    title = "From Day",        type = input.integer, minval = 1, maxval = 31)
+fromYear  = input(defval = 2021, title = "From Year",       type = input.integer, minval = 1970)
+thruMonth = input(defval = 1,    title = "Thru Month",      type = input.integer, minval = 1, maxval = 12)
+thruDay   = input(defval = 1,    title = "Thru Day",        type = input.integer, minval = 1, maxval = 31)
+thruYear  = input(defval = 2112, title = "Thru Year",       type = input.integer, minval = 1970)
+showDate  = input(defval = true, title = "Show Date Range", type = input.bool)
+start     = timestamp(fromYear, fromMonth, fromDay, 00, 00)        // backtest start window
+finish    = timestamp(thruYear, thruMonth, thruDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+[pos_dm, neg_dm, avg_dm] = dmi(14, 14)
+//Entry 
+strategy.entry(id="long", long = true, when = avg_dm > 45 and pos_dm < neg_dm and window())
+//Exit
+strategy.close("long", when = avg_dm > 45 and pos_dm > neg_dm and window())
+Expand (24 lines)

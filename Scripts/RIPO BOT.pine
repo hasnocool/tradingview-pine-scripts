@@ -1,0 +1,137 @@
+Script Name: RIPO BOT
+Author: Ripo7
+Description: Script using MA Trendline, RSI and strong buy signal
+
+Script still in development
+PineScript code:
+
+Pine Script™ strategy
+RIPO BOT
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+//@version=5
+//exapple bot
+strategy('RIPO BOT', shorttitle='RIPO BOT', overlay=true, process_orders_on_close=false, calc_on_order_fills=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100, calc_on_every_tick=false)
+sl_inp = input(0.15, title='Stop Loss %') / 100
+tp_inp = input(0.5, title='Take Profit %') / 100
+length = input(defval=21)
+upper = ta.highest(length)
+lower = ta.lowest(length)
+ema200 = ta.ema(close, 200)
+lengthChop = input.int(14, minval=1)
+ci = 100 * math.log10(math.sum(ta.atr(1), lengthChop) / (ta.highest(lengthChop) - ta.lowest(lengthChop))) / math.log10(lengthChop)
+offset = input.int(0, "Offset",  minval = -500, maxval = 500)
+plot(ci, "CHOP", color=#2962FF, offset = offset)
+band1 = hline(61.8, "Upper Band", color=#787B86, linestyle=hline.style_dashed)
+hline(50, "Middle Band", color=color.new(#787B86, 50))
+band0 = hline(38.2, "Lower Band", color=#787B86, linestyle=hline.style_dashed)
+fill(band1, band0, color = color.rgb(33, 150, 243, 90), title = "Background")
+rsi = ta.rsi(close, 14)
+var float entry_price = na
+output = 100 * (close - upper) / (upper - lower)
+ema = ta.ema(output, input(defval=13, title='EMA'))
+ma(src, len) =>
+    ta.wma(2 * ta.wma(src, len / 2) - ta.wma(src, len), math.round(math.sqrt(len)))
+BBMC = ma(close, 60)
+rangema = ta.ema(ta.tr, 60)
+upperk = BBMC + rangema * 0.2
+lowerk = BBMC - rangema * 0.2
+color_bar = close > upperk ? color.blue : close < lowerk ? color.fuchsia : color.gray
+ExitHigh = ma(high, 15)
+ExitLow = ma(low, 15)
+Hlv3 = int(na)
+Hlv3 := close > ExitHigh ? 1 : close < ExitLow ? -1 : Hlv3[1]
+sslExit = Hlv3 < 0 ? ExitHigh : ExitLow
+base_cross_Long = ta.crossover(close, sslExit)
+base_cross_Short = ta.crossover(sslExit, close)
+codiff = base_cross_Long ? 1 : base_cross_Short ? -1 : na
+entry_long = false
+entry_short = false
+    
+if ta.crossover(close, BBMC) and output > ema
+    entry_long := true
+if entry_long and strategy.position_size == 0
+    entry_price := close
+    strategy.entry('enter long', strategy.long, comment='ENTER-LONG_BYBIT_MATICUSDT_BOT-NAME_1M_85915e4dc80fb663')
+if strategy.position_size > 0
+    strategy.exit('Stop Loss/TP long', 'enter long', limit=entry_price * (1 + tp_inp), stop = color_bar == color.fuchsia ? BBMC : na, comment='EXIT-LONG_BYBIT_MATICUSDT_BOT-NAME_1M_85915e4dc80fb663')
+plot(entry_price * (1 + tp_inp), color=color.new(color.green, 0))
+plot(rsi, color=color.yellow)
+plot(output, title='%R', color=color.new(color.yellow, 0), linewidth=2)
+plot(ema, title='EMA', color=color.new(color.aqua, 0), linewidth=2)
+plotarrow(codiff, colorup=color.new(color.blue, 35), colordown=color.new(color.fuchsia, 35), title='Exit Arrows', maxheight=20, offset=0)
+plot(BBMC, color=color_bar, linewidth=4, title='MA Trendline')
+Expand (74 lines)

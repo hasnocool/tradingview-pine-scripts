@@ -1,0 +1,256 @@
+Script Name: Chandelier Exit ZLSMA Strategy
+Author: simwai
+Description: Introducing a Powerful Trading Indicator: Chandelier Exit with ZLSMA 
+
+If you're a trader, you know the importance of having the right tools and indicators to make informed decisions. That's why we're excited to introduce a powerful new trading indicator that combines the Chandelier Exit and ZLSMA: two widely-used and effective indicators for technical...
+PineScript code:
+
+Pine Script™ strategy
+Chandelier Exit ZLSMA Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+//@version=5
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © simwai
+strategy('Chandelier Exit ZLSMA Strategy', shorttitle='CE_ZLSMA', overlay = true, initial_capital = 1000, default_qty_value = 10, default_qty_type = strategy.percent_of_equity, calc_on_every_tick = false, process_orders_on_close = true, commission_value = 0.075)
+// -- Colors --
+color maximumYellowRed = color.rgb(255, 203, 98) // yellow
+color rajah = color.rgb(242, 166, 84) // orange
+color magicMint = color.rgb(171, 237, 198)
+color languidLavender = color.rgb(232, 215, 255)
+color maximumBluePurple = color.rgb(181, 161, 226)
+color skyBlue = color.rgb(144, 226, 244)
+color lightGray = color.rgb(214, 214, 214)
+color quickSilver = color.rgb(163, 163, 163)
+color mediumAquamarine = color.rgb(104, 223, 153)
+color carrotOrange = color.rgb(239, 146, 46)
+// -- Inputs --
+length = input(title='ATR Period', defval=1)
+mult = input.float(title='ATR Multiplier', step=0.1, defval=2)
+showLabels = input(title='Show Buy/Sell Labels ?', tooltip='Created by Chandelier Exit (CE)', defval=false)
+isSignalLabelEnabled = input(title='Show Signal Labels ?', defval=true)
+useClose = input(title='Use Close Price for Extrema ?', defval=true)
+zcolorchange = input(title='Enable Rising/Decreasing Highlightning', defval=false)
+zlsmaLength = input(title='ZLSMA Length', defval=50)
+offset = input(title='Offset', defval=0)
+// -- CE - Credits to @everget --
+float haClose = float(1) / 4 * (open[1] + high[1] + low[1] + close[1])
+atr = mult * ta.atr(length)[1]
+longStop = (useClose ? ta.highest(haClose, length) : ta.highest(haClose, length)) - atr
+longStopPrev = nz(longStop[1], longStop)
+longStop := haClose > longStopPrev ? math.max(longStop, longStopPrev) : longStop
+shortStop = (useClose ? ta.lowest(haClose, length) : ta.lowest(haClose, length)) + atr
+shortStopPrev = nz(shortStop[1], shortStop)
+shortStop := haClose < shortStopPrev ? math.min(shortStop, shortStopPrev) : shortStop
+var int dir = 1
+dir := haClose > shortStopPrev ? 1 : haClose < longStopPrev ? -1 : dir
+buySignal = dir == 1 and dir[1] == -1
+plotshape(buySignal and showLabels ? longStop : na, title='Buy Label', text='Buy', location=location.absolute, style=shape.labelup, size=size.tiny, color=mediumAquamarine, textcolor=color.white)
+sellSignal = dir == -1 and dir[1] == 1
+plotshape(sellSignal and showLabels ? shortStop : na, title='Sell Label', text='Sell', location=location.absolute, style=shape.labeldown, size=size.tiny, color=carrotOrange, textcolor=color.white)
+changeCond = dir != dir[1]
+// -- ZLSMA - Credits to @netweaver2011 --
+lsma = ta.linreg(haClose, zlsmaLength, offset)
+lsma2 = ta.linreg(lsma, zlsmaLength, offset)
+eq = lsma - lsma2
+zlsma = lsma + eq
+zColor = zcolorchange ? zlsma > zlsma[1] ? magicMint : rajah : languidLavender
+plot(zlsma, title='ZLSMA', linewidth=2, color=zColor)
+// -- Signals --
+var string isTradeOpen = ''
+var string signalCache = ''
+bool enterLong = buySignal and ta.crossover(haClose, zlsma) 
+bool exitLong = ta.crossunder(haClose, zlsma) 
+bool enterShort = sellSignal and ta.crossunder(haClose, zlsma)
+bool exitShort = ta.crossover(haClose, zlsma)
+if (signalCache == 'long entry')
+    signalCache := ''
+    enterLong := true
+else if (signalCache == 'short entry')
+    signalCache := ''
+    enterShort := true
+if (isTradeOpen == '')
+    if (exitShort and (not enterLong))
+        exitShort := false
+    if (exitLong and (not enterShort))
+        exitLong := false   
+    if (enterLong and exitShort)
+        isTradeOpen := 'long'
+        exitShort := false
+    else if (enterShort and exitLong)
+        isTradeOpen := 'short'
+        exitLong := false
+    else if (enterLong)
+        isTradeOpen := 'long'
+    else if (enterShort)
+        isTradeOpen := 'short'
+else if (isTradeOpen == 'long')
+    if (exitShort)
+        exitShort := false
+    if (enterLong)
+        enterLong := false
+    if (enterShort and exitLong)
+        enterShort := false
+        signalCache := 'short entry'
+    if (exitLong)
+        isTradeOpen := ''
+else if (isTradeOpen == 'short')
+    if (exitLong)
+        exitLong := false
+    if (enterShort)
+        enterShort := false
+    if (enterLong and exitShort)
+        enterLong := false
+        signalCache := 'long entry'
+    if (exitShort)
+        isTradeOpen := ''
+plotshape((isSignalLabelEnabled and enterLong) ? zlsma : na, title='LONG', text='L', style=shape.labelup, color=mediumAquamarine, textcolor=color.white, size=size.tiny, location=location.absolute)
+plotshape((isSignalLabelEnabled and enterShort) ? zlsma : na, title='SHORT', text='S', style=shape.labeldown, color=carrotOrange, textcolor=color.white, size=size.tiny, location=location.absolute)
+plotshape((isSignalLabelEnabled and exitLong) ? zlsma : na, title='LONG EXIT', style=shape.circle, color=magicMint, size=size.tiny, location=location.absolute)
+plotshape((isSignalLabelEnabled and exitShort) ? zlsma : na, title='SHORT EXIT', style=shape.circle, color=rajah, size=size.tiny, location=location.absolute)
+barcolor(color=isTradeOpen == 'long' ? mediumAquamarine : isTradeOpen == 'short' ? carrotOrange : na)
+// -- Long Exits --
+if (exitLong and strategy.position_size > 0)
+    strategy.close('long', comment='EXIT_LONG')
+// -- Short Exits --
+if (exitShort and strategy.position_size < 0)
+    strategy.close('short', comment='EXIT_SHORT')
+// -- Long Entries --
+if (enterLong)
+    strategy.entry('long', strategy.long, comment='ENTER_LONG')
+// -- Short Entries --
+if (enterShort)
+    strategy.entry('short', strategy.short, comment='ENTER_SHORT')
+Expand (133 lines)

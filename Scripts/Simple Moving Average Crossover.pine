@@ -1,0 +1,104 @@
+Script Name: Simple Moving Average Crossover
+Author: sixpathssenin
+Description: This strategy uses two moving averages of 21 and 8 to generate buy or sell signal.
+
+This is for purely intraday trades and best use in 15 min time frame
+
+This strategy uses angle/slope  of ma to filter out period of sideways movement and only generate signals when the stock starts trending in one direction
+
+ 
+How to use this
+
+1) Buy when the buy is generated 
+
+2)...
+PineScript code:
+
+Pine Script™ strategy
+Simple Moving Average Crossover
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+//written by sixpathssenin
+//@version=4
+strategy(title="Dual Moving Average",initial_capital=10000,overlay=true)
+ma1= sma(close,8)
+ma2= sma(close,21)
+angleCriteria = input(title="Angle", type=input.integer, defval=7, minval=1, maxval=13)
+i_lookback   = input(2,     "Angle Period", input.integer, minval = 1)
+i_atrPeriod  = input(10,    "ATR Period",   input.integer, minval = 1)
+i_angleLevel = input(6,     "Angle Level",  input.integer, minval = 1)
+i_maSource   = input(close, "MA Source",    input.source)
+f_angle(_src, _lookback, _atrPeriod) =>
+    rad2degree = 180 / 3.141592653589793238462643  //pi 
+    ang = rad2degree * atan((_src[0] - _src[_lookback]) / atr(_atrPeriod)/_lookback)
+    ang
+_angle = f_angle(ma2, i_lookback, i_atrPeriod)
+plot(ma1,color=#FF0000)
+plot(ma2,color=#00FF00)
+crosso=crossover(ma1,ma2) 
+crossu=crossunder(ma1,ma2)
+_lookback = 15
+f_somethingHappened(_cond, _lookback) =>
+    bool _crossed = false
+    for i = 1 to _lookback
+        if _cond[i]
+            _crossed := true
+    _crossed
+    
+longcrossed = f_somethingHappened(crosso,_lookback)
+shortcrossed = f_somethingHappened(crossu,_lookback)
+long = longcrossed and _angle > angleCriteria
+short= shortcrossed and _angle < -(angleCriteria)
+if(long)
+    strategy.entry("Long",strategy.long)
+if(short)
+    strategy.entry("short",strategy.short)
+    
+Expand (48 lines)

@@ -1,0 +1,87 @@
+Script Name: 5-10-20 Cross
+Author: aadilpatel07
+Description: EMA cross over with super trend confirmation
+PineScript code:
+
+Pine Script™ strategy
+5-10-20 Cross
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © aadilpatel07
+//@version=4
+strategy("5-10-20 Cross", overlay=true)
+src = close, 
+len1 = input(5, minval=1, title="EMA 1")
+len2 = input(10, minval=1, title="EMA 2")
+len3 = input(20, minval=1, title="EMA 3")
+mult = input(type=input.float, defval=2)
+len = input(type=input.integer, defval=14)
+[superTrend, dir] = supertrend(mult, len)
+ema1 = ema(src, len1)
+ema2 = ema(src, len2)
+ema3 = ema(src, len3)
+//EMA Color
+col1 = color.lime
+col2 = color.blue
+col3 = color.red
+//EMA Plots
+plot(series=ema1,color=col1, title="EMA1")
+plot(series=ema2,color=col2, title="EMA2")
+plot(series=ema3,color=col3, title="EMA3")
+//plot SuperTrend
+colResistance = dir == 1 and dir == dir[1] ? color.new(color.red, 100) : color.new(color.green, 100)
+colSupport = dir == -1 and dir == dir[1] ? color.new(color.green, 0) : color.new(color.green, 10)
+plot(superTrend, color = colResistance, linewidth=1)
+plot(superTrend, color = colSupport, linewidth=1)
+//longCondition = crossover(ema1, ema2) and crossover(ema1,ema3) and crossover(ema2,ema3)
+longCondition = ema1 > ema2 and ema1 > ema3 and ema2 > ema3 and ema2 < ema1 and dir == -1
+if (longCondition)
+    strategy.entry("My Long Entry Id", strategy.long)
+//shortCondition = crossover(ema2, ema1) and crossover(ema3,ema1) and crossover(ema3,ema2)
+shortCondition = ema1 < ema2 and ema1 < ema3 and ema2 < ema3 and ema2 > ema1 and dir == 1
+if (shortCondition)
+    strategy.entry("My Short Entry Id", strategy.short)
+Expand (43 lines)

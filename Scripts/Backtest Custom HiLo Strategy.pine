@@ -1,0 +1,241 @@
+Script Name: Backtest Custom HiLo Strategy
+Author: luyikaibr
+Description: This script implements the HiLo trend follower strategy for backtesting the HiLo indicator. It comes with some custom options. Among them is the Type option that allows to choose between the moving averages for the highs and lows (HiLo), or highest and lowest values for those moving averages, respectively (HiLo Activator).
+PineScript code:
+
+Pine Script™ strategy
+Backtest Custom HiLo Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © luyikaibr
+//@version=4
+strategy("Backtest Custom HiLo Strategy", "BTCHiLoS", overlay=true, precision=2,
+         process_orders_on_close=true,
+         pyramiding=1,
+         close_entries_rule="FIFO",
+         initial_capital=100000, 
+         default_qty_type=strategy.percent_of_equity,
+         default_qty_value=100.0)
+// Configure backtest start date with inputs
+startDay = input(title="Start Day", type=input.integer,
+     defval=2, minval=1, maxval=31)
+startMonth = input(title="Start Month", type=input.integer,
+     defval=1, minval=1, maxval=12)
+startYear = input(title="Start Year", type=input.integer,
+     defval=2020, minval=1800, maxval=2100)
+// Set backtest end date with inputs
+endDay = input(title="End Day", type=input.integer,
+     defval=31, minval=1, maxval=31)
+endMonth = input(title="End Month", type=input.integer,
+     defval=10, minval=1, maxval=12)
+endYear = input(title="End Year", type=input.integer,
+     defval=2020, minval=1800, maxval=2100)
+     
+endHour = input(title="End Hour", type=input.integer,
+     defval=17, minval=0, maxval=23)
+endMin = input(title="End Minute", type=input.integer,
+     defval=0, minval=0, maxval=59)
+startAtOrigin = input(false, title="Start at Origin")
+endNow = input(false, title="End Now")
+len = input(34, title="Length", minval=0)
+offset = input(0, title="Offset", minval=0)
+hiloType = input(title="Type", defval="HiLo", options=["HiLo", "HiLo Activator"])
+simpleHiLo = (hiloType == "HiLo")
+maType = input(title="MA Type", defval="SMA", options=["SMA", "EMA"])
+useEMA = (maType == "EMA")
+opType = input(title="Operation Type", defval="Long", options=["Long", "Short", "Both"])
+opShort = (opType != "Long")
+opLong  = (opType != "Short")
+opBoth  = (opType == "Both")
+hima = (useEMA ? ema(high, len) : sma(high, len))
+loma = (useEMA ? ema(low, len) : sma(low, len))
+hihi = (simpleHiLo ? na: highest(high, len))
+lolo = (simpleHiLo ? na: lowest(low, len))
+hilo = close
+hilo := if simpleHiLo
+    (close < loma[offset] ? hima : (close > hima[offset] ? loma : hilo[1]))
+else
+    (close < loma[offset] ? hihi : (close > hima[offset] ? lolo : hilo[1]))
+hlColor = color.red
+hlColor := (close < loma[offset] ? color.red : (close > hima[offset] ? color.green : hlColor[1]))
+buyArith  = sign(close - hima[offset])
+sellArith = sign(close - loma[offset])
+buyCond = (close > hima[offset])
+sellCond = (close < loma[offset])
+buy = crossover(buyArith, 0.5)
+sell = crossunder(sellArith, -0.5)
+buyState = false
+buyState :=  buy ? true : (sell ? false : buyState[1])
+sellState = false
+sellState :=  buy ? false : (sell ? true : sellState[1])
+enterBuyState  = buyState[0]  and not buyState[1]
+enterSellState = sellState[0] and not sellState[1]
+ 
+plot(hilo, color=hlColor, linewidth=2, style=plot.style_cross, transp=0, title="HiLo")
+plotshape(enterBuyState,  title = "Buy", text = 'Buy', style = shape.labelup, location = location.belowbar, color= color.green,textcolor = color.white, transp = 0, size = size.tiny)
+plotshape(enterSellState, title = "Sell", text = 'Sell', style = shape.labeldown, location = location.abovebar, color= color.maroon,textcolor = color.white, transp = 0, size = size.tiny)
+// See if this bar's time happened on/after start date
+startDate = timestamp(syminfo.timezone, startYear, startMonth, startDay, 0, 0)
+afterStartDate = if startAtOrigin
+    true
+else
+    (time >= startDate)
+atStartDate = if startAtOrigin
+    false
+else
+    (time >= startDate and time < (startDate + time_close[1]-time_close[2]))
+     
+// See if bar's close time is before end date
+endTS = if endNow
+    timenow - 2*(time_close[1]-time_close[2]) // 86400
+else
+    timestamp(syminfo.timezone, endYear, endMonth, endDay, endHour, endMin, 0)
+beforeEndDate = (time < endTS)
+// Only submit enter long orders
+strategy.risk.allow_entry_in(opBoth ? strategy.direction.all : (opLong ? strategy.direction.long : strategy.direction.short))
+// Submit entry orders, but only on/after start date
+if (atStartDate and beforeEndDate and buyCond)
+    strategy.entry(id="EL", long=true)
+if (atStartDate and beforeEndDate and sellCond)
+    strategy.entry(id="ES", long=false)
+if (afterStartDate and beforeEndDate and enterBuyState)
+    strategy.entry(id="EL", long=true)
+if (afterStartDate and beforeEndDate and enterSellState)
+    strategy.entry(id="ES", long=false)
+              
+// if (barstate.islast or not beforeEndDate)
+if (not beforeEndDate and strategy.position_size != 0)
+    strategy.close_all(comment="End")
+    
+Expand (131 lines)

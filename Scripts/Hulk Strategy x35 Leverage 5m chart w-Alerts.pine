@@ -1,0 +1,471 @@
+Script Name: Hulk Strategy x35 Leverage 5m chart w-Alerts
+Author: npietronuto1
+Description: This strategy is a pullback strategy that utilizes 2 EMAs as a way of identifying trend, MACD as an entry signal, and RSI and ADX to filter bad trades. By using the confirmation of all of these indicators the strategy attempts to catch pullbacks, and it is optimized to wait for high probability setups. Take not that the strategy is optimized for use on...
+PineScript code:
+
+Pine Script™ strategy
+Hulk Strategy x35 Leverage 5m chart w/Alerts
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © npietronuto1
+//@version=5
+strategy("Hulk Scalper x35 Leverage", shorttitle = "Smash Pullback Strat", overlay=true, initial_capital=100, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//RSI
+rsiLength = input.int(20)
+RsiTopInput = input.int(2)
+RsiBotInput = input.int(-2)
+// toprsiLine = hline(RsiTopInput, title = "Rsi Top Line", linestyle = hline.style_solid)
+// botrsiLine = hline(RsiBotInput, title = "Rsi Bottom Line", linestyle = hline.style_solid)
+rsi = ta.rsi(close, rsiLength)
+rsiWeighted = rsi - 50 //Zeros Rsi to look nicer
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+adxlen = input(14, title="ADX Smoothing")
+dilen = input(14, title="DI Length")
+dirmov(len) =>
+    up = ta.change(high)
+    down = -ta.change(low)
+    plusDM = na(up) ? na : (up > down and up > 0 ? up : 0)
+    minusDM = na(down) ? na : (down > up and down > 0 ? down : 0)
+    truerange = ta.rma(ta.tr, len)
+    plus = fixnan(100 * ta.rma(plusDM, len) / truerange)
+    minus = fixnan(100 * ta.rma(minusDM, len) / truerange)
+    [plus, minus]
+adx(dilen, adxlen) =>
+    [plus, minus] = dirmov(dilen)
+    sum = plus + minus
+    adx = 100 * ta.rma(math.abs(plus - minus) / (sum == 0 ? 1 : sum), adxlen)
+sig = adx(dilen, adxlen)
+ADXfilterlevel = input.int(33, title = "ADX filter amount")
+// plot(sig, color=color.red, title="ADX")
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//MACD
+FastMacdLength = input.int(12, group = "MACD") 
+SlowMacdLength = input.int(26, group = "MACD")
+SignalLength = input.int(11, group = "MACD")
+MacdTickAmountNeeded = input.float(5.45, title = "Tick Amount for entry", group = "MACD")
+res = input.timeframe("1", group = "MACD")
+// bullishgrow_col = input.color(defval = #3179f5)
+// bullishweaken_col = input.color(defval = #00e1ff)
+// bearishweaken_col = input.color(defval = #ff01f1)
+// bearishgrow_col = input.color(defval = #9d00e5)
+[FastMacd, SlowMacd, Macdhist] = ta.macd(close, FastMacdLength, SlowMacdLength, SignalLength)
+//Pull MACD from Lower timeframe
+MACD = request.security(syminfo.tickerid, res, Macdhist, gaps = barmerge.gaps_on)
+//Grow and Fall Color
+// getgrow_fall_col(Value) =>
+//     if Value >= 0
+    
+//         if Value >= Value[1]
+//             color.new(bullishgrow_col, transp = 10)
+            
+//         else if Value <= Value[1]
+//             color.new(bullishweaken_col, transp = 10)
+            
+//     else if Value <= 0
+    
+//         if Value <= Value[1]
+//             color.new(bearishgrow_col, transp = 10)
+            
+//         else if Value >= Value[1]
+//             color.new(bearishweaken_col, transp = 10)
+            
+    
+    
+//CONDITIONS that check if MACD is overbought or oversold
+MACDisAboveBand = MACD > MacdTickAmountNeeded
+MACDisBelowBand = MACD < MacdTickAmountNeeded*-1
+    
+    
+    
+//Plot
+// plot(MACD, style = plot.style_columns, color = getgrow_fall_col(MACD))
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//EMAs
+//Inputs
+EmaFastLength = input.int(50, title = "Ema Fast Length")
+EmaSlowLength = input.int(200, title = "Ema Slow Length")
+StrongUpTrendCol = input.color(color.rgb(74, 255, 163))
+//WeakUptrend = input.color(color.rgb(74, 255, 163, 50))
+StrongDownTrendCol = input.color(color.rgb(255, 71, 84))
+//WeakDownTrend = input.color(color.rgb(255, 71, 84, 50))
+//Calculations
+emaFast= ta.ema(close, EmaFastLength)
+emaSlow= ta.ema(close, EmaSlowLength)
+emaDist=emaFast-emaSlow
+EmaLengthFraction = emaDist/4
+emafrac5 = emaSlow + EmaLengthFraction
+emafrac4 = emaSlow + EmaLengthFraction*2
+emafrac3 = emaSlow + EmaLengthFraction*3
+emafrac2 = emaSlow + EmaLengthFraction*4
+UptrendCol_DowntrendCol= emaFast>=emaSlow ? StrongUpTrendCol:StrongDownTrendCol
+//Plot
+ema1p = plot(emaFast, color = color.new(#000000, transp = 100))
+ema2p = plot(emafrac2, color = color.new(#000000, transp = 100))
+ema3p = plot(emafrac3, color = color.new(#000000, transp = 100))
+ema4p = plot(emafrac4, color = color.new(#000000, transp = 100))
+ema5p = plot(emafrac5, color = color.new(#000000, transp = 100))
+ema6p = plot(emaSlow, color = color.new(#000000, transp = 100))
+fill(ema2p,ema3p, color = color.new(UptrendCol_DowntrendCol, 70))
+fill(ema3p,ema4p, color = color.new(UptrendCol_DowntrendCol, 60))
+fill(ema4p,ema5p, color = color.new(UptrendCol_DowntrendCol, 50))
+fill(ema5p,ema6p, color = color.new(UptrendCol_DowntrendCol, 40))
+//Conditons
+FastEma_above_SlowEma = emaFast > emaSlow  
+FastEma_below_SlowEma = emaFast < emaSlow
+emaCrossEvent = ta.crossover(emaFast, emaSlow) or ta.crossover(emaSlow, emaFast)
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//Trade Cap per EMA X
+//Inputs
+MaxTrades_PerCross_Checkbox = input.bool(true, "Limit Trades Per Cross", group = "Filters")
+TrdCount = 0//Variable that keeps current trade count
+if(TrdCount[1] > 0)//Passes variable on to current candle
+    TrdCount := TrdCount[1]
+    
+    
+//Reset trade count if EMAs X    
+emaXevent = ta.crossover(emaFast, emaSlow) or ta.crossover(emaSlow, emaFast) // Check for EMA cross
+if(emaXevent)
+    TrdCount := 0
+    
+//Conditions
+MaxTrades = input.int(6)
+IsMaxTrades_BelowCap = TrdCount[1] < MaxTrades //Condition that applies max trade count
+if(not MaxTrades_PerCross_Checkbox)
+    IsMaxTrades_BelowCap := true
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//STRATEGY LOGIC
+//Parameters
+TakeProfitInput = input.float(0.0135, title = "Take Profit %", group = "TP/SL")
+StopLossInput = input.float(0.011, title = "Stop Loss %", group = "TP/SL")
+//TP/SL calculations
+Long_takeProfit = close * (1 + TakeProfitInput)
+Long_stopLoss = close * (1 - StopLossInput)
+Short_takeProfit = close * (1 - TakeProfitInput)
+Short_stopLoss = close * (1 + StopLossInput)
+//LONG and Short
+LongConditionPt1 = close > emaSlow and MACDisBelowBand and  sig > ADXfilterlevel
+LongConditionPt2 = FastEma_above_SlowEma and IsMaxTrades_BelowCap and strategy.position_size == 0
+//Checks if Rsi Inbetween Lines
+LongConditionPt3 = rsiWeighted < RsiTopInput and rsiWeighted > RsiBotInput
+ShortConditionPt1 = close < emaSlow and MACDisAboveBand and sig > ADXfilterlevel
+ShortConditionPt2 = FastEma_below_SlowEma and IsMaxTrades_BelowCap and strategy.position_size == 0
+//Checks if Rsi Inbetween Lines
+ShortConditionPt3 = rsiWeighted < RsiTopInput and rsiWeighted > RsiBotInput
+// longCondition = FastEma_above_SlowEma and MACDisBelowBand and IsMaxTrades_BelowCap and rsiWeighted < RsiTopInput and strategy.position_size == 0
+longCondition = LongConditionPt1 and LongConditionPt2 and LongConditionPt3
+if(longCondition)
+    strategy.entry("long", strategy.long)
+    strategy.exit("exit", "long", limit = Long_takeProfit, stop = Long_stopLoss)
+    
+    TrdCount := TrdCount + 1//ADD to Max Trades Count
+    
+    alert("Go Long with TP at" + str.tostring(Long_takeProfit) + "and SL at" + str.tostring(Long_stopLoss), alert.freq_once_per_bar_close)
+shortCondition = ShortConditionPt1 and ShortConditionPt2 and ShortConditionPt3
+if(shortCondition )
+    
+    strategy.entry("short", strategy.short)
+    strategy.exit("exit", "short", limit = Short_takeProfit, stop = Short_stopLoss)
+    TrdCount := TrdCount + 1 //ADD to Max Trades Count
+    
+    alert("Go Short with TP at" + str.tostring(Short_takeProfit) + "and SL at" + str.tostring(Short_stopLoss), alert.freq_once_per_bar_close)
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+Expand (273 lines)

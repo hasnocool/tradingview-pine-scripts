@@ -1,0 +1,116 @@
+Script Name: wtfBUYorSELLffs
+Author: SeaSide420
+Description: Multiple timeframe Hull moving averages. 1 Hull period, 3 timeframes. 
+ With Info Panel 
+This strategy is for any pair but the settings are tuned for  DOGEUSDT 
+ It is 3 Hull moving averages crossovers.
+The first HMA is taken from the timeframe of the chart.
+The second and third HMA's have a setting for TIMEFRAME. 
+For example the user can have the chart on 15m,...
+PineScript code:
+
+Pine Script™ strategy
+wtfBUYorSELLffs
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+//@version=4
+//
+strategy("wtfBUYorSELLffs",overlay=true,currency="USD",initial_capital=100000,default_qty_type=strategy.percent_of_equity,default_qty_value=100,commission_type=strategy.commission.percent,commission_value=0.1)
+Period=input(title="Hull MA Period",type=input.integer,defval=6,minval=1)
+Resolution2=input(title="HMA2 Resolution", type=input.resolution,defval="60")
+Resolution3=input(title="HMA3 Resolution", type=input.resolution,defval="240")
+Price=input(title="Source of Price",type=input.source,defval=open)
+xOffset       = input(40, title="Panel offset (X-Axis)")
+yOffset       = input(0, title="Panel offset (y-Axis)")
+lightgray = #D3D3D3FF
+pnlTextColor = color.silver
+pnlColor = color.black
+HMA = hma(Price,Period)
+HMA2 = security(syminfo.tickerid, Resolution2, HMA,barmerge.gaps_off,barmerge.lookahead_off)
+HMA3 = security(syminfo.tickerid, Resolution3, HMA,barmerge.gaps_off,barmerge.lookahead_off) 
+HUP = HMA > HMA[1]
+H1UP = security(syminfo.tickerid, Resolution2, HUP,barmerge.gaps_off,barmerge.lookahead_off)
+H2UP = security(syminfo.tickerid, Resolution3, HUP,barmerge.gaps_off,barmerge.lookahead_off) 
+int barSize = timeframe.isdaily ? timeframe.multiplier*86400000 : 
+           timeframe.isseconds? timeframe.multiplier*1000 :
+           timeframe.isminutes? timeframe.multiplier*60000 : (time[0]-time[1])
+int   lapos_x = timenow + barSize*xOffset
+float lapos_y = highest(20) + yOffset*syminfo.mintick * syminfo.pointvalue
+f_draw_infopanel(_x, _y, _line, _text)=>
+    _rep_text = ""
+    for _l = 0 to _line
+        _rep_text := _rep_text + "\n"
+    _rep_text := _rep_text + _text
+    var label _la = na
+    label.delete(_la)
+    _la := label.new(
+         x=_x, y=_y, 
+         text=_rep_text, xloc=xloc.bar_time, yloc=yloc.price, 
+         color=pnlColor, style=label.style_labelup, textcolor=pnlTextColor, size=size.normal)
+f_draw_infopanel(lapos_x, lapos_y, 8, "╚═══════════════════════╝")
+f_draw_infopanel(lapos_x, lapos_y, 6,  "HMA3 on TF " + Resolution3 + "  = " + tostring(HMA3,"#.####") + (H2UP ? " BUY" : " SELL"))
+f_draw_infopanel(lapos_x, lapos_y, 4,  "HMA2 on TF " + Resolution2 + "  = " +  tostring(HMA2,"#.####") + (H1UP ? " BUY" : " SELL"))
+f_draw_infopanel(lapos_x, lapos_y, 2,  "HMA1 on TF " + timeframe.period + "  = " + tostring(HMA,"#.####") + (HUP ? " BUY" : " SELL"))
+f_draw_infopanel(lapos_x, lapos_y, 0,  "╔═════════ HMA(" + tostring(Period,"#") +") ════════╗")
+change_color=HMA>HMA3?color.green:color.red
+change_color2=HMA2>HMA3?color.lime:color.yellow
+plot1=plot(HMA3,color=change_color2,title="3 Hull MA Line",linewidth=2,transp=75)
+plot2=plot(HMA2,color=change_color,title="2 Hull MA Line",linewidth=2,transp=75)
+plot3=plot(HMA,color=color.white,title="Hull MA Line",linewidth=2,transp=75)
+fill(plot1,plot3,color=change_color,transp=90)
+fill(plot2,plot3,color=change_color2,transp=75)
+if (H2UP and H1UP and HUP)
+    strategy.entry("BUY",strategy.long)
+if (not H2UP and not H1UP and not HUP)
+    strategy.entry("SELL",strategy.short)
+Expand (51 lines)

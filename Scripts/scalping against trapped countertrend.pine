@@ -1,0 +1,73 @@
+Script Name: scalping against trapped countertrend
+Author: clocks156t174
+Description: Abstract
+This script attempts to find the end of countertrend.
+This script uses oscillators to measure long term and short period trends.  When the long term trend keeps positive and clear short term period is over, this script provides a buy signal.
+This script does not contain pullback, cut loss and re-enter.  You need to add it manually.
+
+Introduction
+Many...
+PineScript code:
+
+Pine Script™ strategy
+scalping against trapped countertrend
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+//@version=4
+strategy("scalping against trapped countertrend", overlay=false , precision=5 )
+x_src = input( hl2 , title="Source" )
+x_len_a = input( 5 , title="short term trend" , minval=1 )
+x_len_b = input( 60 , title="long term trend" , minval=1 )
+x_k_b = input( 13 , title="smooth long term trend" , minval=1 )
+x_changk = input( 15 , title="clear short term pullback appears recently" , minval=1 )
+x_rsi_ct = input( 35.0 , title="threshold of short term pullback clear" , minval=0.0 , maxval=100.0 )
+x_rsi_ft = input( 50.0 , title="threshold of short term pullback end" , minval=0.0 , maxval=100.0 )
+x_exit_if_reason_over = input(false)
+y_stoch = stoch( x_src , high , low , x_len_b )
+y_k = sma( y_stoch , x_k_b )
+y_rsi = rsi( x_src , x_len_a )
+y_upper = min( y_k-50 , y_rsi-x_rsi_ft , x_changk>1?x_rsi_ct-lowest(y_rsi,x_changk):50 )
+if ( y_upper>0 )
+    strategy.entry("LE", strategy.long)
+else if ( x_exit_if_reason_over and strategy.position_size>0 )
+    strategy.close("LE", comment="x" )
+y_lower = max( y_k-50 , y_rsi-x_rsi_ft , x_changk>1?100-x_rsi_ct-highest(y_rsi,x_changk):-50 )
+if ( y_lower<0 )
+    strategy.entry("SE", strategy.short)
+else if ( x_exit_if_reason_over and strategy.position_size<0 )
+    strategy.close("SE", comment="x" )
+plot( y_stoch , color=#ff3333 )
+plot( y_k , color=#6666ff )
+plot( y_rsi , color=#cccc00 )
+hline(50)
+Expand (31 lines)

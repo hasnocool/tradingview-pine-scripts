@@ -1,0 +1,424 @@
+Script Name: Fixed price Stop Loss [Takazudo]
+Author: Takazudo
+Description: This strategy is a demo for fixed price stop loss.
+
+This strategy enables you to specify fixed price stop loss. Let's say your deposit is USD. When you trade EURCAD, you need to specify the quantity for trade. Here comes three chances for trade.
+
+ 
+ A: SL pips: 500
+ B: SL pips: 200
+ C: SL pips: 100
+ 
+
+In these trade, the risk is different for each. ABC risk ratio...
+PineScript code:
+
+Pine Script™ strategy
+Fixed price Stop Loss [Takazudo]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//@version=5
+//@author=Takazudo
+strategy("Fixed price SL",
+  overlay=true,
+  default_qty_type=strategy.fixed,
+  initial_capital=0,
+  currency=currency.USD)
+var COLOR_TRANSPARENT = color.new(#000000, 100)
+var COLOR_ENTRY_BAND = color.new(#43A6F5, 30)
+var COLOR_RANGE_BREAK_BULL = color.new(#315F2E, 80)
+var COLOR_RANGE_BREAK_BEAR = color.new(#802A1C, 80)
+//============================================================================
+// config
+//============================================================================
+// Money management
+_g1 = 'Money management'
+var config_riskPrice = input.int(100, minval=1, title="Risk price for each entry", group=_g1)
+var config_depositCurrency = input.string(title="Deposit currency", defval="USD", options=["USD"], group=_g1)
+// Entry strategy
+_g2 = 'Entry strategy'
+var config_entryBandBars = input.int(defval = 100, title = "Entry band bar count",  minval=1, group=_g2)
+// Backtesting range
+_g3 = 'Backtesting range'
+fromYear  = input.int(defval = 2016, title = "From Year",  minval = 1970, group=_g3)
+fromMonth = input.int(defval = 1,    title = "From Month", minval = 1, maxval = 12, group=_g3)
+fromDay   = input.int(defval = 1,    title = "From Day",   minval = 1, maxval = 31, group=_g3)
+toYear  = input.int(defval = 2020, title = "To Year",  minval = 1970, group=_g3)
+toMonth = input.int(defval = 12,    title = "To Month", minval = 1, maxval = 12, group=_g3)
+toDay   = input.int(defval = 31,    title = "To Day",   minval = 1, maxval = 31, group=_g3)
+//============================================================================
+// exchange calculations
+//============================================================================
+// mico pip size calculation
+// ex1: AUDCAD -> 0.0001
+// ex2: USDJPY -> 0.01
+f_calcMicroPipSize() =>
+    _base = syminfo.basecurrency
+    _quote = syminfo.currency
+    _result = 0.0001
+    if _quote == 'JPY'
+        _result := _result * 100
+    if _base == 'BTC'
+        _result := _result * 100
+    _result
+// convert price to pips
+f_convertPriceToPips(_price) =>
+    _microPipSize = f_calcMicroPipSize()
+    _price / _microPipSize
+// calculate exchange rate between deposit and quote currency
+f_calcDepositExchangeSymbolId() =>
+    _result = ''
+    _deposit = config_depositCurrency
+    _quote = syminfo.currency
+    if (_deposit == 'USD') and (_quote == 'USD')
+        _result := na
+    if (_deposit == 'USD') and (_quote == 'AUD')
+        _result := 'OANDA:AUDUSD'
+    if (_deposit == 'EUR') and (_quote == 'USD')
+        _result := 'OANDA:EURUSD'
+    if (_deposit == 'USD') and (_quote == 'GBP')
+        _result := 'OANDA:GBPUSD'
+    if (_deposit == 'USD') and (_quote == 'NZD')
+        _result := 'OANDA:NZDUSD'
+    if (_deposit == 'USD') and (_quote == 'CAD')
+        _result := 'OANDA:USDCAD'
+    if (_deposit == 'USD') and (_quote == 'CHF')
+        _result := 'OANDA:USDCHF'
+    if (_deposit == 'USD') and (_quote == 'JPY')
+        _result := 'OANDA:USDJPY'
+    _result
+// Let's say we need CAD to USD exchange
+// However there's only "OANDA:USDCAD" symbol.
+// Then we need to invert the exhchange rate.
+// this function tells us whether we should invert the rate or not
+f_calcShouldInvert() =>
+    _result = false
+    _deposit = config_depositCurrency
+    _quote = syminfo.currency
+    if (_deposit == 'USD') and (_quote == 'CAD')
+        _result := true
+    if (_deposit == 'USD') and (_quote == 'CHF')
+        _result := true
+    if (_deposit == 'USD') and (_quote == 'JPY')
+        _result := true
+    _result
+// calculate how much quantity should I buy or sell
+f_calcQuantitiesForEntry(_depositExchangeRate, _slPips) =>
+    _microPipSize = f_calcMicroPipSize()
+    _priceForEachPipAsDeposit = _microPipSize * _depositExchangeRate
+    _losePriceOnSl = _priceForEachPipAsDeposit * _slPips
+    math.floor(config_riskPrice / _losePriceOnSl)
+//============================================================================
+// Quantity calculation
+//============================================================================
+depositExchangeSymbolId = f_calcDepositExchangeSymbolId()
+// calculate deposit exchange rate
+rate = request.security(depositExchangeSymbolId, timeframe.period, hl2)
+shouldInvert = f_calcShouldInvert()
+depositExchangeRate = if config_depositCurrency == syminfo.currency
+    // if USDUSD, no exchange of course
+    1
+else
+    // else, USDCAD to CADUSD invert if we need
+    shouldInvert ? (1 / rate) : rate
+//============================================================================
+// Range Edge calculation
+//============================================================================
+f_calcEntryBand_high() =>
+    _highest = math.max(open[3], close[3])
+    for i = 4 to (config_entryBandBars - 1)
+        _highest := math.max(_highest, open[i], close[i])
+    _highest
+f_calcEntryBand_low() =>
+    _lowest = math.min(open[3], close[3])
+    for i = 4 to (config_entryBandBars - 1)
+        _lowest := math.min(_lowest, open[i], close[i])
+    _lowest
+entryBand_high = f_calcEntryBand_high()
+entryBand_low = f_calcEntryBand_low()
+entryBand_height = entryBand_high - entryBand_low
+plot(entryBand_high, color=COLOR_ENTRY_BAND, linewidth=1)
+plot(entryBand_low, color=COLOR_ENTRY_BAND, linewidth=1)
+rangeBreakDetected_long = entryBand_high < close
+rangeBreakDetected_short = entryBand_low > close
+shouldMakeEntryLong = (strategy.position_size == 0) and rangeBreakDetected_long
+shouldMakeEntryShort = (strategy.position_size == 0) and rangeBreakDetected_short
+//============================================================================
+// SL & Quantity
+//============================================================================
+var sl_long = hl2
+var sl_short = hl2
+entryQty = 0
+slPips = 0.0
+// just show info bubble
+f_showEntryInfo(_isLong) =>
+    _str =
+      'SL pips: ' + str.tostring(slPips) + '\n' +
+      'Qty: ' + str.tostring(entryQty)
+    _bandHeight = entryBand_high - entryBand_low
+    _y = _isLong ? (entryBand_low + _bandHeight * 1/4) : (entryBand_high - _bandHeight * 1/4)
+    _style = _isLong ? label.style_label_up : label.style_label_down
+    label.new(bar_index, _y, _str, size=size.large, style=_style)
+if shouldMakeEntryLong
+    sl_long := (entryBand_high + entryBand_low) / 2
+    slPips := f_convertPriceToPips(close - sl_long)
+    entryQty := f_calcQuantitiesForEntry(depositExchangeRate, slPips)
+if shouldMakeEntryShort
+    sl_short := (entryBand_high + entryBand_low) / 2
+    slPips := f_convertPriceToPips(sl_short - close)
+    entryQty := f_calcQuantitiesForEntry(depositExchangeRate, slPips)
+// trailing SL
+if strategy.position_size > 0
+    sl_long := math.max(sl_long, entryBand_low)
+if strategy.position_size < 0
+    sl_short := math.min(sl_short, entryBand_high)
+//============================================================================
+// backtest duration
+//============================================================================
+// Calculate start/end date and time condition
+startDate  = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear,   toMonth,   toDay,   00, 00)
+//============================================================================
+// make entries
+//============================================================================
+if (time >= startDate and time <= finishDate)
+    if shouldMakeEntryLong
+        strategy.entry(id="Long", direction=strategy.long, stop=close, qty=entryQty)
+        f_showEntryInfo(true)
+    if shouldMakeEntryShort
+        strategy.entry(id="Short", direction=strategy.short, stop=close, qty=entryQty)
+        f_showEntryInfo(false)
+strategy.exit('Long-SL/TP', 'Long', stop=sl_long)
+strategy.exit('Short-SL/TP', 'Short', stop=sl_short)
+//============================================================================
+// plot misc
+//============================================================================
+sl = strategy.position_size > 0 ? sl_long :
+  strategy.position_size < 0 ? sl_short : na
+plot(sl, color=color.red, style=plot.style_cross, linewidth=2, title="SL")
+value_bgcolor = rangeBreakDetected_long ? COLOR_RANGE_BREAK_BULL :
+  rangeBreakDetected_short ? COLOR_RANGE_BREAK_BEAR : COLOR_TRANSPARENT
+bgcolor(value_bgcolor)
+Expand (222 lines)

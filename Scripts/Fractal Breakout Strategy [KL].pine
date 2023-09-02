@@ -1,0 +1,253 @@
+Script Name: Fractal Breakout Strategy [KL]
+Author: DojiEmoji
+Description: Fractal Breakout Strategy 
+This strategy will enter into a Long position when (a) bullish fractal is formed, combined with (b) ATR is relatively low. Trailing stop loss is set based on ATR.
+
+ Bullish fractal pattern :
+A bullish fractal pattern looks like this:
+  
+It is formed when lower-low has reached a local minimum followed by higher-lows.
+By default, this...
+PineScript code:
+
+Pine Script™ strategy
+Fractal Breakout Strategy [KL]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © DojiEmoji
+//@version=5
+strategy("Fractal Strat [KL] ", overlay=true, pyramiding=1, initial_capital=1000000000, default_qty_type=strategy.percent_of_equity, default_qty_value=5)
+var string ENUM_LONG = "Long"
+var string GROUP_ENTRY = "Entry"
+var string GROUP_TSL = "Stop loss"
+var string GROUP_ORDER = "Order size and Profit taking"
+backtest_timeframe_start = input.time(defval=timestamp("01 Apr 2000 13:30 +0000"), title="Backtest Start Time")
+within_timeframe = time >= backtest_timeframe_start
+// TSL: calculate the stop loss price. {
+_multiple       = input(2.0, title="ATR Multiplier for trailing stop loss", group=GROUP_TSL)
+ATR_TSL         = ta.atr(input(14, title="Length of ATR for trailing stop loss", group=GROUP_TSL, tooltip="Initial risk amount = atr(this length) x multiplier")) * _multiple
+TSL_source      = low
+TSL_line_color  = color.green
+TSL_transp      = 100
+var stop_loss_price = float(0)
+var float initial_entry_p    = float(0)
+var float risk_amt           = float(0)
+var float initial_order_size = float(0)
+if strategy.position_size == 0 or not within_timeframe
+    TSL_line_color := color.black
+    stop_loss_price := TSL_source - ATR_TSL
+else if strategy.position_size > 0
+    stop_loss_price := math.max(stop_loss_price, TSL_source - ATR_TSL)
+    TSL_transp := 0
+plot(stop_loss_price, color=color.new(TSL_line_color, TSL_transp))
+// } end of "TSL" block
+// Profit taking {
+var bool  tp_mode = input(true, title="Take profit and different levels", group=GROUP_ORDER)
+var float FIRST_LVL_PROFIT = input.float(1, title="First level profit", tooltip="Relative to risk. Example: entry at $10 and inital stop loss at $9. Taking first level profit at 1R means taking profits at $11", group=GROUP_ORDER)
+var float SECOND_LVL_PROFIT = input.float(2, title="Second level profit", tooltip="Relative to risk. Example: entry at $10 and inital stop loss at $9. Taking second level profit at 2R means taking profits at $12", group=GROUP_ORDER)
+var float THIRD_LVL_PROFIT = input.float(3, title="Third level profit", tooltip="Relative to risk. Example: entry at $10 and inital stop loss at $9. Taking third level profit at 3R means taking profits at $13", group=GROUP_ORDER)
+// }
+// Fractals {
+// Modified from synapticEx's implementation: https://www.tradingview.com/script/cDCNneRP-Fractal-Support-Resistance-Fixed-Volume-2/
+rel_vol_len = 6 // Relative volume is used; the middle candle has to have volume above the average (say sma over prior 6 bars)
+rel_vol = ta.sma(volume, rel_vol_len)
+_up = high[3]>high[4] and high[4]>high[5] and high[2]<high[3] and high[1]<high[2] and volume[3]>rel_vol[3]
+_down = low[3]<low[4] and low[4]<low[5] and low[2]>low[3] and low[1]>low[2] and volume[3]>rel_vol[3]
+fractal_resistance = high[3], fractal_support = low[3]   // initialize
+fractal_resistance :=  _up ? high[3] : fractal_resistance[1]
+fractal_support := _down ? low[3] : fractal_support[1]
+plot(fractal_resistance, "fractal_resistance", color=color.new(color.red,50), linewidth=2, style=plot.style_cross, offset =-3, join=false)
+plot(fractal_support, "fractal_support", color=color.new(color.lime,50), linewidth=2, style=plot.style_cross, offset=-3, join=false)
+// }
+// ATR diversion test {
+// Hypothesis testing (2-tailed):
+//
+// Null hypothesis (H0) and Alternative hypothesis (Ha):
+//     H0 : atr_fast equals atr_slow
+//     Ha : atr_fast not equals to atr_slow; implies atr_fast is either too low or too high
+len_fast    = input(5,title="Length of ATR (fast) for diversion test", group=GROUP_ENTRY)
+atr_fast    = ta.atr(len_fast)
+atr_slow    = ta.atr(input(50,title="Length of ATR (slow) for diversion test", group=GROUP_ENTRY, tooltip="This needs to be larger than Fast"))
+// Calculate test statistic (test_stat)
+std_error   = ta.stdev(ta.tr, len_fast) / math.pow(len_fast, 0.5)
+test_stat = (atr_fast - atr_slow) / std_error
+// Compare test_stat against critical value defined by user in settings
+//critical_value = input.float(1.645,title="Critical value", tooltip="Strategy uses 2-tailed test to compare atr_fast vs atr_slow. Null hypothesis (H0) is that both should equal. Based on the computed test statistic value, if absolute value of it is +/- this critical value, then H0 will be rejected.", group=GROUP_ENTRY)
+conf_interval = input.string(title="Confidence Interval", defval="95%", options=["90%","95%","99%"], tooltip="Critical values of 1.645, 1.96, 2.58, for CI=90%/95%/99%, respectively; Under 2-tailed test to compare atr_fast vs atr_slow. Null hypothesis (H0) is that both should equal. Based on the computed test statistic value, if absolute value of it is +/- critical value, then H0 will be rejected.")
+critical_value = conf_interval == "90%" ? 1.645 : conf_interval == "95%" ? 1.96 : 2.58
+reject_H0_lefttail = test_stat < -critical_value
+reject_H0_righttail = test_stat > critical_value
+// } end of "ATR diversion test" block
+// Entry Signals
+entry_signal_long = close >= fractal_support and reject_H0_lefttail
+// MAIN {
+// Update the stop limit if strategy holds a position.
+if strategy.position_size > 0
+    strategy.exit(ENUM_LONG, comment="SL", stop=stop_loss_price)
+// Entry
+if within_timeframe and entry_signal_long and strategy.position_size == 0
+    initial_entry_p := close
+    risk_amt := ATR_TSL
+    strategy.entry(ENUM_LONG, strategy.long)
+var int TP_taken_count = 0
+if tp_mode and close > strategy.position_avg_price
+    if close >= initial_entry_p + THIRD_LVL_PROFIT * risk_amt and TP_taken_count == 2
+        strategy.close(ENUM_LONG, comment="TP Lvl3", qty=math.floor(strategy.position_size / 3))
+        TP_taken_count := TP_taken_count + 1
+    else if close >= initial_entry_p + SECOND_LVL_PROFIT * risk_amt and TP_taken_count == 1
+        strategy.close(ENUM_LONG, comment="TP Lvl2", qty=math.floor(strategy.position_size / 3))
+        TP_taken_count := TP_taken_count + 1
+    else if close >= initial_entry_p + FIRST_LVL_PROFIT * risk_amt and TP_taken_count == 0
+        strategy.close(ENUM_LONG, comment="TP Lvl1", qty=math.floor(strategy.position_size / 3))
+        TP_taken_count := TP_taken_count + 1
+    
+// Alerts
+_atr = ta.atr(14)
+alert_helper(msg) =>
+    prefix = "[" + syminfo.root + "] "
+    suffix = "(P=" + str.tostring(close, "#.##") + "; atr=" + str.tostring(_atr, "#.##") + ")"
+    alert(str.tostring(prefix) + str.tostring(msg) + str.tostring(suffix), alert.freq_once_per_bar)
+if strategy.position_size > 0 and ta.change(strategy.position_size)
+    if strategy.position_size > strategy.position_size[1]
+        alert_helper("BUY")
+    else if strategy.position_size < strategy.position_size[1]
+        alert_helper("SELL")
+// Clean up - set the variables back to default values once no longer in use
+if ta.change(strategy.position_size) and strategy.position_size == 0
+    TP_taken_count := 0
+    initial_entry_p := float(0)
+    risk_amt := float(0)
+    initial_order_size := float(0)
+    stop_loss_price := float(0)
+// } end of MAIN block
+Expand (130 lines)

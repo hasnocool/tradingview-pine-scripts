@@ -1,0 +1,74 @@
+Script Name: RSI Classic Strategy (by Coinrule)
+Author: Coinrule
+Description: One of the questions hobbyist traders more often ask is:  what is the perfect trading indicator? 
+
+Every indicator is just a tool, so its efficiency is proportional to your ability to read its signals and translate them into an actionable trading strategy. The RSI is likely the most flexible and easy to use among the technical indicators. 
+
+This trading strategy...
+PineScript code:
+
+Pine Script™ strategy
+RSI Classic Strategy (by Coinrule)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © relevantLeader16058
+//@version=4
+strategy(shorttitle='RSI Classic Strategy',title='RSI Classic Strategy (by Coinrule)', overlay=true, initial_capital = 1000, process_orders_on_close=true, default_qty_type = strategy.percent_of_equity, default_qty_value = 30, commission_type=strategy.commission.percent, commission_value=0.1)
+//Backtest dates
+fromMonth = input(defval = 1,    title = "From Month",      type = input.integer, minval = 1, maxval = 12)
+fromDay   = input(defval = 1,    title = "From Day",        type = input.integer, minval = 1, maxval = 31)
+fromYear  = input(defval = 2020, title = "From Year",       type = input.integer, minval = 1970)
+thruMonth = input(defval = 1,    title = "Thru Month",      type = input.integer, minval = 1, maxval = 12)
+thruDay   = input(defval = 1,    title = "Thru Day",        type = input.integer, minval = 1, maxval = 31)
+thruYear  = input(defval = 2112, title = "Thru Year",       type = input.integer, minval = 1970)
+showDate  = input(defval = true, title = "Show Date Range", type = input.bool)
+start     = timestamp(fromYear, fromMonth, fromDay, 00, 00)        // backtest start window
+finish    = timestamp(thruYear, thruMonth, thruDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+// RSI inputs and calculations
+lengthRSI = 14
+RSI = rsi(close, lengthRSI)
+oversold= input(30)
+overbought= input(60)
+//Entry 
+strategy.entry(id="long", long = true, when = RSI< oversold and window())
+//Exit
+//RSI
+strategy.close("long", when = RSI > overbought and window())
+Expand (36 lines)

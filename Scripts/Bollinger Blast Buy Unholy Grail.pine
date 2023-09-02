@@ -1,0 +1,60 @@
+Script Name: Bollinger Blast Buy Unholy Grail
+Author: saucius
+Description: This strategy copy  the Nick Radge's trading ideas for a profitable systems. He mentions a Bollinger Band idea which is also published in his book Unholy Grails. Nick says: 
+
+he strategy that we did test and showed very promising results was an entry using a Bollinger band and an exit using the opposite Bollinger band, but we use 3 standard deviations for the...
+PineScript code:
+
+Pine Script™ strategy
+Bollinger Blast Buy Unholy Grail
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+//@version=4
+// strategy "bollinger-band-trading-strategy"  taken from bettersystemtrader.com
+// Entry: Buy on the Open the day after a stock closes above the top Bollinger Band
+// Exit: Exit on the Open the day after a stock closes below the lower Bollinger Band
+// In Nicks book, he uses 100 period Bollinger Bands so we’ll do the same. The upper Bollinger Band will be 3 deviations from the central line, the lower Bollinger Band will be 1 deviation below the central line.
+// money management added
+strategy(title = "Bollinger Blast Buy Unholy Grail",calc_on_order_fills=false,calc_on_every_tick =false, initial_capital=20000,commission_value=.25,overlay = true,default_qty_type = strategy.cash, default_qty_value = 20000)
+period=input(10, title="Bollinger period",  minval = 5, step =5)
+multipup=input(3, title="Boll multipler up", minval= 0.1)
+multidown = input(1, title="Boll multipler up", minval= 0.1)
+stop_loss=input(10, "Stop loss %", minval = 1, step = 1)
+bollup = sma(close,period)+stdev(close,period)*multipup
+bolldo = sma(close, period)-stdev(close,period)*multidown
+//entry
+entry = crossover(close,bollup) 
+strategy.entry("Long", true, when = entry)
+exitup = crossunder(close,bolldo)
+strategy.close("Long", when = exitup, comment ="cLOSE up")
+sl = -1*stop_loss/100*strategy.initial_capital
+close_Stop = strategy.openprofit < sl
+strategy.close("Compra", when = close_Stop, comment= "Stop loss")
+b1 = plot(bollup, title = "Boll+")
+b2= plot(bolldo, title = "Boll-")
+fill(b1, b2, color=color.purple)
+Expand (25 lines)

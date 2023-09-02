@@ -1,0 +1,513 @@
+Script Name: BTC 15 min
+Author: RafaelZioni
+Description: This strategy try to catch the uptrend mainly (seems to work on BTC 15  less on others)
+the aim is to get 2% in uptrend which is more easy to do then to search only for lowest 
+since it buy in uptrend it can risky if market change direction 
+there are two take profit (1% and 2% ) , you take out 50% of equity after the first 1%  gain 
+the stop loss and re buy set...
+PineScript code:
+
+Pine Script™ strategy
+BTC 15 min
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © RafaelZioni
+//@version=4
+strategy(title = " BTC 15 min", overlay = true, pyramiding=1,initial_capital = 10000, default_qty_type= strategy.percent_of_equity, default_qty_value = 20, calc_on_order_fills=false, slippage=0,commission_type=strategy.commission.percent,commission_value=0.075)
+strat_dir_input = input(title="Strategy Direction", defval="all", options=["long", "short", "all"])
+strat_dir_value = strat_dir_input == "long" ? strategy.direction.long : strat_dir_input == "short" ? strategy.direction.short : strategy.direction.all
+strategy.risk.allow_entry_in(strat_dir_value)
+price = close
+length8 = input(30,title = 'length of channel')
+upmult = input(title = 'upper percent',type=input.float, step=0.1, defval=5)
+lowmult = input(title = 'lower percent',type=input.float, step=0.1, defval=5)
+basis = sma(close, length8)
+vup = upmult * price / 100
+vlow = lowmult * price / 100
+upper = basis + vup
+lower = basis - vlow
+plot(basis, color=color.red)
+//
+fastLength = input(3, title="Fast filter length ", minval=1)
+slowLength = input(21,title="Slow filter length",  minval=1)
+source=close
+v1=ema(source,fastLength)
+v2=ema(source,slowLength)
+//
+leng=1
+p1=close[1]
+len55 = 10
+//taken from https://www.tradingview.com/script/Ql1FjjfX-security-free-MTF-example-JD/
+HTF = input("1D", type=input.resolution)
+ti = change( time(HTF) ) != 0
+T_c = fixnan( ti ? close : na )
+vrsi = rsi(cum(change(T_c) * volume), leng)
+pp=wma(vrsi,len55)
+d=(vrsi[1]-pp[1])
+len100 = 10
+x=ema(d,len100)
+//
+zx=x/-1
+col=zx > 0? color.lime : color.orange
+//
+tf10 = input("1", title = "Timeframe", type = input.resolution, options = ["1", "5", "15", "30", "60","120", "240","360","720", "D", "W"])
+length = input(50, title = "Period", type = input.integer)
+shift = input(1, title = "Shift", type = input.integer)
+hma(_src, _length)=>
+    wma((2 * wma(_src, _length / 2)) - wma(_src, _length), round(sqrt(_length)))
+    
+hma3(_src, _length)=>
+    p = length/2
+    wma(wma(close,p/3)*3 - wma(close,p/2) - wma(close,p),p)
+b =security(syminfo.tickerid, tf10, hma3(close[1], length)[shift])
+//plot(a,color=color.gray)
+//plot(b,color=color.yellow)
+close_price = close[0]
+len = input(25)
+linear_reg = linreg(close_price, len, 0)
+buy=crossover(linear_reg, b) 
+sell=crossunder(linear_reg, b) or crossunder(close[1],upper)
+//
+src2=low
+src3=high
+Min =input(15)
+leni = timeframe.isintraday and timeframe.multiplier >= 1 ? 
+   Min / timeframe.multiplier * 7 : 
+   timeframe.isintraday and timeframe.multiplier < 60 ? 
+   60 / timeframe.multiplier * 24 * 7 : 7
+l1 = wma(src2,leni)
+h1 = wma(src3,leni)
+//
+m=(h1+l1)/2
+//
+len5 = 100
+src5=m
+//
+multi = 2
+mean = ema(src5, len5)  
+stddev = multi * stdev(src5, len5)  
+b5 = mean + stddev
+s5 = mean - stddev
+var bool long = na
+var bool short = na
+long :=crossover(src5, s5) 
+short :=  crossunder(src5, b5)
+var float last_open_long = na
+var float last_open_short = na
+last_open_long := long ? close : nz(last_open_long[1])
+last_open_short := short ? close : nz(last_open_short[1])
+entry_value =last_open_long
+entry_value1=last_open_short
+r=100
+//
+highb = highest(entry_value1, r)  
+lowb = lowest(entry_value, r)  
+d5 = highb - lowb  
+me = (highb + lowb) / 2  
+h4 = highb - d5 * 0.236  
+c3 = highb - d5 * 0.382  
+c4 = highb - d5 * 0.618  
+l4 = highb - d5 * 0.764  
+//
+col2 = close >= me ? color.lime : color.red
+       
+p5 = plot(upper, color=col2)
+p2 = plot(lower, color=col2)
+fill(p5, p2,color=col2)
+// Conditions
+longCond = bool(na)
+shortCond = bool(na)
+longCond := crossover(zx,0) or buy 
+shortCond := sell
+// Count your long short conditions for more control with Pyramiding
+sectionLongs = 0
+sectionLongs := nz(sectionLongs[1])
+sectionShorts = 0
+sectionShorts := nz(sectionShorts[1])
+if longCond
+    sectionLongs := sectionLongs + 1
+    sectionShorts := 0
+    sectionShorts
+if shortCond
+    sectionLongs := 0
+    sectionShorts := sectionShorts + 1
+    sectionShorts
+// Pyramiding
+pyrl = 1
+// These check to see your signal and cross references it against the pyramiding settings above
+longCondition = longCond and sectionLongs <= pyrl
+shortCondition = shortCond and sectionShorts <= pyrl
+// Get the price of the last opened long or short
+last_open_longCondition = float(na)
+last_open_shortCondition = float(na)
+last_open_longCondition := longCondition ? open : nz(last_open_longCondition[1])
+last_open_shortCondition := shortCondition ? open : nz(last_open_shortCondition[1])
+// Check if your last postion was a long or a short
+last_longCondition = float(na)
+last_shortCondition = float(na)
+last_longCondition := longCondition ? time : nz(last_longCondition[1])
+last_shortCondition := shortCondition ? time : nz(last_shortCondition[1])
+in_longCondition = last_longCondition > last_shortCondition
+in_shortCondition = last_shortCondition > last_longCondition
+// Take profit
+isTPl = true
+//isTPs = input(false, "Take Profit Short")
+tp = input(2, "Exit Profit %", type=input.float)
+long_tp = isTPl and crossover(high, (1 + tp / 100) * last_open_longCondition) and longCondition == 0 and in_longCondition == 1
+//short_tp = isTPs and crossunder(low, (1 - tp / 100) * last_open_shortCondition) and 
+   //shortCondition == 0 and in_shortCondition == 1
+// Stop Loss
+isSLl = input(true,"buy Loss Long")
+//isSLs = input(false, "buy Loss Short")
+sl = 0.0
+sl := input(5, " rebuy %", type=input.float)
+long_sl = isSLl and crossunder(low, (1 - sl / 100) * last_open_longCondition) and 
+   longCondition == 0 and in_longCondition == 1
+//short_sl = isSLs and crossover(high, (1 + sl / 100) * last_open_shortCondition) and 
+   //shortCondition == 0 and in_shortCondition == 1
+//
+// Conditions
+longCond5 = bool(na)
+shortCond5 = bool(na)
+longCond5 := longCondition
+shortCond5 := long_tp
+// 
+sectionLongs5 = 0
+sectionLongs5 := nz(sectionLongs5[1])
+sectionShorts5 = 0
+sectionShorts5 := nz(sectionShorts5[1])
+if longCond5
+    sectionLongs5 := sectionLongs5 + 1
+    sectionShorts5 := 0
+    sectionShorts5
+if shortCond5
+    sectionLongs5 := 0
+    sectionShorts5 := sectionShorts5 + 1
+    sectionShorts5
+// 
+pyr5 = 1
+longCondition5 = longCond5 and sectionLongs5 <= pyr5
+shortCondition5 = shortCond5 and sectionShorts5 <= pyr5
+// Get the price of the last opened long or short
+last_open_longCondition5 = float(na)
+last_open_shortCondition5 = float(na)
+last_open_longCondition5 := longCondition5 ? open : nz(last_open_longCondition5[1])
+last_open_shortCondition5 := shortCondition5 ? open : nz(last_open_shortCondition5[1])
+last_longCondition5 = float(na)
+last_shortCondition5 = float(na)
+last_longCondition5 := longCondition5 ? time : nz(last_longCondition5[1])
+last_shortCondition5 := shortCondition5 ? time : nz(last_shortCondition5[1])
+in_longCondition5 = last_longCondition5 > last_shortCondition5
+in_shortCondition5 = last_shortCondition5 > last_longCondition5
+//
+filter=input(true)
+g(v, p) => round(v * (pow(10, p))) / pow(10, p)
+risk     = input(100)
+leverage = input(1)
+c = g((strategy.equity * leverage / open) * (risk / 100), 4)
+//
+l =(v1 > v2 or filter == false ) and longCondition or long_sl
+//
+//l = longCondition or long_sl
+s=shortCondition5  
+if l 
+    strategy.entry("buy", strategy.long,c)
+if s 
+    strategy.entry("sell", strategy.short,c)
+per(pcnt) =>
+    strategy.position_size != 0 ? round(pcnt / 100 * strategy.position_avg_price / syminfo.mintick) : float(na)
+stoploss=input(title=" stop loss", defval=5, minval=0.01)
+los = per(stoploss)
+q1=input(title=" qty_percent1", defval=50, minval=1)
+q2=input(title=" qty_percent2", defval=50, minval=1)
+tp10=input(title=" Take profit1", defval=1, minval=0.01)
+tp20=input(title=" Take profit2", defval=2, minval=0.01)
+strategy.exit("x1", qty_percent = q1, profit = per(tp10), loss = los)
+strategy.exit("x2", qty_percent = q2, profit = per(tp20), loss = los)
+Expand (286 lines)

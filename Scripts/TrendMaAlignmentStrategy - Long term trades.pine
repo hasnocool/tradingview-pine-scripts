@@ -1,0 +1,255 @@
+Script Name: TrendMaAlignmentStrategy - Long term trades
+Author: Trendoscope
+Description: This is another strategy based on moving average alignment and HighLow periods. This is more suitable for long term trend traders and mainly for stocks.
+
+ Candle is colored lime if :  Lookback Period has at least one bar with moving averages fully aligned OR None of the bars in Lookback periods has negatively aligned moving averages (More than half are positively...
+PineScript code:
+
+Pine Script™ strategy
+TrendMaAlignmentStrategy - Long term trades
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HeWhoMustNotBeNamed
+//@version=4
+strategy("TrendMaAlignmentStrategy", overlay=true, initial_capital = 2000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, commission_type = strategy.commission.cash_per_order, pyramiding = 1, commission_value = 2)
+MAType = input(title="Moving Average Type", defval="sma", options=["ema", "sma", "hma", "rma", "vwma", "wma"])
+LookbackPeriod = input(5, step=10)
+shortHighLowPeriod = input(10, step=10)
+longHighLowPeriod = input(20, step=10)
+atrlength=input(22)
+stopMultiplyer = input(6, minval=1, maxval=10, step=0.5)
+compoundMultiplyer = input(1, minval=1, maxval=10, step=0.5)
+reentryStopMultiplyer = input(3, minval=1, maxval=10, step=0.5)
+exitOnSignal = input(false)
+tradeDirection = input(title="Trade Direction", defval=strategy.direction.long, options=[strategy.direction.all, strategy.direction.long, strategy.direction.short])
+backtestYears = input(10, minval=1, step=1)
+inDateRange = time >= timestamp(syminfo.timezone, year(timenow) - backtestYears, 01, 01, 0, 0)
+includePartiallyAligned = true
+considerYearlyHighLow = true
+considerNewLongTermHighLows = true
+//////////////////////////////////// Get Moving average ///////////////////////////////////
+f_getMovingAverage(source, MAType, length)=>
+    ma = sma(source, length)
+    if(MAType == "ema")
+        ma := ema(source,length)
+    if(MAType == "hma")
+        ma := hma(source,length)
+    if(MAType == "rma")
+        ma := rma(source,length)
+    if(MAType == "vwma")
+        ma := vwma(source,length)
+    if(MAType == "wma")
+        ma := wma(source,length)
+    ma
+    
+f_getMaAlignment(MAType, includePartiallyAligned)=>
+    ma5 = f_getMovingAverage(close,MAType,5)
+    ma10 = f_getMovingAverage(close,MAType,10)
+    ma20 = f_getMovingAverage(close,MAType,20)
+    ma30 = f_getMovingAverage(close,MAType,30)
+    ma50 = f_getMovingAverage(close,MAType,50)
+    ma100 = f_getMovingAverage(close,MAType,100)
+    ma200 = f_getMovingAverage(close,MAType,200)
+    upwardScore = 0
+    upwardScore := close > ma5? upwardScore+1:upwardScore
+    upwardScore := ma5 > ma10? upwardScore+1:upwardScore
+    upwardScore := ma10 > ma20? upwardScore+1:upwardScore
+    upwardScore := ma20 > ma30? upwardScore+1:upwardScore
+    upwardScore := ma30 > ma50? upwardScore+1:upwardScore
+    upwardScore := ma50 > ma100? upwardScore+1:upwardScore
+    upwardScore := ma100 > ma200? upwardScore+1:upwardScore
+    
+    upwards = close > ma5 and ma5 > ma10 and ma10 > ma20 and ma20 > ma30 and ma30 > ma50 and ma50 > ma100 and ma100 > ma200
+    downwards = close < ma5 and ma5 < ma10 and ma10 < ma20 and ma20 < ma30 and ma30 < ma50 and ma50 < ma100 and ma100 < ma200
+    upwards?1:downwards?-1:includePartiallyAligned ? (upwardScore > 5? 0.5: upwardScore < 2?-0.5:upwardScore>3?0.25:-0.25) : 0
+f_getMaAlignmentHighLow(MAType, includePartiallyAligned, LookbackPeriod)=>
+    maAlignment = f_getMaAlignment(MAType,includePartiallyAligned)
+    [highest(maAlignment, LookbackPeriod), lowest(maAlignment, LookbackPeriod)]
+//////////////////////////////////// Calculate new high low condition //////////////////////////////////////////////////
+f_calculateNewHighLows(shortHighLowPeriod, longHighLowPeriod, considerNewLongTermHighLows)=>
+    newHigh = highest(shortHighLowPeriod) == highest(longHighLowPeriod) or not considerNewLongTermHighLows
+    newLow = lowest(shortHighLowPeriod) == lowest(longHighLowPeriod) or not considerNewLongTermHighLows
+    [newHigh,newLow]
+//////////////////////////////////// Calculate stop and compound //////////////////////////////////////////////////
+f_calculateStopAndCompound(target, atr, stopMultiplyer, compoundMultiplyer, barState)=>
+    buyStop = target - (stopMultiplyer * atr)
+    sellStop = target + (stopMultiplyer * atr)
+    if(barState > 0 or strategy.position_size > 0)
+        buyStop := target - (stopMultiplyer * atr)
+        sellStop := target + (compoundMultiplyer * atr)
+        buyStop := (buyStop < buyStop[1] or close < sellStop[1])? buyStop[1] : buyStop
+        sellStop := (sellStop < sellStop[1] or close < sellStop[1]) ? sellStop[1] : sellStop
+    else if(barState < 0 or strategy.position_size < 0)
+        buyStop := target - (compoundMultiplyer * atr)
+        sellStop := target + (stopMultiplyer * atr)
+        sellStop := (sellStop > sellStop[1] or close > buyStop[1])? sellStop[1] : sellStop
+        buyStop := (buyStop > buyStop[1] or close > buyStop[1]) ? buyStop[1] : buyStop
+    [buyStop, sellStop]
+//////////////////////////////////// Calculate Yearly High Low //////////////////////////////////////////////////
+f_getYearlyHighLowCondition(considerYearlyHighLow)=>
+    yhigh = security(syminfo.tickerid, '12M', high[1]) 
+    ylow = security(syminfo.tickerid, '12M', low[1]) 
+    yhighlast = yhigh[365]
+    ylowlast = ylow[365]
+    yhighllast = yhigh[2 * 365]
+    ylowllast = ylow[2 * 365]
+    
+    yearlyTrendUp = na(yhigh)? true : na(yhighlast)? close > yhigh : na(yhighllast)? close > max(yhigh,yhighlast) : close > max(yhigh, min(yhighlast, yhighllast))
+    yearlyHighCondition = (  (na(yhigh) or na(yhighlast) ? true : (yhigh > yhighlast) ) and ( na(yhigh) or na(yhighllast) ? true : (yhigh > yhighllast))) or yearlyTrendUp or not considerYearlyHighLow
+    yearlyTrendDown = na(ylow)? true : na(ylowlast)? close < ylow : na(ylowllast)? close < min(ylow,ylowlast) : close < min(ylow, max(ylowlast, ylowllast))
+    yearlyLowCondition = (  (na(ylow) or na(ylowlast) ? true : (ylow < ylowlast) ) and ( na(ylow) or na(ylowllast) ? true : (ylow < ylowllast))) or yearlyTrendDown or not considerYearlyHighLow
+    
+    [yearlyHighCondition,yearlyLowCondition]
+    
+atr = atr(atrlength)    
+[maAlignmentHigh, maAlignmentLow] = f_getMaAlignmentHighLow(MAType, includePartiallyAligned, LookbackPeriod)
+[newHigh,newLow] = f_calculateNewHighLows(shortHighLowPeriod, longHighLowPeriod, considerNewLongTermHighLows)
+[middle, upper, lower] = bb(close, 20, 2)
+barState = (maAlignmentLow > 0 or maAlignmentHigh == 1) and newHigh ? 1 : (maAlignmentHigh < 0 or maAlignmentLow == -1) and newLow ? -1 : 0
+[buyStop, sellStop] = f_calculateStopAndCompound(close, atr, stopMultiplyer, compoundMultiplyer, barState)
+[yearlyHighCondition,yearlyLowCondition] = f_getYearlyHighLowCondition(considerYearlyHighLow)
+barcolor(barState == 1?color.lime : barState == -1? color.orange: color.silver)
+plot(barState == 1 or strategy.position_size != 0 ?buyStop:na, title="BuyStop", color=color.red, linewidth=2, style=plot.style_linebr)
+plot(barState == -1 or strategy.position_size != 0 ?sellStop:na, title="SellStop", color=color.green, linewidth=2, style=plot.style_linebr)
+buyEntry = barState == 1 and close - reentryStopMultiplyer*atr > buyStop and yearlyHighCondition and inDateRange
+sellEntry = barState == -1 and close + reentryStopMultiplyer*atr < sellStop and yearlyLowCondition and inDateRange
+buyExit = barState == -1
+sellExit = barState == 1
+strategy.risk.allow_entry_in(tradeDirection)
+strategy.entry("Buy", strategy.long, when=buyEntry)
+strategy.close("Buy", when=buyExit and exitOnSignal)
+strategy.exit("ExitBuy", "Buy", stop = buyStop)
+strategy.entry("Sell", strategy.short, when=sellEntry)
+strategy.close("Sell", when=sellExit and exitOnSignal)
+strategy.exit("ExitSell", "Sell", stop = sellStop)
+Expand (130 lines)

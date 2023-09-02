@@ -1,0 +1,85 @@
+Script Name: 4-Hour Stochastic EMA Trend
+Author: slymnturkoglu
+Description: This trading strategy relies heavily on catching the trend. You
+may have success using this strategy on as low as the one hour
+chart or as high as the daily chart; however, I’ve had most
+success trading it on the four hour chart. This strategy consists
+of four indicators, which are:
+1. 5 Period Exponential Moving Average (closed)
+2. 15 Period Exponential Moving...
+PineScript code:
+
+Pine Script™ strategy
+4-Hour Stochastic EMA Trend
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © slymnturkoglu
+//@version=4
+strategy("Stochastic")
+//study(title="Stochastic", shorttitle="Stoch", format=format.price, precision=2, resolution="")
+period1 = 5
+period2 = 15
+period3 = 50
+ma1 = ema(close, period1)
+ma2 = ema(close, period2)
+ma3 = ema(close, period3)
+periodK=13
+periodD=15
+smoothK=5
+k = sma(stoch(close, high, low, periodK), smoothK)
+d = sma(k, periodD)
+buyCondition = crossover(k, d) and crossover(ma1, ma3) and crossover(ma2, ma3)
+sellCondition = crossunder(k, d) and crossunder(ma1, ma3) and crossunder(ma2, ma3)
+strategy.entry("long", strategy.long, 1000, alert_message="LongAlert", when=buyCondition)
+strategy.close("long", alert_message="CloseAlert", when=sellCondition)
+    
+//study("Stochastic EMA Trend", overlay=false)
+plot(close)
+plot(ma1, color=color.blue, linewidth=3, title="EMA period 5")
+plot(ma2, color=color.green,linewidth=3, title="EMA period 15")
+plot(ma3, color=color.yellow,linewidth=3, title="EMA period 50")
+plot(d, color=color.red,linewidth=3, title="d")
+plot(k, color=color.blue,linewidth=3, title="k")
+Expand (42 lines)

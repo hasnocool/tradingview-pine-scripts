@@ -1,0 +1,181 @@
+Script Name: EMA Slope Trend Follower Strategy
+Author: lukescream
+Description: This strategy is based on the  slope of the EMA130. 
+Over that slope, the script calculates two EMAs (9,21) which are used to generate the main entry and exit signal.
+
+In particular, the strategy enters a LONG position when EMA9 > EMA21. On the contrary, it closes the LONG and opens a SHORT when EMA9 < EMA21.
+
+When the slope of the EMA130 is rising, it means that...
+PineScript code:
+
+Pine Script™ strategy
+EMA Slope Trend Follower Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © lukescream
+//@version=4
+strategy("EMA Slope Trend Follower", initial_capital=10000, default_qty_type=strategy.percent_of_equity, commission_type=strategy.commission.percent, commission_value=0.06, slippage = 2, default_qty_value=30, overlay=false)
+//definizione input
+average = input (title="Source MA Type", type=input.string, defval="EMA",options=["EMA","SMA"])
+len = input(130, minval=1, title="Source MA Length")
+slopeFlen = input (9,title="Fast Slope MA Length")
+slopeSlen= input (21,title="Slow Slope MA Length")
+trendfilter=input(true,title="Trend Filter")
+trendfilterperiod=input(200,title="Trend Filter MA Period")
+trendfiltertype=input (title="Trend Filter MA Type", type=input.string, defval="EMA",options=["EMA","SMA"])
+volatilityfilter=input(false,title="Volatility Filter")
+volatilitystdevlength=input(20,title="Vol Filter STDev Length")
+volatilitystdevmalength=input(30,title="Vol Filter STDev MA Length")
+//variabili
+out = if average == "EMA" 
+    ema(close,len)
+else
+    sma(close,len)
+    
+slp = change(out)/out
+emaslopeF = ema(slp,slopeFlen)
+emaslopeS = ema(slp,slopeSlen)
+//variabili accessorie e condizioni
+TrendConditionL=if trendfiltertype =="EMA"
+    close>ema(close,trendfilterperiod)
+else
+    close>sma(close,trendfilterperiod)
+    
+TrendConditionS=if trendfiltertype =="EMA"
+    close<ema(close,trendfilterperiod)
+else
+    close<sma(close,trendfilterperiod)
+VolatilityCondition=stdev(close,volatilitystdevlength)>sma(stdev(close,volatilitystdevlength),volatilitystdevmalength)
+ConditionEntryL= if trendfilter == true
+    if volatilityfilter == true
+        emaslopeF>emaslopeS and TrendConditionL and VolatilityCondition
+    else
+        emaslopeF>emaslopeS and TrendConditionL
+else
+    if volatilityfilter == true
+        emaslopeF>emaslopeS and VolatilityCondition
+    else 
+        emaslopeF>emaslopeS
+ConditionEntryS= if trendfilter == true
+    if volatilityfilter == true
+        emaslopeF<emaslopeS and TrendConditionS and VolatilityCondition
+    else 
+        emaslopeF<emaslopeS and TrendConditionS
+else
+    if volatilityfilter == true
+        emaslopeF<emaslopeS and VolatilityCondition
+    else
+        emaslopeF<emaslopeS
+ConditionExitL=crossunder(emaslopeF,emaslopeS)
+ConditionExitS=crossover(emaslopeF,emaslopeS)
+//plot
+plot (slp, color=color.white)
+plot (emaslopeF,color=color.yellow)
+plot (emaslopeS,color=color.red)
+//ingressi e uscite
+if ConditionExitS
+    if strategy.position_size < 0
+        strategy.close("SLPShort")
+if ConditionExitL
+    if strategy.position_size > 0
+        strategy.close("SLPLong")
+if ConditionEntryL
+    strategy.entry("SLPLong",long=true)
+    
+if ConditionEntryS
+    strategy.entry("SLPShort",long=false)
+Expand (94 lines)

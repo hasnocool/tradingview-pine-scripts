@@ -1,0 +1,131 @@
+Script Name: EMA Cross Strategy
+Author: kirilov
+Description: This double EMA crossover strategy aims to illustrate a good strategy design.
+
+It is currently the only published script that:
+ 
+ supports a proper date picker for the backtest period
+ is able to test in short and long mode only
+PineScript code:
+
+Pine Script™ strategy
+EMA Cross Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// This strategy has been created for illustration purposes only and should not be relied upon as a basis for buying, selling, or holding any asset or security.
+// © kirilov
+//@version=4
+strategy(
+     "EMA Cross Strategy",
+     overlay=true,
+     calc_on_every_tick=true,
+     currency=currency.USD
+     )
+// INPUT:
+// Options to enter fast and slow Exponential Moving Average (EMA) values
+emaFast = input(title="Fast EMA", type=input.integer, defval=10, minval=1, maxval=9999)
+emaSlow = input(title="Slow EMA", type=input.integer, defval=20, minval=1, maxval=9999)
+// Option to select trade directions
+tradeDirection = input(title="Trade Direction", options=["Long", "Short", "Both"], defval="Both")
+// Options that configure the backtest date range
+startDate = input(title="Start Date", type=input.time, defval=timestamp("01 Jan 1970 00:00"))
+endDate = input(title="End Date", type=input.time, defval=timestamp("31 Dec 2170 23:59"))
+// CALCULATIONS:
+// Use the built-in function to calculate two EMA lines
+fastEMA = ema(close, emaFast)
+slowEMA = ema(close, emaSlow)
+// PLOT:
+// Draw the EMA lines on the chart
+plot(series=fastEMA, color=color.orange, linewidth=2)
+plot(series=slowEMA, color=color.blue, linewidth=2)
+// CONDITIONS:
+// Check if the close time of the current bar falls inside the date range
+inDateRange = (time >= startDate) and (time < endDate)
+// Translate input into trading conditions
+longOK  = (tradeDirection == "Long") or (tradeDirection == "Both")
+shortOK = (tradeDirection == "Short") or (tradeDirection == "Both")
+// Decide if we should go long or short using the built-in functions
+longCondition = crossover(fastEMA, slowEMA)
+shortCondition = crossunder(fastEMA, slowEMA)
+// ORDERS:
+// Submit entry (or reverse) orders
+if (longCondition and inDateRange)
+    strategy.entry(id="long", long=true, when = longOK)
+if (shortCondition and inDateRange)
+    strategy.entry(id="short", long=false, when = shortOK)
+    
+// Submit exit orders in the cases where we trade only long or only short
+if (strategy.position_size > 0 and shortCondition)
+    strategy.exit(id="exit long", stop=close)
+if (strategy.position_size < 0 and longCondition)
+    strategy.exit(id="exit short", stop=close)
+Expand (69 lines)

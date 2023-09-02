@@ -1,0 +1,238 @@
+Script Name: Crypto High Potential Strategy
+Author: maxencetajet
+Description: BTCUSD -- 5 min
+
+ BUY POSITION 
+
+ 1 : The price is above the EMA
+2 : The Parabolic SAR is green
+3 : The RSI is above the 50 line 
+
+ SELL POSITION 
+
+ 1 : The price is bellow the EMA
+2 : The Parabolic SAR is red
+3 : The rsi is below the 50 line
+PineScript code:
+
+Pine Script™ strategy
+Crypto High Potential Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © maxencetajet
+//@version=5
+strategy("HA_RSI", overlay=true, initial_capital=1000, default_qty_type=strategy.fixed, default_qty_value=0.5, slippage=25)
+closeHA = request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, close)
+risk = input.float(2, title="Risk per Trade %", group="Money Management")
+_x = input.bool(false, title="do not take too small positions", group="Money Management", tooltip="This parameter is used to avoid positions that have a stoploss that is too short and that the spreads of the broker take all the gains")
+security = input.float(50, title='min of pips (00001.00) for each position', group="Money Management")
+riskt = risk / 100 + 1
+useDateFilter = input.bool(true, title="Filter Date Range of Backtest",
+     group="Backtest Time Period")
+backtestStartDate = input.time(timestamp("1 June 2022"), 
+     title="Start Date", group="Backtest Time Period",
+     tooltip="This start date is in the time zone of the exchange " + 
+     "where the chart's instrument trades. It doesn't use the time " + 
+     "zone of the chart or of your computer.")
+backtestEndDate = input.time(timestamp("1 July 2022"),
+     title="End Date", group="Backtest Time Period",
+     tooltip="This end date is in the time zone of the exchange " + 
+     "where the chart's instrument trades. It doesn't use the time " + 
+     "zone of the chart or of your computer.")
+inTradeWindow = not useDateFilter or (time >= backtestStartDate and
+     time < backtestEndDate)
+swingHighV = input.int(10, title="Swing High", group="Stop Loss", tooltip="Number of candles in which the parameter targets the highest")
+swingLowV = input.int(10, title="Swing Low", group="Stop Loss", tooltip="Number of candles in which the parameter targets the lowest point")
+emaV = input.int(200, title="Ema Period", group="EMA")
+rsiV = input.int(14, title="RSI Period", group="RSI")
+start = input(0.02, group="Parabolic SAR")
+increment = input(0.02, group="Parabolic SAR")
+maximum = input(0.2, "Max Value", group="Parabolic SAR")
+ema = ta.ema(closeHA, emaV)
+rsi = ta.rsi(closeHA, rsiV)
+SAR = ta.sar(start, increment, maximum)
+myColor = SAR < low?color.green:color.red
+longcondition = closeHA > ema and rsi > 50 and closeHA[1] > SAR and closeHA[1] < SAR[1] 
+shortcondition = closeHA < ema and rsi < 50 and closeHA[1] < SAR and closeHA[1] > SAR[1]
+float risk_long = na
+float risk_short = na
+float stopLoss = na
+float entry_price = na
+float takeProfit = na
+risk_long := risk_long[1]
+risk_short := risk_short[1]
+swingHigh = ta.highest(closeHA, swingHighV)
+swingLow = ta.lowest(closeHA, swingLowV)
+lotB = (strategy.equity*riskt-strategy.equity)/(closeHA - swingLow)
+lotS = (strategy.equity*riskt-strategy.equity)/(swingHigh - closeHA)
+if strategy.position_size == 0 and longcondition and inTradeWindow
+    risk_long := (close - swingLow) / close
+    minp = close - swingLow
+    if _x
+        if minp > security
+            strategy.entry("long", strategy.long, qty=lotB, comment="Buy " + str.tostring(close) + "")
+    else 
+        strategy.entry("long", strategy.long, qty=lotB, comment="Buy " + str.tostring(close) + "")
+        
+if strategy.position_size == 0 and shortcondition and inTradeWindow
+    risk_short := (swingHigh - close) / close  
+    minp = swingHigh - close
+    if _x
+        if minp > security
+            strategy.entry("short", strategy.short, qty=lotS, comment="Sell " + str.tostring(close) + "")
+    else 
+        strategy.entry("short", strategy.short, qty=lotS, comment="Sell " + str.tostring(close) + "")
+if strategy.position_size > 0
+    stopLoss := strategy.position_avg_price * (1 - risk_long)
+    entry_price := strategy.position_avg_price
+    strategy.exit("long exit", "long", stop = stopLoss)
+    
+if strategy.position_size < 0 
+    stopLoss := strategy.position_avg_price * (1 + risk_short)
+    entry_price := strategy.position_avg_price
+    strategy.exit("short exit", "short", stop = stopLoss)
+if closeHA[1] < SAR and close > strategy.position_avg_price
+    strategy.close("long", comment="Exit Long")
+    
+if closeHA[1] > SAR and close < strategy.position_avg_price
+    strategy.close("short", comment="Exit Short")
+p_ep = plot(entry_price, color=color.new(color.white, 0), linewidth=2, style=plot.style_linebr, title='entry price')
+p_sl = plot(stopLoss, color=color.new(color.red, 0), linewidth=2, style=plot.style_linebr, title='stopLoss')
+fill(p_sl, p_ep, color.new(color.red, transp=85))
+plot(SAR, "ParabolicSAR", style=plot.style_circles, color=myColor, linewidth=1)
+plot(ema, color=color.white, linewidth=2, title="EMA")
+colorresult = strategy.netprofit > 0 ? color.green : color.red  
+profitprc = strategy.netprofit / strategy.initial_capital * 100
+periodzone = (backtestEndDate - backtestStartDate) / 3600 / 24 / 1000
+var tbl = table.new(position.top_right, 4, 2, border_width=3)
+table.cell(tbl, 0, 0, "Symbole",  bgcolor = #9B9B9B, width = 6, height = 6)
+table.cell(tbl, 1, 0, "Net Profit", bgcolor = #9B9B9B, width = 6, height = 6)
+table.cell(tbl, 2, 0, "Trades", bgcolor = #9B9B9B, width = 6, height = 6)
+table.cell(tbl, 3, 0, "Period",  bgcolor = #9B9B9B, width = 6, height = 6)
+    
+table.cell(tbl, 0, 1, str.tostring(syminfo.ticker),  bgcolor = #E8E8E8, width = 6, height = 6)
+table.cell(tbl, 1, 1, str.tostring(profitprc, format.mintick) + " %", bgcolor = colorresult,   width = 6, height = 6)
+table.cell(tbl, 2, 1, str.tostring(strategy.closedtrades), bgcolor = colorresult,   width = 6, height = 6)
+table.cell(tbl, 3, 1, str.tostring(periodzone) + " day", bgcolor = colorresult,   width = 6, height = 6)
+Expand (121 lines)

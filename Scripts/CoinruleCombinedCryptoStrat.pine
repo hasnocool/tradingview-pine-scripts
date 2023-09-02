@@ -1,0 +1,136 @@
+Script Name: CoinruleCombinedCryptoStrat
+Author: SnoDragon
+Description: Utilizes a combination of RSI and MA to determine the best time to acquire cryptocurrencies and then sell when the markets are reaching peak prices. Best followed on lower time frames. Based on a strategy of averaging down during dips then selling at peaks with the highest volume first, then slowly liquidating as the price increases in percentage of holdings.
+PineScript code:
+
+Pine Script™ strategy
+CoinruleCombinedCryptoStrat
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © syfuslokust
+//@version=4
+strategy(shorttitle='CoinruleCombinedCryptoStrat',title='CoinruleCombinedCryptoStrat', overlay=true, initial_capital = 10000, pyramiding = 1000, process_orders_on_close=true, default_qty_type = strategy.percent_of_equity, default_qty_value = 2, commission_type=strategy.commission.percent, commission_value=0.35)
+// RSI inputs and calculations
+lengthRSI = 14
+RSI = rsi(close, lengthRSI)
+//Normal
+oversold = input(35)
+overbought =  input(70)
+res = input(title="Additional Timescale", defval="60", options=["5", "15", "60", "360", "1D"])
+//ALGO
+//oversold= input(26)
+//overbought= input(80)
+//sell pct
+SellPct = input(15)
+ExitPct = input(50)
+//MA inputs and calculations
+movingaverage_signal = sma(close, input(9))
+movingaverage_fast = sma(close, input(50))
+movingaverage_slow = sma(close, input(200))
+movingaverage_mid= sma(close, input(100))
+long_ma_signal = security(syminfo.tickerid, res, sma(close, input(9)), lookahead=barmerge.lookahead_on)
+long_ma_fast = security(syminfo.tickerid, res, sma(close, input(50)), lookahead=barmerge.lookahead_on)
+long_ma_slow = security(syminfo.tickerid, res, sma(close, input(200)), lookahead=barmerge.lookahead_on)
+long_ma_mid= security(syminfo.tickerid, res, sma(close, input(100)), lookahead=barmerge.lookahead_on)
+//Look Back
+inp_lkb = input(12, title='Lookback Long Period')
+inp_lkb_2 = input(2, title='Lookback Short Period')
+ 
+perc_change(lkb) =>
+    overall_change = ((close[0] - close[lkb]) / close[lkb]) * 100
+//Entry 
+//MA
+bullish = crossover(movingaverage_signal, movingaverage_fast)
+//Execute buy
+strategy.entry(id="long", long = true, when = (RSI < oversold) and movingaverage_signal < movingaverage_mid, comment="BuyIn")
+//when = crossover(close, movingaverage_signal) and movingaverage_signal < movingaverage_slow and RSI < oversold)
+//Exit
+//RSI
+Stop_loss= ((input (4))/100)
+longStopPrice  = strategy.position_avg_price * (1 - Stop_loss)
+//MA
+bearish = crossunder(close, long_ma_mid)
+//Execute sell
+strategy.close("long", qty_percent = SellPct, when = RSI > overbought and movingaverage_fast > movingaverage_mid, comment="SmallSell")
+strategy.close("long", qty_percent = ExitPct, when = bearish, comment="StopLoss")
+//strategy.close("long", qty_percent = ExitPct, when = bearish )
+//when = (crossunder(low, movingaverage_signal) and movingaverage_fast > movingaverage_slow and RSI > overbought) or (movingaverage_signal < movingaverage_fast and crossunder(low, movingaverage_fast)) or (low < longStopPrice))
+//PLOT
+plot(movingaverage_signal, color=color.white, linewidth=2, title="signal")
+plot(movingaverage_fast, color=color.orange, linewidth=2, title="fast")
+plot(movingaverage_slow, color=color.purple, linewidth=2, title="slow")
+plot(movingaverage_mid, color=color.blue, linewidth=2, title="mid")
+plot(long_ma_signal, color=color.yellow, linewidth=1, title="long signal")
+plot(long_ma_mid, color=color.red, linewidth=1, title="long slow")
+Expand (71 lines)

@@ -1,0 +1,252 @@
+Script Name: Crunchster's Turtle and Trend System
+Author: Crunchster1
+Description: This is a combination of two popular systematic trading strategies - in the trend following category. 
+
+The strategy is designed for use on the daily timeframe. Specific features of this system are outlined below:
+1. Two different strategies to choose from, "Trend" which is a volatility adjusted Exponential Moving Average (EMA) crossover strategy and "Breakout"...
+PineScript code:
+
+Pine Script™ strategy
+Crunchster's Turtle and Trend System
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Crunchster1
+//@version=5
+strategy(title="Crunchster's Turtle and Trend System", shorttitle="Turtle Trend", overlay=true, slippage=10, pyramiding=1, precision = 4, calc_on_order_fills = false, calc_on_every_tick = false, default_qty_value = 0.1, initial_capital = 1000, commission_value = 0.06, process_orders_on_close = true)
+// Inputs and Parameters
+src = input(close, 'Source', group='Strategy Settings')
+length = input.int(title="Lookback period for fast EMA", defval=10, minval=2, group='Strategy Settings', tooltip='This sets the lookback period for the fast exponential moving average. The slow EMA is 5x the fast EMA length')
+blength = input.int(title="Lookback period for Breakout", defval=20, minval=5, step=5, group='Strategy Settings')
+long = input(true, 'Long', inline='08', group='Strategy toggle')
+short = input(true, 'Short', inline='08', group='Strategy toggle', tooltip='Toggle long/short strategy on/off')
+EMAwt = input(false, 'Trend', inline='01', group='Strategy toggle')
+breakwt = input(true, 'Breakout', inline='01', group='Strategy toggle', tooltip='Toggle trend/breakout strategy on/off')
+stopMultiple = input.float(2, 'Stop multiple', step=0.5, group='Risk Management Settings', tooltip='Multiple for ATR, setting hard stop loss from entry price')
+trail = input.int(10, 'Trail lookback', step=5, group='Risk Management Settings', tooltip='Lookback period for the trailing stop')
+lev = input.float(1, 'Max Leverage', step=0.5, group='Risk Management Settings', tooltip='Max leverage sets maximum allowable leverage of total capital (initial capital + any net profit), capping maximum volatility adjusted position size')
+riskT = input.float(15, maxval=75, title='Annualised Volatility Target %', group='Risk Management Settings', tooltip='Specify annual risk target, used to determine volatility adjusted position size. Annualised daily volatility is referenced to this value and position size adjusted accordingly')
+comp = input(true, 'Compounding', inline='09', group='Risk Management Settings')
+Comppct = input.float(50, '%', step=5, inline='09', group='Risk Management Settings', tooltip='Toggle compounding of profit, and set % of profit to compound')
+// Backtesting period
+FromDay = input.int(defval=1, title='From Day', minval=1, maxval=31, inline='04', group='Backtest range')
+FromMonth = input.int(defval=1, title='From Mon', minval=1, maxval=12, inline='04', group='Backtest range')
+FromYear = input.int(defval=2018, title='From Yr', minval=1900, inline='04', group='Backtest range', tooltip='Set start of backtesting period')
+ToDay = input.int(defval=1, title='To Day', minval=1, maxval=31, inline='05', group='Backtest range')
+ToMonth = input.int(defval=1, title='To Mon', minval=1, maxval=12, inline='05', group='Backtest range')
+ToYear = input.int(defval=9999, title='To Yr', minval=1900, inline='05', group='Backtest range', tooltip='Set end of backtesting period')
+start = timestamp(FromYear, FromMonth, FromDay, 00, 00)
+finish = timestamp(ToYear, ToMonth, ToDay, 23, 59)
+window = time >= start and time <= finish
+// Breakout strategy
+lower = ta.lowest(low[1], blength)
+upper = ta.highest(high[1], blength)
+basis = math.avg(upper, lower)
+signal = 20*(close - basis) / (upper - lower)
+// Trend strategy
+fEMA = ta.ema(close[1], length)
+sEMA = ta.ema(close[1], length*5)
+emadiff = fEMA - sEMA
+nemadiff = 5*emadiff/(ta.stdev(close - close[1], 252))
+//Risk Management formulae
+tr = math.max(high - low, math.abs(high - close), math.abs(low - close)) //True range
+stopL = ta.sma(tr, 14) //Average true range
+stdev = ta.stdev(close-close[1], 14) //volatility of recent returns
+maxcapital = strategy.initial_capital+strategy.netprofit //Maximum capital available to invest - initial capital net of profit
+annvol = 100*math.sqrt(365)*stdev/close //converts recent volatility of returns into annualised volatility of returns - assumes daily timeframe
+risk = 1.1
+if comp
+    risk := (strategy.initial_capital+(Comppct*strategy.netprofit/100))//adjust investment capital to include compounding
+else
+    risk := strategy.initial_capital
+shares = (risk * (riskT/annvol)) / close //calculates volatility adjusted position size, dependent on user specified annualised risk target
+if ((shares*close) > lev*maxcapital) //ensures position size does not exceed available capital multiplied by user specified maximum leverage
+    shares := lev*maxcapital/close
+//To set the price at the entry point of trade
+Posopen() =>
+    math.abs(strategy.position_size[1]) <= 0 and math.abs(strategy.position_size) > 0
+var float openN = na
+if Posopen()
+    openN := stopL
+// Trailing stop
+tlower = ta.lowest(low[1], trail)
+tupper = ta.highest(high[1], trail)
+tbasis = math.avg(tupper, tlower)
+tsignal = 20*(close - tbasis) / (tupper - tlower)
+// Strategy Rules
+if EMAwt
+    if long
+        longCondition2 = (nemadiff >2 and nemadiff[1] <2) and window
+        exitlong = tsignal <= -10
+        if (longCondition2)
+            strategy.entry('Trend Long!', strategy.long, qty=shares)
+        if strategy.position_size > 0    
+            strategy.exit('Stop Long', from_entry = 'Trend Long!', stop=(strategy.opentrades.entry_price(0) - (openN * stopMultiple)))
+        if (exitlong)
+            strategy.close('Trend Long!', immediately = true)
+    if short
+        shortCondition2 = (nemadiff <-1 and nemadiff[1] >-1) and window
+        exitshort = tsignal >= 10
+        if (shortCondition2)
+            strategy.entry('Trend Short!', strategy.short, qty=shares)
+        if strategy.position_size < 0   
+            strategy.exit('Stop Short', from_entry = 'Trend Short!', stop=(strategy.opentrades.entry_price(0) + (openN * stopMultiple)))
+        if (exitshort)
+            strategy.close('Trend Short!', immediately = true)
+if breakwt
+    if long
+        longCondition1 = (signal >= 10) and window
+        exitlong = tsignal <= -10
+        if (longCondition1)
+            strategy.entry('Break Long!', strategy.long, qty=shares)
+        if strategy.position_size > 0    
+            strategy.exit('Stop Long', from_entry = 'Break Long!', stop=(strategy.opentrades.entry_price(0) - (openN * stopMultiple)))
+        if (exitlong)
+            strategy.close('Break Long!', immediately = true)
+    if short
+        shortCondition1 = (signal <= -10) and window
+        exitshort = tsignal >= 10
+        if (shortCondition1)
+            strategy.entry('Break Short!', strategy.short, qty=shares)
+        if strategy.position_size < 0   
+            strategy.exit('Stop Short', from_entry = 'Break Short!', stop=(strategy.opentrades.entry_price(0) + (openN * stopMultiple)))
+        if (exitshort)
+            strategy.close('Break Short!', immediately = true)
+// Visuals of trend and direction
+plot(nemadiff, title='EMA Forecast', color=color.black, display=display.none)
+plot(ta.sma(ta.median(math.sqrt(math.pow(nemadiff,2)), 700), 350), 'Forecast mean', color=color.rgb(245, 0, 0), display=display.none)
+MAColor = fEMA > sEMA ? #00ff00 : #ff0000
+MA1 = plot(fEMA, title='Fast EMA', color=MAColor)
+MA2 = plot(sEMA, title='Slow EMA', color=MAColor)
+fill(MA1, MA2, title='Band Filler', color=MAColor)
+Expand (131 lines)

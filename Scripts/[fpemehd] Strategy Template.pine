@@ -1,0 +1,690 @@
+Script Name: [fpemehd] Strategy Template
+Author: DuDu95
+Description: Hello Guys! Nice to meet you all!
+This is my fourth script!
+This is the Strategy Template for traders who wants to make their own strategy.
+I made this based on the open source strategies by jason5480, kevinmck100, myncrypto. Thank you All!
+
+### StopLoss
+1. Can Choose Stop Loss Type: Percent, ATR, Previous Low / High.
+2. Can Chosse inputs of each Stop Loss...
+PineScript code:
+
+Pine Script™ strategy
+[fpemehd] Strategy Template
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © fpemehd
+// Thanks to myncrypto, jason5480, kevinmck100
+// @version=5
+strategy(title          = '[fpemehd] Strategy Template',
+      shorttitle        = '[f] Template',
+      overlay           = true,
+      pyramiding        = 0,
+      currency          = currency.USD,
+      default_qty_type  = strategy.percent_of_equity,
+      default_qty_value = 100,
+      commission_value  = 0.1,
+      initial_capital   = 100000,
+      max_bars_back     = 500,
+      max_lines_count   = 150,
+      max_labels_count  = 300)
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+//                      Time, Direction, Etc - Basic Settings Inputs
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+// 1. Time: Based on UTC +09:00
+i_start                 = input.time (defval = timestamp("20 Jan 1990 00:00 +0900"), title = "Start Date", tooltip = "Choose Backtest Start Date", inline = "Start Date", group = "Time" ) 
+i_end                   = input.time (defval = timestamp("20 Dec 2030 00:00 +0900"), title = "End Date", tooltip = "Choose Backtest End Date", inline = "End Date", group = "Time" ) 
+inTime                  = time >= i_start and time <= i_end
+// 2. Inputs for direction: Long? Short? Both? 
+i_longEnabled           = input.bool (defval = true , title = "Long?", tooltip = "Enable Long Position Trade?", inline = "Long / Short", group = "Long / Short" )
+i_shortEnabled          = input.bool (defval = true , title = "Short?", tooltip = "Enable Short Position Trade?", inline = "Long / Short", group = "Long / Short" )
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+//                      Filter - Inputs, Indicaotrs
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+// 3. Use Filters? What Filters?
+i_ATRFilterOn           = input.bool (defval = false , title = "ATR Filter On?", tooltip = "ATR Filter On? Order will not be made unless filter condition is fulfilled", inline = "1", group =  "Filters") 
+i_ATRFilterLen          = input.int  (defval = 14 , title = "Length for ATR Filter", minval = 1 , maxval = 100 , step = 1 , tooltip = "", inline = "2", group = "Filters") 
+i_ATRSMALen             = input.int  (defval = 40 , title = "SMA Length for ATR SMA", minval = 1 , maxval = 100000 , step = 1 , tooltip = "ATR should be bigger than this", inline = "2", group = "Filters") 
+bool i_ATRFilter        = ta.atr(i_ATRFilterLen) >= ta.sma(ta.atr(length = i_ATRFilterLen), i_ATRSMALen) ? true : false
+bool filterFulfilled    = not i_ATRFilterOn or i_ATRFilter
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+//                      Strategy Logic (Entry & Exit Condition) - Inputs, Indicators for Strategy
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+//// Indicators
+// Inputs for Strategy Indicators
+i_fastMALen             = input.int  (defval = 21, title = 'Fast SMA Length', minval = 1, inline = 'MA Length', group = 'Strategy')
+i_slowMALen             = input.int  (defval = 49, title = 'Slow SMA Length', minval = 1, tooltip = 'How many candles back to calculte the fast/slow SMA.', inline = 'MA Length', group = 'Strategy')
+// Calculate Indicators
+float indicator1        = ta.sma(source = close, length = i_fastMALen)
+float indicator2        = ta.sma(source = close, length = i_slowMALen)
+// Plot: Indicators
+var indicator1Color     = color.new(color = color.yellow, transp = 0)
+plot(series = indicator1, title = 'indicator1', color = indicator1Color, linewidth = 1, style = plot.style_line)
+var indicator2Color     = color.new(color = color.orange, transp = 0)
+plot(series = indicator2, title = 'indicator2', color = indicator2Color, linewidth = 1, style = plot.style_line)
+////// Entry, Exit
+// Long, Short Logic with Indicator
+bool crossover          = ta.crossover (indicator1, indicator2)
+bool crossunder         = ta.crossunder (indicator1, indicator2)
+// Basic Cond + Long, Short Entry Condition
+bool longCond           = (i_longEnabled and inTime) and (crossover) 
+bool shortCond          = (i_shortEnabled and inTime) and (crossunder) 
+// Basic Cond + Long, Short Exit Condition
+bool closeLong          = (i_longEnabled) and (crossunder)
+bool closeShort         = (i_shortEnabled) and (crossover)
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+//                      Position Control
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+// Long, Short Entry Condition + Not entered Position Yet
+bool openLong           = longCond and not (strategy.opentrades.size(strategy.opentrades - 1) > 0) and filterFulfilled
+bool openShort          = shortCond and not (strategy.opentrades.size(strategy.opentrades - 1) < 0) and filterFulfilled
+bool enteringTrade      = openLong or openShort
+float entryBarIndex     = bar_index
+// Long, Short Entry Fulfilled or Already Entered
+bool inLong             = openLong or strategy.opentrades.size(strategy.opentrades - 1) > 0 and not closeLong
+bool inShort            = openShort or strategy.opentrades.size(strategy.opentrades - 1) < 0 and not closeShort
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+//                      Stop Loss - Inputs, Indicaotrs
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+//// Use SL? TSL? 
+i_useSLTP               = input.bool   (defval =  true, title = "Enable SL & TP?", tooltip = "", inline = "1", group = "Stop Loss") 
+i_tslEnabled            = input.bool   (defval = false , title = "Enable Trailing SL?", tooltip = "Enable Stop Loss & Take Profit? \n\Enable Trailing SL?", inline = "1", group = "Stop Loss") 
+// i_breakEvenAfterTP   = input.bool   (defval = false, title = 'Enable Break Even After TP?', tooltip = 'When Take Profit price target is hit, move the Stop Loss to the entry price (or to a more strict price defined by the Stop Loss %/ATR Multiplier).', inline = '2', group = 'Stop Loss / Take Profit')
+//// Sl Options
+i_slType                = input.string (defval = "ATR", title = "Stop Loss Type", options = ["Percent", "ATR", "Previous LL / HH"], tooltip = "Stop Loss based on %? ATR?", inline = "3", group = "Stop Loss") 
+i_slATRLen              = input.int    (defval = 14, title = "ATR Length", minval = 1 , maxval = 200 , step = 1, inline = "4", group = "Stop Loss")  
+i_slATRMult             = input.float  (defval = 3, title = "ATR Multiplier", minval = 1 , maxval = 200 , step = 0.1, tooltip = "", inline = "4", group = "Stop Loss") 
+i_slPercent             = input.float  (defval = 3, title = "Percent", tooltip = "", inline = "5", group = "Stop Loss")
+i_slLookBack            = input.int    (defval = 30, title = "Lowest Price Before Entry", group = "Stop Loss",  inline = "6", minval = 30, step = 1, tooltip = "Lookback to find the Lowest Price. \nStopLoss is determined by the Lowest price of the look back period. Take Profit is derived from this also by multiplying the StopLoss value by the Risk:Reward multiplier.")
+// Functions for Stop Loss
+float openAtr           = ta.valuewhen(condition = enteringTrade, source = ta.atr(i_slATRLen), occurrence = 0) 
+float openLowest        = ta.valuewhen(condition = openLong, source = ta.lowest(low, i_slLookBack), occurrence = 0)
+float openHighest       = ta.valuewhen(condition = openShort, source = ta.highest(high, i_slLookBack), occurrence = 0)
+f_getLongSLPrice(source) =>
+    switch i_slType
+        "Percent"           => source * (1 - (i_slPercent/100))
+        "ATR"               => source - (i_slATRMult * openAtr)
+        "Previous LL / HH"  => openLowest
+        => na
+f_getShortSLPrice(source) =>
+    switch i_slType
+        "Percent"           => source * (1 + (i_slPercent/100))
+        "ATR"               => source + (i_slATRMult * openAtr)
+        "Previous LL / HH"  => openHighest
+        => na
+// Calculate Stop Loss
+var float longSLPrice   = na
+var float shortSLPrice  = na
+bool longTPExecuted     = false
+bool shortTPExecuted    = false
+longSLPrice := if (inLong and i_useSLTP)
+    if (openLong)
+        f_getLongSLPrice (close)
+    else
+        // 1. Trailing Stop Loss
+        if i_tslEnabled
+            stopLossPrice = f_getLongSLPrice (high) 
+            math.max(stopLossPrice, nz(longSLPrice[1])) 
+        // 2. Normal StopLoss
+        else
+            nz(source = longSLPrice[1], replacement = 0) 
+else
+    na           
+shortSLPrice := if (inShort and i_useSLTP)
+    if (openShort)
+        f_getShortSLPrice (close)
+    else
+        // 1. Trailing Stop Loss
+        if i_tslEnabled
+            stopLossPrice = f_getShortSLPrice (low) 
+            math.min(stopLossPrice, nz(shortSLPrice[1])) 
+        // 2. Normal StopLoss
+        else
+            nz(source = shortSLPrice[1], replacement = 999999.9) 
+else
+    na           
+// Plot: Stop Loss of Long, Short Entry
+var longSLPriceColor    = color.new(color.maroon, 0)
+plot(series = longSLPrice, title = 'Long Stop Loss', color = longSLPriceColor, linewidth = 1, style = plot.style_linebr, offset = 1)
+var shortSLPriceColor   = color.new(color.maroon, 0)
+plot(series = shortSLPrice, title = 'Short Stop Loss', color = shortSLPriceColor, linewidth = 1, style = plot.style_linebr, offset = 1)
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+//                      Take Profit - Inputs, Indicaotrs
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+i_useTPExit             = input.bool   (defval = true, title = "Use Take Profit?", tooltip = "", inline = "1", group = "Take Profit") 
+i_RRratio               = input.float  (defval = 1.8, title = "R:R Ratio", minval = 0.1 , maxval = 200 , step = 0.1, tooltip = "R:R Ratio > Risk Reward Ratio? It will automatically set Take Profit % based on Stop Loss", inline = "2", group = "Take Profit") 
+i_tpQuantityPerc        = input.float  (defval = 50, title = 'Take Profit Quantity %', minval = 0.0, maxval = 100, step = 1.0, tooltip = '% of position closed when tp target is met.', inline="34", group = 'Take Profit')
+var float longTPPrice   = na
+var float shortTPPrice  = na
+f_getLongTPPrice() =>
+    close + i_RRratio * math.abs (close - f_getLongSLPrice (close))
+f_getShortTPPrice() =>
+    close - i_RRratio * math.abs(close - f_getShortSLPrice (close))
+longTPPrice := if (inLong and i_useSLTP)
+    if (openLong)
+        f_getLongTPPrice ()
+    else
+        nz(source = longTPPrice[1], replacement = f_getLongTPPrice ()) 
+else
+    na
+shortTPPrice := if (inShort and i_useSLTP)
+    if (openShort)
+        f_getShortTPPrice ()
+    else
+        nz(source = shortTPPrice[1], replacement = f_getShortTPPrice ()) 
+else
+    na
+// Plot: Take Profit of Long, Short Entry 
+var longTPPriceColor    = color.new(color.teal, 0)
+plot(series = longTPPrice, title = 'Long Take Profit', color = longTPPriceColor, linewidth = 1, style = plot.style_linebr, offset = 1)
+var shortTPPriceColor   = color.new(color.teal, 0)
+plot(series = shortTPPrice, title = 'Short Take Profit', color = shortTPPriceColor, linewidth = 1, style = plot.style_linebr, offset = 1)
+// Plot: Entry Price 
+var posColor            = color.new(color.white, 0)
+plot(series = strategy.opentrades.entry_price(strategy.opentrades - 1), title = 'Position Entry Price', color = posColor, linewidth = 1, style = plot.style_linebr)
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+//                      Quantity - Inputs
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+i_useRiskManangement    = input.bool  (defval = true, title = "Use Risk Manangement?", tooltip = "", inline = "1", group = "Quantity") 
+i_riskPerTrade          = input.float (defval = 3, title = "Risk Per Trade (%)", minval = 0, maxval = 100, step = 0.1, tooltip = "Use Risk Manangement by Quantity Control?", inline = "2", group = "Quantity") 
+// i_leverage              = input.float (defval = 2, title = "Leverage", minval = 0, maxval = 100, step = 0.1, tooltip = "Leverage", inline = "3", group = "Quantity") 
+float qtyPercent        = na
+float entryQuantity     = na
+f_calQtyPerc() =>
+    if (i_useRiskManangement)
+        riskPerTrade        = (i_riskPerTrade) / 100 // 1번 거래시 3% 손실
+        stopLossPrice       = openLong ? f_getLongSLPrice (close) : openShort ? f_getShortSLPrice (close) : na
+        riskExpected        = math.abs((close-stopLossPrice)/close) // 손절가랑 6% 차이
+        riskPerTrade / riskExpected  // 0 ~ 1
+    else
+        1
+f_calQty(qtyPerc) =>
+    math.min (math.max (0.000001, strategy.equity / close * qtyPerc), 1000000000)
+    
+// TP Execution
+longTPExecuted          := strategy.opentrades.size(strategy.opentrades - 1) > 0 and (longTPExecuted[1] or strategy.opentrades.size(strategy.opentrades - 1) < strategy.opentrades.size(strategy.opentrades - 1)[1] or strategy.opentrades.size(strategy.opentrades - 1)[1] == 0 and high >= longTPPrice)
+shortTPExecuted         := strategy.opentrades.size(strategy.opentrades - 1) < 0 and (shortTPExecuted[1] or strategy.opentrades.size(strategy.opentrades - 1) > strategy.opentrades.size(strategy.opentrades - 1)[1] or strategy.opentrades.size(strategy.opentrades - 1)[1] == 0 and low <= shortTPPrice)
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+//                      Plot Label, Boxes, Results, Etc
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+i_showSimpleLabel       = input.bool(false, "Show Simple Label for Entry?",     group = "Strategy: Drawings",           inline = "1",  tooltip ="") 
+i_showLabels            = input.bool(true, "Show Trade Exit Labels",            group = "Strategy: Drawings",           inline = "1",  tooltip = "Useful labels to identify Profit/Loss and cumulative portfolio capital after each trade closes.\n\nAlso note that TradingView limits the max number of 'boxes' that can be displayed on a chart (max 500). This means when you lookback far enough on the chart you will not see the TP/SL boxes. However you can check this option to identify where trades exited.")
+i_showDashboard         = input.bool(true, "Show Dashboard",                    group = "Strategy: Drawings",           inline = "2",  tooltip = "Show Backtest Results. Backtest Dates, Win/Lose Rates, Etc.")
+// Plot: Label for Long, Short Entry
+var openLongColor       = color.new(#2962FF, 0)
+var openShortColor      = color.new(#FF1744, 0)
+var entryTextColor      = color.new(color.white, 0)
+if (openLong and i_showSimpleLabel)
+    label.new (x = bar_index, y = na, text = 'Open', yloc = yloc.belowbar, color = openLongColor, style = label.style_label_up, textcolor = entryTextColor)
+    entryBarIndex := bar_index
+if (openShort and i_showSimpleLabel)
+    label.new (x = bar_index, y = na, text = 'Close', yloc = yloc.abovebar, color = openShortColor, style = label.style_label_down, textcolor = entryTextColor)
+    entryBarIndex := bar_index
+float prevEntryPrice    = strategy.closedtrades.entry_price (strategy.closedtrades - 1)
+float pnl               = strategy.closedtrades.profit      (strategy.closedtrades - 1)
+float prevExitPrice     = strategy.closedtrades.exit_price  (strategy.closedtrades - 1)
+f_enteringTradeLabel(x, y, qty, entryPrice, slPrice, tpPrice, rrRatio, direction) => 
+    if i_showLabels
+        labelStr = ("Trade Start" 
+              + "\nDirection: " + direction 
+              + "\nRisk Per Trade: " + str.tostring (i_useRiskManangement ? i_riskPerTrade : 100, "#.##") + "%"  
+              + "\nExpected Risk: " + str.tostring (math.abs((close-slPrice)/close) * 100, "#.##") + "%" 
+              + "\nEntry Position Qty: " + str.tostring(math.abs(qty * 100), "#.##") + "%"
+              + "\nEntry Price: " + str.tostring(entryPrice, "#.##"))
+              + "\nStop Loss Price: " + str.tostring(slPrice, "#.##") 
+              + "\nTake Profit Price: " + str.tostring(tpPrice, "#.##") 
+              + "\nRisk - Reward Ratio: " + str.tostring(rrRatio, "#.##") 
+        label.new(x = x, y = y, text = labelStr, color = color.new(color.blue, 60) , textcolor = color.white, style = label.style_label_up)
+f_exitingTradeLabel(x, y, entryPrice, exitPrice, direction) => 
+    if i_showLabels
+        labelStr = ("Trade Result" 
+              + "\nDirection: " + direction 
+              + "\nEntry Price: " + str.tostring(entryPrice, "#.##") 
+              + "\nExit Price: " + str.tostring(exitPrice,"#.##")
+              + "\nGain %: " + str.tostring(direction == 'Long' ? -(entryPrice-exitPrice) / entryPrice * 100 : (entryPrice-exitPrice) / entryPrice * 100 ,"#.##") + "%")
+        label.new(x = x, y = y, text = labelStr, color = pnl > 0 ? color.new(color.green, 60) : color.new(color.red, 60), textcolor = color.white, style = label.style_label_down)
+f_fillCell(_table, _column, _row, _title, _value, _bgcolor, _txtcolor) =>
+    _cellText = _title + " " + _value
+    table.cell(_table, _column, _row, _cellText, bgcolor=_bgcolor, text_color=_txtcolor, text_size=size.auto)
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+//                      Orders
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+if (inTime)
+    if (openLong)
+        qtyPercent        := f_calQtyPerc()
+        entryQuantity     := f_calQty(qtyPercent)
+        strategy.entry(id = "Long", direction = strategy.long, qty = entryQuantity, comment = 'Long(' + syminfo.ticker + '): Started', alert_message = 'Long(' + syminfo.ticker + '): Started')
+        f_enteringTradeLabel(x = bar_index + 1, y = close-3*ta.tr, entryPrice = close, qty = qtyPercent, slPrice = longSLPrice, tpPrice = longTPPrice, rrRatio = i_RRratio, direction = "Long")
+    if (openShort)
+        qtyPercent        := f_calQtyPerc()
+        entryQuantity     := f_calQty(qtyPercent)
+        strategy.entry(id = "Short", direction = strategy.short, qty = entryQuantity, comment = 'Short(' + syminfo.ticker + '): Started', alert_message = 'Short(' + syminfo.ticker + '): Started')
+        f_enteringTradeLabel(x = bar_index + 1, y = close-3*ta.tr, entryPrice = close, qty = qtyPercent, slPrice = shortSLPrice, tpPrice = shortTPPrice, rrRatio = i_RRratio, direction = "Short")
+    if (closeLong)
+        strategy.close(id = 'Long', comment = 'Close Long', alert_message = 'Long: Closed at market price')
+        strategy.position_size > 0 ? f_exitingTradeLabel(x = bar_index, y = close+3*ta.tr, entryPrice = prevEntryPrice, exitPrice = prevExitPrice, direction = 'Long') : na
+    if (closeShort)
+        strategy.close(id = 'Short', comment = 'Close Short', alert_message = 'Short: Closed at market price')
+        strategy.position_size < 0 ? f_exitingTradeLabel(x = bar_index, y = close+3*ta.tr, entryPrice = prevEntryPrice, exitPrice = prevExitPrice, direction = 'Short') : na
+    if (inLong)
+        strategy.exit(id = 'Long TP / SL', from_entry = 'Long', qty_percent = i_tpQuantityPerc, limit = longTPPrice, stop = longSLPrice, alert_message = 'Long(' + syminfo.ticker + '): Take Profit or Stop Loss executed')
+        strategy.exit(id = 'Long SL', from_entry = 'Long', stop = longSLPrice, alert_message = 'Long(' + syminfo.ticker + '): Stop Loss executed')
+    if (inShort)
+        strategy.exit(id = 'Short TP / SL', from_entry = 'Short', qty_percent = i_tpQuantityPerc, limit = shortTPPrice, stop = shortSLPrice, alert_message = 'Short(' + syminfo.ticker + '): Take Profit or Stop Loss executed')
+        strategy.exit(id = 'Short SL', from_entry = 'Short', stop = shortSLPrice, alert_message = 'Short(' + syminfo.ticker + '): Stop Loss executed')
+    
+    if strategy.position_size[1] > 0 and strategy.position_size == 0
+        f_exitingTradeLabel(x = bar_index, y = close+3*ta.tr, entryPrice = prevEntryPrice, exitPrice = prevExitPrice, direction = 'Long')
+    
+    if strategy.position_size[1] < 0 and strategy.position_size == 0
+        f_exitingTradeLabel(x = bar_index, y = close+3*ta.tr, entryPrice = prevEntryPrice, exitPrice = prevExitPrice, direction = 'Short')
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+//                      Backtest Result Dashboard
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+if i_showDashboard
+    var bgcolor = color.new(color = color.black, transp = 100)
+    var greenColor = color.new(color = #02732A, transp = 0)
+    var redColor = color.new(color = #D92332, transp = 0)
+    var yellowColor = color.new(color = #F2E313, transp = 0)
+    // Keep track of Wins/Losses streaks
+    newWin  = (strategy.wintrades  > strategy.wintrades[1]) and (strategy.losstrades == strategy.losstrades[1]) and (strategy.eventrades == strategy.eventrades[1])
+    newLoss = (strategy.wintrades == strategy.wintrades[1]) and (strategy.losstrades  > strategy.losstrades[1]) and (strategy.eventrades == strategy.eventrades[1])
+    varip int winRow     = 0
+    varip int lossRow    = 0
+    varip int maxWinRow  = 0
+    varip int maxLossRow = 0
+    if newWin
+        lossRow := 0
+        winRow := winRow + 1
+    if winRow > maxWinRow
+        maxWinRow := winRow
+        
+    if newLoss
+        winRow := 0
+        lossRow := lossRow + 1
+    if lossRow > maxLossRow
+        maxLossRow := lossRow
+    // Prepare stats table
+    var table dashTable = table.new(position.top_right, 1, 15, border_width=1)
+    
+   
+    if barstate.islastconfirmedhistory
+        dollarReturn = strategy.netprofit
+        f_fillCell(dashTable, 0, 0, "Start:", str.format("{0,date,long}", strategy.closedtrades.entry_time(0)) , bgcolor, color.white) // + str.format(" {0,time,HH:mm}", strategy.closedtrades.entry_time(0)) 
+        f_fillCell(dashTable, 0, 1, "End:", str.format("{0,date,long}", strategy.opentrades.entry_time(0)) , bgcolor, color.white) // + str.format(" {0,time,HH:mm}", strategy.opentrades.entry_time(0))
+        _profit = (strategy.netprofit / strategy.initial_capital) * 100
+        f_fillCell(dashTable, 0, 2, "Net Profit:", str.tostring(_profit, '##.##') + "%", _profit > 0 ? greenColor : redColor, color.white)
+        _numOfDaysInStrategy = (strategy.opentrades.entry_time(0) - strategy.closedtrades.entry_time(0)) / (1000 * 3600 * 24)
+        f_fillCell(dashTable, 0, 3, "Percent Per Day", str.tostring(_profit / _numOfDaysInStrategy, '#########################.#####')+"%", _profit > 0 ? greenColor : redColor, color.white)
+        _winRate = ( strategy.wintrades / strategy.closedtrades ) * 100
+        f_fillCell(dashTable, 0, 4, "Percent Profitable:", str.tostring(_winRate, '##.##') + "%", _winRate < 50 ? redColor : _winRate < 75 ? greenColor : yellowColor, color.white)
+        f_fillCell(dashTable, 0, 5, "Profit Factor:", str.tostring(strategy.grossprofit / strategy.grossloss,  '##.###'), strategy.grossprofit > strategy.grossloss ? greenColor : redColor, color.white)
+        f_fillCell(dashTable, 0, 6, "Total Trades:", str.tostring(strategy.closedtrades), bgcolor, color.white)
+        f_fillCell(dashTable, 0, 8, "Max Wins In A Row:", str.tostring(maxWinRow, '######') , bgcolor, color.white)
+        f_fillCell(dashTable, 0, 9, "Max Losses In A Row:", str.tostring(maxLossRow, '######') , bgcolor, color.white)
+Expand (364 lines)

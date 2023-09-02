@@ -1,0 +1,579 @@
+Script Name: WOMBO COMBO- EMA & VWAP & MACD & BB & STC
+Author: MakeMoneyCoESTB2020
+Description: Hello my fellow investors,
+
+After hours of reading, backtesting, and YouTube video watching I discovered that EMA, VWAP, BB, MACD, and STC produce the most consistent results for investment planning.  This strategy allows you to pick between the aforementioned indicators or layer them together.
+
+It works on the pricipal of:
+1) Always follow the market trend -...
+PineScript code:
+
+Pine Script™ strategy
+WOMBO COMBO: EMA & VWAP & MACD & BB & STC
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © MakeMoneyCoESTB2020
+//Edition 383 update - window condition for code execution added (compliments to allanster for approach)
+//Edition 380 update - BB condition coded out of exit strategy
+//*********************Notes for continued work***************
+//3) add a Table of contents to each section of code
+//4) add candle stick pattern considerations to chart
+//9)
+//************************************************************
+//Hello my fellow investors
+//After hours of reading, backtesting, and YouTube video watching
+//I discovered that 200EMA, VWAP, BB, MACD, and STC 
+//produce the most consistent results for investment planning.
+//This strategy allows you to pick between the aforementioned indicators or layer them together.
+//It works on the pricipal of:
+//1) Always follow the market trend - buy/sell above/below 200EMA
+//2) Follow corporate investing trends - buy/sell above/below VWAP
+//3) Apply MACD check - buy--> MACD line above signal line 
+// and corssover below histogram \\ sell --> MACD line below signal line 
+// and crossover above histogram.
+//4) Check volitility with price against BB limits upper/Sell or lower/buy
+//5) When STC crosses about 10 buy and when it drops below 90 sell
+//6) Exit position when stop loss is triggered or profit target is hit.  BB also provides a parameter to exit positions.
+//This code is the product of many hours of hard work on the part of the greater tradingview community.  The credit goes to everyone in the community who has put code out there for the greater good.
+//Happy Hunting!
+//Title
+strategy("WOMBO COMBO: 100/200EMA & VWAP & MACD", shorttitle="WOMBO COMBO", default_qty_type=strategy.percent_of_equity, default_qty_value=5, initial_capital=20000,slippage=2, currency=currency.USD, overlay=true, pyramiding = 2)
+//define calculations price source
+price = input(title="Price Source", defval=close)
+//Does user want to run the Strategy for Trending Up or Trending Down
+RunTrend=input(title="Run Strategy Trending Up, Down, or Both", defval="Both", options=["Up", "Down", "Both"])
+//***************************
+//Calculate 20/50/100/200EMA 
+EMAlength = input(title="EMA_Length", defval=200)
+EMA=ema(price, EMAlength)
+//plot EMA
+ColorEMA=EMAlength==200?color.blue:EMAlength==100?color.aqua:EMAlength==50?color.orange:color.red
+plot(EMA, title = "EMA", color = ColorEMA)
+//*****************************
+//calculate VWAP
+ColorVWAP = (price > vwap) ? color.lime : color.maroon
+plot(vwap, title = "VWAP", color=ColorVWAP, linewidth=2)
+//*****************************
+//calculate MACD
+//define variables for speed
+fast = 12, slow = 26
+//define parameters to calculate MACD
+fastMA = ema(price, fast)
+slowMA = ema(price, slow)
+//define MACD line
+macd = fastMA - slowMA
+//define SIGNAL line
+signal = sma(macd, 9)
+//plot MACD line
+//plot(macd, title = "MACD",  color=color.orange)
+//plot signal line
+//plot(signal, title = "Signal", color=color.purple)
+//plot histogram
+//define histogram colors
+//col_grow_above = color.green
+//col_grow_below = color.red
+//col_fall_above = color.lime
+//col_fall_below = color.maroon
+//define histogram value
+//hist = macd - signal
+//plot histogram
+//plot(hist, title="Histogram", style=plot.style_columns, color=(hist>=0 ? (hist[1] < hist ? col_grow_above : col_fall_above) : (hist[1] < hist ? col_grow_below : col_fall_below) ), transp=0 )
+//***************************************
+//Calculate Bollinger Bands
+//Define BB input variables
+//lengthBB = input(20, minval=1)
+//multBB = input(2.0, minval=0.001, maxval=50)
+lengthBB = 20
+multBB = 2
+//define BB average
+basisBB = sma(price, lengthBB)
+//define BB standar deviation
+devBB = multBB * stdev(price, lengthBB)
+//define BB upper and lower limits
+upperBB = basisBB + devBB
+lowerBB = basisBB - devBB
+//Plot BB graph
+ShowBB = input(title="Show BB", defval="Y", type=input.string, options=["Y", "N"])
+transP = (ShowBB=="Y") ? 0 : 100
+plot (upperBB, title = "BB Upper Band", color = color.aqua, transp=transP)
+plot (basisBB, title = "BB Average", color = color.red, transp=transP)
+plot (lowerBB, title = "BB Lower Band", color = color.aqua, transp=transP)
+//*************************************************
+//Calculate STC
+//fastLength = input(title="MACD Fast Length", type=input.integer, defval=12)
+//slowLength = input(title="MACD Slow Length", type=input.integer, defval=26)
+fastLength = 23
+slowLength = 50
+cycleLength = input(title="Cycle Length", type=input.integer, defval=40)
+//d1Length = input(title="1st %D Length", type=input.integer, defval=3)
+//d2Length = input(title="2nd %D Length", type=input.integer, defval=3)
+d1Length = 3
+d2Length = 3
+srcSTC = close
+macdSTC = ema(srcSTC, fastLength) - ema(srcSTC, slowLength)
+k = nz(fixnan(stoch(macdSTC, macdSTC, macdSTC, cycleLength)))
+d = ema(k, d1Length)
+kd = nz(fixnan(stoch(d, d, d, cycleLength)))
+stc = ema(kd, d2Length)
+stc :=  stc > 100 ? 100 : stc < 0 ? 0 : stc
+upperSTC = input(title="Upper STC limit", defval=85)
+lowerSTC = input( title="Lower STC limit", defval=15)
+ma1length=35
+ma1 = ema(close,ma1length)
+ma2 = ema(close,EMAlength)
+//STCbuy = crossover(stc, lowerSTC) and ma1>ma2 and close>ma1
+//STCsell = crossunder(stc, upperSTC) and ma1<ma2 and close<ma1
+STCbuy = crossover(stc, lowerSTC) 
+STCsell = crossunder(stc, upperSTC) 
+//*************************************************
+//Candle stick patterns
+//DojiSize = input(0.05, minval=0.01, title="Doji size")
+//data=(abs(open - close) <= (high - low) * DojiSize)
+//plotchar(data, title="Doji", text='Doji', color=color.white)
+data2=(close[2] > open[2] and min(open[1], close[1]) > close[2] and open < min(open[1], close[1]) and close < open )
+//plotshape(data2, title= "Evening Star", color=color.red, style=shape.arrowdown, text="Evening\nStar")
+data3=(close[2] < open[2] and max(open[1], close[1]) < close[2] and open > max(open[1], close[1]) and close > open )
+//plotshape(data3,  title= "Morning Star", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Morning\nStar")
+data4=(open[1] < close[1] and open > close[1] and high - max(open, close) >= abs(open - close) * 3 and min(close, open) - low <= abs(open - close))
+//plotshape(data4, title= "Shooting Star", color=color.red, style=shape.arrowdown, text="Shooting\nStar")
+data5=(((high - low)>3*(open -close)) and  ((close - low)/(.001 + high - low) > 0.6) and ((open - low)/(.001 + high - low) > 0.6))
+//plotshape(data5, title= "Hammer", location=location.belowbar, color=color.white, style=shape.diamond, text="H")
+data5b=(((high - low)>3*(open -close)) and  ((high - close)/(.001 + high - low) > 0.6) and ((high - open)/(.001 + high - low) > 0.6))
+//plotshape(data5b, title= "Inverted Hammer", location=location.belowbar, color=color.white, style=shape.diamond, text="IH")
+data6=(close[1] > open[1] and open > close and open <= close[1] and open[1] <= close and open - close < close[1] - open[1] )
+//plotshape(data6, title= "Bearish Harami",  color=color.red, style=shape.arrowdown, text="Bearish\nHarami")
+data7=(open[1] > close[1] and close > open and close <= open[1] and close[1] <= open and close - open < open[1] - close[1] )
+//plotshape(data7,  title= "Bullish Harami", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Bullish\nHarami")
+data8=(close[1] > open[1] and open > close and open >= close[1] and open[1] >= close and open - close > close[1] - open[1] )
+//plotshape(data8,  title= "Bearish Engulfing", color=color.red, style=shape.arrowdown, text="Bearish\nEngulfing")
+data9=(open[1] > close[1] and close > open and close >= open[1] and close[1] >= open and close - open > open[1] - close[1] )
+//plotshape(data9, title= "Bullish Engulfing", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Bullish\nEngulfling")
+upper = highest(10)[1]
+data10=(close[1] < open[1] and  open < low[1] and close > close[1] + ((open[1] - close[1])/2) and close < open[1])
+//plotshape(data10, title= "Piercing Line", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Piercing\nLine")
+lower = lowest(10)[1]
+data11=(low == open and  open < lower and open < close and close > ((high[1] - low[1]) / 2) + low[1])
+//plotshape(data11, title= "Bullish Belt", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Bullish\nBelt")
+data12=(open[1]>close[1] and open>=open[1] and close>open)
+//plotshape(data12, title= "Bullish Kicker", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Bullish\nKicker")
+data13=(open[1]<close[1] and open<=open[1] and close<=open)
+//plotshape(data13, title= "Bearish Kicker", color=color.red, style=shape.arrowdown, text="Bearish\nKicker")
+data14=(((high-low>4*(open-close))and((close-low)/(.001+high-low)>=0.75)and((open-low)/(.001+high-low)>=0.75)) and high[1] < open and high[2] < open)
+//plotshape(data14,  title= "Hanging Man", color=color.red, style=shape.arrowdown, text="Hanging\nMan")
+data15=((close[1]>open[1])and(((close[1]+open[1])/2)>close)and(open>close)and(open>close[1])and(close>open[1])and((open-close)/(.001+(high-low))>0.6))
+//plotshape(data15, title= "Dark Cloud Cover", color=color.red, style=shape.arrowdown, text="Dark\nCloudCover")
+// ************************************ INPUT BACKTEST RANGE ******************************************===
+fromMonth = input(defval = 1,    title = "From Month",      type = input.integer, minval = 1, maxval = 12)
+fromDay   = input(defval = 1,    title = "From Day",        type = input.integer, minval = 1, maxval = 31)
+fromYear  = input(defval = 2020, title = "From Year",       type = input.integer, minval = 1970)
+thruMonth = input(defval = 1,    title = "Thru Month",      type = input.integer, minval = 1, maxval = 12)
+thruDay   = input(defval = 1,    title = "Thru Day",        type = input.integer, minval = 1, maxval = 31)
+thruYear  = input(defval = 2112, title = "Thru Year",       type = input.integer, minval = 1970)
+// === INPUT SHOW PLOT ===
+showDate  = input(defval = true, title = "Show Date Range", type = input.bool)
+// === FUNCTION EXAMPLE ===
+start     = timestamp(fromYear, fromMonth, fromDay, 00, 00)        // backtest start window
+finish    = timestamp(thruYear, thruMonth, thruDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+bgcolor(color = showDate and window() ? color.gray : na, transp = 90) 
+// === EXECUTION ===
+//strategy.entry("L", strategy.long, when = window() and crossOv)    // enter long when "within window of time" AND crossover
+//strategy.close("L", when = window() and crossUn)                   // exit long when "within window of time" AND crossunder
+//**********Long & Short Entry Calculations***********************************
+//Determine when to run the strategy based on user input for uptrend or downtrend
+RunTrendUp=false //Varibile for running the Strategy in an UpTrend
+RunTrendUp:= iff(RunTrend == "Up" or RunTrend == "Both", true, false)
+RunTrendDWN=false //Varibile for running the Strategy in a DownTrend
+RunTrendDWN:= iff(RunTrend == "Down" or RunTrend == "Both", true, false)
+//Define countback variable
+countback=input(minval=0, maxval=5, title="Price CountBack", defval=0)
+//User input for what evaluations to run: EMA, VWAP, MACD, BB
+EMA_Y_N=input(defval = "Y", title="Run EMA", type=input.string, options=["Y", "N"])
+VWAP_Y_N=input(defval = "Y", title="Run VWAP", type=input.string, options=["Y", "N"])
+MACD_Y_N=input(defval = "N", title="Run MACD", type=input.string, options=["Y", "N"])
+BB_Y_N=input(defval = "N", title="Run BB", type=input.string, options=["Y", "N"])
+STC_Y_N=input(defval = "Y", title="Run STC", type=input.string, options=["Y", "N"])
+//long entry condition
+dataHCLB=(RunTrendUp and iff(STC_Y_N=="Y", STCbuy, true) and iff(EMA_Y_N=="Y", price[countback]>EMA, true) and iff(VWAP_Y_N=="Y", price[countback]>vwap, true) and iff(MACD_Y_N=="Y", crossunder(signal[countback], macd[countback]), true) and iff(MACD_Y_N=="Y", macd[countback]<0, true) and iff(BB_Y_N=="Y", crossunder(price[countback], lowerBB), true))
+plotshape(dataHCLB, title= "HC-LB", color=color.lime, style=shape.circle, text="HC-LB")
+strategy.entry("HC-Long", strategy.long, comment="HC-Long", when = dataHCLB and window())
+//short entry condition
+dataHCSB=(RunTrendDWN and iff(STC_Y_N=="Y", STCsell, true) and iff(EMA_Y_N=="Y", price[countback]<EMA, true) and iff(VWAP_Y_N=="Y", price[countback]<vwap, true) and iff(MACD_Y_N=="Y", crossunder(macd[countback], signal[countback]), true) and iff(MACD_Y_N=="Y", signal[countback]>0, true) and iff(BB_Y_N=="Y", crossover(price[countback], upperBB), true))
+plotshape(dataHCSB, title= "HC-SB", color=color.fuchsia, style=shape.circle, text="HC-SB")
+strategy.entry("HC-Short", strategy.short, comment="HC-Short", when=dataHCSB and window())
+//******************Exit Conditions******************************
+// Profit and Loss Exit Calculations
+//User Options to Change Inputs 
+//Does user want to run a Trailing Stop
+trailStop_YN=input(title="Run a Trailing Stop", defval="N", options=["Y", "N"])
+TrailPerc = input(title="Trail Loss %", type=input.float, minval=0, step=1, defval=6) /100
+// User Options to Change Inputs (%)
+stopPer = input(15, title='Stop Loss %', type=input.float) / 100
+takePer = input(25, title='Take Profit %', type=input.float) / 100
+//calculate Trail stop price for MD_EMA TGT% condition
+longStopPrice=0.0//long side entry stop variable
+longStopPrice := if (strategy.position_size > 0)
+    stopValue = close * (1 - TrailPerc)  
+    max(stopValue, longStopPrice[1])
+else
+    0
+    
+shortStopPrice=0.0//short side entry stop variable
+shortStopPrice := if (strategy.position_size < 0)
+    shortStopValue = close * (1 + TrailPerc)  
+    min(shortStopValue, shortStopPrice[1])
+else
+    999999 
+    
+// Determine where you've entered and in what direction
+longStop = strategy.position_avg_price * (1 - stopPer)
+shortStop = strategy.position_avg_price * (1 + stopPer)
+shortTake = strategy.position_avg_price * (1 - takePer)
+longTake = strategy.position_avg_price * (1 + takePer)
+//exit position conditions and orders
+if strategy.position_size > 0//or crossunder(price[countback], upperBB)
+    strategy.exit(id="Close Long", when = window(), stop=longStop, limit=longTake)
+if strategy.position_size < 0 //or crossover(price[countback], lowerBB)
+    strategy.exit(id="Close Short", when = window(), stop=shortStop, limit=shortTake)//exit position conditions and orders
+if strategy.position_size > 0 //long side exit conditions
+    if trailStop_YN=="Y"
+        strategy.exit(id="Close Long", when = window(), stop=longStop, limit=longTake, qty_percent=50)// sell 50% when either the TGT or the SL is hit then transition to a trailing stop loss
+        strategy.exit(id="Close Long Trailing Stop", when = window(), stop=longStopPrice, qty_percent=100)
+    if trailStop_YN=="N"
+        strategy.exit(id="Close Long", when = window(), stop=longStop, limit=longTake)// sell when either the TGT or the SL is hit   
+        
+        
+if strategy.position_size < 0 //short side exit conditions
+    if trailStop_YN=="Y"
+        strategy.exit(id="Close Short", when = window(), stop=shortStop, limit=shortTake, qty_percent=50)// sell 50% when either the TGT or the SL is hit then transition to a trailing stop loss
+        strategy.exit(id="Close Short Trailing Stop", when = window(), stop=shortStopPrice, qty_percent=100)
+    if trailStop_YN=="N"
+        strategy.exit(id="Close Short", when = window(), stop=shortStop, limit=shortTake)// sell when either the TGT or the SL is hit
+// Plot stop trailing loss values for confirmation
+plot(series=(strategy.position_size > 0 and (trailStop_YN=="Y")) ? longStopPrice : na, color=color.fuchsia, style=plot.style_cross, linewidth=2, title="Long Trail Stop") //plot the trailing stop on the chart for an uptrend
+plot(series=(strategy.position_size < 0 and (trailStop_YN=="Y")) ? shortStopPrice : na, color=color.fuchsia, style=plot.style_cross, linewidth=2, title="Short Trail Stop") //plot the trailing stop on the chart for a downtrend
+//plot fixed stop loss value
+plot(series=(strategy.position_size > 0 and (trailStop_YN=="N")) ? longStop : na, color=color.fuchsia, style=plot.style_cross, linewidth=2, title="Long Trail Stop") //plot the stop on the chart for an uptrend
+plot(series=(strategy.position_size < 0 and (trailStop_YN=="N")) ? shortStop : na, color=color.fuchsia, style=plot.style_cross, linewidth=2, title="Short Trail Stop") //plot the stop on the chart for a downtrend
+//plot the TGT profit points
+plot(series=(strategy.position_size > 0 ) ? longTake : na, color=color.lime, style=plot.style_cross, linewidth=2, title="Short Trail Stop") //plot the TGT% for long position
+plot(series=(strategy.position_size < 0 ) ? shortTake : na, color=color.lime, style=plot.style_cross, linewidth=2, title="Short Trail Stop") //plot the TGT% for short position
+Expand (317 lines)

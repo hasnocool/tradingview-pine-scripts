@@ -1,0 +1,140 @@
+Script Name: TemaRSI Strategy
+Author: sonnyparlin
+Description: This strategy uses a triple exponential moving average (Tema) and RSI to find buy points and uses stops, trailing stops and take profit to exit. Draft 1.
+PineScript code:
+
+Pine Script™ strategy
+TemaRSI Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+// @version=4
+// Author: Sonny Parlin (highschool dropout)
+strategy(shorttitle="TemaRSI+Strategy", title="TemaRSI Strategy",
+                                      overlay=true, commission_type=strategy.commission.percent, 
+                                      commission_value=0.02, currency=currency.USD, slippage=2,
+                                      initial_capital=10000)
+// Inputs and variables
+ff = input(3, minval=1, step=1, maxval=29, title="Tema Fast (days)")
+ss = input(100, minval=30, maxval=200, title="Tema Slow (days)")
+rsiValue = input(20, minval=15, maxval=50, title="Buy when RSI goes above")
+orderStake = input(95, "Order Stake (%)", minval=0, step=0.01)/100
+xEMA1 = ema(close, ff)
+xEMA2 = ema(xEMA1, ff)
+xEMA3 = ema(xEMA2, ff)
+temaFast = 3 * xEMA1 - 3 * xEMA2 + xEMA3
+xxEMA1 = ema(close, ss)
+xxEMA2 = ema(xxEMA1, ss)
+xxEMA3 = ema(xxEMA2, ss)
+temaSlow = 3 * xxEMA1 - 3 * xxEMA2 + xxEMA3
+// The buy stratey:
+cond1 = temaFast < temaSlow
+cond2 = rising(temaFast,3) and falling(temaSlow,3)
+cond4 = rising(temaFast,4) and rising(temaSlow,3)
+cond5 = crossover(temaFast,temaSlow)
+cond6 = rsi(close,14) > rsiValue
+enterLong = (cond1 and cond2 and cond6) or (cond4 and cond6) or (cond5 and cond6) or crossover(rsi(close,14),30)
+orderSize = (strategy.equity * orderStake) / close
+// Trailing Stoploss
+i_activationPct = input(1, title='Trailing Stop is activated after price moves x% from Entry', step=0.1)/100
+i_trailOffset   = input(800, title='Trailing Stop in ticks (pair specific)', minval=1, step=100) // You'll have to tweak per pair
+var float activationLevel = na // The price needs to pass this price in order to activate the trailing Stop Loss
+// Take profit
+tp = input(2.2, minval=-100, step=0.1, title='Take Profit (%) -100 to disable', type=input.float)/100
+takeProfit = strategy.position_avg_price * (1 + tp)
+i_sl = input(6, title='Stop Loss (%)', step=0.1, type=input.float)/100
+var float entryPrice    = na
+var float stopLossPrice = na
+showPlots = input(defval=false, type=input.bool, title="Show Plots")
+// Enter long
+if (enterLong) and strategy.opentrades == 0
+    entryPrice    := close
+    stopLossPrice := entryPrice * (1 - i_sl)
+    strategy.entry("Open Long Position", strategy.long, orderSize, when=strategy.position_size <= 0, comment="Buy")
+    activationLevel  := entryPrice+(entryPrice*i_activationPct)
+    strategy.exit("Open Long Position", stop=stopLossPrice, trail_price=activationLevel, trail_offset=i_trailOffset, comment="Sell Stop")
+// Plots
+var tstop = float(na)
+if high >= activationLevel and strategy.opentrades > 0
+    tstop := max(high - i_trailOffset*syminfo.mintick, nz(tstop[1]))
+else
+    tstop := na
+    
+if (crossover(high, takeProfit) and takeProfit != -100 and tstop < takeProfit)
+    strategy.close("Open Long Position", comment="Sell Profit")
+plot(showPlots ? temaFast : na, "temaFast", color=#00ffcc)
+plot(showPlots ? temaSlow : na, "temaSlow", color=color.orange)
+plot(showPlots ? activationLevel : na, "activationLevel", style=plot.style_linebr, color=color.blue)
+plot(showPlots ? stopLossPrice : na, "stoploss", style=plot.style_linebr, color=color.red)
+plot(showPlots ? takeProfit : na, "Take Profit", style=plot.style_linebr, color=color.green)
+plot(showPlots ? tstop : na, "Trailing Stoploss", style=plot.style_linebr, color=color.white)
+Expand (71 lines)

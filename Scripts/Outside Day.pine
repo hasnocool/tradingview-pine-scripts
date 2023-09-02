@@ -1,0 +1,172 @@
+Script Name: Outside Day
+Author: EduardoMattje
+Description: This strategy is taken from Perry Kaufman's book "Trading System and Methods".
+
+You can enter on the direction of the candle, or opposite to it. I find that the opposite tends to yield better results in volatile assets, allowing a better reward to risk ratio. There is no stop loss in this strategy, only a fixed take profit and a time limitation.
+PineScript code:
+
+Pine Script™ strategy
+Outside Day
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © EduardoMattje
+//@version=5
+strategy("Outside Day", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=50,
+ process_orders_on_close=true, margin_long=100, margin_short=100)
+// Constants
+var G_ATR = "ATR settings"
+var G_ENTRY = "Entry settings"
+var G_EXIT = "Exit settings"
+var LONG = "Long"
+var SHORT = "Short"
+var BOTH = "Both"
+// Inputs
+var ATR_PERIOD = input.int(20, "Period", 1, inline=G_ATR, group=G_ATR)
+var ATR_MULT = input.float(1.0, "Multiplier", minval=0.0, step=0.1, inline=G_ATR, group=G_ATR)
+var MAX_BARS = input.int(3, "Max bars with open trading", minval=0, 
+ tooltip="Determine how many bars you can stay with an open position.\nEntries longer than this will automatically be closed.", group=G_ENTRY)
+var DIRECTION = input.string(BOTH, "Direction of orders", [BOTH, LONG, SHORT])
+var MEAN_REVERSE = input.bool(true, "Mean reverse", tooltip="Entries will be done as a mean reverse, so it will sell at up days, and buy at down days.", group=G_EXIT)
+// ATR
+var float atr = na
+if ATR_MULT != 0.0
+    atr := ta.atr(ATR_PERIOD) * ATR_MULT
+// Conditions
+outsideDay = high[0] > high[1] and low[0] < low[1]
+outsideLow = close[0] < low[1]
+outsideHigh = close[0] > high[1]
+// Entry orders
+enterLong() => strategy.entry(LONG, strategy.long, when=DIRECTION != SHORT)
+enterShort() => strategy.entry(SHORT, strategy.short, when=DIRECTION != LONG)
+if not na(atr) or (DIRECTION == BOTH and ATR_MULT == 0)
+    if outsideDay
+        if outsideLow
+            if MEAN_REVERSE
+                enterLong()
+            else
+                enterShort()
+        else if outsideHigh
+            if MEAN_REVERSE
+                enterShort()
+            else
+                enterLong()
+// Exit orders
+var float entryPrice = na
+var float longTarget = na
+var float shortTarget = na
+targetCalc(increment_) => entryPrice + increment_
+if strategy.position_size[0] == 0.0
+    entryPrice := close
+    longTarget := targetCalc(atr)
+    shortTarget := targetCalc(-atr)
+if ATR_MULT != 0.0
+    strategy.exit("Long", "Long", limit=longTarget)
+    strategy.exit("Short", "Short", limit=shortTarget)
+daysInTrade = ta.barssince(strategy.opentrades == 0)
+exitMessage = "This position has remained open for more than " + str.tostring(MAX_BARS) + " day" + (MAX_BARS > 1 ? "s" : "")
+exitLateCond = daysInTrade >= MAX_BARS and MAX_BARS != 0
+strategy.close_all(exitLateCond, exitMessage)
+// Plots
+plotTarget = strategy.position_size > 0 ? longTarget : strategy.position_size < 0 ? shortTarget : na
+plotTarget := not exitLateCond[1] and strategy.position_size[1] != 0 ? plotTarget[1] : plotTarget[0]
+var color p_color = na
+if strategy.position_size > 0
+    p_color := color.teal
+else if strategy.position_size < 0
+    p_color := color.red
+plot(plotTarget, "Take profit", p_color, 2, plot.style_linebr)
+Expand (94 lines)

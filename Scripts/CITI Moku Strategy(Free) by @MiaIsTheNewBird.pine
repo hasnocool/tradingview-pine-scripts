@@ -1,0 +1,1098 @@
+Script Name: CITI Moku Strategy(Free) by @MiaIsTheNewBird
+Author: CITIAlgo
+Description: CITI Moku Strategy  - This is a high win rate strategy based on Ichimoku Cloud and Lines and helps with catching trends in any markets on many Timeframes and detailed backtesting. This strategy uses high probability entry signals, Ichimoku cloud & kijun filtering system and Moving Average filters. 
+
+Entry Signals can be chosen to be any one of the 6 conditions, by...
+PineScript code:
+
+Pine Script™ strategy
+CITI Moku Strategy(Free) by @MiaIsTheNewBird
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+540
+541
+542
+543
+544
+545
+546
+547
+548
+549
+550
+551
+552
+553
+554
+555
+556
+557
+558
+559
+560
+561
+562
+563
+564
+565
+566
+567
+568
+569
+570
+571
+572
+573
+574
+575
+576
+577
+578
+579
+580
+581
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//@version=5
+//@strategy_alert_message {{strategy.order.alert_message}}"
+//Base Indicator SuperIchi from LuxALgo with changes
+//Created by Mia & Nomi
+//Backtester template from @Haldro 
+//Dashboard & Time filter template from Vermt
+strategy('CITI Moku Strategy(Free) by @MiaIsTheNewBird', shorttitle = "CITI Moku Strategy (Free)",
+         overlay           = true,
+         initial_capital   = 10000,
+         commission_value  = 0.025,
+         default_qty_value = 25,
+         slippage          = 1,
+         pyramiding        = 0,
+         max_lines_count   = 500,
+         max_labels_count  = 500,
+         currency          = currency.USD,
+         default_qty_type  = strategy.percent_of_equity)
+//------------------------------------------------------------------------------
+tenkan_len  = input(9,'Tenkan',inline='tenkan',group="Ichimoku Lines & Cloud Settings")
+tenkan_mult = input(2.,'',inline='tenkan',group="Ichimoku Lines & Cloud Settings")
+kijun_len   = input(26,'Kijun',inline='kijun',group="Ichimoku Lines & Cloud Settings")
+kijun_mult  = input(8.,'',inline='kijun',group="Ichimoku Lines & Cloud Settings")
+spanB_len   = input(52,'Senkou Span B',inline='span',group="Ichimoku Lines & Cloud Settings")
+spanB_mult  = input(8.,'',inline='span',group="Ichimoku Lines & Cloud Settings")
+chikou_offset      = input(26,'Chikou Offset',group="Ichimoku Lines & Cloud Settings")
+kumo_offset        = input(26,'Kumo Offset',group="Ichimoku Lines & Cloud Settings")
+//------------------------------------------------------------------------------
+avg(src,length,mult)=>
+    atr = ta.atr(length)*mult
+    up = hl2 + atr
+    dn = hl2 - atr
+    upper = 0.,lower = 0.
+    upper := src[1] < upper[1] ? math.min(up,upper[1]) : up
+    lower := src[1] > lower[1] ? math.max(dn,lower[1]) : dn
+   
+    os = 0,max = 0.,min = 0.
+    os := src > upper ? 1 : src < lower ? 0 : os[1]
+    spt = os == 1 ? lower : upper
+    max := ta.cross(src,spt) ? math.max(src,max[1]) : os == 1 ? math.max(src,max[1]) : spt
+    min := ta.cross(src,spt) ? math.min(src,min[1]) : os == 0 ? math.min(src,min[1]) : spt
+    math.avg(max,min)
+tenkan = avg(close,tenkan_len,tenkan_mult)
+kijun = avg(close,kijun_len,kijun_mult)
+senkouA = math.avg(kijun,tenkan)
+senkouB = avg(close,spanB_len,spanB_mult)
+chikou = close
+//------------------------------------------------------------------------------
+plot(tenkan, title = 'Tenkan-Sen', linewidth=1, color=#32C4EE )
+plot(kijun, title = 'Kinjun-Sen', linewidth=1, color=#EC3E6F )
+plot(chikou, title = 'Chikou Span', linewidth=1, offset = -chikou_offset+1, color=color.fuchsia, display=display.none)
+cloud_a = #0C3D4E       
+cloud_b = #451721 
+A = plot(senkouA,'Senkou Span A',na,offset=kumo_offset-1)
+B = plot(senkouB,'Senkou Span B',na,offset=kumo_offset-1)
+fill(A,B,senkouA > senkouB ? cloud_a : cloud_b)
+//Entry Signals
+Entry1 = input.bool(false, title="Price Crossing Tenkan Line", group="Entry Signals Settings - Select Conditions for Entry")
+Entry2 = input.bool(true, title="Tenkan Line Crossing Kijun Line", group="Entry Signals Settings - Select Conditions for Entry")
+Entry3 = input.bool(false, title="Price Crossing Kijun Line", group="Entry Signals Settings - Select Conditions for Entry")
+Entry1Long = Entry1 ? ta.crossover(close,tenkan) : true
+Entry2Long = Entry2 ? ta.crossover(tenkan,kijun) : true
+Entry3Long = Entry3 ? ta.crossover(close,kijun) : true
+Entry1Short = Entry1 ? ta.crossunder(close,tenkan) : true
+Entry2Short = Entry2 ? ta.crossunder(tenkan,kijun) : true
+Entry3Short = Entry3 ? ta.crossunder(close,kijun) : true
+//Assemble Entries
+longEntry = Entry1Long and Entry2Long and Entry3Long 
+shortEntry = Entry1Short and Entry2Short and Entry3Short 
+// Exit Signals
+Exit1 = input.bool(false, title="Price Crossunder Tenkan Line", group="Exit Signals Settings- Use as Indicator")
+Exit2 = input.bool(true, title="Tenkan Line Crossunder Kijun Line", group="Exit Signals Settings- Use as Indicator")
+Exit3 = input.bool(false, title="Price Crossunder Kijun Line", group="Exit Signals Settings- Use as Indicator")
+//Assemble Exit Filters
+Exit1Long = Exit1 ? ta.crossunder(close,tenkan) : true
+Exit2Long = Exit2 ? ta.crossunder(tenkan,kijun) : true
+Exit3Long = Exit3 ? ta.crossunder(close,kijun) : true
+Exit1Short = Exit1 ? ta.crossover(close,tenkan) : true
+Exit2Short = Exit2 ? ta.crossover(tenkan,kijun) : true
+Exit3Short = Exit3 ? ta.crossover(close,kijun) : true
+//Assemble Exits
+longExit = Exit1Long and Exit2Long and Exit3Long 
+shortExit = Exit1Short and Exit2Short and Exit3Short 
+///Plot Letters as Indicators
+var bool PlotLong = input.bool (true, "Plot Buy Trades" , group="Use as Indicator")
+var bool PlotShorts = input.bool (true, "Plot Sell Trades" , group="Use as Indicator")
+var bool PlotLongExit = input.bool (true, "Plot Buy- Exit Trades" , group="Use as Indicator")
+var bool PlotShortsExit = input.bool (true, "Plot Sell- Exit Trades" , group="Use as Indicator")
+//Backtester from @Haldro
+// —————— ToolTips
+TTreversesignal  = 'Wait End Deal- Enable/Disable waiting for a trade to close at Stop Loss/Take Profit. Until the trade closes on the Stop Loss or Take Profit, no new trade will open.'
+TTreOpenDeal     = 'ReEntry Deal- If true trade was long and  SL/TP was reached then go long again and vice versa. \n'
+                 + 'ReOpen Deal- If true and Wait End Deal is false then in case you are in a Long position and a new signal to Long, you will reEnter a new Long position and vice versa for Shorts.'
+TTslType         = 'Fixed%- Fixed SL/TP in percent. \n'
+                 + 'Fixed$- Fixed SL/TP in cash. \n'
+                 + 'Trailing %- Trailing stop in % like on exchanges. Regulated by the "Trailing%" parameter. \n'
+                 + 'Fast Trail- If in a long, it immediately follows the price when it rises otherwise it stands still. Vice versa for shorts. Regulated by the "Trailing% parameter. \n'
+                 + 'ATR - Fixed TP/SL depending on the current ATR. It is regulated by the "ATR period" | "Multiplier" parameters. \n'
+                 + 'R:R- Risk Reward sets the TP depending on the size of the SL. For example, if SL is $100, and R:R = 2, then the TP is $200. \n'
+                 + 'HH/LL- Searches for the last Extremum (High/Low) for the specified number of bars and sets a fixed Take. \n'
+                 + 'LO/HI Sets the SL for High/Low candles. "LO/HI" = 1 Sets the SL for the last High/Low. \n'
+                 + 'MA- Movinng Average SL. A very diverse type of SL.'
+// —————— Main Inputs
+bullDeal         = input.bool   (true,        ' Long Deals    ',      group='Trade Direction', inline='deal')    
+bearDeal         = input.bool   (true,        ' Short Deals',         group='Trade Direction', inline='deal')   
+groupset         = 'TP-SL Strategy'
+waitEndDeal      = input.bool   (true,        ' Wait End Deal ',      group=groupset, inline='ord1')    
+reEntryDeal      = input.bool   (true,       ' ReEntry Deal  ',      group=groupset, inline='ord1')
+tpType           = input.string ('ATR TP',       ' 𝐓𝐚𝐤𝐞 𝐏𝐫𝐨𝐟𝐢𝐭',        group=groupset, inline='type', options=['None', 'FIXED ％', 'FIXED ＄', 'ATR TP', 'R:R', 'HH / LL'])
+slType           = input.string ('ATR SL', ' 𝐒𝐭𝐨𝐩 𝐋𝐨𝐬𝐬 ',          group=groupset, inline='type', options=['None', 'FIXED ％', 'FIXED ＄', 'TRAILING', 'FAST TRAIL', 'ATR SL','ATR TRAIL','LO / HI', 'MA'], tooltip=TTslType)
+grouptakes       = 'Take Profit Levels'
+ontake1          = input.bool   (true,       '🇹🇵¹',                  group=grouptakes, inline='take')
+qtake1           = input.int    (5,          '�',                   group=grouptakes, inline='take', minval=1, step=5, maxval=100)
+ontake2          = input.bool   (false,       '🇹🇵²',                  group=grouptakes, inline='take')
+qtake2           = input.int    (20,          '�',                   group=grouptakes, inline='take', minval=1, step=5, maxval=100)
+ontake3          = input.bool   (false,       '🇹🇵³',                  group=grouptakes, inline='take')
+qtake3           = input.int    (50,          '�',                   group=grouptakes, inline='take', minval=1, step=5, maxval=100)
+onstop0          = input.bool   (false,       '🇸🇱⁰ ',                 group=grouptakes, inline='take')
+qstop0           = input.int    (30,          '�',                   group=grouptakes, inline='take', minval=1, step=5, maxval=100)
+// ———————————————— SIGNAL FOR BACKTEST SYSTEM ————————————————
+Entrysignals_ = longEntry ? +1 : shortEntry ? -1 : 0
+// —————— Variables Initialisation
+Entrysignals = nz(Entrysignals_)
+bull = Entrysignals == +1 // +1 is bull signal
+bear = Entrysignals == -1 // -1 is bear signal
+//Backtester //Credit ©VertMT
+startFilter    = input.bool    (group='📆 Time Filter 📆', title="              ", defval=true, inline="Start")
+endFilter      = input.bool    (group='📆 Time Filter 📆', title="              ", defval=true, inline="End")
+startTime      = input.time    (group='📆 Time Filter 📆', title="Start Timeㅤㅤ", defval=timestamp('UTC 01 Jan 2020 00:00'),  inline="Start")
+endTime        = input.time    (group='📆 Time Filter 📆', title="End Time ㅤ ㅤ", defval=timestamp('UTC 31 Dec 2050 23:45'),  inline="End")
+session        = input.session (group='📆 Time Filter 📆', title="Time Session  ", defval='0000-0000', tooltip="00:00 - 00:00 to disable.")
+zoneTime       = input.string  (group='📆 Time Filter 📆', title="UTC           ", defval="UTC", options = ["UTC-10", "UTC-8", "UTC-7", "UTC-6", "UTC-5", "UTC-4", "UTC-3", "UTC", "UTC+1", "UTC+2", "UTC+3", "UTC+4", "UTC+4:30", "UTC+5", "UTC+5:30", "UTC+6", "UTC+7", "UTC+8", "UTC+9", "UTC+9:30", "UTC+10", "UTC+11", "UTC+12", "UTC+12:45", "UTC+13"], tooltip="Match this time zone with that of your graph so that all values are displayed correctly.")
+mon            = input.bool    (group='📆 Time Filter 📆', title="Monㅤ         ", defval=true,  inline="Days")
+tue            = input.bool    (group='📆 Time Filter 📆', title="Tueㅤ         ", defval=true,  inline="Days")
+wed            = input.bool    (group='📆 Time Filter 📆', title="Wedㅤ         ", defval=true,  inline="Days")
+thu            = input.bool    (group='📆 Time Filter 📆', title="Thuㅤ         ", defval=true,  inline="Days")
+fri            = input.bool    (group='📆 Time Filter 📆', title="Friㅤ         ", defval=true,  inline="Days")
+sat            = input.bool    (group='📆 Time Filter 📆', title="Satㅤ         ", defval=true,  inline="Days")
+sun            = input.bool    (group='📆 Time Filter 📆', title="Sunㅤ         ", defval=true,  inline="Days")
+// 📆 Time Filter 📆 —————
+tradeDateIsAllowed() =>
+    start = startFilter ? time >= startTime : true
+    end   = endFilter   ? time <= endTime   : true
+   
+    ses   = time == time("S", session, zoneTime) ? true : false
+    monF  = ( dayofweek(time, zoneTime) == dayofweek.monday    ) and mon ? true : false
+    tueF  = ( dayofweek(time, zoneTime) == dayofweek.tuesday   ) and tue ? true : false
+    wedF  = ( dayofweek(time, zoneTime) == dayofweek.wednesday ) and wed ? true : false
+    thuF  = ( dayofweek(time, zoneTime) == dayofweek.thursday  ) and thu ? true : false
+    friF  = ( dayofweek(time, zoneTime) == dayofweek.friday    ) and fri ? true : false
+    satF  = ( dayofweek(time, zoneTime) == dayofweek.saturday  ) and sat ? true : false
+    sunF  = ( dayofweek(time, zoneTime) == dayofweek.sunday    ) and sun ? true : false
+    dayF   = monF or tueF or wedF or thuF or friF or satF or sunF ? true : false
+    filter = start ? end ? ses ? dayF ? true : false : false : false : false
+dateRange = tradeDateIsAllowed()
+// ————————————————————————————————————————————— Signal Filters ——————————————————————————————————————————————————————————— \\ // Credit @pAulseperformance
+groupsignal           = 'Signal Filters'
+FilterType1         = input.bool (true,           '1. MA Filter',                                           group=groupsignal, inline='FT1')
+FilterType1MAType    = input.string ('EMA',           '',                                                 group=groupsignal, inline='FT1', options=['EMA','HMA','SMA'])
+FilterType1Len       = input.int    (21,             '',                                                 group=groupsignal, inline='FT1', minval=1, tooltip='MA Type, MA Source, MA Length\nLong = close > MA\nShort = close < MA')
+var bool ma1Status      = input.bool(false, group=groupsignal, title="Show MA Line?")
+source = close
+MA(FilterType4MAType, source, FilterType4Len) =>
+    ma = 0.0
+    if FilterType4MAType == "SMA" // Simple
+        ma := ta.sma(source, FilterType4Len)
+    
+    if FilterType4MAType == "EMA" // Exponential
+        ma := ta.ema(source, FilterType4Len)
+    
+    if FilterType4MAType == "VWMA" // Volume Weighted
+        ma := ta.vwma(source, FilterType4Len)
+    
+    if FilterType4MAType == "HMA" // Hull MA
+        ma := ta.hma(source, FilterType4Len)
+    
+    resultMA = ma
+ma = MA(FilterType1MAType, source, FilterType1Len)
+plot(ma, "Moving Average 1", color = ma1Status ? color.yellow : na)
+FilterType2          = input.bool   (true,           '2.  Above/Below Kumo Cloud Settings',                                           group=groupsignal, inline='FT2')
+FilterType3          = input.bool   (false,          '3. Bullish/Bearish Kumo Cloud Filter Settings',                                           group=groupsignal, inline='FT3')
+FilterType4         = input.bool   (false,            '4. Bullish/Bearish Kijun Filter Settings',                                           group=groupsignal, inline='FT4')
+// —————— Filter 1: Moving Average
+Filter1Ma      = FilterType1 ? MA(FilterType1MAType, close, FilterType1Len) : 0.
+Filter1Long    = FilterType1 ? close > Filter1Ma : true
+Filter1Short   = FilterType1 ? close < Filter1Ma : true
+// Filter 2: Above/Below Kumo Cloud Settings
+Filter2Long  = FilterType2 ? close > math.max(senkouA[kumo_offset-1],senkouB[kumo_offset-1]): true
+Filter2Short = FilterType2 ? close < math.min(senkouA[kumo_offset-1],senkouB[kumo_offset-1]): true
+// Filter 3: Bullish/Bearish Kumo Cloud Filter Settings
+Filter3Long = FilterType3 ? senkouA[kumo_offset-1] > senkouB[kumo_offset-1] : true 
+Filter3Short = FilterType3 ? senkouA[kumo_offset-1] < senkouB[kumo_offset-1]  : true
+// Filter 4: Bullish/Bearish Kijun Filter Settings
+Filter4Long = FilterType4 ? kijun > math.max(senkouA[kumo_offset-1],senkouB[kumo_offset-1]) : true
+Filter4Short = FilterType4 ? kijun < math.min(senkouA[kumo_offset-1],senkouB[kumo_offset-1]) : true
+//  —————— Filter 12: Bullish/Bearish Chikou Span Settings
+// —————— Assemble Filters
+FilterLongOK    = Filter1Long and Filter2Long and Filter3Long and Filter4Long
+FilterShortOK   = Filter1Short and Filter2Short and Filter3Short and Filter4Short
+// Risk Managment \\ // Credit @Daveatt
+grouprisk               = 'Risk Management'
+setmaxLosingStreak      = input.bool   (false,           '',                   group=grouprisk, inline='1')
+maxLosingStreak         = input.int    (15,              'Loss Streak   ',     group=grouprisk, inline='1', minval=1)
+setmaxWinStreak         = input.bool   (false,           '',                   group=grouprisk, inline='1')
+maxWinStreak            = input.int    (15,              'Win Streak   ',      group=grouprisk, inline='1', minval=1, tooltip='𝐋𝐨𝐬𝐬 𝐒𝐭𝐫𝐞𝐚𝐤 ➖ Set Max number of consecutive loss trades. \n𝐖𝐢𝐧 𝐒𝐭𝐫𝐞𝐚𝐤 ➖ Max Winning Streak Length.')
+setmaxLosingDaysStreak  = input.bool   (false,           '',                   group=grouprisk, inline='2')
+maxLosingDaysStreak     = input.int    (3,               'Row Loss InDay',     group=grouprisk, inline='2', minval=1)
+setMaxDrawdown          = input.bool   (false,           '',                   group=grouprisk, inline='2')
+maxPercDd               = input.int    (10,              'DrawDown ％',        group=grouprisk, inline='2', minval=1, maxval=100, tooltip='𝐑𝐨𝐰 𝐋𝐨𝐬𝐬 𝐈𝐧𝐃𝐚𝐲 ➖ Max of consecutive days with a loss in a row. \n𝐃𝐫𝐚𝐰𝐃𝐨𝐰𝐧％ ➖ Max DrawDown (in % of strategy equity).')
+setMaxIntradayLoss      = input.bool   (false,           '',                   group=grouprisk, inline='3')
+maxIntradayLoss         = input.int    (3,               'InDay Loss ％ ',     group=grouprisk, inline='3', minval=1, maxval=100)
+setNumberDailyTrades    = input.bool   (false,           '',                   group=grouprisk, inline='3')
+maxDailyTrades          = input.int    (10,              'Daily Trades  ',     group=grouprisk, inline='3', minval=1, maxval=100, tooltip='𝐈𝐧𝐃𝐚𝐲 𝐋𝐨𝐬𝐬 ％ ➖ Set Max Intraday Loss. \n𝐃𝐚𝐢𝐥𝐲 𝐓𝐫𝐚𝐝𝐞𝐬 ➖ Limit the number of MAX trades per day.')
+setNumberWeeklyTrades   = input.bool   (false,           '',                   group=grouprisk, inline='4')
+maxWeeklyTrades         = input.int    (50,              'Weekly Trades',      group=grouprisk, inline='4', minval=1, maxval=100, tooltip='𝐖𝐞𝐞𝐤𝐥𝐲 𝐓𝐫𝐚𝐝𝐞𝐬 ➖ Limit the number of MAX trades per week.')
+QTYMethod               = input.string ('EQUITY',        '     Order Size',    group=grouprisk, inline=' ', options=['NONE', 'EQUITY', 'SIZE', 'CONTRACTS'])
+useNetProfit            = input.bool   (true,            'Use Net Profit',     group=grouprisk, inline=' ', tooltip='𝐔𝐬𝐞 𝐍𝐞𝐭 𝐏𝐫𝐨𝐟𝐢𝐭 ➖ On/Off the use of profit in the following trades. *Only works if the type is EQUITY')
+riskPerc                = input.int    (30,              '​🇪​​🇶​​🇺​​🇮​​🇹​​🇾​',              group=grouprisk, inline='.', minval=1, maxval=100)
+riskSize                = input.int    (1000,            '​🇸​​🇮​​🇿​​🇪',                group=grouprisk, inline='.', minval=1)
+riskCntr                = input.int    (1,               '​🇨​​🇴​​🇳​​🇹​​🇷​​🇦​​🇨​​🇹​​🇸​',           group=grouprisk, inline='.', minval=1, tooltip='𝐎𝐫𝐝𝐞𝐫 𝐒𝐢𝐳𝐞: \n𝐍𝐎𝐍𝐄 ➖ Use the default position size settings in Tab "Properties". \n𝐄𝐐𝐔𝐈𝐓𝐘 ➖ ％ per trade from the initial capital. \n𝐒𝐈𝐙𝐄 ➖ Fixed size amount of trade. \n𝐂𝐎𝐍𝐓𝐑𝐀𝐂𝐓𝐒 ➖ The fixed amount of the deal in contracts. \n')
+// —————— Order Size
+eqty = switch QTYMethod
+    'NONE'      => na
+    'EQUITY'    => riskPerc / close
+    'SIZE'      => riskSize / close
+    'CONTRACTS' => riskCntr
+//
+// —————— Intraday Loss ％
+condintradayloss = setMaxIntradayLoss ? maxIntradayLoss : 100
+strategy.risk.max_intraday_loss(value=condintradayloss, type=strategy.percent_of_equity)
+// —————— Max Drawdown ％
+condmaxdrawdown = setMaxDrawdown ? maxPercDd : 100
+strategy.risk.max_drawdown(value=condmaxdrawdown, type=strategy.percent_of_equity)
+// —————— Daily trades calculation
+tradesIntradayCount = setNumberDailyTrades ? maxDailyTrades : 1000
+strategy.risk.max_intraday_filled_orders(count=tradesIntradayCount)
+// —————— Weekly trades calculation
+tradesLastWeek = 0
+tradesLastWeek := dayofweek == dayofweek.monday and dayofweek != dayofweek[1] ? strategy.closedtrades[1] + strategy.opentrades[1] : tradesLastWeek[1]
+// —————— Calculate number of trades this week
+weeklyTrades = strategy.closedtrades + strategy.opentrades - tradesLastWeek
+okToTradeWeekly = setNumberWeeklyTrades ? weeklyTrades < maxWeeklyTrades : true
+// —————— Consecutive loss days in a row
+countConsLossDays = setmaxLosingDaysStreak ? maxLosingDaysStreak : 1000
+strategy.risk.max_cons_loss_days(countConsLossDays)
+// —————— Calculate the total losing streaks
+newLoss = strategy.losstrades > strategy.losstrades[1] and strategy.wintrades == strategy.wintrades[1] and strategy.eventrades == strategy.eventrades[1]
+// —————— Determine current losing streak length
+streakLossLen = 0
+streakLossLen := newLoss ? nz(streakLossLen[1]) + 1 : strategy.wintrades > strategy.wintrades[1] or strategy.eventrades > strategy.eventrades[1] ? 0 : nz(streakLossLen[1])
+// —————— Check if losing streak is under max allowed
+okToTradeLossStreak = setmaxLosingStreak ? streakLossLen < maxLosingStreak : true
+// —————— Calculate the total winning streaks
+newWin = strategy.wintrades > strategy.wintrades[1] and strategy.losstrades == strategy.losstrades[1] and strategy.eventrades == strategy.eventrades[1]
+// —————— Figure out current winning streak length
+streakWinLen = 0
+streakWinLen := newWin ? nz(streakWinLen[1]) + 1 : strategy.losstrades > strategy.losstrades[1] or strategy.eventrades > strategy.eventrades[1] ? 0 : nz(streakWinLen[1])
+// —————— Check if winning streak is under max allowed
+okToTradeWinStreak = setmaxWinStreak ? streakWinLen < maxWinStreak : true
+// TP-SL Exit Strategy
+percentTP    = input.float  (4.5,             ' Profit ％    ',            group=groupset, inline='fix', minval=0.1, step=0.1)
+percentSL    = input.float  (1.5,             ' Stop ％  ',                group=groupset, inline='fix', minval=0.1, step=0.1)
+moneyTP      = input.float  (333,             ' Profit ＄    ',            group=groupset, inline='mon', minval=1,   step=5)
+moneySL      = input.float  (100,             ' Stop ＄  ',                group=groupset, inline='mon', minval=1,   step=5)
+ATRLenTP       = input.int    (30,              ' ATR TP Period  ',             group=groupset, inline='atrTP', minval=1,   step=1)
+ATRMultTP      = input.float  (3,               ' TP Multiplier',               group=groupset, inline='atrTP', minval=0.1, step=0.1)
+ATRLenSL       = input.int    (30,              ' ATR SL Period  ',             group=groupset, inline='atrSL', minval=1,   step=1)
+ATRMultSL     = input.float  (4,               'SL Multiplier',               group=groupset, inline='atrSL', minval=0.1, step=0.1)
+trailPerc    = input.float  (3,               ' Trailing ％  ',            group=groupset, inline='trl', minval=0.1, step=0.1)
+riskReward   = input.float  (2,               ' R:R    1:',                group=groupset, inline='trl', minval=0.5, step=0.1)
+fixedRR      = input.bool   (true,            ' Fixed RR',                 group=groupset, inline='trl', tooltip='𝐅𝐢𝐱𝐞𝐝 𝗥:𝗥 ➖ If the stop loss is Dynamic (Trailing or MA) then R:R can also be made Dynamic')
+HHLL         = input.int    (200,             ' HH / LL   ',               group=groupset, inline='hls', minval=1,   step=5)
+LoHi         = input.int    (5,               '  LO / HI ',                group=groupset, inline='hls', minval=1,   step=1)
+addPerc      = input.bool   (false,           ' Add ％',                   group=groupset, inline='hls', tooltip='𝐀𝐝𝐝 ％ ➖ If true, then with the "𝗦𝘁𝗼𝗽 ％" parameter you can add percentages to any of the current SL. \nCan be especially useful when using Stop - 𝗔𝗧𝗥 or 𝗠𝗔 or 𝗟𝗢/𝗛𝗜. \nFor example with 𝗟𝗢/𝗛𝗜 to put a stop for the last High/Low and add 0.5% additional Stoploss')
+maStopType   = input.string ('EMA',           ' MA Stop',                  group=groupset, inline='mas', options=['EMA', 'HMA','SMA'])
+maStopLen    = input.int    (15,              ' Len',                      group=groupset, inline='mas', minval=1,   step=2)
+maPerc       = input.float  (0.1,             ' Step',                     group=groupset, inline='mas', minval=0,   step=0.1, tooltip='𝐌𝐀 𝐒𝐭𝐨𝐩 ➖ allows to choose which MA to use. \n𝐋𝐞𝐧 ➖ Length of chosen MA. \n𝐒𝐭𝐞𝐩 ➖％ step of change MA. Step = 0 will use the selected MA without changes. \nWARNING: When 𝐀𝐝𝐝 ％ is on, the MA calculation changes..')
+var bool PaintStrategy= input.bool (false, "Paint Strategy and TP/SL on Chart" , group=grouptakes, tooltip="Plots trades for TP-SL Strategy")
+slNumber     = input.int    (1,               ' SL 0 Position',            group=grouptakes, inline='pos', minval=1, maxval=2)
+ontpBE       = input.bool   (false,           '',                          group=grouptakes, inline='pos')
+tpBEnumber   = input.int    (2,               'Breakeven on TP',           group=grouptakes, inline='pos', minval=1, maxval=3, tooltip='𝐒𝐋 𝟎 𝐏𝐨𝐬𝐢𝐭𝐢𝐨𝐧 ➖ Changes the position of the intermediate Stop Loss.\nThe value = 3 - the middle. \n𝐁𝐫𝐞𝐚𝐤𝐞𝐯𝐞𝐧 𝐨𝐧 𝐓𝐏 ➖ If true Set StopLoss to Breakeven after the specified TakeProfit is reached.')
+barCoolDwn   = input.int    (0,               ' CoolDown # Bars',          group=grouptakes, inline='   ', minval=0, tooltip='Do Not open a new position until # bars have passed since the last trade.\nValue=0 - disables the function.')
+// —————— Trade variables
+entry        = strategy.position_avg_price
+sizePos      = strategy.position_size
+inLong       = sizePos > 0
+inShort      = sizePos < 0
+inTrade      = inLong or inShort
+inPos        = (inLong and not inShort[1]) or (inShort and not inLong[1])
+var ID       = 'TradeID'
+var tpPrice  = float(na)
+var slPrice  = float(na)
+// —————— Entry solutions
+direction    = 0
+directionL   = bull and (nz(direction[1]) == 0 or nz(direction[1]) == -1)
+directionS   = bear and (nz(direction[1]) == 0 or nz(direction[1]) == +1)
+direction   := directionL ? +1 : directionS ? -1 : (reEntryDeal ? direction[1] : direction[0])
+checkCoolDwn = barCoolDwn >0 ? not inTrade[barCoolDwn] : true
+OkToTrade    = dateRange and okToTradeLossStreak and okToTradeWinStreak and checkCoolDwn
+goLong       = ( waitEndDeal ? not inTrade and direction==+1 : direction==+1 ) and bullDeal and OkToTrade and FilterLongOK 
+goShort      = ( waitEndDeal ? not inTrade and direction==-1 : direction==-1 ) and bearDeal and OkToTrade and FilterShortOK 
+// ———————————————————————————————————————————————————————————————————————————————————————————————————————————————————————— \\
+DynamicStops = (slType == 'TRAILING' or slType == 'FAST TRAIL' or slType == 'MA')
+// —————— Fixed SL/TP
+if tpType == 'FIXED ％'
+    tpPrice := inLong and not inTrade[1] ? entry * (1 + percentTP/100) : inShort and not inTrade[1] ? entry * (1 - percentTP/100) : tpPrice
+if slType == 'FIXED ％'
+    slPrice := inLong and not inTrade[1] ? entry * (1 - percentSL/100) : inShort and not inTrade[1] ? entry * (1 + percentSL/100) : slPrice
+// —————— Money SL/TP
+if tpType == 'FIXED ＄'
+    tpPrice := inLong and not inTrade[1] ? entry + (moneyTP / math.abs(sizePos)) : inShort and not inTrade[1] ? entry - (moneyTP / math.abs(sizePos)) : tpPrice
+if slType == 'FIXED ＄'
+    slPrice := inLong and not inTrade[1] ? entry - (moneySL / math.abs(sizePos)) : inShort and not inTrade[1] ? entry + (moneySL / math.abs(sizePos)) : slPrice
+// —————— Trailing Stop
+if slType == 'TRAILING'
+    StopL    = 0., StopS = 0.
+    StopL   := inLong  ? math.max(close * (1 - trailPerc/100), StopL[1]) : 0
+    StopS   := inShort ? math.min(close * (1 + trailPerc/100), StopS[1]) : 999999
+    slPrice := inLong  ? StopL : inShort ? StopS : slPrice
+// —————— Fast Trailing Stop
+if slType == 'FAST TRAIL'
+    var stop = float(na)
+    stop    := inLong and not inTrade[1] ? entry * (1 - trailPerc/100) : inShort and not inTrade[1] ? entry * (1 + trailPerc/100) : stop
+    stop    := inLong and close > close[1] ? stop + (close - close[1]) : inShort and close < close[1] ? stop + (close - close[1]) : stop
+    slPrice := stop
+// —————— ATR Fixed TP
+StopATRTP     = ta.atr(ATRLenTP) * ATRMultTP
+if tpType == 'ATR TP'
+    tpPrice := inLong and not inTrade[1] ? entry + StopATRTP: inShort and not inTrade[1] ? entry - StopATRTP : tpPrice
+// —————— ATR Fixed SL
+StopATRSL     = ta.atr(ATRLenSL) * ATRMultSL
+if slType == 'ATR SL'
+    slPrice := inLong and not inTrade[1] ? entry - StopATRSL : inShort and not inTrade[1] ? entry + StopATRSL : slPrice
+// —————— LO / HI Stop
+if slType == 'LO / HI'
+    HiStop   = ta.highest(high, LoHi)
+    LoStop   = ta.lowest (low,  LoHi)
+    slPrice := inLong and not inTrade[1] ? LoStop : inShort and not inTrade[1] ? HiStop : slPrice
+// —————— HH / LL Take
+if tpType == 'HH / LL'
+    HiStop   = ta.highest(high, HHLL)
+    LoStop   = ta.lowest (low,  HHLL)
+    tpPrice := inLong and not inTrade[1] ? HiStop : inShort and not inTrade[1] ? LoStop : tpPrice
+// —————— MA's Stops
+if slType == 'MA'
+    maSType  = MA(maStopType, close, maStopLen)
+    Stop     = maSType * (maPerc / 100)
+    slPrice := inLong  ? math.max(nz(slPrice[1], 0), maSType - Stop) : inShort ? math.min(nz(slPrice[1], 999999), maSType + Stop) : na
+// —————— Risk Reward Take
+if tpType == 'R:R'
+    check    = fixedRR ? not inTrade[1] : true
+    tpPrice := inLong and check ? entry + (entry - slPrice) * riskReward : inShort and check ? entry - (slPrice - entry) * riskReward : tpPrice
+// —————— Add Percents to SL
+if addPerc
+    check    = DynamicStops ? true : not inTrade[1]
+    slPrice := inLong and check ? slPrice * (1 - percentSL/100) : inShort and check ? slPrice * (1 + percentSL/100) : slPrice
+// —————— TPSL's
+TypeStop = tpType != 'None' or slType == 'FIXED ％' or slType == 'FIXED ＄' or slType == 'ATR' or slType == 'LO / HI'
+BuildLeveles(take, nTake) => // Creating Intermediate Levels of the SL/TP - by shifting the current TP/SL to the entry level
+    nTakes = 4
+    var offset = float(na)
+    offset := not inPos[1] ? (entry - take) : offset
+    xentry = take + offset
+    levels = array.new_float()
+    for i = 1 to nTakes - 1
+        array.push(levels, xentry + (take - xentry) * i / (nTakes))
+    result = nTake >= 0 and nTake <= nTakes ? array.get(levels, nTake) : na
+CheckLevels(lvl, isTake) => // Check if the SL/TP is reached 
+    var float level = na
+    if isTake and ((inLong and high >= lvl) or (inShort and low <= lvl))
+        level := entry
+    if not isTake and ((inLong and low <= lvl) or (inShort and high >= lvl))
+        level := entry
+    if not inTrade
+        level := na
+    level
+// —————— Get and Check Levels
+stop0 = tpType != 'None' ? BuildLeveles(slPrice, slNumber-1) : slPrice , checkStop0 = TypeStop ? CheckLevels(stop0, false) : CheckLevels(stop0, true )
+take1 = BuildLeveles(TypeStop ? tpPrice : slPrice, 0)                  , checkTake1 = TypeStop ? CheckLevels(take1, true ) : CheckLevels(take1, false)
+take2 = BuildLeveles(TypeStop ? tpPrice : slPrice, 1)                  , checkTake2 = TypeStop ? CheckLevels(take2, true ) : CheckLevels(take2, false)
+take3 = BuildLeveles(TypeStop ? tpPrice : slPrice, 2)                  , checkTake3 = TypeStop ? CheckLevels(take3, true ) : CheckLevels(take3, false)
+// —————— Move Stop to Breakeven
+slbecheck = (tpBEnumber==1 and ontake1) or (tpBEnumber==2 and ontake2) or (tpBEnumber==3 and ontake3) 
+if ontpBE and slbecheck and not DynamicStops
+    slbe     = TypeStop ? CheckLevels(BuildLeveles(tpPrice, tpBEnumber-1), true) : CheckLevels(BuildLeveles(slPrice, tpBEnumber-1), false)
+    slPrice := slbe > 0 ? slbe : slPrice
+    stop0   := slPrice == entry ? slPrice : stop0
+// ALERTS
+i_alert_message_long_txt = input.text_area(defval = "",title = 'API Long Entry' , group = 'API for Long Bot Alerts')
+i_alert_message_short_txt =input.text_area(defval = "",title = 'API Short Entry' , group = 'API for Short Bot Alerts')
+i_alert_txt_exit_TPSL0 = input.text_area(defval = "",title = 'API Exit 0' , group = 'API TP-SL Strategy Exit Alerts')
+i_alert_txt_exit_TPSL1 = input.text_area(defval = "",title = 'API Exit 1' , group = 'API TP-SL Strategy Exit Alerts')
+i_alert_txt_exit_TPSL2 = input.text_area(defval = "",title = 'API Exit 2' , group = 'API TP-SL Strategy Exit Alerts')
+i_alert_txt_exit_TPSL3 = input.text_area(defval = "",title = 'API Exit 3' , group = 'API TP-SL Strategy Exit Alerts')
+i_alert_txt_exit_TPSLX = input.text_area(defval = "",title = 'API Exit X' , group = 'API TP-SL Strategy Exit Alerts')
+// —————— Entry's
+eqty(qty) => QTYMethod=='EQUITY' ? qty / 100 * (strategy.initial_capital + (useNetProfit ? strategy.netprofit : 0)) : QTYMethod=='SIZE' ? qty / syminfo.pointvalue : qty
+if goLong
+    ID := 'Long'
+    strategy.entry(ID, strategy.long,  qty=eqty(eqty), comment=ID, alert_message = ID + i_alert_message_long_txt)
+if goShort
+    ID := 'Short'
+    strategy.entry(ID, strategy.short, qty=eqty(eqty), comment=ID, alert_message = ID + i_alert_message_short_txt)
+// —————— Exit's
+qty(perc) => math.abs(sizePos*perc/100)
+if inTrade 
+    strategy.exit('End_0', onstop0 ? ID : 'na', qty=qty(qstop0), limit=tpPrice,                    stop=stop0,                      comment_profit='TP 0', comment_loss='SL 0', alert_message= ID +  i_alert_txt_exit_TPSL0)
+    strategy.exit('End_1', ontake1 ? ID : 'na', qty=qty(qtake1), limit=TypeStop ? take1 : tpPrice, stop=TypeStop ? slPrice : take1, comment_profit='TP 1', comment_loss='SL 1', alert_message= ID + i_alert_txt_exit_TPSL1)
+    strategy.exit('End_2', ontake2 ? ID : 'na', qty=qty(qtake2), limit=TypeStop ? take2 : tpPrice, stop=TypeStop ? slPrice : take2, comment_profit='TP 2', comment_loss='SL 2', alert_message= ID + i_alert_txt_exit_TPSL2)
+    strategy.exit('End_3', ontake3 ? ID : 'na', qty=qty(qtake3), limit=TypeStop ? take3 : tpPrice, stop=TypeStop ? slPrice : take3, comment_profit='TP 3', comment_loss='SL 3', alert_message= ID + i_alert_txt_exit_TPSL3)
+    strategy.exit('End_X',           ID,                         limit=tpPrice,                    stop=slPrice,                    comment_profit='TP X', comment_loss='SL X', alert_message= ID + i_alert_txt_exit_TPSLX)
+// ========================================================================================================================
+///==============================================================================================================
+// Plotting and Debugging - Style 1 - Paint Strategy
+// ========================================================================================================================
+bullcolor    = input.color  (color.new(color.teal,70),     'Colors:  FG',               group=grouptakes, inline='col')
+bearcolor    = input.color  (color.new(color.red,70),     '',                          group=grouptakes, inline='col')
+bullcolorb   = input.color  (color.new(color.teal,80),     'BG',                        group=grouptakes, inline='col')
+bearcolorb   = input.color  (color.new(color.red,80),     '',                          group=grouptakes, inline='col')
+//Style 1- Paint Strategy on Chart
+plotColx = inLong and PaintStrategy? bullcolor  : inShort ? bearcolor  : na
+plotColy = inLong and PaintStrategy ? bullcolorb : inShort ? bearcolorb : na
+tpcolor  = tpType != 'None' ? bullcolor : plotColx
+tp1 = plot(inPos and PaintStrategy? tpPrice : na, 'Take', color=tpType != 'None' ? bullcolor : plotColx, style=plot.style_linebr, editable=false)
+sl1 = plot(inPos and PaintStrategy ? slPrice : na, 'Stop', color=tpType != 'None' ? bearcolor : plotColx, style=plot.style_linebr, editable=false)
+en1 = plot(TypeStop and PaintStrategy ? (inLong and slPrice > entry or inShort and slPrice < entry ? slPrice : entry) : inPos ? close : na, 'Price', color=TypeStop ? #787b86 : na, style=plot.style_linebr)
+fill(tp1, en1, color=TypeStop ? bullcolorb : plotColy, editable=false)
+fill(sl1, en1, color=TypeStop ? bearcolorb : plotColy, editable=false)
+plotchar(inPos and not inPos[1] and PaintStrategy? tpPrice : na, 'Take Start', color=tpType != 'None' ? bullcolor : plotColx, char='?', location=location.absolute, size=size.tiny)
+plotchar(inPos and not inPos[1] and PaintStrategy? slPrice : na, 'Stop Start', color=tpType != 'None' ? bearcolor : plotColx, char='?', location=location.absolute, size=size.tiny)
+plot(inPos and ontake1 and not checkTake1[1] and PaintStrategy? take1 : na, 'TP 1', color=tpcolor,   style=plot.style_linebr, editable=false)
+plot(inPos and ontake2 and not checkTake2[1] and PaintStrategy? take2 : na, 'TP 2', color=tpcolor,   style=plot.style_linebr, editable=false)
+plot(inPos and ontake3 and not checkTake3[1] and PaintStrategy? take3 : na, 'TP 3', color=tpcolor,   style=plot.style_linebr, editable=false)
+plot(inPos and onstop0 and not checkStop0[1] and PaintStrategy? stop0 : na, 'SL 0', color=bearcolor, style=plot.style_linebr, editable=false)
+//Style- Plot Letters on Chart
+plotshape(goLong and PlotLong,'Bullish Signals',text='Buy',location=location.belowbar, style=shape.labelup, size=size.tiny , color=#32C4EE  , textcolor=color.white,offset=0)
+plotshape(inLong and longExit and PlotLong and PlotLongExit,'Long Exit',location=location.abovebar, style=shape.xcross , size=size.tiny, color=#32C4EE  , textcolor=color.white,offset=2)
+plotshape(goShort and PlotShorts ,'Bearish Signals',text='Sell', location=location.abovebar, style=shape.labeldown, size=size.tiny , color=#EC3E6F  , textcolor=color.white,offset=0)
+plotshape(inShort and shortExit and PlotShorts and PlotShortsExit ,'Short Exit',location=location.belowbar, style=shape.xcross, size=size.tiny, color=#EC3E6F  , textcolor=color.white,offset=2)
+//Plot Dashboard
+// 📊 Plots 📊
+//The data collected during the backtest will be displayed on screen within a dashboard and various drawings to visualize the operations.
+plotDashboard  = input.bool    (group="📊 Plots 📊", title="Plot Dashboard          ", defval=true)
+maxProfit      = input.float   (group="📊 Plots 📊", title="Profit ㅤ ㅤ🟢 if > to:", defval=0.1, inline="Profit")
+minProfit      = input.float   (group="📊 Plots 📊", title="ㅤ🔴 if < to:          ", defval=0,   inline="Profit")
+maxWinRate     = input.float   (group="📊 Plots 📊", title="Win Rateㅤ🟢 if > to:  ", defval=70,  inline="Winrate", minval = 0, maxval=100)
+minWinRate     = input.float   (group="📊 Plots 📊", title="ㅤ🔴 if < to:          ", defval=50,  inline="Winrate", minval = 0, maxval=100)
+maxPFactor     = input.float   (group="📊 Plots 📊", title="P. Factorㅤ🟢 if > to: ", defval=2,   inline="PFactor", minval=0)
+minPFactor     = input.float   (group="📊 Plots 📊", title="ㅤ🔴 if < to:          ", defval=1,   inline="PFactor", minval=0)
+bgcolor(dateRange ? na : color.new(color.white, 80))
+MTLabel(ftimestamp, etimestamp, statusProfit, statusWinRate, statusPFactor, maxWinRow, maxLossRow) =>
+    timefr = timeframe.isminutes ? 'min' : ''
+    string _text = '         🔰CITI Moku (Free)🔰' + '\n'
+    _text += '➖➖➖➖➖➖➖➖➖➖' + '\n'
+    _text += '' + '\n'
+    _text += ' Ticker:' + '\n'
+    _text += '     ' + syminfo.ticker + '  ' + timeframe.period + timefr
+    _text += '' + '\n\n'
+    _text += ' Since:' + '\n'
+    _text += str.format("    {0,date,long}  ", ftimestamp) + str.format("{0,time,HH:mm}", ftimestamp) + '\n'
+    _text += ' To:' + '\n'
+    _text += str.format("    {0,date,long}  ", etimestamp) + str.format("{0,time,HH:mm}", etimestamp) + '\n'
+    _text += '' + '\n'
+    _text += '➖➖➖➖➖➖➖➖➖➖' + '\n'
+    _text += '' + '\n'
+    _text += ' #Trades:  ' + str.tostring(strategy.closedtrades, '##.##') + '\n'
+    _text += '' + '\n'
+    _text += ' Profit:' + '\n'
+    _text += '     ' + str.tostring(statusProfit)  + str.tostring(( strategy.netprofit / strategy.initial_capital ) * 100, '##.##') + '% \n'
+    _text += ' Win Rate:' + '\n'
+    _text += '     ' + str.tostring(statusWinRate) + str.tostring(( strategy.wintrades / strategy.closedtrades )    * 100, '##.##') + '% \n'
+    _text += ' Profit Factor:' + '\n'
+    _text += '     ' + str.tostring(statusPFactor) + str.tostring(( strategy.grossprofit / strategy.grossloss ),           '##.###') + '\n'
+    _text += '' + '\n'
+    _text += ' Win Trades:   '  + str.tostring(strategy.wintrades, '######') + '\n'
+    _text += ' Loss Trades:   ' + str.tostring(strategy.losstrades, '######') + '\n'
+    _text += '' + '\n'
+    _text += ' Avg Win:  '  + str.tostring((( strategy.grossprofit / strategy.wintrades ) * 100 ) / strategy.initial_capital, '##.##') + '%\n'
+    _text += ' Avg Loss:  ' + str.tostring((( strategy.grossloss / strategy.losstrades ) * 100 ) / strategy.initial_capital, '##.##') + '%\n'
+    _text += '' + '\n'
+    _text += ' Max Win in a Row:  '  + str.tostring(maxWinRow, '######')  + '\n'
+    _text += ' Max Loss in a Row:  ' + str.tostring(maxLossRow, '######')  + '\n'
+    _text += '' + '\n'
+    _text += '➖➖➖➖➖➖➖➖➖➖' + '\n'
+ftimestamp = startFilter ? timestamp(year(startTime, zoneTime), month(startTime, zoneTime), dayofmonth(startTime, zoneTime), hour(startTime, zoneTime), minute(startTime, zoneTime), second(startTime, zoneTime)) : timestamp(year(ta.valuewhen(barstate.isfirst, time, 0), zoneTime),  month(ta.valuewhen(barstate.isfirst, time, 0), zoneTime),  dayofmonth(ta.valuewhen(barstate.isfirst, time, 0), zoneTime),  hour(ta.valuewhen(barstate.isfirst, time, 0), zoneTime),  minute(ta.valuewhen(barstate.isfirst, time, 0), zoneTime))
+etimestamp = endFilter   ? timestamp(year(endTime, zoneTime),   month(endTime, zoneTime),   dayofmonth(endTime, zoneTime),   hour(endTime, zoneTime),   minute(endTime, zoneTime),   second(endTime, zoneTime)) : timestamp(year(timenow, zoneTime), month(timenow, zoneTime), dayofmonth(timenow, zoneTime), hour(timenow, zoneTime), minute(timenow, zoneTime))
+statusProfit  = (( strategy.netprofit / strategy.initial_capital ) * 100) + 0.001 >= maxProfit  ? "🟢 " : (( strategy.netprofit / strategy.initial_capital ) * 100) - 0.001 <= minProfit  ? "🔴 " : "🟡 "
+statusWinRate = (( strategy.wintrades / strategy.closedtrades )    * 100) + 0.001 >= maxWinRate ? "🟢 " : (( strategy.wintrades / strategy.closedtrades )    * 100) - 0.001 <= minWinRate ? "🔴 " : "🟡 "
+statusPFactor = ( strategy.grossprofit / strategy.grossloss )             + 0.001 >= maxPFactor ? "🟢 " : ( strategy.grossprofit / strategy.grossloss )             - 0.001 <= minPFactor ? "🔴 " : "🟡 "
+varip int winRow     = 0
+varip int lossRow    = 0
+varip int maxWinRow  = 0
+varip int maxLossRow = 0
+if (strategy.wintrades  > strategy.wintrades[1]) and (strategy.losstrades == strategy.losstrades[1]) and (strategy.eventrades == strategy.eventrades[1])
+    lossRow := 0
+    winRow := winRow + 1
+    if winRow > maxWinRow
+        maxWinRow := winRow
+if (strategy.wintrades == strategy.wintrades[1]) and (strategy.losstrades  > strategy.losstrades[1]) and (strategy.eventrades == strategy.eventrades[1])
+    winRow := 0
+    lossRow := lossRow + 1
+    if lossRow > maxLossRow
+        maxLossRow := lossRow
+label la = na
+label.delete(la[1])
+la := plotDashboard ? label.new(x=bar_index + 5, y=close, text=MTLabel(ftimestamp, etimestamp, statusProfit, statusWinRate, statusPFactor, maxWinRow, maxLossRow), color=color.new(color.black, 50), style=label.style_label_left, textcolor=color.white, size=size.normal, textalign=text.align_left) : na
+Expand (581 lines)

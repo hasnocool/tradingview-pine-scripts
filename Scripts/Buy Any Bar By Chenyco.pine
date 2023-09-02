@@ -1,0 +1,85 @@
+Script Name: Buy Any Bar By Chenyco
+Author: chenyco
+Description: Buys amount of shares by bars with specified amount of money (100$ for a month bar for example).
+Including commissions.
+PineScript code:
+
+Pine Script™ strategy
+Buy Any Bar By Chenyco
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+//@version=4
+strategy("Buy Any Bar By Chenyco", shorttitle ="BAB Chenyco", overlay=true, default_qty_type =  strategy.cash, initial_capital = 100000, commission_type = strategy.commission.cash_per_order, commission_value = 1.5)
+fromDay = input(1, title="From Day")
+fromMonth = input(1, title="From Month")
+fromYear = input(1970, title="From Year")
+toDay = input(1, title="To Day")
+toMonth = input(1, title="To Month")
+toYear = input(2019, title="To Year")
+amount = input(100, title="AVG Amount in USD Per Bar")
+from = timestamp(fromYear, fromMonth, fromDay, 0, 0)
+to1 = timestamp(toYear, toMonth, toDay, 0, 0)
+count = 0.0
+qty = 1.0
+var float close1 = close
+if (amount > close)
+    count := 1
+    qty := amount / close
+else 
+    count := close / amount
+    qty := 1
+var float lasyBuyCount = 1
+lasyBuyCount := lasyBuyCount[1]
+if (from < time and to1 > time and (lasyBuyCount <= 0 or na(lasyBuyCount)))
+    strategy.order("entry", true , qty = qty)
+    lasyBuyCount := count
+else 
+    lasyBuyCount := lasyBuyCount-1
+    
+//plot(count)
+//plot(qty)
+//plot(close)
+if (to1 < time and strategy.equity > 0) 
+    strategy.order("entry", false , qty = strategy.equity)
+Expand (42 lines)

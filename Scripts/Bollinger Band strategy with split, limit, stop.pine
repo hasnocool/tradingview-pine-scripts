@@ -1,0 +1,191 @@
+Script Name: Bollinger Band strategy with split, limit, stop
+Author: Dicargo_Beam
+Description: Entering a short position after breaking the upper Bollinger Band, entering a long position when entering after breaking the lower Bollinger Band
+
+Provides templates for how to display position average price, stop loss, and profit price using the plot function on the chart, and how to buy splits
+
+
+After entering the position, if the price crosses the mid-band...
+PineScript code:
+
+Pine Script™ strategy
+Bollinger Band strategy with split, limit, stop
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+//@version=5
+strategy(title='Bollinger Band strategy with split, limit, stop', shorttitle='bb strategy', overlay=true,commission_type = strategy.commission.percent, commission_value = 0.01, default_qty_type = strategy.percent_of_equity, default_qty_value = 10, pyramiding = 4)
+//Summary: Going Long or Short when Entering after Breaking the Bollinger Bands\
+//At this time, the stop-loss, profit-taking price, and pyramiding standard\
+// are determined from the difference between the position average price and the band price.
+//After entering the position, if the price crosses the mid-band line, the stop loss is adjusted to the mid-band line.
+//each trade, entry position size = 10% of total cash
+//max pyramiding is 4
+//commission = 0.01%
+start_time = input.time(timestamp("20 Jul 2020 00:00 +0300"), "Strstegy Start Date")
+exit_time = input.time(timestamp("20 Jul 2023 00:00 +0300"), "Strategy Exit Date")
+bgcolor(time[1]<start_time and time>=start_time?color.red:na)
+bgcolor(time[1]<exit_time and time>=exit_time?color.blue:na)
+in_period = time>=start_time and time<=exit_time
+bb_length = input.int(20)
+bb_mult = input.int(2)
+[middle, upper, lower] = ta.bb(close,bb_length, bb_mult)
+plot(middle, color=color.aqua)
+plot(upper, color=color.orange)
+plot(lower, color=color.orange)
+long_cond = ta.crossover(close,lower)
+short_cond = ta.crossunder(close,upper)
+var saved_ph = 0.0
+if strategy.opentrades>0 and strategy.opentrades[1]==0 and strategy.position_size > 0
+    saved_ph := upper[1]
+var saved_pl = 0.0
+if strategy.opentrades>0 and strategy.opentrades[1]==0 and strategy.position_size < 0
+    saved_pl := lower[1]
+avg = strategy.position_avg_price
+long_diff = saved_ph-avg
+short_diff = saved_pl-avg
+long_stoploss = avg - 1*long_diff
+short_stoploss = avg - 1*short_diff
+long_avgdown = avg - 0.5*long_diff
+short_avgup = avg - 0.5*short_diff
+long_profit_price = avg + 0.5*long_diff
+short_profit_price = avg + 0.5*short_diff
+var label _label = na
+if in_period
+    if long_cond and strategy.opentrades==0
+        strategy.entry("Long",strategy.long)
+    if long_cond and strategy.opentrades >0 and (close[1]<long_avgdown or close[2]<long_avgdown)
+        strategy.entry("Long",strategy.long)
+    if short_cond and strategy.opentrades==0
+        strategy.entry("Short", strategy.short)
+    if short_cond and strategy.opentrades>0 and (close[1]>short_avgup or close[2]>short_avgup)
+        strategy.entry("Short",strategy.short)
+plot(avg, style=plot.style_linebr)
+plot(strategy.position_size > 0? long_profit_price: na,color=color.green, style=plot.style_linebr)
+plot(strategy.position_size > 0? long_avgdown: na,color=color.yellow, style=plot.style_linebr)
+plot(strategy.position_size > 0? long_stoploss: na,color=color.red, style=plot.style_linebr)
+plot(strategy.position_size < 0? short_profit_price: na,color=color.green, style=plot.style_linebr)
+plot(strategy.position_size < 0? short_avgup: na,color=color.yellow, style=plot.style_linebr)
+plot(strategy.position_size < 0? short_stoploss: na,color=color.red, style=plot.style_linebr)
+var co = false
+if strategy.position_size > 0 and ta.crossover(close, middle)
+    co := true
+var cu = false
+if strategy.position_size < 0 and ta.crossunder(close, middle)
+    cu := true
+if strategy.opentrades == 0
+    co := false
+    cu := false
+if strategy.position_size > 0
+    if co
+        strategy.exit("Long Exit", "Long", limit=long_profit_price, stop=middle)
+    else
+        strategy.exit("Long Exit", "Long", limit=long_profit_price, stop=long_stoploss)
+if strategy.position_size < 0
+    if cu
+        strategy.exit("Short Exit", "Short", limit=short_profit_price, stop=middle)
+    else
+        strategy.exit("Short Exit", "Short", limit=short_profit_price, stop=short_stoploss)
+Expand (104 lines)

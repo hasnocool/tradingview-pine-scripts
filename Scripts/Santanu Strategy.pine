@@ -1,0 +1,292 @@
+Script Name: Santanu Strategy
+Author: pontume11
+Description: This script use for crypto market, its use ema and supertrend to find the current trend in the market
+PineScript code:
+
+Pine Script™ strategy
+Santanu Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+//@version=5
+strategy("Santanu Strategy", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=50)
+atrPeriod = input(3, "ATR Length")
+factor = input.float(1, "Factor", step = 0.01)
+[supertrend, direction] = ta.supertrend(factor, atrPeriod)
+bodyMiddle = plot((open + close) / 2, display=display.none)
+upTrend = plot(direction < 0 ? supertrend : na, "Up Trend", color = color.green, style=plot.style_linebr)
+downTrend = plot(direction < 0? na : supertrend, "Down Trend", color = color.red, style=plot.style_linebr)
+fill(bodyMiddle, upTrend, color.new(color.green, 90), fillgaps=false)
+fill(bodyMiddle, downTrend, color.new(color.red, 90), fillgaps=false)
+len = input.int(14, minval=1, title="Length")
+src = input(close, title="Source")
+offset = input.int(title="Offset", defval=0, minval=-500, maxval=500)
+out = ta.ema(src, len)
+len44 = input.int(44, minval=1, title="Length")
+out44 = ta.ema(src, len44)
+isRising = ta.rising(out, 1)
+isFalling = ta.falling(out, 1)
+plotColor = color.black
+if isRising
+    plotColor := color.green
+else if isFalling
+    plotColor := color.red
+    
+plot(out, color=plotColor, title="MA", offset=offset)
+plot(out44, color=color.blue, title="MA", offset=offset)
+lenRsi = input(14, title='RSI Length')
+ob = input(55, title='Upper Threshold')
+os = input(45, title='Lower Threshold')
+barcolor = input(true, title='Colored Bars')
+rsi = ta.rsi(close, lenRsi)
+//plot(rsi, color=color.new(color.gray, 0))
+col1 = rsi >= ob ? color.green : na
+col2 = rsi <= os ? color.red : na
+col0 = rsi < ob and rsi > os ? color.white : na
+isRSITrade = rsi < ob and rsi > os ? false : true
+//plot1 = plot(rsi, style=plot.style_linebr, linewidth=3, color=col1)
+//plot2 = plot(rsi, style=plot.style_linebr, linewidth=3, color=col2)
+barcolor(barcolor ? col1 : na)
+barcolor(barcolor ? col2 : na)
+barcolor(barcolor ? col0 : na)
+h1 = hline(ob)
+h2 = hline(os)
+//trend type indicator
+//==========================================================================[Inputs]==========================================================================
+useAtr = input(true, title='Use ATR to detect Sideways Movements')  // Use Average True Range (ATR) to detect Sideways Movements
+atrLen = input.int(22, minval=1, title='ATR Length')  // length of the Average True Range (ATR) used to detect Sideways Movements
+atrMaType = input.string('SMA', options=['SMA', 'EMA'], title='ATR Moving Average Type')  // Type of the moving average of the ATR used to detect Sideways Movements
+atrMaLen = input.int(100, minval=1, title='ATR MA Length')  // length of the moving average of the ATR used to detect Sideways Movements
+useAdx = input(true, title='Use ADX to detect Sideways Movements')  // Use Average Directional Index (ADX) to detect Sideways Movements
+adxLen = input.int(14, minval=1, maxval=50, title='ADX Smoothing')  // length of the Average Directional Index (ADX) used to detect Sideways Movements
+diLen = input.int(14, minval=1, title='DI Length')  // length of the Plus and Minus Directional Indicators (+DI & -DI) used to determine the direction of the trend
+adxLim = input.int(25, minval=1, title='ADX Limit')  // A level of ADX used as the boundary between Trend Market and Sideways Market
+smooth = input.int(3, minval=1, maxval=5, title='Smoothing Factor')  // Factor used for smoothing the oscillator
+lag = input.int(8, minval=0, maxval=15, title='Lag')  // lag used to match indicator and chart
+//============================================================================================================================================================
+//===================================================================[Initial Calculations]===================================================================
+atr = ta.atr(atrLen)  // Calculate the Average True Range (ATR)
+atrMa = atrMaType == 'EMA' ? ta.ema(atr, atrMaLen) : ta.sma(atr, atrMaLen)  // Calculate the moving average of the ATR
+up = ta.change(high)  // Calculate parameter related to ADX, +DI and -DI
+down = -ta.change(low)  // Calculate parameter related to ADX, +DI and -DI          
+plusDM = na(up) ? na : up > down and up > 0 ? up : 0  // Calculate parameter related to ADX, +DI and -DI
+minusDM = na(down) ? na : down > up and down > 0 ? down : 0  // Calculate parameter related to ADX, +DI and -DI
+trur = ta.rma(ta.tr, diLen)  // Calculate parameter related to ADX, +DI and -DI
+plus = fixnan(100 * ta.rma(plusDM, diLen) / trur)  // Calculate Plus Directional Indicator (+DI)
+minus = fixnan(100 * ta.rma(minusDM, diLen) / trur)  // Calculate Minus Directional Indicator (-DI)
+sum = plus + minus  // Calculate parameter related to ADX
+adx = 100 * ta.rma(math.abs(plus - minus) / (sum == 0 ? 1 : sum), adxLen)  // Calculate Average Directional Index (ADX)
+//============================================================================================================================================================
+//========================================================================[Conditions]========================================================================
+cndNa = na(atr) or na(adx) or na(plus) or na(minus) or na(atrMaLen)  // Conditions for lack of sufficient data for calculations
+cndSidwayss1 = useAtr and atr <= atrMa  // Sideways Movement condition (based on ATR)
+cndSidwayss2 = useAdx and adx <= adxLim  // Sideways Movement condition (based on ADX)
+cndSidways = cndSidwayss1 or cndSidwayss2  // General Sideways Movement condition
+cndUp = plus > minus  // uptrend condition
+cndDown = minus >= plus  // downtrend condition
+trendType = cndNa ? na : cndSidways ? 0 : cndUp ? 2 : -2  // Determine the type of trend
+smoothType = na(trendType) ? na : math.round(ta.sma(trendType, smooth) / 2) * 2  // Calculate the smoothed trend type oscillator
+//============================================================================================================================================================
+//=========================================================================[Drawing]==========================================================================
+colGreen30 = color.new(color.green, 30)  // Define the color used in the drawings
+colGreen90 = color.new(color.green, 90)  // Define the color used in the drawings
+colGray = color.new(color.gray, 20)  // Define the color used in the drawings      
+colWhite90 = color.new(color.white, 90)  // Define the color used in the drawings
+colRed30 = color.new(color.red, 30)  // Define the color used in the drawings
+colRed90 = color.new(color.red, 90)  // Define the color used in the drawings
+band3 = plot(+3, title='Band_3', color=color.new(color.black, 0))  // Draw the upper limit of the uptrend area
+band2 = plot(+1, title='Band_2', color=color.new(color.black, 0))  // Draw the boundary between Sideways and Uptrend areas
+band1 = plot(-1, title='Band_1', color=color.new(color.black, 0))  // Draw the boundary between Sideways and Downtrend areas
+band0 = plot(-3, title='Band_0', color=color.new(color.black, 0))  // Draw the lower limit of the downtrend area
+fill(band2, band3, title='Uptrend area', color=colGreen90)  // Highlight the Uptrend area
+fill(band1, band2, title='Sideways area', color=colWhite90)  // Highlight the Sideways area
+fill(band0, band1, title='Downtrend area', color=colRed90)  // Highlight the Downtrend area
+var label lblUp = na
+label.delete(lblUp)
+lblUp := label.new(x=time, y=2, text='UP', color=color.new(color.green, 100), textcolor=color.black, style=label.style_label_left, xloc=xloc.bar_time, yloc=yloc.price, size=size.normal, textalign=text.align_left)  // Show Uptrend area label
+var label lblSideways = na
+label.delete(lblSideways)
+lblSideways := label.new(x=time, y=0, text='SIDEWAYS', color=color.new(color.green, 100), textcolor=color.black, style=label.style_label_left, xloc=xloc.bar_time, yloc=yloc.price, size=size.normal, textalign=text.align_left)  // Show Sideways area label
+var label lblDown = na
+label.delete(lblDown)
+lblDown := label.new(x=time, y=-2, text='DOWN', color=color.new(color.green, 100), textcolor=color.black, style=label.style_label_left, xloc=xloc.bar_time, yloc=yloc.price, size=size.normal, textalign=text.align_left)  // Show Downtrend area label
+var label lblCurrentType = na
+label.delete(lblCurrentType)
+lblCurrentType := label.new(x=time, y=smoothType, color=color.new(color.blue, 30), style=label.style_label_right, xloc=xloc.bar_time, yloc=yloc.price, size=size.small)  // Show the latest status label
+trendCol = smoothType == 2 ? colGreen30 : smoothType == 0 ? colGray : colRed30  // Determine the color of the oscillator in different conditions
+trendTypeTrade = smoothType == 2 ? 2 : smoothType == 0 ? 0 : 1  // Determine the color of the oscillator in different conditions
+plot(smoothType, title='Trend Type Oscillator', color=trendCol, linewidth=3, offset=-lag, style=plot.style_stepline)  // Draw the trend type oscillator
+//trend type indicator
+if (direction < 0) == true and trendTypeTrade == 2
+    strategy.entry("Buy Now", strategy.long)
+    
+if (direction < 0) == false and trendTypeTrade == 1
+    strategy.entry("Sell Now", strategy.short)
+    
+//if (direction < 0) == false
+    //strategy.close(id="Buy Now")
+    
+//if (direction < 0) == true
+    //strategy.close(id="Sell Now")
+//plot(strategy.equity, title="equity", color=color.red, linewidth=2, style=plot.style_areabr)
+Expand (162 lines)

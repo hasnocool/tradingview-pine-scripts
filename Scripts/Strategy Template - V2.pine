@@ -1,0 +1,427 @@
+Script Name: Strategy Template - V2
+Author: Trendoscope
+Description: This is an educational script created to demonstrate few basic building blocks of a trend based strategy and how to achieve different entry and exit types. My initial intention was to create a comprehensive strategy template which covers all the aspects of strategy. But, ended up creating fully fledged strategy based on trend following.
+
+This is an enhancement on ...
+PineScript code:
+
+Pine Script™ strategy
+Strategy Template - V2
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HeWhoMustNotBeNamed
+//   __    __            __       __  __                  __       __                        __      __    __              __      _______             __    __                                          __ 
+//  /  |  /  |          /  |  _  /  |/  |                /  \     /  |                      /  |    /  \  /  |            /  |    /       \           /  \  /  |                                        /  |
+//  $$ |  $$ |  ______  $$ | / \ $$ |$$ |____    ______  $$  \   /$$ | __    __   _______  _$$ |_   $$  \ $$ |  ______   _$$ |_   $$$$$$$  |  ______  $$  \ $$ |  ______   _____  ____    ______    ____$$ |
+//  $$ |__$$ | /      \ $$ |/$  \$$ |$$      \  /      \ $$$  \ /$$$ |/  |  /  | /       |/ $$   |  $$$  \$$ | /      \ / $$   |  $$ |__$$ | /      \ $$$  \$$ | /      \ /     \/    \  /      \  /    $$ |
+//  $$    $$ |/$$$$$$  |$$ /$$$  $$ |$$$$$$$  |/$$$$$$  |$$$$  /$$$$ |$$ |  $$ |/$$$$$$$/ $$$$$$/   $$$$  $$ |/$$$$$$  |$$$$$$/   $$    $$< /$$$$$$  |$$$$  $$ | $$$$$$  |$$$$$$ $$$$  |/$$$$$$  |/$$$$$$$ |
+//  $$$$$$$$ |$$    $$ |$$ $$/$$ $$ |$$ |  $$ |$$ |  $$ |$$ $$ $$/$$ |$$ |  $$ |$$      \   $$ | __ $$ $$ $$ |$$ |  $$ |  $$ | __ $$$$$$$  |$$    $$ |$$ $$ $$ | /    $$ |$$ | $$ | $$ |$$    $$ |$$ |  $$ |
+//  $$ |  $$ |$$$$$$$$/ $$$$/  $$$$ |$$ |  $$ |$$ \__$$ |$$ |$$$/ $$ |$$ \__$$ | $$$$$$  |  $$ |/  |$$ |$$$$ |$$ \__$$ |  $$ |/  |$$ |__$$ |$$$$$$$$/ $$ |$$$$ |/$$$$$$$ |$$ | $$ | $$ |$$$$$$$$/ $$ \__$$ |
+//  $$ |  $$ |$$       |$$$/    $$$ |$$ |  $$ |$$    $$/ $$ | $/  $$ |$$    $$/ /     $$/   $$  $$/ $$ | $$$ |$$    $$/   $$  $$/ $$    $$/ $$       |$$ | $$$ |$$    $$ |$$ | $$ | $$ |$$       |$$    $$ |
+//  $$/   $$/  $$$$$$$/ $$/      $$/ $$/   $$/  $$$$$$/  $$/      $$/  $$$$$$/  $$$$$$$/     $$$$/  $$/   $$/  $$$$$$/     $$$$/  $$$$$$$/   $$$$$$$/ $$/   $$/  $$$$$$$/ $$/  $$/  $$/  $$$$$$$/  $$$$$$$/ 
+//                                                                                                                                                                                                          
+//                                                                                                                                                                                                          
+//
+//@version=5
+//########################################### Strategy definition ######################################################/
+strategy('Strategy Template - V2', overlay=true, initial_capital=20000, default_qty_type=strategy.percent_of_equity, 
+         default_qty_value=100, commission_type=strategy.commission.percent, pyramiding=1, commission_value=0.11, 
+         max_lines_count=500, max_labels_count=500, max_boxes_count=500)
+//########################################### Entry and exit parameters ######################################################/
+i_entryType = input.string('Stop', title='Entry Type', options=['Market', 'Stop', 'Limit', 'Stop-Limit'], group='Entry Parameters')
+i_dcLength = input.int(40, step=10, title='Donchian Length', group='Entry Parameters')
+i_htfResolution = input.timeframe('W', title='Higher Timeframe', group='Entry Parameters')
+i_stopType = input.string('Stop', title='Stop Type', options=['Market', 'Stop'], group='Exit Parameters')
+i_takeProfit = input.bool(false, title='Take Initial Profit', group='Exit Parameters')
+i_takeProfitRR = input.float(10, step=0.5, title='Risk/Reward (Take Profit)', group='Exit Parameters')
+i_takeProfitQty = input.int(30, step=5, minval=5, maxval=100, title='Take Profit Percent', group='Exit Parameters')
+i_atrMaType = input.string('sma', title='ATR MA Type (Stop-Limit)', options=['sma', 'ema', 'hma', 'rma', 'vwma', 'wma'], group='Exit Parameters')
+i_atrLength = input.int(22, title='ATR Length (Stop-Limit', step=5, group='Exit Parameters')
+i_atrMultStop = input.float(0.5, step=0.5, title='ATR Multiplier (Stop-Limit)', group='Exit Parameters')
+//############################################ Generic Strategy Parameters ###################################################/
+i_tradeDirection = input.string(title='Trade Direction', defval=strategy.direction.all, options=[strategy.direction.all, strategy.direction.long, strategy.direction.short], group='Trade Filters')
+strategy.risk.allow_entry_in(i_tradeDirection)
+i_startTime = input.time(defval=timestamp('01 Jan 2010 00:00 +0000'), title='Start Time', group='Trade Filters')
+i_endTime = input.time(defval=timestamp('01 Jan 2099 00:00 +0000'), title='End Time', group='Trade Filters')
+inDateRange = time >= i_startTime and time <= i_endTime
+//################################################## Generic Methods #########################################################/
+f_secureSecurity(_symbol, _res, _src, _offset) =>
+    request.security(_symbol, _res, _src[_offset], lookahead=barmerge.lookahead_on)
+f_getMovingAverage(source, MAType, MALength) =>
+    ma = ta.sma(source, MALength)
+    if MAType == 'ema'
+        ma := ta.ema(source, MALength)
+        ma
+    if MAType == 'hma'
+        ma := ta.hma(source, MALength)
+        ma
+    if MAType == 'rma'
+        ma := ta.rma(source, MALength)
+        ma
+    if MAType == 'vwma'
+        ma := ta.vwma(source, MALength)
+        ma
+    if MAType == 'wma'
+        ma := ta.wma(source, MALength)
+        ma
+    ma
+f_getCustomAtr(MAType, MALength) =>
+    f_getMovingAverage(ta.tr, MAType, MALength)
+f_get_donchian(dcLength, resolution) =>
+    top = resolution == '' ? ta.highest(dcLength) : f_secureSecurity(syminfo.tickerid, resolution, ta.highest(dcLength), 1)
+    bottom = resolution == '' ? ta.lowest(dcLength) : f_secureSecurity(syminfo.tickerid, resolution, ta.lowest(dcLength), 1)
+    mid = (top + bottom) / 2
+    [mid, top, bottom]
+//###################################################### Calculation and plot ##########################################################/
+[mid, top, bottom] = f_get_donchian(i_dcLength, '')
+[hmid, htop, hbottom] = f_get_donchian(i_dcLength, i_htfResolution)
+atrStop = f_getCustomAtr(i_atrMaType, i_atrLength) * i_atrMultStop
+p_top = plot(top, 'TOP', color=color.new(color.lime, 80))
+p_bottom = plot(bottom, 'BOTTOM', color=color.new(color.orange, 80))
+p_mid = plot(mid, 'MID', color=color.new(color.blue, 80))
+fill(p_top, p_mid, title='Upper', color=color.new(color.lime, 80))
+fill(p_bottom, p_mid, title='Lower', color=color.new(color.orange, 80))
+p_htop = plot(htop, 'HTOP', color=color.new(color.green, 80))
+p_hbottom = plot(hbottom, 'HBOTTOM', color=color.new(color.red, 80))
+p_hmid = plot(hmid, 'HMID', color=color.new(color.purple, 80))
+fill(p_htop, p_hmid, title='HTF Upper', color=color.new(color.green, 80))
+fill(p_hbottom, p_hmid, title='HTF Lower', color=color.new(color.red, 80))
+// ########################################### Trade conditions and levels ################################################/
+longBias = bottom > hmid and inDateRange
+shortBias = top < hmid and inDateRange
+closeBuyCondition = strategy.position_size > 0
+closeSellCondition = strategy.position_size < 0
+// Market order conditions
+buyMarketCondition = ta.crossover(high, top[1]) and i_entryType == 'Market'
+sellMarketCondition = ta.crossunder(low, bottom[1]) and i_entryType == 'Market'
+closeBuyMarketCondition = ta.crossunder(low, bottom[1]) and i_stopType == 'Market' and not longBias
+closeSellMarketCondition = ta.crossover(high, top[1]) and i_stopType == 'Market' and not shortBias
+// Stop order conditions
+buySellStopCondition = i_entryType == 'Stop'
+closeBuySellStopCondition = i_stopType == 'Stop'
+// Limit and stoplimit conditions
+buyLimitCondition = i_entryType == 'Limit' and high > mid
+sellLimitCondition = i_entryType == 'Limit' and low < mid
+buyStopLimitCondition = i_entryType == 'Stop-Limit' and ta.crossover(high, top[1])
+sellStopLimitCondition = i_entryType == 'Stop-Limit' and ta.crossunder(low, bottom[1])
+// Entry levels for long and short orders via Stop, Limit and Stop-Limit
+buyLevel = top
+sellLevel = bottom
+buyStopLimit = top + atrStop
+sellStopLimit = bottom - atrStop
+// Exit levels for long and short - to be used in Stop orders
+closeBuyStop = bottom
+closeSellStop = top
+// Take profit conditions and levels for long and short - to be used in Take Profit exit orders
+takeProfitBuyCondition = longBias and strategy.position_size > 0 and i_takeProfit
+takeProfitSellCondition = shortBias and strategy.position_size < 0 and i_takeProfit
+profitLong = top + i_takeProfitRR * (top - bottom)
+profitShort = bottom - i_takeProfitRR * (top - bottom)
+profitLong := strategy.position_size <= 0 ? profitLong : high[1] > profitLong[1] ? profitLong[1] + i_takeProfitRR * (top - bottom) : profitLong[1]
+profitShort := strategy.position_size >= 0 ? profitShort : low[1] < profitShort[1] ? profitShort[1] - i_takeProfitRR * (top - bottom) : profitShort[1]
+// ########################################### Trade Statements Using If-Blocks ################################################/
+//Entry for Long Orders
+if longBias
+    //Cancel short pending orders and close existing short trades
+    strategy.cancel('Short')
+    strategy.close('Short')
+    //Long entry based on entry type - market, stop, limit or stop-limit
+    if buyMarketCondition
+        strategy.entry('Long', strategy.long, comment='Long-Market-Order')
+    if buySellStopCondition
+        strategy.entry('Long', strategy.long, stop=buyLevel, oca_name='oca_buy', oca_type=strategy.oca.cancel, comment='Long-Stop-Order')
+    if buyLimitCondition
+        strategy.entry('Long', strategy.long, limit=buyLevel, oca_name='oca_buy', oca_type=strategy.oca.cancel, comment='Long-Limit-Order')
+    if buyStopLimitCondition
+        strategy.entry('Long', strategy.long, limit=buyStopLimit, stop=buyLevel, oca_name='oca_buy', oca_type=strategy.oca.cancel, comment='Long-Stop-Limit-Order')
+//Entry for Short Orders
+if shortBias
+    //Cancel long pending orders and close existing long trades
+    strategy.cancel('Long')
+    strategy.close('Long')
+    //Short entry based on entry type - market, stop, limit or stop-limit
+    if sellMarketCondition
+        strategy.entry('Short', strategy.short, comment='Short-Market-Order')
+    if buySellStopCondition
+        strategy.entry('Short', strategy.short, stop=sellLevel, oca_name='oca_sell', oca_type=strategy.oca.cancel, comment='Short-Stop-Order')
+    if sellLimitCondition
+        strategy.entry('Short', strategy.short, limit=sellLevel, oca_name='oca_sell', oca_type=strategy.oca.cancel, comment='Short-Limit-Order')
+    if sellStopLimitCondition
+        strategy.entry('Short', strategy.short, limit=sellStopLimit, stop=sellLevel, oca_name='oca_sell', oca_type=strategy.oca.cancel, comment='Short-Stop-Limit-Order')
+//Exit Long order market condition
+if closeBuyCondition and closeBuyMarketCondition
+    strategy.close('Long', comment='Close-Long-Market')
+//Exit Short order by market condition
+if closeSellCondition and closeSellMarketCondition
+    strategy.close('Short', comment='Close-Short-Market')
+//Exit by stoploss - Set stoploss beforehand
+if closeBuySellStopCondition
+    if closeBuyCondition
+        strategy.exit('StopLong', 'Long', stop=closeBuyStop, comment='Close-Buy-Stop')
+    if closeSellCondition
+        strategy.exit('StopShort', 'Short', stop=closeSellStop, comment='Close-Sell-Stop')
+// Take Profit for Long Order
+if takeProfitBuyCondition
+    strategy.exit('ProfitLong', 'Long', limit=profitLong, qty_percent=i_takeProfitQty, comment='Close-Buy-Profit')
+// Take Profit for Short Order
+if takeProfitSellCondition
+    strategy.exit('ProfitShort', 'Short', limit=profitShort, qty_percent=i_takeProfitQty, comment='Close-Sell-Profit')
+// ########################################### Trade Statements Using When - Alternative method ################################################/
+// //Cancen pending orders when market changes its bias
+// strategy.cancel("Long", when=shortBias)
+// strategy.cancel("Short", when=longBias)
+// //Close existing trades when market changes its bias
+// strategy.close("Long", when=shortBias)
+// strategy.close("Short", when=longBias)
+// //Market orders when Entry Type = Market
+// strategy.entry("Long", strategy.long, when=longBias and buyMarketCondition, comment = "Long-Market-Order")
+// strategy.entry("Short", strategy.short, when=shortBias and sellMarketCondition, comment = "Short-Market-Order")
+// //Stop orders when Entry Type = Stop (Buy at higher price and sell at lower price) - suitable for trend following methods
+// strategy.entry("Long", strategy.long, when=longBias and buySellStopCondition, stop=buyLevel,
+//                          oca_name="oca_buy", oca_type=strategy.oca.cancel, comment = "Long-Stop-Order")
+// strategy.entry("Short", strategy.short, when=shortBias and buySellStopCondition, stop=sellLevel,
+//                          oca_name="oca_sell", oca_type=strategy.oca.cancel, comment = "Short-Stop-Order")
+// //Limit orders when Entry Type = Limit
+// strategy.entry("Long", strategy.long, when=longBias and buyLimitCondition, limit=buyLevel,
+//                          oca_name="oca_buy", oca_type=strategy.oca.cancel, comment = "Long-Limit-Order")
+// strategy.entry("Short", strategy.short, when=shortBias and sellLimitCondition, stop=sellLevel,
+//                          oca_name="oca_sell", oca_type=strategy.oca.cancel, comment = "Short-Limit-Order")
+// //Stop-limit orders when Entry Type = Stop-Limit (Buy at higher price and sell at lower price but with protection) - suitable for trend following methods
+// strategy.entry("Long", strategy.long, when=longBias and buyStopLimitCondition, limit=buyStopLimit, stop=buyLevel,
+//                          oca_name="oca_buy", oca_type=strategy.oca.cancel, comment = "Long-Stop-Limit-Order")
+// strategy.entry("Short", strategy.short, when=shortBias and sellStopLimitCondition, limit=sellStopLimit, stop=sellLevel,
+//                          oca_name="oca_sell", oca_type=strategy.oca.cancel, comment = "Short-Stop-Limit-Order")
+// // Stoploss - Exit by market
+// strategy.close("Long", when=closeBuyCondition and closeBuyMarketCondition, comment="Close-Long-Market")
+// strategy.close("Short", when=closeSellCondition and closeSellMarketCondition, comment="Close-Short-Market")
+// // Stoploss - Exit by stop
+// strategy.exit("StopLong", "Long", stop=closeBuyStop, when=closeBuyCondition and closeBuySellStopCondition, comment="Close-Buy-Stop")
+// strategy.exit("StopShort", "Short", stop=closeSellStop, when=closeSellCondition and closeBuySellStopCondition, comment="Close-Sell-Stop")
+// // Take Profit
+// strategy.exit("ProfitLong", "Long", limit=profitLong, when=takeProfitBuyCondition, qty_percent=i_takeProfitQty, comment="Close-Buy-Profit")
+// strategy.exit("ProfitShort", "Short", limit=profitShort, when=takeProfitSellCondition, qty_percent=i_takeProfitQty, comment="Close-Sell-Profit")
+Expand (224 lines)

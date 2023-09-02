@@ -1,0 +1,76 @@
+Script Name: ROCKET_EWO
+Author: k33st
+Description: Simple flag system strategy based on EMA cross overs, and standard deviation.
+Converted from pine script v3
+PineScript code:
+
+Pine Script™ strategy
+ROCKET_EWO
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+//@version=5
+strategy("ROCKET_EWO", overlay=true)
+ema_range = input(5)
+ema_watch = input(13)
+inval_a = input(open)
+inval_b = input(open)
+ratio = input(0)
+max = 5000
+s2=ta.ema(inval_a, ema_range) - ta.ema(inval_b, ema_watch)
+c_color=s2 <= ratio ? 'red' : 'lime'
+s3 = s2 + (ta.stdev(open, 1)) * 5.618
+plotshape(s3, color=color.white, style=shape.cross, location=location.abovebar, size=size.auto, show_last=max, transp=30, offset= 0)
+cr = s2 > 0
+alertcondition(cr, title='[Rocket_EWO]', message='[Rocket_EWO]')
+buy = s2 > 1
+sell = s2 < -1
+txt  = "🚀" + "\n"+ "\n"+ "\n"+ "\n"
+plotshape(buy, color=color.lime, style=shape.triangleup, location=location.belowbar ,color=color.white, text=txt, size=size.normal, show_last=max, transp=1, offset= -3)
+plotshape(not buy, color=color.red, style=shape.triangledown, location=location.belowbar, size=size.normal, show_last=max, transp=1, offset= 0)
+signalperiod = time
+s4 = ta.cross(s2, 0) ? time : na
+colsig= s2 <= ratio ? color.red : color.lime
+plotshape((time==s4)?7000:na,color=color.blue, style=shape.flag, location=location.abovebar, size=size.large, transp=1)
+longCondition =  ta.crossover(s2, 1.618)
+if (longCondition)
+    strategy.entry("LONG Id", strategy.long)
+shortCondition = ta.crossunder(s2, 1.618)
+if (shortCondition)
+    strategy.entry("SHORT Id", strategy.short)
+strategy.close("LONG Id", when = s2 < 0.218)
+strategy.risk.max_drawdown(75, strategy.percent_of_equity)
+Expand (35 lines)

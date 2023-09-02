@@ -1,0 +1,196 @@
+Script Name: Bitcoin trend RVI and Ema
+Author: rusobecher
+Description: strategy with two emas and rvi. 
+Only long positions when fast ema above slow ema when rvi gives entry.
+Only short positions when slow ema above fast ema when rvi gives entry.
+PineScript code:
+
+Pine Script™ strategy
+Bitcoin trend RVI and Ema
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+//this strategy works well on h4 (btc or eth)
+//@version=5
+strategy(title="Relative Vigor Index", shorttitle="RVGI",overlay=true)
+//indicator(title="Relative Vigor Index", shorttitle="RVGI", format=format.price, precision=4, timeframe="", timeframe_gaps=true)
+len = input.int(4, title="Length rvi", minval=1)
+rvi = math.sum(ta.swma(close-open), len)/math.sum(ta.swma(high-low),len)
+sig = ta.swma(rvi)
+offset = input.int(0, "Offset rvi", minval = -500, maxval = 500)
+atrlength = input.int(19,title="Atr Length",minval=1)
+ema1 =  input.int(95,title="Long EMA rapida",minval=1,step=10)
+ema2 =  input.int(200,title="Long EMA lenta",minval=1,step=10)
+atrSL = input.float(2.0,title="Atr SL", step=0.1)
+atrTP = input.float(1.0,title="Atr TP", step=0.1)
+atr = ta.atr(atrlength)
+esalcista = low > ta.ema(close,ema1) and ta.ema(close,ema1) > ta.ema(close,ema2)
+bajista = high < ta.ema(close,ema1) and ta.ema(close,ema1) < ta.ema(close,ema2)
+//plot(high + atr)
+//plot(low - atr)
+//strategy.entry("compra",strategy.long, when=ta.crossover(rvi,sig))
+//strategy.close("compra",when=ta.crossunder(rvi,sig))
+//plot(rvi, color=#008000, title="RVGI", offset = offset)
+//plot(sig, color=#FF0000, title="Signal", offset = offset)
+//plotshape(true,style=shape.xcross)
+var TP = 0.0
+var SL = 0.0
+comprado = strategy.position_size>0
+vendido = strategy.position_size<0
+crucepositivo = ta.crossover(rvi,sig)
+crucenegativo = ta.crossunder(rvi,sig)
+if comprado
+    // ver SL
+    if low < SL
+        strategy.close("BUY",comment="SL")
+        
+        
+if comprado    
+    //ver tp
+    if high > TP
+        strategy.close("BUY",comment="TP")
+        
+       
+    
+    
+    
+if not comprado and not vendido
+    if crucepositivo and esalcista
+        strategy.entry("BUY",strategy.long)
+        SL := low - (atr * atrSL)
+        TP := high + (atr * atrTP)
+        alert("BUY",alert.freq_once_per_bar)
+//---------------
+if vendido
+    // ver SL
+    if high > SL
+        strategy.close("SELL",comment="SL")
+        
+        
+if vendido    
+    //ver tp
+    if low < TP
+        strategy.close("SELL",comment="TP")
+        
+       
+if not vendido and not comprado
+    if crucenegativo and bajista
+        strategy.entry("SELL",strategy.short)
+        SL := high + (atr * atrSL)
+        TP := low - (atr * atrTP)
+        alert("SELL",alert.freq_once_per_bar)
+//----------------
+//plotshape(comprado,style=shape.xcross)
+plot( comprado ? SL : na, color=color.red,style=plot.style_circles)
+plot( comprado ? TP : na, color=color.blue,style=plot.style_circles)
+plot( ta.ema(close,ema1),color=color.orange)
+plot( ta.ema(close,ema2),color=color.yellow)
+plot( vendido ? SL : na, color=color.red,style=plot.style_circles)
+plot( vendido ? TP : na, color=color.blue,style=plot.style_circles)
+Expand (108 lines)

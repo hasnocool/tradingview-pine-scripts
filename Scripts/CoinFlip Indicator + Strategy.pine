@@ -1,0 +1,54 @@
+Script Name: CoinFlip Indicator + Strategy
+Author: johntheshen
+Description: Flip a coin every Monday.
+
+Heads, go long. Tail, go short. Stoploss at 1 ATR, and Take profit at 1 ATR too. 1:1 risk to reward ratio.
+
+After backtesting 2018, 2019, and 2020 with 28 major currency pairs. We are getting close to a 50% win rate with an 8% standard deviation.
+
+Believe it or not, this simple performs better than lots of the popular indicators out...
+PineScript code:
+
+Pine Script™ strategy
+CoinFlip Indicator + Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+//@version=5
+strategy("CoinFlip", overlay = true)
+int result = int(math.random()+0.5)
+atr_period = input(defval = 14, title = "ATR Period")
+year_to_test = input(defval = 2022, title = "Year to Test")
+day_of_week = input(defval = 1, title = "Day of Week")
+atr = ta.atr(atr_period)
+shouldSell = result == 0 and dayofweek == day_of_week
+shouldBuy = result == 1 and dayofweek == day_of_week 
+plotshape(result == 0 and dayofmonth == day_of_week, title="sell", location=location.abovebar, color=color.red, transp=0, style=shape.arrowdown)
+plotshape(result == 1 and dayofmonth == day_of_week, title="buy", location=location.belowbar, color=color.lime, transp=0, style=shape.arrowup)
+strategy.entry("short entry", strategy.short, 1000 / (1*atr), when=shouldSell and year == year_to_test)
+strategy.entry("long entry", strategy.long,  1000  / (1*atr), when=shouldBuy and year == year_to_test)
+strategy.exit("exit", "long entry", limit = close + 1*atr, stop = close - 1*atr, when = shouldBuy)
+strategy.exit("exit", "short entry", limit = close - 1*atr, stop = close + 1*atr, when = shouldSell)
+Expand (24 lines)

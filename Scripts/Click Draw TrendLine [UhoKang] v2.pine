@@ -1,0 +1,499 @@
+Script Name: Click Draw TrendLine [UhoKang] v2
+Author: zard96
+Description: This is an indicator that directly draws a trend line by clicking on the candle.
+Click to Create Trend lines !!
+Create a trend line by connecting A, B, and C with three vertices.
+
+1. Draw Bear Trend line
+  Click   pivot high : First pivothigh of the downtrend line
+  Click   pivot low : pivotlow of the downtrend line 
+  Click   pivot high : Second pivothigh of the...
+PineScript code:
+
+Pine Script™ strategy
+Click Draw TrendLine [UhoKang] v2
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//@version=5
+strategy("Click Draw TrendLine [UhoKang] v2", shorttitle="Click TrendLine v2", overlay=true, initial_capital=10000,default_qty_type=strategy.percent_of_equity,default_qty_value=20,commission_value=0.075,pyramiding = 5, slippage=3, process_orders_on_close=true)
+// This is an indicator that directly draws a trend line by clicking on the candle.
+// Click to Create Trend lines !!
+// Create a trend line by connecting A, B, and C with three vertices.
+// 1. Draw Bear Trend line
+//   Click [A] pivot high : First pivothigh of the downtrend line
+//   Click [B] pivot low : pivotlow of the downtrend line 
+//   Click [C] pivot high : Second pivothigh of the downtrend line 
+// 2. Draw Bull Trend line
+//   Click [A] pivot low : First pivotlow of the uptrend line
+//   Click [B] pivot high : pivothigh of the uptrend line 
+//   Click [C] pivot low : Second pivotlow of the uptrend line 
+// Modefiy Trendlines
+// 1. Edit Bear Trend line
+//   Drag Red[A],[B],[C]
+// 2. Edit Bull Trend line 
+//   Drag Green[A],[B],[C]
+/////////////////////////////////////////////// TrendLine /////////////////////////////////////////////////////////
+// 1. input
+var TriangleHigh_A = input.time(timestamp("2021-12-30"), confirm = true, title = "Bear Trendline : [A] Pivot high")
+var TriangleHigh_B = input.time(timestamp("2021-12-30"), confirm = true, title = "Bear Trendline : [B] Pivot low")
+var TriangleHigh_C = input.time(timestamp("2021-12-30"), confirm = true, title = "Bear Trendline : [C] Pivot high")
+var TriangleLow_A = input.time(timestamp("2021-12-30"), confirm = true, title = "Bull Trendline : [A] Pivot low")
+var TriangleLow_B = input.time(timestamp("2021-12-30"), confirm = true, title = "Bull Trendline : [B] Pivot high")
+var TriangleLow_C = input.time(timestamp("2021-12-30"), confirm = true, title = "Bull Trendline : [C] Pivot low")
+// 2. get bar_index of pivotpoint (피봇의 인덱스를 구하기)
+BigH1 = TriangleHigh_A == time ?  bar_index : na
+BigHR1 = TriangleHigh_B == time ?  bar_index : na
+BigH2 = TriangleHigh_C == time ?  bar_index : na
+BigL1 = TriangleLow_A == time ?  bar_index: na
+BigLR1 = TriangleLow_B == time ?  bar_index: na
+BigL2 = TriangleLow_C == time ?  bar_index : na
+// 2. get price of pivotpoint  (피봇의 가격을 구하기)
+BigH_price1 = BigH1 ? high : na
+BigH_price2 = BigH2 ? high : na
+BigL_price1 = BigL1 ? low : na
+BigL_price2 = BigL2 ? low : na
+BigHR_price1 = BigHR1 ? low : na
+BigLR_price1 = BigLR1 ? high : na
+// 3. set datas  (고점의 정보들을 var 변수에 기록해두기)
+// trendlines var (긴추세선 변수 기록)
+var BigH_Line_index1 = int(na)
+var BigH_Line_index2 = int(na)
+var BigL_Line_index1 = int(na)
+var BigL_Line_index2 = int(na)
+var BigH_Line_price1 = float(na)
+var BigH_Line_price2 = float(na)
+var BigL_Line_price1 = float(na)
+var BigL_Line_price2 = float(na)
+BigH_Line_index1 := BigH1? BigH1:  BigH_Line_index1 [1]
+BigH_Line_index2 := BigH2? BigH2:  BigH_Line_index2 [1]
+BigL_Line_index1 := BigL1? BigL1:  BigL_Line_index1 [1]
+BigL_Line_index2 := BigL2? BigL2:  BigL_Line_index2 [1]
+BigH_Line_price1 := BigH_price1? BigH_price1 : BigH_Line_price1 [1]
+BigH_Line_price2 := BigH_price2? BigH_price2 : BigH_Line_price2 [1]
+BigL_Line_price1 := BigL_price1? BigL_price1 : BigL_Line_price1 [1]
+BigL_Line_price2 := BigL_price2? BigL_price2 : BigL_Line_price2 [1]
+// parallel lines var (평행선 변수 기록)
+var BigHR_Line_price1 = float(na)
+var BigLR_Line_price1 = float(na)
+var BigH_Atr = float(na)
+var BigL_Atr = float(na)
+var BigHR_index = int(na)
+var BigLR_index = int(na)
+BigHR_Line_price1 := BigHR_price1? BigHR_price1 : BigHR_Line_price1 [1]
+BigLR_Line_price1 := BigLR_price1? BigLR_price1 : BigLR_Line_price1 [1]
+BigHR_index := BigHR1 ? BigHR1 : BigHR_index[1]
+BigLR_index := BigLR1 ? BigLR1 : BigLR_index[1]
+// mini trendlines var (짧은추세선 변수 기록)
+var MidH_Line_index1 = int(na)
+var MidH_Line_index2 = int(na)
+var MidL_Line_index1 = int(na)
+var MidL_Line_index2 = int(na)
+var MidH_Line_price1 = float(na)
+var MidH_Line_price2 = float(na)
+var MidL_Line_price1 = float(na)
+var MidL_Line_price2 = float(na)
+// 4. plotshape inputpoint on chart 입력 받았는지 차트에 표시하기
+plotshape(BigH1, location = location.abovebar, color=color.maroon, textcolor=color.yellow, text = "A", style = shape.labeldown)
+plotshape(BigHR1, location = location.belowbar, color=color.maroon, textcolor=color.yellow, text = "B", style = shape.labeldown)
+plotshape(BigH2, location = location.abovebar, color=color.maroon, textcolor=color.yellow, text = "C", style = shape.labeldown)
+plotshape(BigL1, location = location.belowbar, color=color.olive, textcolor=color.white, text = "A", style = shape.labelup)
+plotshape(BigLR1, location = location.abovebar, color=color.olive, textcolor=color.white, text = "B", style = shape.labelup)
+plotshape(BigL2, location = location.belowbar, color=color.olive, textcolor=color.white, text = "C", style = shape.labelup)
+// 5. plot startpoint of trendlines  (추세선이 생성된 지점의 라인 그리기) 
+plot(BigH1 ? high : BigH2 ? high : na, color=color.new(color.maroon,30), style=plot.style_line, linewidth=1, editable=false, title = "iAC guideline")
+plot(BigHR1 ? low : BigH1 ? high : na, color=color.new(color.maroon,80), style=plot.style_line, linewidth=1, editable=false, title = "AB guideline")
+plot(BigHR1 ? low : BigH2 ? high : na, color=color.new(color.maroon,80), style=plot.style_line, linewidth=1, editable=false, title = "BC guideline")
+plot(BigL1 ? low : BigL2 ? low : na, color=color.new(color.olive,30), style=plot.style_line, linewidth=1, editable=false, title = "AC guideline")
+plot(BigLR1 ? high : BigL1 ? low : na, color=color.new(color.olive,80), style=plot.style_line, linewidth=1, editable=false, title = "AB guideline")
+plot(BigLR1 ? high : BigL2 ? low : na, color=color.new(color.olive,80), style=plot.style_line, linewidth=1, editable=false, title = "BC guideline")
+/////////////////////////////////////////////////////// 추 세 선 계 산 하 기 ////////////////////////////////////////////////////////
+////////////////////////////////////////////////////// calc trendline ///////////////////////////////////////////////////////////
+// get avg of trendline (추세선 곡률계산)
+avgLine(src1,src2, x1, x2) => // pivot price1, pivot price2, pivot index1, pivot index2  (가격1, 가격2, 시작점, 끝점)
+    avgLineRatio = (src1 - src2)/(x2-x1) 
+    avgLineRatioLast = -(avgLineRatio * (bar_index-x2)) // x2 꼭지점 ~ 현재 꼭지점의 차이를 계산 
+    
+// calc trendlines (추세선 계산)
+BigH_Avg = avgLine(BigH_Line_price1,BigH_Line_price2,BigH_Line_index1,BigH_Line_index2)
+BigL_Avg = avgLine(BigL_Line_price1,BigL_Line_price2,BigL_Line_index1,BigL_Line_index2)
+MidH_Avg = avgLine(MidH_Line_price1,MidH_Line_price2,MidH_Line_index1,MidH_Line_index2)
+MidL_Avg = avgLine(MidL_Line_price1,MidL_Line_price2,MidL_Line_index1,MidL_Line_index2)
+BigH_Line = BigH_Line_price2 + BigH_Avg 
+BigL_Line = BigL_Line_price2 + BigL_Avg 
+MidH_Line = MidH_Line_price2 + MidH_Avg 
+MidL_Line = MidL_Line_price2 + MidL_Avg 
+// calc triangles (삼각수렴 계산) 
+lineTop = float(na)
+lineMid = float(na)
+lineBot = float(na)
+if BigH_Line and BigL_Line and BigH_Line > BigL_Line
+    lineHeight = (BigH_Line - BigL_Line)/4 
+    lineTop := BigL_Line + (lineHeight*3)
+    lineMid := BigL_Line + (lineHeight*2)
+    lineBot := BigL_Line + (lineHeight*1)
+    
+// calc trendLine and parallel lines (추세선과 평행선의 간격계산) 
+BigH_Atr := (BigH_Line_price1 - BigHR_Line_price1)
+BigH_Atr:= BigH_Atr - (BigH_Line_price1-BigH_Line_price2) * (BigHR_index - BigH_Line_index1)/(BigH_Line_index2 - BigH_Line_index1) 
+BigL_Atr := (BigLR_Line_price1 - BigL_Line_price1)
+BigL_Atr:= BigL_Atr + (BigL_Line_price1-BigL_Line_price2) * (BigLR_index - BigL_Line_index1)/(BigL_Line_index2 - BigL_Line_index1) 
+BigH_TrendLineMax = BigH_Line - BigH_Atr
+BigH_TrendLineTop = BigH_Line - BigH_Atr*0.25
+BigH_TrendLineMid = BigH_Line - BigH_Atr*0.5
+BigH_TrendLineBot = BigH_Line - BigH_Atr*0.75
+BigL_TrendLineMax = BigL_Line + BigL_Atr
+BigL_TrendLineTop = BigL_Line + BigL_Atr*0.75
+BigL_TrendLineMid = BigL_Line + BigL_Atr*0.5
+BigL_TrendLineBot = BigL_Line + BigL_Atr*0.25
+// calc price line for trade (매수선 계산)
+LineRange = input.float(0.05, title = "Grid percent value", step = 0.01)
+BigH_Line_Buy2 = BigH_Line -(BigH_TrendLineMax - BigH_TrendLineTop )*LineRange*2
+BigH_Line_Buy1 = BigH_Line -(BigH_TrendLineMax - BigH_TrendLineTop )*LineRange
+BigH_Line_Sell1 = BigH_Line +(BigH_TrendLineMax - BigH_TrendLineTop )*LineRange
+BigH_Line_Sell2 = BigH_Line +(BigH_TrendLineMax - BigH_TrendLineTop )*LineRange*2
+BigL_Line_Buy2 = BigL_Line -(BigL_TrendLineBot - BigL_TrendLineMax )*LineRange*2
+BigL_Line_Buy1 = BigL_Line -(BigL_TrendLineBot - BigL_TrendLineMax )*LineRange
+BigL_Line_Sell1 = BigL_Line +(BigL_TrendLineBot - BigL_TrendLineMax )*LineRange
+BigL_Line_Sell2 = BigL_Line +(BigL_TrendLineBot - BigL_TrendLineMax )*LineRange*2
+// plot mini trendlines (추세선그리기)
+plot_BigH_LIne = plot(BigH_Line, color=color.new(color.maroon,0), style = plot.style_linebr, linewidth = 2, title = "Bull Trendline")
+plot_BigL_LIne = plot(BigL_Line, color=color.new(color.olive,0), style = plot.style_linebr, linewidth = 2, title = "Bear Trendline")
+plot(MidH_Line, color=color.new(color.red,0), style = plot.style_linebr, linewidth = 1, title = "Bull line")
+plot(MidL_Line, color=color.new(color.green,0), style = plot.style_linebr, linewidth = 1, title = "Bear line")
+// plot triangles (삼각수렴 그리기)
+plotTriTop = plot(lineTop, color = color.new(color.green,60), title = "Triangle line Top")
+plotTriMid = plot(lineMid, color = color.new(color.black,50), title = "Triangle line Middle")
+plotTriBot = plot(lineBot, color = color.new(color.red,60), title = "Triangle line Bottom")
+fill(plot_BigH_LIne,plotTriTop, color = color.new(color.green,70), title = "Triangle fill Top")
+fill(plot_BigH_LIne,plotTriMid, color = color.new(color.green,90), title = "Triangle fill Top")
+fill(plot_BigL_LIne,plotTriMid, color = color.new(color.red,90), title = "Triangle fill Bottom")
+fill(plot_BigL_LIne,plotTriBot, color = color.new(color.red,70), title = "Triangle fill Bottom") 
+// plot parallel lines (평행선 그리기)
+plot_TrendHMax = plot(BigH_TrendLineMax, color=color.new(color.maroon,50), style = plot.style_circles, linewidth = 1, title = "Bear parallel Max")
+plot_TrendHTop = plot(BigH_TrendLineTop, color=color.new(color.maroon,85), style = plot.style_linebr, linewidth = 1, title = "Bear parallel Top")
+plot_TrendHMid = plot(BigH_TrendLineMid, color=color.new(color.maroon,90), style = plot.style_linebr, linewidth = 1, title = "Bear parallel Mid")
+plot_TrendHBot = plot(BigH_TrendLineBot, color=color.new(color.maroon,95), style = plot.style_linebr, linewidth = 1, title = "Bear parallel Bot")
+fill(plot_TrendHMax,plot_TrendHMid, color = color.new(color.maroon,90), title = "Bear parallel lines")
+plot_TrendLMax = plot(BigL_TrendLineMax, color=color.new(color.olive,50), style = plot.style_circles, linewidth = 1, title = "Bull parallel Max")
+plot_TrendLTop = plot(BigL_TrendLineTop, color=color.new(color.olive,95), style = plot.style_linebr, linewidth = 1, title = "Bull parallel Top")
+plot_TrendLMid = plot(BigL_TrendLineMid, color=color.new(color.olive,90), style = plot.style_linebr, linewidth = 1, title = "Bull parallel Mid")
+plot_TrendLBot = plot(BigL_TrendLineBot, color=color.new(color.olive,85), style = plot.style_linebr, linewidth = 1, title = "Bull parallel Bot")
+fill(plot_TrendLMax,plot_TrendLMid, color = color.new(color.olive,90), title = "Bull parallel lines")
+// draw start point of parallel lines (평행선 작도선 그리기)
+plot(BigHR1 ? low : BigH2 ? BigH_TrendLineMax : na, color=color.new(color.maroon,80), style=plot.style_line, linewidth=1, editable=false, title = "Bear parallel guideline")
+plot(BigLR1 ? high : BigL2 ? BigL_TrendLineMax : na, color=color.new(color.olive,80), style=plot.style_line, linewidth=1, editable=false, title = "Bull parallel guideline")
+// // plot price lines for trade (parallel lines) (평행선에 매수선 그리기)
+plot(BigH_Line_Buy2, color=color.new(color.green,80), style = plot.style_linebr, linewidth = 2, title = "Bear Trendline Buy B2")
+plot(BigH_Line_Buy1, color=color.new(color.green,90), style = plot.style_linebr, linewidth = 1, title = "Bear Trendline Buy B1")
+plot(BigH_Line_Sell1, color=color.new(color.red,90), style = plot.style_linebr, linewidth = 1, title = "Bear Trendline Sell T1")
+plot(BigH_Line_Sell2, color=color.new(color.red,80), style = plot.style_linebr, linewidth = 2, title = "Bear Trendline Sell T2")
+plot(BigL_Line_Buy2, color=color.new(color.green,80), style = plot.style_linebr, linewidth = 2, title = "Bull Trendline Buy B2")
+plot(BigL_Line_Buy1, color=color.new(color.green,90), style = plot.style_linebr, linewidth = 1, title = "Bull Trendline Buy B1")
+plot(BigL_Line_Sell1, color=color.new(color.red,90), style = plot.style_linebr, linewidth = 1, title = "Bull Trendline Sell T1")
+plot(BigL_Line_Sell2, color=color.new(color.red,80), style = plot.style_linebr, linewidth = 2, title = "Bull Trendline Sell T2")
+// set trend
+var trendline_trend = 0 
+if close > BigH_Line 
+    trendline_trend := 1 
+else if close < BigL_Line
+    trendline_trend := -1 
+else 
+    trendline_trend := 0
+trendline_trend_color = trendline_trend > 0 ? color.new(color.green,80) : trendline_trend < 0 ? color.new(color.red,80) : na
+bgcolor(trendline_trend_color ,  title = "Plot Trendline Trend")
+// set trigger 
+trendline_longTr = false
+trendline_longExitTr = false 
+trendline_shortTr = false 
+trendline_shortExitTr = false 
+// 
+if trendline_trend == 0
+    if  ta.crossover(close, BigL_Line_Buy1) or ta.crossover(close, BigL_Line_Buy2)
+        trendline_longTr := true 
+    if ta.crossunder(close, BigH_Line_Sell1) or ta.crossunder(close, BigH_Line_Sell2) 
+        trendline_shortTr := true 
+    if ta.crossunder(close, lineTop)
+        trendline_longExitTr := true 
+    if ta.crossover(close,lineBot)
+        trendline_shortExitTr := true 
+if trendline_trend == -1 
+    if ta.crossover(close, BigL_Line) or ta.crossover(close, BigL_Line_Sell1) 
+        trendline_longTr := true 
+        trendline_shortExitTr := true 
+    if close < BigL_Line_Sell2
+        trendline_longExitTr := true 
+if trendline_trend == 1 
+    if ta.crossunder(close, BigH_Line) or ta.crossunder(close, BigH_Line_Buy1)
+        trendline_shortTr := true 
+        trendline_longExitTr := true 
+    if close > BigH_Line_Buy2
+        trendline_shortExitTr := true
+// Lets trade ----------------------------------------------------------------
+check_long_mode = input.bool(true, title = "Long Mode On!")
+check_short_mode = input.bool(false, title = "Short Mode On!")
+if trendline_longTr
+    if check_long_mode 
+        strategy.entry("L", strategy.long)
+else if trendline_shortTr
+    if check_short_mode
+        strategy.entry("S", strategy.short)    
+if trendline_longExitTr
+    strategy.close("L")
+else if trendline_shortExitTr
+    strategy.close("S")
+Expand (255 lines)

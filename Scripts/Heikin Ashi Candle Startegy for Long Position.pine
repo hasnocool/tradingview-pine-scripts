@@ -1,0 +1,249 @@
+Script Name: Heikin Ashi Candle Startegy for Long Position
+Author: YohanNaftali
+Description: This strategy utilize Heikin-Ashi candlestick chart. 
+Heikin-Ashi technique is a Japanese candlestick-based technical trading tool that uses candlestick charts to represent and visualize market price data.
+Heikin-Ashi candle is essentially taking an average of the movement. 
+There is a tendency with Heikin-Ashi for the candles to stay red during a downtrend and...
+PineScript code:
+
+Pine Script™ strategy
+Heikin Ashi Candle Startegy for Long Position
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © YohanNaftali
+//@version=5
+///////////////////////////////////////////////////////////////////////////////
+// Heikin Ashi Candle Startegy
+// ver 2021.12.29
+// © YohanNaftali
+// This script composed by Yohan Naftali for educational purpose only 
+// Reader who will use this signal must do own research
+///////////////////////////////////////////////////////////////////////////////
+strategy(
+     title = 'Heikin Ashi Candle Startegy Long',  
+     shorttitle = 'HA Strategy Long',  
+     format = format.price,
+     precision = 6,
+     overlay = true)
+// Input
+validationPeriod = input.int( 
+     defval = 3, 
+     title = 'Validation Period', 
+     group = 'Candle')
+qtyOrder = input.float(
+     defval = 1.0,
+     title = 'Qty', 
+     group = 'Order')
+maxActive = input.float(
+     defval = 1.0,
+     title = 'Maximum Active Open Position', 
+     group = 'Order')
+// Long Strategy
+tpLong = input.float(
+     defval = 1,
+     title = "Take Profit (%)",
+     minval = 0.0, 
+     step = 0.1, 
+     group = "Long") * 0.01
+slLong = input.float(
+     defval = 25,
+     title = "Stop Loss (%)", 
+     minval=0.0, 
+     step=0.1,
+     group="Long") * 0.01
+trailingStopLong = input.float(
+     defval = 0.2,
+     title = "Trailing Stop (%)",
+     minval = 0.0, 
+     step = 0.1,
+     group = 'Long') * 0.01
+// Calculation
+haTicker = ticker.heikinashi(syminfo.tickerid)
+haClose = request.security(haTicker, timeframe.period, close)
+haOpen = request.security(haTicker, timeframe.period, open)
+// Long
+limitLong = tpLong > 0.0 ? strategy.position_avg_price * (1 + tpLong) : na
+stopLong = slLong > 0.0 ? strategy.position_avg_price * (1 - slLong) : na
+float trailLong = 0.0
+trailLong := if strategy.position_size > 0
+    trailClose = close * (1 - trailLong)
+    math.max(trailClose, trailLong[1])
+else
+    0
+isGreen = true
+for i = 0 to validationPeriod-1
+    isGreen := isGreen and haClose[i] > haOpen[i]        
+isLong = isGreen and haClose[validationPeriod] < haOpen[validationPeriod]
+plot(
+     limitLong,
+     title = 'Limit', 
+     color = color.rgb(0, 0, 255, 0), 
+     style = plot.style_stepline,
+     linewidth = 1)
+plot(
+     trailLong,
+     title = 'Trailing', 
+     color = color.rgb(255, 255, 0, 0), 
+     style = plot.style_stepline,
+     linewidth = 1)
+plot(
+     stopLong,
+     title = 'Stop', 
+     style = plot.style_stepline,
+     color = color.rgb(255, 0, 0, 0), 
+     linewidth = 1)
+// plotshape(
+//      isLong, 
+//      title = 'Entry', 
+//      style = shape.arrowup, 
+//      location = location.belowbar, 
+//      offset = 1, 
+//      color = color.new(color.green, 0), 
+//      text = 'Long Entry',
+//      size = size.small)
+// Strategy
+strategy.risk.max_position_size(maxActive)
+strategy.risk.allow_entry_in(strategy.direction.long)
+strategy.entry(
+     id = "Long", 
+     direction = strategy.long, 
+     qty = qtyOrder,  
+     when = isLong,       
+     alert_message = "LN")
+if (strategy.position_size > 0)
+    strategy.exit(
+         id = "Long Exit",
+         from_entry = "Long",
+         limit = limitLong,
+         stop = stopLong,
+         trail_price = trailLong,
+         alert_message = "LX")      
+Expand (128 lines)

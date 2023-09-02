@@ -1,0 +1,830 @@
+Script Name: Top 40 High Low Strategy for SPY, 5min
+Author: PtGambler
+Description: This strategy is developed based on my High Low Index SPY Top 40 indicator
+  
+
+Notes:
+    - this strategy is only developed for SPY on the  5 min chart . It seems to work with QQQ as well, but it isn't optimized for it
+    - P/L shown is based on 10 SPY option contracts, call or put, with strike price closest to the entry SPY price and expiry of 0 to 1 day. This...
+PineScript code:
+
+Pine Script™ strategy
+Top 40 High Low Strategy for SPY, 5min
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © platsn
+//
+// *****************************************************************************************************************************************************************************************************
+ 
+//@version=5
+strategy("Top 40 High Low Strategy", overlay=true, pyramiding=0, initial_capital=5000, commission_type=strategy.commission.cash_per_contract, commission_value = 0.09) 
+// ******************** Period **************************************
+startY = input(title='Start Year', defval=2011, group = "Trading window")
+startM = input.int(title='Start Month', defval=1, minval=1, maxval=12, group = "Trading window")
+startD = input.int(title='Start Day', defval=1, minval=1, maxval=31, group = "Trading window")
+finishY = input(title='Finish Year', defval=2050, group = "Trading window")
+finishM = input.int(title='Finish Month', defval=12, minval=1, maxval=12, group = "Trading window")
+finishD = input.int(title='Finish Day', defval=31, minval=1, maxval=31, group = "Trading window")
+timestart = timestamp(startY, startM, startD, 00, 00)
+timefinish = timestamp(finishY, finishM, finishD, 23, 59)
+t1 = time(timeframe.period, "0930-1500:23456")
+t2 = time(timeframe.period, "0930-1600:23456")
+window = time >= timestart and time <= timefinish and t1 ? true : false 
+window2 = time >= timestart and time <= timefinish and t2 ? true : false 
+// *****************************************************
+isSPY = input.bool(defval=true,title="Options trading only", group = "Trading Options")
+SPY_option = input.int(defval=10,title="# of options per trade", group = "Trading Options")
+reinvest = input.bool(defval=false,title="Reinvest profit?", group = "Trading Options")
+trade_trailing = input.bool(defval=true, title = "Trade Trailing SL after PT", group = "Trading Options")
+trailing_stop = false
+TS = 0
+trade_earlyExit = input.bool(defval=true, title= "Take Profit early based on Top 40 overbought/oversold", group="Trading Options")
+trade_expiry = input.bool(defval=true, title="Trade same/1 day expiry, exits EOD Mon/Wed/Fri; exits 1/2 Tues/Thurs", group="Trading Options")
+src = close
+// ***************************************************************************************************** Daily ATR *****************************************************
+// // Inputs
+atrlen = input.int(14, minval=1, title="ATR period", group = "ATR")
+iPercent = input.float(130, minval=0, step=10, title="% ATR to use for SL / PT", group = "ATR")
+// // Logic
+percentage = iPercent * 0.01
+atr = ta.rma(ta.tr, atrlen)
+datrp = atr  * percentage
+// plot(datr,"Daily ATR")
+// plot(atr, "ATR")
+// plot(datrp, "ATR for SL/PT")
+// ***************************************************************************************************************** MACD ************************
+// Getting inputs
+fast_length = input(title="Fast Length", defval=12, group = "MACD")
+slow_length = input(title="Slow Length", defval=26, group = "MACD")
+signal_length = input.int(title="Signal Smoothing",  minval = 1, maxval = 50, defval = 9, group = "MACD")
+sma_source = input.string(title="Oscillator MA Type",  defval="SMA", options=["SMA", "EMA"], group = "MACD")
+sma_signal = input.string(title="Signal Line MA Type", defval="EMA", options=["SMA", "EMA"], group = "MACD")
+// Plot colors
+// col_macd = input(#2962FF, "MACD Line  ", group="Color Settings", inline="MACD")
+// col_signal = input(#FF6D00, "Signal Line  ", group="Color Settings", inline="Signal")
+// col_grow_above = input(#26A69A, "Above   Grow", group="Histogram", inline="Above")
+// col_fall_above = input(#B2DFDB, "Fall", group="Histogram", inline="Above")
+// col_grow_below = input(#FFCDD2, "Below Grow", group="Histogram", inline="Below")
+// col_fall_below = input(#FF5252, "Fall", group="Histogram", inline="Below")
+// Calculating
+fast_ma = sma_source == "SMA" ? ta.sma(src, fast_length) : ta.ema(src, fast_length)
+slow_ma = sma_source == "SMA" ? ta.sma(src, slow_length) : ta.ema(src, slow_length)
+macd = fast_ma - slow_ma
+signal = sma_signal == "SMA" ? ta.sma(macd, signal_length) : ta.ema(macd, signal_length)
+hist = macd - signal
+macd_bull = hist > hist[1]
+macd_bear = hist < hist[1]
+// plot(macd_bull?1:0, "MACD bull")
+// plot(macd_bear?1:0, "MACD bear")
+macd_cross = ta.cross(macd,signal)
+// **************************************************************************************************************** Linear Regression *************************
+//Input
+clen = input.int(defval = 48, minval = 1, title = "Linear Regression Period", group = "Linear Regression")
+slen = input.int(defval=5, minval=1, title="LR Slope Period" , group = "Linear Regression")
+glen = input.int(defval=14, minval=1, title="LR Signal Period", group = "Linear Regression")
+LR_thres = input.float(18.8, minval=0, step=0.1, title="LR Threshold for Ranging vs Trending" , group = "Linear Regression")
+ 
+//Linear Regression Curve
+lrc = ta.linreg(src, clen, 0)
+//Linear Regression Slope
+lrs = (lrc-lrc[1])/1
+//Smooth Linear Regression Slope
+slrs = ta.ema(lrs, slen)
+//Signal Linear Regression Slope
+alrs = ta.sma(slrs, glen)
+up_accel = lrs > alrs and lrs > 0 
+down_accel = lrs < alrs and lrs < 0 
+zero_accel = not(up_accel) and not(down_accel)
+LR_upTrend = slrs > 0
+LR_downTrend = slrs < 0
+LR_ranging  = math.abs(slrs)*100 <= LR_thres
+LR_trending = math.abs(slrs)*100 > LR_thres
+LR_bull = slrs > slrs[1]
+LR_bear = slrs < slrs[1]
+// plot(slrs*100, "LR slope")
+// plot(LR_trending?1:0, "LR Trending")
+plotchar(not(LR_trending[1]) and LR_trending and LR_upTrend, char="⇗", color=color.green, location = location.belowbar, size = size.small)
+plotchar(not(LR_trending[1]) and LR_trending and LR_downTrend, char="⇘", color=color.red, location = location.abovebar, size = size.small)
+plotchar(LR_trending[1] and not(LR_trending), char="⇒", color=color.gray, location = location.abovebar, size = size.small)
+// *************************************************************************************************************************** Stochastic RSI ********************************
+// Stochastic Main Parameters
+smoothK = input.int(3, minval=1, title='Stoch K', group = "Stochastic RSI")
+smoothD = input.int(3, minval=1, title='Stoch D', group = "Stochastic RSI")
+lengthRSI = input.int(14, "RSI Length", minval=1, group = "Stochastic RSI")
+lengthStoch = input.int(14, "Stochastic Length", minval=1, group = "Stochastic RSI")
+rsi = ta.rsi(src, lengthRSI)
+k = ta.sma(ta.stoch(rsi, rsi, rsi, lengthStoch), smoothK)
+d = ta.sma(k, smoothD)
+stoch_long = k < 10 
+stoch_short = k > 90
+stoch_bottom = k[2] >= k[1] and k > k[1]
+stoch_top = k[2] <= k[1] and k < k[1] 
+// *************************************************************************************************************************** RSI **********************
+rsi_bull = rsi > rsi[1]
+rsi_bear = rsi < rsi[1]
+// plot(rsi,"RSI")
+// plot(rsi_bull? 1:0, "RSI Bull")
+// plot(rsi_bear?1:0, "RSI Bear")
+// ********************************************************************************************************** High Low Index *****************************************************
+// original author --> © LonesomeTheBlue
+// changed list of 40 tickers to top 40 SPY holdings
+timeFrame = input.timeframe(defval = '5', title = "Time Frame", group = "High Low Index")
+length = input.int(defval = 15, title = "Length", minval = 1, group = "High Low Index")
+source = input.string(defval = "High/Low", title = "Source", options = ["High/Low", "Close"], group = "High Low Index")
+smoothLength = input.int(defval = 10, title = "Smoothing Length", minval = 1, group = "High Low Index")
+// showRecordHighPercent = input.bool(defval = true, title = "Record High Percent", group = "High Low Index")
+// showTable= input.bool(defval = true, title = "Show Table", inline = "table", group = "High Low Index")
+// textsize = input.string(defval = size.tiny, title = " |  Text Size", options = [size.tiny, size.small, size.normal], inline = "table", group = "High Low Index")
+// showEma = input.bool(defval = true, title = "EMA", inline = "ema", group = "High Low Index")
+emaLength = input.int(defval = 9, title = "EMA Length", minval = 1, group = "High Low Index")
+symbol1 = input.symbol(defval = "AAPL", group = "Symbols")
+symbol2 = input.symbol(defval = "MSFT", group = "Symbols")
+symbol3 = input.symbol(defval = "AMZN", group = "Symbols")
+symbol4 = input.symbol(defval = "GOOG", group = "Symbols")
+symbol5 = input.symbol(defval = "FB", group = "Symbols")
+symbol6 = input.symbol(defval = "TSLA", group = "Symbols")
+symbol7 = input.symbol(defval = "NVDA", group = "Symbols")
+symbol8 = input.symbol(defval = "BRK.B", group = "Symbols")
+symbol9 = input.symbol(defval = "JPM", group = "Symbols")
+symbol10 = input.symbol(defval = "UNH", group = "Symbols")
+symbol11 = input.symbol(defval = "JNJ", group = "Symbols")
+symbol12 = input.symbol(defval = "HD", group = "Symbols")
+symbol13 = input.symbol(defval = "PG", group = "Symbols")
+symbol14 = input.symbol(defval = "V", group = "Symbols")
+symbol15 = input.symbol(defval = "PFE", group = "Symbols")
+symbol16 = input.symbol(defval = "BAC", group = "Symbols")
+symbol17 = input.symbol(defval = "MA", group = "Symbols")
+symbol18 = input.symbol(defval = "ADBE", group = "Symbols")
+symbol19 = input.symbol(defval = "DIS", group = "Symbols")
+symbol20 = input.symbol(defval = "NFLX", group = "Symbols")
+symbol21 = input.symbol(defval = "TMO", group = "Symbols")
+symbol22 = input.symbol(defval = "XOM", group = "Symbols")
+symbol23 = input.symbol(defval = "CRM", group = "Symbols")
+symbol24 = input.symbol(defval = "CSCO", group = "Symbols")
+symbol25 = input.symbol(defval = "COST", group = "Symbols")
+symbol26 = input.symbol(defval = "ABT", group = "Symbols")
+symbol27 = input.symbol(defval = "PEP", group = "Symbols")
+symbol28 = input.symbol(defval = "ABBV", group = "Symbols")
+symbol29 = input.symbol(defval = "KO", group = "Symbols")
+symbol30 = input.symbol(defval = "PYPL", group = "Symbols")
+symbol31 = input.symbol(defval = "CVX", group = "Symbols")
+symbol32 = input.symbol(defval = "CMCSA", group = "Symbols")
+symbol33 = input.symbol(defval = "LLY", group = "Symbols")
+symbol34 = input.symbol(defval = "QCOM", group = "Symbols")
+symbol35 = input.symbol(defval = "NKE", group = "Symbols")
+symbol36 = input.symbol(defval = "VZ", group = "Symbols")
+symbol37 = input.symbol(defval = "WMT", group = "Symbols")
+symbol38 = input.symbol(defval = "INTC", group = "Symbols")
+symbol39 = input.symbol(defval = "ACN", group = "Symbols")
+symbol40 = input.symbol(defval = "AVGO", group = "Symbols")
+HighsLows = array.new_int(40, 0)
+getHighLow(length)=>
+    highest_ = ta.highest(length)[1]
+    lowest_ = ta.lowest(length)[1]
+    int ret = 0
+    if na(highest_)
+        ret := 2
+    else
+        bool h_ = ((source == "High/Low" ? high : close) > highest_)
+        bool l_ = ((source == "High/Low" ? low : close)  < lowest_)
+        ret := h_ ? 1 : l_ ? -1 : 0
+    ret
+    
+getHLindexForTheSymbol(symbol, timeFrame, length, index)=>
+    highlow = request.security(symbol, timeFrame, getHighLow(length))
+    array.set(HighsLows, index, na(highlow) ? 2 : highlow)
+    
+getHLindexForTheSymbol(symbol1, timeFrame, length, 0)
+getHLindexForTheSymbol(symbol2, timeFrame, length, 1)
+getHLindexForTheSymbol(symbol3, timeFrame, length, 2)
+getHLindexForTheSymbol(symbol4, timeFrame, length, 3)
+getHLindexForTheSymbol(symbol5, timeFrame, length, 4)
+getHLindexForTheSymbol(symbol6, timeFrame, length, 5)
+getHLindexForTheSymbol(symbol7, timeFrame, length, 6)
+getHLindexForTheSymbol(symbol8, timeFrame, length, 7)
+getHLindexForTheSymbol(symbol9, timeFrame, length, 8)
+getHLindexForTheSymbol(symbol10, timeFrame, length, 9)
+getHLindexForTheSymbol(symbol11, timeFrame, length, 10)
+getHLindexForTheSymbol(symbol12, timeFrame, length, 11)
+getHLindexForTheSymbol(symbol13, timeFrame, length, 12)
+getHLindexForTheSymbol(symbol14, timeFrame, length, 13)
+getHLindexForTheSymbol(symbol15, timeFrame, length, 14)
+getHLindexForTheSymbol(symbol16, timeFrame, length, 15)
+getHLindexForTheSymbol(symbol17, timeFrame, length, 16)
+getHLindexForTheSymbol(symbol18, timeFrame, length, 17)
+getHLindexForTheSymbol(symbol19, timeFrame, length, 18)
+getHLindexForTheSymbol(symbol20, timeFrame, length, 19)
+getHLindexForTheSymbol(symbol21, timeFrame, length, 20)
+getHLindexForTheSymbol(symbol22, timeFrame, length, 21)
+getHLindexForTheSymbol(symbol23, timeFrame, length, 22)
+getHLindexForTheSymbol(symbol24, timeFrame, length, 23) 
+getHLindexForTheSymbol(symbol25, timeFrame, length, 24)
+getHLindexForTheSymbol(symbol26, timeFrame, length, 25)
+getHLindexForTheSymbol(symbol27, timeFrame, length, 26)
+getHLindexForTheSymbol(symbol28, timeFrame, length, 27)
+getHLindexForTheSymbol(symbol29, timeFrame, length, 28)
+getHLindexForTheSymbol(symbol30, timeFrame, length, 29)
+getHLindexForTheSymbol(symbol31, timeFrame, length, 30)
+getHLindexForTheSymbol(symbol32, timeFrame, length, 31)
+getHLindexForTheSymbol(symbol33, timeFrame, length, 32)
+getHLindexForTheSymbol(symbol34, timeFrame, length, 33)
+getHLindexForTheSymbol(symbol35, timeFrame, length, 34)
+getHLindexForTheSymbol(symbol36, timeFrame, length, 35)
+getHLindexForTheSymbol(symbol37, timeFrame, length, 36)
+getHLindexForTheSymbol(symbol38, timeFrame, length, 37)
+getHLindexForTheSymbol(symbol39, timeFrame, length, 38)
+getHLindexForTheSymbol(symbol40, timeFrame, length, 39)
+highs = 0
+total = 0
+for x = 0 to 39
+    highs += (array.get(HighsLows, x) == 1 ? 1 : 0)
+    total += (array.get(HighsLows, x) == 1 or array.get(HighsLows, x) == -1 ? 1 : 0)
+// calculate & show Record High Percent / High Low Index / EMA
+var float RecordHighPercent = 50
+RecordHighPercent := total == 0 ? RecordHighPercent : 100 * highs / total
+HighLowIndex = ta.sma(RecordHighPercent, smoothLength)
+// hline0 = hline(0, linestyle = hline.style_dotted)
+// hline50 = hline(50, linestyle = hline.style_dotted)
+// hline100 = hline(100, linestyle = hline.style_dotted)
+// fill(hline0, hline50, color = color.rgb(255, 0, 0, 75))
+// fill(hline50, hline100, color = color.rgb(0, 255, 0, 75))
+// plot(showRecordHighPercent ? RecordHighPercent : na, color = showRecordHighPercent ? #9598a1 : na)
+// plot(showEma ? ta.ema(HighLowIndex, emaLength) : na, color = showEma ? color.red : na, title = "EMA line")
+// plot(HighLowIndex, color = color.blue, linewidth = 2, title = "High Low Index Line")
+HLIma = ta.ema(HighLowIndex, emaLength)
+peak = HighLowIndex[2] <= HighLowIndex[1] and HighLowIndex < HighLowIndex[1]
+dip = HighLowIndex[2] >= HighLowIndex[1] and HighLowIndex > HighLowIndex[1]
+HL_bull = HighLowIndex > HighLowIndex[1]
+HL_bear = HighLowIndex < HighLowIndex[1]
+HLma_bull = ta.crossover(HLIma, 50) and HL_bull
+HLma_bear = ta.crossunder(HLIma,50) and HL_bear
+// plot(HL_bull?1:0, "HL Bull")
+// plot(HL_bear?1:0, "HL Bear")
+HL_cross = ta.cross(HighLowIndex,HLIma)
+// ***************************************************************************************************************************************** SL & PT ***********************************
+RR = input.float(2.0, minval = 1, step = 0.1, title="Reward to Risk Ratio", group = "Trading Options")
+SL_offset = input.int(15, minval=-100, maxval = 100, title ="% Stop loss reduction(+ve)/increase(-ve)", group = "Trading Options")
+barsSinceLastEntry()=>
+    strategy.opentrades > 0 ? (bar_index - strategy.opentrades.entry_bar_index(strategy.opentrades-1)) : na
+// plot(barsSinceLastEntry(),"BSLE")
+inLong = false
+inShort = false
+last_high = high[1]
+last_low = low[1]
+long_SL = last_low - datrp
+short_SL = last_high + datrp
+long_PT = last_high + math.abs(high[1]-low[1])
+short_PT = last_low - math.abs(high[1]-low[1])
+long_CT_PT = long_PT
+short_CT_PT = short_PT
+last_entry = strategy.opentrades.entry_price(strategy.opentrades-1)
+L_risk = last_entry - long_SL
+S_risk = short_SL - last_entry
+if strategy.opentrades > 0 and not(trailing_stop)
+    long_SL := math.min(long_SL[barsSinceLastEntry()], last_low)
+    short_SL := math.max(short_SL[barsSinceLastEntry()], last_high)
+    L_risk := last_entry - long_SL
+    S_risk := short_SL - last_entry
+    long_PT := last_entry + (last_entry - long_SL) * RR
+    short_PT := last_entry - (short_SL - last_entry) * RR
+    long_CT_PT := last_entry + (last_entry - long_SL) * (RR/3)
+    short_CT_PT := last_entry - (short_SL - last_entry) * (RR/3)
+    long_SL := long_SL + (L_risk * SL_offset * 0.01)
+    short_SL := short_SL - (S_risk * SL_offset * 0.01)
+    if strategy.opentrades.size(0) > 0 and barsSinceLastEntry() > 0
+        inLong := true
+    else if strategy.opentrades.size(0) < 0 and barsSinceLastEntry() > 0
+        inShort := true
+else
+    long_PT := last_high + math.abs(high-long_SL)
+    short_PT := last_low - math.abs(short_SL-low)
+// **************************************************************************************************************************************** Trade Pauses ****************************************
+bool trade_pause = false
+bool trade_pause2 = false
+no_longat10 = input.bool(true, title="No entry between 10:05 - 10:20 (Statistically bad trades)", group = "Trading Options")
+// if math.abs(close - open) > atr
+//     trade_pause := true
+// else
+//     trade_pause := false 
+if no_longat10 and time(timeframe.period, "1000-1030:23456")
+    trade_pause2 := true
+else
+    trade_pause2 := false
+    
+// ************************************************************************************************************************************ Entry conditions **************************
+L_entry1 =  macd_bull and HL_bull and LR_trending and up_accel and HighLowIndex < 96 
+S_entry1 =  macd_bear and HL_bear and LR_trending and down_accel and HighLowIndex > 4
+// ************************************************************************************************************************************** Exit Conditions ********************************
+exit0 = true
+ 
+L_exit1 = (HighLowIndex[1] > 99 and HighLowIndex < 99) 
+S_exit1 = (HighLowIndex[1] < 1 and HighLowIndex > 1)
+L_exit2 = S_entry1
+S_exit2 = L_entry1
+// ************************************************************************************************************************************ Entry and Exit orders *****************************
+ 
+option_multiplier = input.float(0.007, title="Multiplier for trading options (adjust to approx. options P&L)", step=0.001, group = "Trading Options")
+profit = strategy.netprofit
+trade_amount = math.floor(strategy.initial_capital / close) 
+if isSPY  
+    if strategy.netprofit > 0 and reinvest and strategy.closedtrades.profit(strategy.closedtrades-1) > 0
+        trade_amount := math.floor(strategy.initial_capital * option_multiplier) * (SPY_option + math.floor((profit/strategy.initial_capital)*10))
+    else
+        trade_amount := math.floor(strategy.initial_capital * option_multiplier) * SPY_option
+ 
+if not(trade_pause) and not(trade_pause2) and strategy.opentrades == 0
+    strategy.entry("Long", strategy.long, trade_amount, when = L_entry1 and window, comment="Long")
+    strategy.entry("Short", strategy.short, trade_amount, when = S_entry1 and window, comment = "Short")
+if not(trade_trailing) and window
+    strategy.exit("Exit", "Long", stop= long_SL, limit = long_PT, comment = "Exit Long SL/PT hit")
+    strategy.exit("Exit", "Short", stop= short_SL, limit = short_PT, comment = "Exit Short SL/PT hit")
+if strategy.opentrades.profit(strategy.opentrades-1) > 0 and trade_earlyExit
+    strategy.close("Long", when = L_exit1 or L_exit2, comment = "Exit - Take profit")
+    strategy.close("Short", when = S_exit1 or S_exit2, comment = "Exit - Take profit")
+// *************** Trailing SL *******************************************
+if trade_trailing and (high > long_PT or TS[1] == 1) and window2
+    long_SL := math.max(long_SL[1], low - datrp)
+    trailing_stop := true
+    strategy.exit("Exit", "Long", when = exit0 and window2, stop= long_SL, comment = "Exit Long Trailing SL")
+if trade_trailing and not(trailing_stop) and window
+    strategy.exit("Exit", "Long", stop= long_SL, comment = "Exit Long SL/PT hit")
+if trade_trailing and (low < short_PT or TS[1] == 1) and window2
+    short_SL := math.min(short_SL[1], high + datrp)
+    trailing_stop := true
+    strategy.exit("Exit", "Short", when= exit0 and window2, stop= short_SL, comment = "Exit Short Trailing SL")
+if trade_trailing and not(trailing_stop) and window
+    strategy.exit("Exit", "Short", stop= short_SL, comment = "Exit Short SL/PT hit")
+    
+if trade_expiry
+    if time(timeframe.period, "1550-1555:246")
+        strategy.close_all()
+    if time(timeframe.period, "1550-1555:35")
+        strategy.close("Long", qty_percent = 50, comment="Close 1/2 EOD")
+        strategy.close("Short", qty_percent = 50, comment="Close 1/2 EOD")
+strategy.cancel_all(when=time(timeframe.period, "1555-1600:23456"))
+// plot(trailing_stop? 1:0, "Trailing stop ON")
+if strategy.opentrades == 0
+    trailing_stop := false
+TS := trailing_stop? 1:0
+SSL = plot(short_SL,title = "Short SL", color= inShort ? color.red: color.new(color.red,100), linewidth = 3)
+LSL = plot(long_SL,title = "Long SL", color= inLong ? color.red: color.new(color.red,100), linewidth = 3)
+LPT = plot(long_PT,title = "Long PT", color= inLong ? color.green: color.new(color.green,100), linewidth = 3)
+SPT = plot(short_PT,title = "Short PT", color= inShort ? color.green: color.new(color.green,100), linewidth = 3)
+LE = plot(last_entry, title = "Last entry", color = strategy.opentrades > 0 ? color.gray : color.new(color.gray,100))
+// plot(L_risk, title = "Risk Long")
+// plot(S_risk, title = "Risk Short")
+fill(LPT, LE, color = strategy.opentrades.size(0) > 0 ? color.new(color.green,90) : na)
+fill(LE, LSL, color = strategy.opentrades.size(0) > 0 ? color.new(color.red,90): na)
+fill(SPT, LE, color = strategy.opentrades.size(0) < 0 ? color.new(color.green,90) : na)
+fill(LE, SSL, color = strategy.opentrades.size(0) < 0 ? color.new(color.red,90) : na)
+Expand (450 lines)

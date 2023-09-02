@@ -1,0 +1,88 @@
+Script Name: 8 Day Run - Momentum Strategy
+Author: Marcns_
+Description: Inspired by Linda Bradford Raschke.
+
+Entry criteria:
+
+This strategy is used to capture momentum effects on the daily periodicities. Once prices have had a run of 8 or more consecutive closes above or below the 5-period simple moving average the strategy is primed to trade. 
+
+It will then enter a short on the first close above the 5sma after a run of 8 or more...
+PineScript code:
+
+Pine Script™ strategy
+8 Day Run - Momentum Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Marcuscor
+//@version=5
+// Inpsired by Linda Bradford Raschke: a strategy for trading momentum in futures markets
+strategy("8D Run", initial_capital = 50000, commission_value = 0.0004) 
+SMA = ta.sma(close,5)
+TrendUp = close >= SMA
+TrendDown = close <= SMA
+//logic to long
+TriggerBuy = ta.barssince(close < SMA) >= 8
+Buy = TriggerBuy[1] and TrendDown 
+strategy.entry("EL", strategy.long, when = Buy)
+strategy.close(id = "EL", when = close > SMA)
+// 1) color background when "run" begins and 2) change color when buy signal occurs
+bgcolor(TriggerBuy? color.green : na, transp = 90)
+bgcolor(Buy ? color.green : na, transp = 70)
+// logic to short 
+TriggerSell = ta.barssince(close > SMA) >= 8
+Sell = TriggerSell[1] and TrendUp
+strategy.entry("ES", strategy.short, when = Sell)
+strategy.close(id = "ES", when = close < SMA)
+// 1) color background when "run" begins and 2) change color when sell signal occurs
+bgcolor(TriggerSell ? color.red : na, transp = 90)
+bgcolor(Sell ? color.red : na, transp = 70) 
+Expand (49 lines)

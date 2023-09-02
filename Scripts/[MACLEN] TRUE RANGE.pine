@@ -1,0 +1,190 @@
+Script Name: [MACLEN] TRUE RANGE
+Author: MaclenMtz
+Description: This is a true range (TR) based strategy with weighted moving average (WMA) smoothing to remove noise.
+
+In addition, it includes a risk management strategy using 4 "safes" in the same operation to always seek to make a profit.
+
+This is for evaluation only, and it is not recommended to use with real money.
+
+It is a work in progress. I read your comments.
+PineScript code:
+
+Pine Script™ strategy
+[MACLEN] TRUE RANGE
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © MaclenMtz
+//@version=5
+strategy("[MACLEN] Rangos", shorttitle="Rangos [https://t.me/Bitcoin_Maclen]", overlay=false, slippage=0, initial_capital=1000, currency=currency.USD, default_qty_type=strategy.fixed, default_qty_value=0.1, pyramiding=5, commission_type=strategy.commission.percent, commission_value=0.08)
+//------WINDOW----------
+i_startTime = input.time(defval = timestamp("01 Jan 2022 00:00 -0700"), title = "Start Time", group = "Backtest Window")
+i_endTime = input.time(defval = timestamp("31 Dec 2025 00:00 -0700"), title = "End Time")
+window = time >= i_startTime and time <= i_endTime
+//-----------------------------
+sube = close>close[1] ? ta.tr : 0
+baja = close<close[1] ? ta.tr : 0
+corto = input(10, group="Configuración")
+largo = input(30)
+suavizado = input(10)
+fastDiff = ta.wma(sube, corto) - ta.wma(baja,corto)
+slowDiff = ta.wma(sube, largo) - ta.wma(baja, largo)
+ind = ta.wma(fastDiff - slowDiff, suavizado)
+iColor = ind>0 ? color.green : ind<0 ? color.red : color.black
+plot(ind, color=iColor)
+plot(0, color=color.white)
+long = ind[1]<ind and ind[2]<ind[1] and ind<0
+short = ind[1]>ind and ind[2]>ind[1] and ind>0
+plotshape(long and not long[1], style = shape.xcross, color=color.green, location=location.bottom, size=size.tiny)
+plotshape(short and not short[1], style = shape.xcross, color=color.red, location=location.top, size=size.tiny)
+//Apalancamiento
+lev = input.int(2)
+//Contratos
+capital = input(defval=1000, title="Capital Inicial", group="Gestión de Riesgo")
+contrato1 = (capital*lev)/(16*close)
+c1 = contrato1
+c2 = contrato1
+c3 = contrato1*2
+c4 = contrato1*4
+c5 = contrato1*8
+//cap_enopentrade = strategy.opentrades == 1 ? c1: strategy.opentrades == 2 ? c1+c2: strategy.opentrades == 3 ? c1+c2+c3: strategy.opentrades == 4 ? c1+c2+c3+c4: strategy.opentrades == 5 ? c1+c2+c3+c4+c5 : 0
+change = math.round((close-strategy.position_avg_price)/strategy.position_avg_price * 100,2)
+var float used = 0
+porc_tp = input.float(6.5, step=0.1)
+safe = input.float(-6.0, step=0.1)
+sl = input.float(-5.0, title="StopLoss", step=0.1)
+//----------------Strategy---------------------------
+if strategy.opentrades == 0 and long and not long[1] and window
+    strategy.entry('BUY', strategy.long, qty=c1, comment="Buy")
+    used := used + (c1*close)
+if strategy.opentrades == 1 and long and not long[1] and window and change<safe
+    strategy.entry('SAFE1', strategy.long, qty=c2, comment="Safe1")
+    used := used + (c2*close)
+if strategy.opentrades == 2 and long and not long[1] and window and change<safe
+    strategy.entry('SAFE2', strategy.long, qty=c3, comment="Safe2")
+    used := used + (c3*close)
+if strategy.opentrades == 3 and long and not long[1] and window and change<safe
+    strategy.entry('SAFE3', strategy.long, qty=c4, comment="Safe3")
+    used := used + (c4*close)
+if strategy.opentrades == 4 and long and not long[1] and window and change<safe
+    strategy.entry('SAFE4', strategy.long, qty=c5, comment="Safe4")
+    used := used + (c5*close)
+min_prof = strategy.openprofit>0
+if (short and min_prof)
+    strategy.close_all(comment="Close (Profit= "+ str.tostring(math.round(change,2)*lev)+"%)")
+    used := 0
+if math.abs(strategy.openprofit) >= (used/lev)
+    strategy.close_all(comment="LIQ")
+    used := 0
+    
+if change<=sl
+    strategy.close_all(comment="SL")
+    used := 0
+//plot (strategy.openprofit)
+//plot(strategy.position_size)
+//plot(change)
+//plot(used/lev)
+var table display = table.new(position.top_right,1,1)
+labelText = "Open P/L= " + str.tostring(math.round(strategy.openprofit,2)) + "\n" + "Price Change = " + str.tostring(change) + "%" + "\n" + "Capital Usado = " + str.tostring(used/lev)
+table.cell(display,0,0, labelText, text_size=size.normal)
+Expand (101 lines)

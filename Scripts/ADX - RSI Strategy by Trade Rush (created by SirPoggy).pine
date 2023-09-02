@@ -1,0 +1,620 @@
+Script Name: ADX - RSI Strategy by Trade Rush (created by SirPoggy)
+Author: UnknownUnicorn20967364
+Description: This is one of many new strategies coming soon which were seen on Trade Rush
+ This one is the ADX / RSI Strategy seen here: 
+  https:www.youtube.com/watch?v=uSkGE0ujyn4
+
+ While the strategy has been modified slightly to use the DMI instead of the ADX, the core of the strategy is essentially the same
+ Long signals are generated when the RSI is above 70, close is...
+PineScript code:
+
+Pine Script™ strategy
+ADX / RSI Strategy by Trade Rush (created by SirPoggy)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+//@version=4
+//
+// Strategy Coded by SirPoggy
+strategy("[SirPoggy] Simple and Effective RSI Strategy", overlay=true,currency=currency.USD,process_orders_on_close=true,default_qty_type=strategy.percent_of_equity,initial_capital=500,default_qty_value=100,pyramiding=1,calc_on_order_fills=false,calc_on_every_tick=true)
+//
+//
+// User Inputs
+//
+showbox= input(title="Show Status Box?",group="Main Strategy Settings", type=input.bool, defval=true)
+backtest= input(title="Show Backtest Results?",group="Main Strategy Settings", type=input.bool, defval=true)
+showwin = input(title="Show Win / Loss labels?", type=input.bool, defval=true,group="Main Strategy Settings")
+enableLong= input(title="Enable Long Entries?",group="Main Strategy Settings", type=input.bool, defval=true)
+enableShort= input(title="Enable Short Entries?",group="Main Strategy Settings", type=input.bool, defval=true)
+//MAIN TREND Strategy
+useslowema = input(title="Enable Global Trend", type=input.bool, defval=false,group="Main Strategy Settings",group="Main Strategy Settings")
+emalen = input(200, minval=1, title="Global Trend Length",group="Main Strategy Settings")
+emaslow = ema(close,emalen)
+lookback= input(10,group="Main Strategy Settings",title="Universal Lookback Period for Strategies")
+plot(emaslow,"Global Trend EMA",transp= useslowema ? 0 : 100,color=color.white)
+//RSI Strategy Options
+usersi = input(title="Enable RSI Strategy",group="🔘 RSI Strategy Settings 🔘", type=input.bool, defval=false)
+rsitype = input(title="RSI Strategy Type",group="🔘 RSI Strategy Settings 🔘", defval="Standard", options=["Standard", "Reversal","50/50 Method","Strict Standard","Strict 50/50","Strict Reversal"],tooltip="Standard - RSI Value is higher than the overbought (def: 70) threshold for Longs, higher than oversold (def: 30) for shorts \n\nEMA - Compares a 12 and 26 period RSI EMA to determine long and short entries.\n\nReversal - RSI Value above oversold threshold for longs and above overbought threshold for longs\n\n50/50 Method - Any cross on the RSI at 50 is a signal for long or short depending on the direction")
+rsistrat = input(title="RSI Strategy Settings",group="🔘 RSI Strategy Settings 🔘", defval="Standard", options=["Standard", "More Sensitive"],tooltip="Standard - Sets RSI to 14 period\n\nMore Sensitive - Sets RSI to 8")
+//
+// ADX Strategy Settings
+useadx = input(title="Enable ADX Strategy", type=input.bool,group="🔘 ADX Strategy Settings 🔘", defval=false)
+adxtype = input(title="ADX Strategy Settings",group="🔘 ADX Strategy Settings 🔘", defval="Standard", options=["Less Sensitive","Standard", "More Sensitive"],tooltip="Standard - Sets ADX strategy to 14 period\n\nMore Sensitive - Sets ADX strategy to 8\n\nLess Sensitive - Sets ADX to 21 period")
+adxroc = input(title="Use ADX Rate of Change?",group="🔘 ADX Strategy Settings 🔘",type=input.bool, defval=false)
+// Pullback Settings
+usepullback= input(title="Enable EMA Pullback Requirement?",group="Pullback Filter", type=input.bool, defval=false)
+ema_pullback_len = input(title="EMA Lengths for Pullback Filter",group="Pullback Filter", defval="5/20", options=["5/20","20/50","50/100","200/250"])
+//
+//
+//RSI STRATEGY
+//
+len = rsistrat == "More Sensitive" ? 8 : rsistrat == "Extreme" ? 2 : 14
+rsisrc = close
+up = rma(max(change(rsisrc), 0), len)
+down = rma(-min(change(rsisrc), 0), len)
+rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+//RSI Signals
+rsiL = false
+rsiS = false
+if rsitype == "Standard" ? rsi >= 70 : rsitype == "Reversal" ? rsi >= 30 : rsitype == "Strict Standard" ? crossover(rsi,rsitype == "Extreme" ? 90 : 70) : rsitype ==  "Strict Reversal" ? crossover(rsi,rsitype == "Extreme" ? 10 : 30) : rsitype ==  "Strict 50/50" ? crossover(rsi,50) : rsi >= 50
+    rsiL := true
+if rsitype == "Standard" ? rsi <= 30 : rsitype == "Reversal" ? rsi <= 70 : rsitype == "Strict Standard" ? crossunder(rsi,rsitype == "Extreme" ? 10 : 30) : rsitype ==  "Strict Reversal" ? crossunder(rsi,rsitype == "Extreme" ? 90 : 70) : rsitype ==  "Strict 50/50" ? crossunder(rsi,50) : rsi <= 50
+    rsiS := true
+//
+// ADX STRATEGY
+//
+lenadxsig = adxtype == "Standard" ? 14 : adxtype == "More Sensitive" ? 8 : 21
+lenadx = adxtype == "Standard" ? 14 : adxtype == "More Sensitive" ? 8 : 21
+upadx = change(high)
+downadx = -change(low)
+plusDM = na(upadx) ? na : (upadx > downadx and upadx > 0 ? upadx : 0)
+minusDM = na(downadx) ? na : (downadx > upadx and downadx > 0 ? downadx : 0)
+trur = rma(tr, lenadx)
+plus = fixnan(100 * rma(plusDM, lenadx) / trur)
+minus = fixnan(100 * rma(minusDM, lenadx) / trur)
+sum = plus + minus
+adx = 100 * rma(abs(plus - minus) / (sum == 0 ? 1 : sum), lenadxsig)
+adxL_N = false
+adxS_N = false
+if adx > 25 and plus > 25 and minus < 20 
+    adxL_N := true
+if adx > 25 and plus < 20 and minus > 25
+    adxS_N := true
+    
+adxL = adxL_N and (adxroc ? roc(adx,lookback) > 0 : true) and (adxroc ? roc(plus,lookback) > 0 : true) and (adxroc ? roc(minus,lookback) < 0 : true)
+adxS = adxS_N and (adxroc ? roc(adx,lookback) < 0 : true) and (adxroc ? roc(plus,lookback) < 0 : true) and (adxroc ? roc(minus,lookback) > 0 : true)
+//
+// END ADX Strategy
+//
+//
+// Order Parameters
+//
+// Close / Open Trade Messages
+enableOA= input(title="Enable New Trade Alerts?", type=input.bool, defval=false,group="Alert Settings")
+enableTA= input(title="Enable Take Profit Alerts?", type=input.bool, defval=false,group="Alert Settings")
+enableSA= input(title="Enable Stop Loss Alerts?", type=input.bool, defval=false,group="Alert Settings")
+opentradelong = input(title="Long Open Trade Alert", type=input.string, defval="Open Long",group="Alert Settings")
+closelongmess = input(title="Long SL Alert", type=input.string, defval="Long Stop Loss",group="Alert Settings")
+closelongmessT = input(title="Long TP Alert", type=input.string, defval="Long Take Profit",group="Alert Settings")
+opentradeshort = input(title="Short Open Trade Alert", type=input.string, defval="Open Short",group="Alert Settings")
+closeshortmess = input(title="Short SL Alert", type=input.string, defval="Short Stop Loss",group="Alert Settings")
+closeshortmessT = input(title="Short TP Alert", type=input.string, defval="Short Take Profit",group="Alert Settings")
+// Entry Price
+entry = ((strategy.position_size[0] > strategy.position_size[1]) or (strategy.position_size[0] < strategy.position_size[1])) and strategy.position_size[1] == 0
+ep = 0.0
+ep := na(ep) ? na : ep[1]
+islong = strategy.position_size > 0
+isshort = strategy.position_size < 0
+isnotin = strategy.position_size == 0
+//
+// Step 4: Order Parameters
+//
+//
+// Step 5: Long and Short Conditions
+//
+// The Fixed Percent Stop Loss Code
+// User Options to Change Inputs (%)
+entry_barL = barssince(strategy.position_size[0] > strategy.position_size[1])
+entry_barS = barssince(strategy.position_size[0] < strategy.position_size[1])
+stoptype = input(title="Stop Loss Method", defval="ATR Based", options=["Percent Based","ATR Based","Average of ATR & %"],group="Close Strategy Settings")
+//
+// PULLBACK CONFIRM
+//
+ema_pullback_1 = ema_pullback_len == "5/20" ? ema(close,5) : ema_pullback_len == "20/50" ? ema(close,20) : ema_pullback_len == "50/100" ? ema(close,50) : ema(close,200) 
+ema_pullback_2 = ema_pullback_len == "5/20" ? ema(close,20) : ema_pullback_len == "20/50" ? ema(close,50) : ema_pullback_len == "50/100" ? ema(close,100) : ema(close,250)
+plot(ema_pullback_1,"Pullback EMA",color=color.blue,transp= usepullback ? 0 : 100)
+pullback_L = close < ema_pullback_1 and close > ema_pullback_2 and roc(close,10) < 0
+pullback_S = close > ema_pullback_1 and close < ema_pullback_2 and roc(close,10) > 0 
+//
+// END PULLBACK CONFIRM
+//
+// Date Range Backtest Filter
+// DATE RANGE
+// Calculate start/end date and time condition
+limitresults= input(title="Limit Results to Date Range?", type=input.bool, defval=false)
+startDate  = input(timestamp("2021-05-01T00:00:00"), title="Backtest Start Date", type = input.time)
+finishDate = input(timestamp("2021-06-01T00:00:00"), title="Backtest End Date", type = input.time)
+inDateRange  = (limitresults ?  time >= startDate and time <= finishDate : 0==0) 
+//
+//MAIN VARIABLES LONG
+inuptrend = useslowema ? close > emaslow : 0==0
+//
+//MAIN VARIABLES SHORT
+//
+indowntrend = useslowema ? close < emaslow : 0==0
+longCondition = false
+shortCondition = false
+// LONG CONDITIONS
+for i = 1 to lookback + 1
+    if enableLong ?
+     (useslowema ? inuptrend[i] : 0==0) and
+     (usersi ? rsiL[i] : 0==0) and
+     (useadx ? adxL[i] : 0==0)  and
+     (usepullback ? pullback_L : 0==0)
+     : 1==0
+        longCondition := true
+// SHORT CONDITIONS
+for i = 1 to lookback + 1
+    if enableShort ? 
+     (useslowema ? indowntrend[i] : 0==0) and
+     (usersi ? rsiS[i] : 0==0) and
+     (useadx ? adxS[i] : 0==0) and
+     (usepullback ? pullback_S : 0==0)
+     : 1==0
+        shortCondition := true
+long = isnotin and longCondition[0] and (not longCondition[1] and isnotin[1])
+short = isnotin and shortCondition[0] and (not longCondition[1] and isnotin[1]) 
+if  long and inDateRange 
+    strategy.entry("Long", strategy.long, when = long,comment="Enter Long")
+    ep := close 
+    if enableOA
+        alert(opentradelong)
+        
+if  short and inDateRange
+    strategy.entry("Short", strategy.short, when = short,comment="Enter Short")
+    ep := close
+    if enableOA
+        alert(opentradeshort)
+// Kill Trade Functions
+killtrade = input(title="Attempt to Kill Trade After X Bars",group="Close Strategy Settings", defval="Disable", options=["Disable","5","10","15","20","25","30","35","40","45","50","55","60","65","70","75","80","85","90","95","100"],tooltip="This option if set to N/A does nothing. If set to a value, will attempt to close trade in profit after X bars.")
+killwhenL = killtrade == "Disable" ? na : tonumber(killtrade) - entry_barL 
+killnowL = killtrade == "Disable" ? na : killwhenL <= 0
+killwhenS = killtrade == "Disable" ? na: tonumber(killtrade) - entry_barS 
+killnowS = killtrade == "Disable" ? na : killwhenS <= 0 
+// Take Profit and Stop Loss Calculations
+stopPer = input(2, title='Stop Loss Percentage', type=input.float,group="Close Strategy Settings")/100
+stopATR_mult = input(1.4,step=0.2, title='ATR Multiplier', type=input.float,group="Close Strategy Settings")
+taketype = "Risk Based"
+takePer = input(1.5,step=0.2, title='Take Profit Risk Multiplier', type=input.float,group="Close Strategy Settings")
+atr = atr(14)
+stopATR_L = 0.0
+profitATR_L = 0.0
+stopATR_L := na(stopATR_L) ? na : stopATR_L[1]
+profitATR_L := na(profitATR_L) ? na : profitATR_L[1]
+stopATR_S = 0.0
+profitATR_S = 0.0
+stopATR_S := na(stopATR_S) ? na : stopATR_S[1]
+profitATR_S := na(profitATR_S) ? na : profitATR_S[1]
+if long and inDateRange
+    stopATR_L := ep - (atr * stopATR_mult)
+    profitATR_L := ep + (atr * (stopATR_mult * takePer))
+if short and inDateRange
+    stopATR_S := ep + (atr * stopATR_mult)
+    profitATR_S := ep - (atr * (stopATR_mult * takePer))
+longStop2 = stoptype == "Average of ATR & %" ? avg(stopATR_L,ep * (1 - stopPer)) : stoptype == "ATR Based" ? stopATR_L : stoptype == "Percent Based" ? ep * (1 - stopPer) : na
+shortStop2 = stoptype == "Average of ATR & %" ? avg(stopATR_S,ep * (1 + stopPer)) : stoptype == "ATR Based" ? stopATR_S : stoptype == "Percent Based" ? ep * (1 + stopPer) : na
+longTake2 = stoptype == "Average of ATR & %" ? avg(profitATR_L,  ep * (1 + (stopPer * takePer))) : stoptype == "ATR Based" ? profitATR_L  : ep * (1 + (stopPer * takePer))
+shortTake2 = stoptype == "Average of ATR & %" ?  avg(profitATR_S,  ep * (1 - (stopPer * takePer))) : stoptype == "ATR Based" ? profitATR_S : ep * (1 - (stopPer * takePer))
+// EXIT CONTIDIONS 
+if  barssince(entry) >= 1 and (low <= longStop2 and islong)
+    strategy.close(comment="SL Long",id="Long")
+    if enableSA 
+        alert(closelongmess)
+    showwin ? label.new(x=bar_index[1] - 3, y=low - low*0.03,text="LOSS",color=color.red,textcolor=color.white, style=label.style_label_center,size=size.normal,textalign=text.align_left) : na
+if  barssince(entry) >= 1 and (killtrade == "Disable" ?  high >= longTake2 and islong: killnowL and islong ? ((close > ep) or high >= longTake2 and islong) : 0==1)
+    strategy.close(comment="TP Long",id="Long")
+    if enableTA 
+        alert(closelongmessT)
+    showwin ? label.new(x=bar_index[1] - 3, y=high + high*0.03,text="WIN",color=color.green,textcolor=color.white, style=label.style_label_center,size=size.normal,textalign=text.align_left) : na
+if  barssince(entry) >= 1 and (high >= shortStop2 and isshort)
+    strategy.close(comment="SL Short",id="Short")
+    if enableSA
+        alert(closeshortmess)
+    showwin ? label.new(x=bar_index[1] - 3, y=high + high*0.03,text="LOSS",color=color.red,textcolor=color.white, style=label.style_label_center,size=size.normal,textalign=text.align_left) : na
+if  barssince(entry) >= 1 and (killtrade == "Disable" ? low <= shortTake2 and isshort : killnowS and isshort ? ((close < ep) or (low <= shortTake2 and isshort)) : 0==1)
+    strategy.close(comment="TP Short",id="Short")
+    if enableTA
+        alert(closeshortmessT)
+    showwin ? label.new(x=bar_index[1] - 3, y=low - low*0.03,text="WIN",color=color.green,textcolor=color.white, style=label.style_label_center,size=size.normal,textalign=text.align_left) : na
+//PLOT FIXED SLTP LINE
+LongFixedSL = plot(strategy.position_size > 0  ? longStop2 : na, style=plot.style_linebr, color=color.red, linewidth=1, title="Long Fixed SL",offset=0)
+ShortFixedSL = plot(strategy.position_size < 0 ? shortStop2 : na, style=plot.style_linebr, color=color.red, linewidth=1, title="Short Fixed SL",offset=0)
+LongTakeProfit = plot(strategy.position_size > 0 ? longTake2 : na, style=plot.style_linebr, color=color.green, linewidth=1, title="Long Take Profit",offset=0)
+ShortTakeProfit = plot(strategy.position_size < 0 ? shortTake2 : na, style=plot.style_linebr, color=color.green, linewidth=1, title="Short Take Profit",offset=0)
+LongEP = plot(strategy.position_size > 0 ? ep : na, style=plot.style_linebr, color=color.green, linewidth=1, title="Long Entry Price",offset=0)
+ShortEP = plot(strategy.position_size < 0 ? ep : na, style=plot.style_linebr, color=color.green, linewidth=1, title="Short Entry Price",offset=0)
+// Fill the background areas
+fill(LongEP, LongFixedSL,
+     color=color.red, transp=80, title="Loss Area")
+fill(LongEP, LongTakeProfit,
+     color=color.green, transp=80, title="Win Area")
+fill(ShortEP, ShortFixedSL,
+     color=color.red, transp=80, title="Loss Area")
+fill(ShortEP, ShortTakeProfit,
+     color=color.green, transp=80, title="Win Area")
+//
+// End Step 6C: Close Conditions
+//
+//
+// Print Box
+//
+// Long Print
+inrsiL = usersi ? rsiL ? "🟢 - RSI\n\n" : "🔴 - RSI\n\n" : na
+inadxL = useadx ? adxL ? "🟢 - ADX\n\n" : "🔴 - ADX\n\n" : na
+// Short Print 
+inrsiS = usersi ? rsiS ? "🟢 - RSI\n\n" : "🔴 - RSI\n\n" : na
+inadxS = useadx ? adxS ? "🟢 - ADX\n\n" : "🔴 - ADX\n\n" : na
+print = "Ticker: " + syminfo.ticker + "\n\n" 
+ + (islong ? "🟢 In Long Trade for " + tostring(entry_barL) + " bars\n\n" : na)
+ + (isshort ? "🔴 In Short Trade for " + tostring(entry_barS) + " bars\n\n" : na)
+ + (enableLong ? "Long Signals\n__________\n\n"
+ + inrsiL
+ + inadxL
+ + (enableShort ? "\n\n\n" : na) : na)
+ + (enableShort ? "Short Signals\n__________\n\n"
+ + inrsiS
+ + inadxS
+ + "\n\n\n" : na)
+ + (backtest ? "\n\n\nBacktest Results\n__________\n\n"
+ + "Winning Trades: " + tostring(strategy.wintrades) + "\n"
+ + "Losing Trades: " + tostring(strategy.losstrades) + "\n\n"
+ + "Win %: " + tostring(round((strategy.wintrades / (strategy.wintrades + strategy.losstrades)) * 100)) + "\n\n" : na)
+ 
+box = showbox ? label.new(x=time + 100*(time - time[1]), y=close,text=print,xloc=xloc.bar_time,yloc=yloc.price,color=color.navy,textcolor=color.white, style=label.style_label_center,size=size.normal,textalign=text.align_left) : na
+label.delete(box[1])
+//
+//
+//
+Expand (344 lines)

@@ -1,0 +1,184 @@
+Script Name: Etlers Instantenous Trendline
+Author: OrcChieftain
+Description: This script uses @cheatcountry  script  to calculate Ehlers Instantenous Trendline .
+
+Backtest offers 3 capital management tools. One that will always calculate order size as initial capital/close, one that uses the same calculation but adds or substracts profit. The last one allows you to enter manually the size you want to trade.
+
+Green and red horizontal lines...
+PineScript code:
+
+Pine Script™ strategy
+Etlers Instantenous Trendline
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © greenmask9, @cheatcountry
+//@version=4
+strategy(title= "Etlers Instantenous Trendline", shorttitle = "Instantenous Trendline", overlay=true)
+//commission_type=strategy.commission.percent, commission_value=.5
+//
+//Capital Management
+capitaltype = input(defval="Initial", title="Capital Settings", options=["Initial", "Growing","Manual"], type=input.string)
+manualcapital = input(title="Manual Position Size", defval=100.3, type=input.float)
+leverage = input(title="Leverage", defval=1, type=input.float)
+capitalsystem(capitaltype) =>
+    v1 = floor(strategy.initial_capital/close) * leverage
+    v2 = floor((strategy.initial_capital + strategy.netprofit)/close) * leverage
+    v3 = manualcapital
+    capitaltype== "Initial"? v1 : capitaltype == "Growing" ? v2 : v3
+ordersize=capitalsystem(capitaltype)
+//Targets, Stops
+percentages = input(title="Percentage stop 🎯", defval=true)
+targetpercentage = input(title="Profit (%)", type=input.float, minval=0.0, step=0.1, defval=1) * 0.01
+stoppercentage = input(title="Stop Loss (%)", type=input.float, minval=0.0, step=0.1, defval=1) * 0.01
+longtp  = strategy.position_avg_price * (1 + targetpercentage)
+shorttp = strategy.position_avg_price * (1 - targetpercentage)
+longStopPrice  = strategy.position_avg_price * (1 - stoppercentage)
+shortStopPrice = strategy.position_avg_price * (1 + stoppercentage)
+//Cheatcountry's part
+// Copyright (c) 2019-present, Franklin Moormann (cheatcountry)
+// Ehlers Instantaneous Trendline V2 [CC] script may be freely distributed under the MIT license.
+inp = input(title="Source", type=input.source, defval=hl2)
+res = input(title="Resolution", type=input.resolution, defval="")
+src = security(syminfo.tickerid, res, inp[barstate.isrealtime ? 1 : 0])[barstate.isrealtime ? 0 : 1]
+alpha = input(title="Alpha", type=input.float, defval=0.07, minval=0.01, step = 0.01)
+itrend = 0.0
+itrend := bar_index < 7 ? (src + (2 * nz(src[1])) + nz(src[2])) / 4 : ((alpha - (pow(alpha, 2) / 4)) * src) + (0.5 * pow(alpha, 2) * nz(src[1])) - 
+         ((alpha - (0.75 * pow(alpha, 2))) * nz(src[2])) + (2 * (1 - alpha) * nz(itrend[1])) - (pow(1 - alpha, 2) * nz(itrend[2]))
+trigger = (2 * itrend) - nz(itrend[2])
+sig = trigger > itrend ? 1 : trigger < itrend ? -1 : 0
+itColor = sig > 0 ? color.green : sig < 0 ? color.red : color.black
+plot(trigger, title="Trigger", color=itColor, linewidth=2)
+plot(itrend, title="ITrend", color=color.black, linewidth=1)
+//End Cheatcountry's part
+//Things
+buy = crossover(trigger, itrend)
+sell = crossunder(trigger, itrend)
+if (buy)
+    strategy.entry("Buy", strategy.long, ordersize)
+if (percentages)
+    strategy.exit( "Buy", from_entry="Buy", stop=longStopPrice, limit= longtp)
+//    if (target and stop)
+//        strategy.exit( "Set Value tp/sl", from_entry="Buy", profit=targetticks, loss=stopnumberticks)
+//    if (target and not stop)
+//        strategy.exit( "Set Value tp/sl", from_entry="Buy", profit=targetticks)
+//    if (stop and not target)
+//        strategy.exit( "Set Value tp/sl", from_entry="Buy", loss=stopnumberticks)
+//strategy.close("Buy", buyend)
+if (sell)
+    strategy.entry("Short", strategy.short, ordersize)
+if (percentages)
+    strategy.exit( "Short", from_entry="Short", stop=shortStopPrice, limit = shorttp)
+plot(series=(strategy.position_size > 0) ? longStopPrice : na,
+     color=color.red, style=plot.style_linebr,
+     linewidth=2, title="Long Stop Loss")
+plot(series=(strategy.position_size < 0) ? shortStopPrice : na,
+     color=color.red, style=plot.style_linebr,
+     linewidth=2, title="Short Stop Loss")
+plot(series=(strategy.position_size > 0) ? longtp : na,
+     color=color.lime, style=plot.style_linebr,
+     linewidth=2, title="Long Stop Loss")
+plot(series=(strategy.position_size < 0) ? shorttp : na,
+     color=color.lime, style=plot.style_linebr,
+     linewidth=2, title="Short Stop Loss")
+Expand (101 lines)

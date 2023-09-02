@@ -1,0 +1,105 @@
+Script Name: HiLo Extension
+Author: Saravanan_Ragavan
+Description: This Strategy is finding high and low breaks of the day and enter into the trader based on RSI value and time value 
+
+1) This strategy is created for Indian Index like Nifty, Bank Nifty and so... 
+2) Trades are initiate only after 10:15 AM and before 3:10PM 
+3) High and Low of the day break will be check during the above time frame
+4) RSI value will be check (RSI...
+PineScript code:
+
+Pine Script™ strategy
+HiLo Extension
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Saravanan_Ragavan
+// This Strategy is finding high or low breaks of the day and enter into the trader based on RSI value and time value 
+//@version=4
+strategy(title="HiLoExtn", shorttitle="HiLoExtn", overlay=true)
+T1 = time(timeframe.period, "0915-0916")
+Y = bar_index
+Z1 = valuewhen(T1, bar_index, 0)
+L = Y-Z1 + 1
+tim = time(timeframe.period, "1015-1510")
+exitt= time(timeframe.period, "1511-1530")
+//VWMA 20
+plot(vwma(close,20), color=color.blue)
+length = L
+lower = lowest(length)
+upper = highest(length)
+u = plot(upper, "Upper", color=color.green)
+l = plot(lower, "Lower", color=color.red)
+//**** RSI
+len = 14
+src = close
+up = rma(max(change(src), 0), len)
+down = rma(-min(change(src), 0), len)
+rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+// Buy above Buy Line
+if ( (upper==high) and rsi>50 and   tim and close>open )
+    strategy.entry("Buy", strategy.long, comment="Buy")
+    
+// Exit Long Below Vwap
+strategy.close("Buy", when = close < vwma(close,20) or exitt) 
+// Sell above Buy Line
+if ((lower==low) and rsi<50 and   tim  and close<open)
+    strategy.entry("Sell", strategy.short, comment="Sell")
+    
+// Exit Short above Vwap    
+strategy.close("Sell", when = close > vwma(close,20) or exitt)
+Expand (55 lines)

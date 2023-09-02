@@ -1,0 +1,268 @@
+Script Name: Automated - Fibs with Limit only orders
+Author: CryptoRox
+Description: Automated - Fibs with Limit only orders
+
+This script was designed to demonstrate how you can use a single alert to move your limit orders around.
+
+It is not meant to be traded live and has been built to work with Binance Futures Testnet.
+
+You will notice a lot of plots with 5 different titles.
+
+New = Place your limit buy at a fixed-price.
+Move = Cancel the current...
+PineScript code:
+
+Pine Script™ strategy
+Automated - Fibs with Limit only orders
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © CryptoRox
+//@version=4
+//Paste the line below in your alerts to run the built-in commands.
+//{{strategy.order.alert_message}}
+strategy(title="Fibs limit only", shorttitle="Strategy", overlay=true, precision=8, pyramiding=1000, commission_type=strategy.commission.percent, commission_value=0.04)
+//Settings 
+testing = input(false, "Live")
+//Use epochconverter or something similar to get the current timestamp.
+starttime = input(1600976975, "Start Timestamp") * 1000
+//Wait XX seconds from that timestamp before the strategy starts looking for an entry.
+seconds = input(60, "Start Delay") * 1000
+testPeriod = testing ? time > starttime + seconds : 1
+leverage = input(1, "Leverage")
+tp = input(1.0, "Take Profit %") / leverage
+dca = input(-1.0, "DCA when < %") / leverage *-1
+fibEntry = input("1", "Entry Level", options=["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"])
+//Strategy Calls
+equity = strategy.equity
+avg = strategy.position_avg_price
+symbol = syminfo.tickerid
+openTrades = strategy.opentrades
+closedTrades = strategy.closedtrades
+size = strategy.position_size
+//Fibs
+lentt = input(60, "Pivot Length")
+h = highest(lentt)
+h1 = dev(h, lentt) ? na : h
+hpivot = fixnan(h1)
+l = lowest(lentt)
+l1 = dev(l, lentt) ? na : l
+lpivot = fixnan(l1)
+z = 400
+p_offset= 2
+transp = 60
+a=(lowest(z)+highest(z))/2
+b=lowest(z)
+c=highest(z)
+fib0 = (((hpivot - lpivot)) + lpivot)
+fib1 = (((hpivot - lpivot)*.21) + lpivot)
+fib2 = (((hpivot - lpivot)*.3) + lpivot)
+fib3 = (((hpivot - lpivot)*.5) + lpivot)
+fib4 = (((hpivot - lpivot)*.62) + lpivot)
+fib5 = (((hpivot - lpivot)*.7) + lpivot)
+fib6 = (((hpivot - lpivot)* 1.00) + lpivot)
+fib7 = (((hpivot - lpivot)* 1.27) + lpivot)
+fib8 = (((hpivot - lpivot)* 2) + lpivot)
+fib9 = (((hpivot - lpivot)* -.27) + lpivot)
+fib10 = (((hpivot - lpivot)* -1) + lpivot)
+notna = nz(fib10[60])
+entry = 0.0
+if fibEntry == "1"
+    entry := fib10
+if fibEntry == "2"
+    entry := fib9
+if fibEntry == "3"
+    entry := fib0
+if fibEntry == "4"
+    entry := fib1
+if fibEntry == "5"
+    entry := fib2
+if fibEntry == "6"
+    entry := fib3
+if fibEntry == "7"
+    entry := fib4
+if fibEntry == "8"
+    entry := fib5
+if fibEntry == "9"
+    entry := fib6
+if fibEntry == "10"
+    entry := fib7
+profit = avg+avg*(tp/100)
+pause = 0
+pause := nz(pause[1])
+paused = time < pause
+fill = 0.0
+fill := nz(fill[1])
+count = 0.0
+count := nz(fill[1])
+filled = count > 0 ? entry > fill-fill/100*dca : 0
+signal = testPeriod and notna and not paused and not filled ? 1 : 0
+neworder = crossover(signal, signal[1])
+moveorder = entry != entry[1] and signal and not neworder ? true : false
+cancelorder = crossunder(signal, signal[1]) and not paused
+filledorder = crossunder(low[1], entry[1]) and signal[1]
+last_profit = 0.0
+last_profit := nz(last_profit[1])
+if neworder and signal
+    strategy.order("New", 1, 0.0001, alert_message='New Order|e=binancefuturestestnet s=btcusdt b=long q=0.0011 fp=' + tostring(entry)) 
+if moveorder
+    strategy.order("Move", 1, 0.0001, alert_message='Move Order|e=binancefuturestestnet s=btcusdt b=long c=order|e=binancefuturestestnet s=btcusdt b=long q=0.0011 fp=' + tostring(entry))
+if filledorder and size < 1
+    fill := entry
+    count := count+1 
+    pause := time + 60000
+    p = close+close*(tp/100)
+    strategy.entry("Filled", 1, 1,  alert_message='Long Filled|e=binancefuturestestnet s=btcusdt b=short c=order|delay=1|e=binancefuturestestnet s=btcusdt b=long c=position q=100% ro=1 fp=' + tostring(p))
+if filledorder and size >= 1
+    fill := entry
+    count := count+1 
+    pause := time + 60000
+    strategy.entry("Filled", 1, 1,  alert_message='Long Filled|e=binancefuturestestnet s=btcusdt b=short c=order|delay=1|e=binancefuturestestnet s=btcusdt b=long c=position q=100% ro=1 fp=' + tostring(profit))
+if cancelorder and not filledorder
+    pause := time + 60000
+    strategy.order("Cancel", 1, 0.0001,  alert_message='Cancel Order|e=binancefuturestestnet s=btcusdt b=long c=order')
+if filledorder
+    last_profit := profit
+closeit = crossover(high, profit) and size >= 1
+if closeit
+    strategy.entry("Close ALL", 0, 0, alert_message='Profit')
+    count := 0
+    fill := 0.0
+    last_profit := 0.0
+    
+//Plots
+bottom = signal ? color.green : filled ? color.red : color.white
+plot(entry, "Entry", bottom)
+Expand (133 lines)

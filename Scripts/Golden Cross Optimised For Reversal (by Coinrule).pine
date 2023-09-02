@@ -1,0 +1,94 @@
+Script Name: Golden Cross Optimised For Reversal (by Coinrule)
+Author: Coinrule
+Description: A moving average crossing is a common and widely adopted trading strategy. A short-term MA crossing above a long-term one provides the buy-signal. The opposite generates a sell-signal for the strategy.
+
+Although very popular, this strategy has some limitations that lead to frequent "false signals" and only a few very profitable trades. If the strategy provides two...
+PineScript code:
+
+Pine Script™ strategy
+Golden Cross Optimised For Reversal (by Coinrule)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+//@version=4
+strategy("Golden Cross, SMA 100, Moving Average Strategy (by Coinrule)", shorttitle="Golden_Cross_Strat_MA100_optimized", overlay=true, initial_capital = 1000,process_orders_on_close=true, default_qty_type = strategy.percent_of_equity, default_qty_value = 100)
+// Input
+switch1=input(true, title="Enable Bar Color?")
+switch2=input(false, title="Show Fast Moving Average")
+switch3=input(true, title="Show Slow Moving Average")
+//Calculate Moving Averages
+movingaverage_fast = sma(close, input(9))
+movingaverage_slow = sma(close, input(100))
+movingaverage_normal= sma(close, input(50))
+//Backtest dates
+fromMonth = input(defval = 1,    title = "From Month",      type = input.integer, minval = 1, maxval = 12)
+fromDay   = input(defval = 1,    title = "From Day",        type = input.integer, minval = 1, maxval = 31)
+fromYear  = input(defval = 2020, title = "From Year",       type = input.integer, minval = 1970)
+thruMonth = input(defval = 1,    title = "Thru Month",      type = input.integer, minval = 1, maxval = 12)
+thruDay   = input(defval = 1,    title = "Thru Day",        type = input.integer, minval = 1, maxval = 31)
+thruYear  = input(defval = 2112, title = "Thru Year",       type = input.integer, minval = 1970)
+showDate  = input(defval = true, title = "Show Date Range", type = input.bool)
+start     = timestamp(fromYear, fromMonth, fromDay, 00, 00)        // backtest start window
+finish    = timestamp(thruYear, thruMonth, thruDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+// Calculation
+bullish_cross = crossover(movingaverage_fast, movingaverage_normal)
+bearish_cross = crossunder(movingaverage_fast, movingaverage_normal)
+//Entry and Exit
+if bullish_cross and window() and movingaverage_slow > movingaverage_normal
+    strategy.entry("long", strategy.long)
+strategy.close("long", when = bearish_cross and window())
+// Colors
+bartrendcolor = close > movingaverage_fast and close > movingaverage_slow and change(movingaverage_slow) > 0 ? color.green : close < movingaverage_fast and close < movingaverage_slow and change(movingaverage_slow) < 0 ? color.red : color.blue
+barcolor(switch1?bartrendcolor:na)
+// Output
+plot(movingaverage_fast, color=color.orange, linewidth=2)
+plot(movingaverage_slow, color=color.purple, linewidth=3)
+plot(movingaverage_normal, color=color.blue, linewidth=2)
+bgcolor(color = showDate and window() ? color.gray : na, transp = 90)
+Expand (47 lines)

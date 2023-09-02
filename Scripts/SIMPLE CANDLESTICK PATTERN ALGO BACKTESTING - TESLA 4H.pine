@@ -1,0 +1,103 @@
+Script Name: SIMPLE CANDLESTICK PATTERN ALGO BACKTESTING - TESLA 4H
+Author: thequantscience
+Description: Many traders spend a lot of time to create algorithms full of unrealistic and far from reality indicators and market conditions. With this script I want to help traders understand the advantage of the Pine language. Using indicators with no statistical foundation and creating algorithms with technical indicators and thousands of conditions is not always the right...
+PineScript code:
+
+Pine Script™ strategy
+SIMPLE CANDLESTICK PATTERN ALGO BACKTESTING - TESLA 4H
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © TheQuantScience
+//@version=5
+strategy("SimpleBarPattern_LongOnly", overlay=true, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, currency = currency.EUR, initial_capital = 1000, commission_type = strategy.commission.percent, commission_value = 0.03)
+// Make input options that configure backtest date range
+startDate = input.int(title="Start Date",
+     defval=1, minval=1, maxval=31)
+startMonth = input.int(title="Start Month",
+     defval=1, minval=1, maxval=12)
+startYear = input.int(title="Start Year",
+     defval=2017, minval=1800, maxval=2100)
+endDate = input.int(title="End Date",
+     defval=8, minval=1, maxval=31)
+endMonth = input.int(title="End Month",
+     defval=3, minval=1, maxval=12)
+endYear = input.int(title="End Year",
+     defval=2022, minval=1800, maxval=2100)
+     
+// Look if the close time of the current bar
+// Falls inside the date range
+inDateRange = (time >= timestamp(syminfo.timezone, startYear,
+         startMonth, startDate, 0, 0)) and
+     (time < timestamp(syminfo.timezone, endYear, endMonth, endDate, 0, 0))
+// Setting Conditions 
+ConditionA = low < open 
+ConditionB = low < low[1]
+ConditionC = close > open
+ConditionD = close > open[1] and close > close[1]
+FirstCondition = ConditionA and ConditionB 
+SecondCondition = ConditionC and ConditionD
+IsLong = FirstCondition and SecondCondition
+TakeProfit_long = input(4.00)
+StopLoss_long = input(4.00)
+Profit = TakeProfit_long*close/100/syminfo.mintick
+Loss = StopLoss_long*close/100/syminfo.mintick
+EntryCondition = IsLong and inDateRange
+// Trade Entry&Exit Condition 
+if EntryCondition and strategy.opentrades == 0
+    strategy.entry(id = 'Open_Long', direction = strategy.long)
+    strategy.exit(id = "Close_Long", from_entry = 'Open_Long', profit = Profit, loss = Loss)
+Expand (54 lines)

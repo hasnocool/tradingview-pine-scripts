@@ -1,0 +1,227 @@
+Script Name: RSI-VWAP Indicator -
+Author: UnknownUnicorn2151907
+Description: █ OVERALL
+
+Simple and effective script that, as you already know, uses vwap as source of the rsi, and with good results as long as the market has no long-term downtrend.
+
+RsiVwap = rsi (vwap (close), Length)
+
+The default settings are for BTC in a 30 minute time frame. For other pairs and time frames you just have to play with the settings.
+
+█ FEATURES
+
+• The...
+PineScript code:
+
+Pine Script™ strategy
+RSI-VWAP Indicator %
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Xaviz
+//@version=4
+strategy("RSI-VWAP Indicator %", overlay = false, pyramiding = 5, initial_capital = 100000, default_qty_value = 0, commission_value = 0.04, max_labels_count = 500)
+//█ Initial inputs
+StartDate           = timestamp(        "01 Jan 2000 00:00 +0000")
+Spot                = input(false,      "Spot Trading (no leverage)",   input.bool)
+testPeriodStart     = input(StartDate,  "Start of trading",             input.time)
+Length              = input(16,         "RSI/VWAP Length",              input.integer,  minval = 1)
+OverSold            = input(18,         "RSI/VWAP Oversold",            input.float,    minval = 0,  maxval = 100)
+OverBought          = input(80,         "RSI/VWAP Overbought",          input.float,    minval = 0,  maxval = 100)
+EquityPercent       = input(25,         "% Equity on Longs",            input.float,    minval = 0,  maxval = 100)
+PositionPercent     = input(50,         "% Position on Closings",       input.float,    minval = 0,  maxval = 100)
+Risk                = input(15,         "% Drawdown allowed",           input.float,    minval = 0,  maxval = 100)
+MarginRate          = input(1.0,        "% Margin Rate",                input.float,    minval = 0) / 100
+// RSI with VWAP as source
+RsiVwap             = rsi(vwap(close), Length)
+//█ Plotting
+// Rsi-vwap Line Color
+RsiVwapLineColor    = RsiVwap > OverBought ?     color.new(color.red,  50) : 
+                      RsiVwap < OverSold   ?     color.new(color.lime, 50) : 
+                                                 color.new(color.blue, 50)
+// Rsi-vwap Fill Color
+FillColorOverBought = RsiVwap > OverBought ?     color.new(color.red,  75) : na 
+FillColorOverSold   = RsiVwap < OverSold   ?     color.new(color.lime, 75) : na
+                      
+// Overbought/Oversold Color
+OboughtOsoldColor   =                            color.new(color.gray, 50)
+// Rsi-vwap plot                                       
+RsiVwapLine         = plot(RsiVwap,     "RSI/VWAP",     RsiVwapLineColor, linewidth = 2)
+// Plot of the top line
+OverBoughtLine      = plot(OverBought,  "Overbought",   OboughtOsoldColor)
+// Plot of the bottom line
+OverSoldLine        = plot(OverSold,    "Oversold",     OboughtOsoldColor)
+// Fill between plots                                                            
+fill(RsiVwapLine,   OverBoughtLine, FillColorOverBought)
+fill(RsiVwapLine,   OverSoldLine,   FillColorOverSold)
+// Information panel
+Equity                  = strategy.equity
+Balance                 = strategy.initial_capital + strategy.netprofit
+RealizedPnL             = strategy.netprofit
+Floating                = strategy.openprofit
+PercentFloating         = (Floating / strategy.initial_capital) * 100
+PercentRealizedPnL      = (RealizedPnL / strategy.initial_capital) * 100
+URealizedPnL            = Floating + RealizedPnL
+PercentURealizedPnL     = ((URealizedPnL) / strategy.initial_capital) * 100
+PositionSize            = strategy.position_size * strategy.position_avg_price
+Cash                    = Spot ? max(0, Balance - PositionSize) : max(0, Balance - (PositionSize * MarginRate))
+Leverage                = PositionSize / Balance
+Margin                  = Spot ? 0 : PositionSize * MarginRate
+var label labelEquity = na
+labelEquity := label.new(bar_index, 50, style = label.style_label_left, textcolor = #9598a1, color = #131722, textalign = text.align_left, size = size.normal,
+ 
+ text =  "Position Size: "   + tostring(strategy.position_size, '#.########') + " "  + syminfo.basecurrency + "\n" +
+         "Cash: "            + tostring(Cash, '#.##')                         + " "  + syminfo.currency     + "\n" +
+         "Margin: "          + tostring(Margin, '#.##')                       + " "  + syminfo.currency     + "\n" +
+         "Floating: "        + tostring(Floating, '#.##')                     + " "  + syminfo.currency     + " / "  
+                             + tostring(PercentFloating,  '#.##')             + " %" + "\n" +
+         "Realized PnL: "    + tostring(RealizedPnL, '#.##')                  + " "  + syminfo.currency     + " / "  
+                             + tostring(PercentRealizedPnL,  '#.##')          + " %" + "\n" +
+         "Unrealized PnL: "  + tostring(URealizedPnL, '#.##')                 + " "  + syminfo.currency     + " / "  
+                             + tostring(PercentURealizedPnL, '#.##')          + " %")
+                             
+// Deleting previous labels
+label.delete(labelEquity[1])
+//█ Backtest & Alerts
+// Quantities
+QuantityOnLong      = Spot ? (EquityPercent / 100) * ((strategy.equity / close) - strategy.position_size) :
+                             (EquityPercent / 100) *  (strategy.equity / close)
+QuantityOnClose     = (PositionPercent / 100) * strategy.position_size
+// Buy/Long shapes
+var bool long = na
+if crossover(RsiVwap[1], OverSold) and (time > testPeriodStart)
+    label.new(bar_index, OverSold, tostring(Leverage, "#.#") + "X", textcolor = Spot ? na : #9598a1, color = color.new(color.lime, 25), style = label.style_diamond, size = size.tiny)
+    long := true
+    
+// Sell/Closing shapes
+if crossunder(RsiVwap[1], OverBought) and (time > testPeriodStart) and not na(long)
+    label.new(bar_index, OverBought, color = color.new(color.red, 25),  style = label.style_diamond, size = size.tiny)
+    
+// Alerts
+string BuyMessage   = "q=" + tostring(EquityPercent)   + "% t=market"
+string SellMessage  = "q=" + tostring(PositionPercent) + "% t=market"
+// (copy and paste on the alert window a message similar to this)
+// {{strategy.order.action}} @ {{strategy.order.price}} | e={{exchange}} a=account s={{ticker}} b={{strategy.order.action}} {{strategy.order.alert_message}}
+// Market orders on long
+if crossover(RsiVwap, OverSold) and (time > testPeriodStart)
+    strategy.entry("LONG", strategy.long, qty = QuantityOnLong, alert_message = BuyMessage)
+// Market orders on close   
+if crossunder(RsiVwap, OverBought)
+    strategy.close("LONG", qty_percent = PositionPercent, comment = "CLOSE", alert_message = SellMessage)
+// Max Drawdown allowed percent
+strategy.risk.max_drawdown(Risk, strategy.percent_of_equity)
+// by XaviZ
+Expand (114 lines)

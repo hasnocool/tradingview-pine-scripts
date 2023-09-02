@@ -1,0 +1,1127 @@
+Script Name: A simple trading strategy for XTZ-EUR (December 2021)
+Author: hugodanielcom
+Description: This is my current trading strategy for XTZ/EUR for this month of December.
+
+ 
+ It tries to avoid pumps/dumps (i.e. does not trade on big candles).
+ It always performs one order in each candle for the trading window of the rebalance bear/bull market indicator (check my profile for it).
+ It has alerts configured so that you can use it in your server/broker (just...
+PineScript code:
+
+Pine Script™ strategy
+A simple trading strategy for XTZ/EUR (December 2021)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+540
+541
+542
+543
+544
+545
+546
+547
+548
+549
+550
+551
+552
+553
+554
+555
+556
+557
+558
+559
+560
+561
+562
+563
+564
+565
+566
+567
+568
+569
+570
+571
+572
+573
+574
+575
+576
+577
+578
+579
+580
+581
+582
+583
+584
+585
+586
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © hugodanielcom
+//@version=5
+// 
+// Welcome, this is a simple scalping strategy for trading XTZ.
+//
+// It works well for the Bear months, specially when configured with as much fiat than crypto at a starting state.
+// This strategy underperforms Buy&Hold for the Bull months.
+//
+// It tries to do one market operation per candle whenever the candle happens in a buy/sell trading window of the
+// Rebalance Bear/Bull indicator (https://www.tradingview.com/script/Y0omflqx-Rebalance-as-a-Bear-Bull-indicator/).
+//
+// It always buys/sells the same amount by default (you can set it in the cog menu in the option "Base Crypto Amount To Trade"),
+// for XTZ this is set to 19.5XTZ.
+//
+// This is my attempt at scalping, it differs slightly from the standards because it does not require fast
+// response candles or immediate market operations (it can work well with limit trading) and on top of this it also
+// does not require a stop loss since it uses an indicator that provides the trading windows (surprises can still happen though).
+//
+// The main logic for this strategy is simple and happens down at the bottom, in the "Actions" section.
+// 
+//
+// This code makes use of the following libraries, they are open-source as well
+// and you can check them out here: https://www.tradingview.com/u/hugodanielcom/#published-scripts
+import hugodanielcom/PureRebalance/3 as rebalancer
+import hugodanielcom/TradingPortfolio/1 as portfolio
+strategy("S2", overlay=false, calc_on_order_fills = false, initial_capital = 10000.0)
+starting_crypto = input.float(defval = 1.0,   title = "Initial Crypto",  minval = 1.0, maxval = 10000.0)
+starting_fiat = input.float(defval = 1.0,   title = "Initial Fiat",  minval = 1.0, maxval = 10000.0)
+base_amount = input.float(defval = 1.0,   title = "Base Crypto Amount To Trade",  minval = 0.1, maxval = 100.0)
+min_value = input.float(defval = 11.0,   title = "Min Fiat Trading Value",  minval = 1.0, maxval = 100.0)
+float precision = input.float(defval = 15.0,   title = "Rebalance Precision",  minval = 1.0, maxval = 100.0)
+fromHour  = input.int(defval = 1,    title = "hh",       group = "From", inline="fromClock", minval = 1, maxval = 24)
+fromMin   = input.int(defval = 0,    title = "mm",       group = "From", inline="fromClock", minval = 0, maxval = 60)
+fromMonth = input.int(defval = 11,   title = "MM",      group = "From", inline="fromDate",  minval = 1, maxval = 12)
+fromDay   = input.int(defval = 1,    title = "DD",      group = "From", inline="fromDate",  minval = 1, maxval = 31)
+fromYear  = input.int(defval = 2021, title = "YYYY",    group = "From", inline="fromDate",  minval = 1970)
+thruMonth = input.int(defval = 11,   title = "MM",     group = "Thru", inline="thruDate",  minval = 1, maxval = 12)
+thruDay   = input.int(defval = 31,   title = "DD",     group = "Thru", inline="thruDate",  minval = 1, maxval = 31)
+thruYear  = input.int(defval = 2021, title = "YYYY",    group = "Thru", inline="thruDate",  minval = 1970)
+float MIN_AMOUNT = min_value / close
+// === FUNCTION EXAMPLE ===
+start     = timestamp(fromYear, fromMonth, fromDay, fromHour, fromMin)        // backtest start window
+finish    = timestamp(thruYear, thruMonth, thruDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+accum_profit  = input.float(defval = 2.5,          group = "Profit", title = "Profit", minval = 0.1, maxval = 99.9)
+rebull_rebear_precision  = input.float(defval = 2.5,          group = "Bear/Bull Market Indicator", title = "Rebalance when portfolio differs by %",  tooltip="Bigger values make the rebalance hold more and become less sensitive to peaks/bottoms and act less often.", minval = 0.1, maxval = 99.9)
+rebull_rebear_from_month = fromMonth // input.int(defval = 11,             group = "Bear/Bull Market Indicator", title = "Start At Month",        minval = 1, maxval = 12)
+rebull_rebear_from_day   = input.int(defval = 1,              group = "Bear/Bull Market Indicator", title = "Start At Day",          minval = 1, maxval = 31)
+rebull_rebear_from_year  = fromYear // input.int(defval = 2021,           group = "Bear/Bull Market Indicator", title = "Start At Year",         minval = 2020)
+rebull_rebear_capital    = input.float(defval = 10000.0,      group = "Bear/Bull Market Indicator", title = "Initial capital",   minval = 1, tooltip="The total portfolio value to start with. A higher value makes the rebalancer more sensitive to peaks/bottoms and act more often")
+rebull_rebear_percentage = input.float(defval = 60.0,         group = "Bear/Bull Market Indicator", title = "Rebalance Token %", minval = 0.01, maxval = 100.0, tooltip="Percentage of Token / Money.\n60 means the targeted balance is 60% token and 40% money")
+rebull_rebear_show_force = input.bool(defval = false,         group = "Bear/Bull Market Indicator", title = "Show force")
+rebull_rebear_show_opos  = input.bool(defval = true,          group = "Bear/Bull Market Indicator", title = "Show buy/sell windows of opportunities")
+// Backtest start window
+rebull_rebear_start     = timestamp(rebull_rebear_from_year, rebull_rebear_from_month, rebull_rebear_from_day)
+// Function returns true when the current bar time is
+// "within the window of time" for this indicator
+rebull_rebear_window()  => time >= rebull_rebear_start
+// The two market trend indicator portfolios 
+var float[] percentage_portfolio = portfolio.init()
+var float[] signal_portfolio = portfolio.init()
+// Initialization starts by doing a rebalance at the first bar within
+// the window
+var bool rebull_rebear_init1 = true
+if rebull_rebear_window() and rebull_rebear_init1
+    // Only do this once, for the first bar, set init1 to false to disallow
+    // this block from running again
+    rebull_rebear_init1 := false
+    first_rebalance_amount = rebalancer.rebalance(close, 0.0, rebull_rebear_capital, rebull_rebear_percentage / 100)
+    portfolio.set_balance(percentage_portfolio, first_rebalance_amount, rebull_rebear_capital - (first_rebalance_amount * close))
+    float signal_capital = close*100.0
+    signal_first_rebalance_amount = rebalancer.rebalance(close, 0.0, signal_capital, rebull_rebear_percentage / 100)
+    portfolio.set_balance(signal_portfolio, signal_first_rebalance_amount, signal_capital - (signal_first_rebalance_amount * close))
+var float signal = 0.0
+float signal_rebalance_amount = rebalancer.rebalance(close, portfolio.crypto(signal_portfolio), portfolio.fiat(signal_portfolio), rebull_rebear_percentage / 100.0)
+float signal_percentage_change = math.abs(signal_rebalance_amount) / portfolio.crypto(signal_portfolio)
+bool signal_is_rebalance_needed = signal_percentage_change >= ((rebull_rebear_precision / 4.0) / 100.0)
+bool signal_is_rebalance_buying  = signal_is_rebalance_needed and signal_rebalance_amount > 0
+bool signal_is_rebalance_selling = signal_is_rebalance_needed and signal_rebalance_amount < 0
+// This is where the rebalance gets done
+float percentage_rebalance_amount = rebalancer.rebalance(close, portfolio.crypto(percentage_portfolio), portfolio.fiat(percentage_portfolio), rebull_rebear_percentage / 100.0)
+// Check if the amount to rebalance is bigger than the percentage
+float percentage_change = math.abs(percentage_rebalance_amount) / portfolio.crypto(percentage_portfolio)
+bool percentage_is_rebalance_needed = percentage_change >= (rebull_rebear_precision / 100.0)
+bool percentage_is_rebalance_buying = percentage_is_rebalance_needed and percentage_rebalance_amount > 0
+bool percentage_is_rebalance_selling = percentage_is_rebalance_needed and percentage_rebalance_amount < 0
+var int bear_bull_balance = 0
+var int bear_balance = 0
+var int bull_balance = 0
+var int signal_bear_balance = 0
+var int signal_bull_balance = 0
+var float percentage_signal = 0.0
+// Update the percentage portfolio and the signal portfolio number of operations
+// and bear/bull market balance. The values calculated here will then be used
+// to set the "market_value" and "signal_market_value" below, which are the
+// main indicators of the bear/bull market strength.
+if rebull_rebear_window()
+    if percentage_is_rebalance_buying
+        portfolio.buy(percentage_portfolio, percentage_rebalance_amount, close)
+        bear_balance += 1
+        
+    if percentage_is_rebalance_selling
+        portfolio.sell(percentage_portfolio, math.abs(percentage_rebalance_amount), close)
+        bull_balance += 1
+    
+    if signal_is_rebalance_buying
+        if portfolio.buy(signal_portfolio, signal_rebalance_amount, close)
+            signal += signal_rebalance_amount
+            signal_bear_balance += 1
+    if signal_is_rebalance_selling
+        if portfolio.sell(signal_portfolio, math.abs(signal_rebalance_amount), close)
+            signal += signal_rebalance_amount
+            signal_bull_balance += 1
+market_value = bull_balance - bear_balance
+signal_market_value = signal_bull_balance - signal_bear_balance
+// Store the signal_market_value at the entry point of a new market_value, this
+// is used to subtract to the current signal value, useful as an indicator of
+// the market force within the current market_value quantity.
+var market_value_start = signal_market_value
+if market_value[0] != market_value[1]
+    market_value_start := signal_market_value
+// The colors to be used when the market is considered bear or bull
+bear_down_color = color.new(color.red, 15)
+bear_up_color = color.new(color.red, 15)
+bull_down_color = color.new(color.green, 15)
+bull_up_color = color.new(color.green, 15)
+// A special color to be used when it is neither.
+nothing_color = color.new(color.gray, 0)
+// By default it is neither:
+color market_color = nothing_color
+// Look at the market_value and decide which color to use
+market_color := nothing_color
+bool is_signal_going_up = signal > 0
+bool is_signal_going_down = not is_signal_going_up
+if market_value > 0 and is_signal_going_up
+    market_color := bull_up_color
+if market_value > 0 and is_signal_going_down
+    market_color := bull_down_color
+if market_value < 0 and is_signal_going_up
+    market_color := bear_up_color
+if market_value < 0 and is_signal_going_down
+    market_color := bear_down_color
+// The market force is the second indicator that this code outputs, it represents
+// the tendency of the market to go up or down within a "market_value" block.
+force=signal_market_value - market_value_start
+// It can be used to find buying and selling windows
+bool is_force_selling_opportunity = force > 0 and ((market_value < 0 and force >= 2)  or (market_value > 0 and force >= 1))
+bool is_force_buying_opportunity  = force < 0 and ((market_value < 0 and force <= -2) or (market_value > 0 and force <= -3))
+bool is_buying_opportunity = is_force_buying_opportunity or (is_force_buying_opportunity[1] and close[1] >= close[0])
+bool is_selling_opportunity = is_force_selling_opportunity or (is_force_selling_opportunity[1] and close[1] <= close[0])
+// Paint these extra values if they are being drawn:
+color force_color = na
+if is_selling_opportunity
+    force_color := color.new(color.red, 80)
+if is_buying_opportunity
+    force_color := color.new(color.blue, 80)
+// The final bear/bull output
+bgcolor(rebull_rebear_show_opos ? force_color : na, title="Buy/Sell opportunities")
+plot(market_value, "Bear/Bull Strength", color=market_color, style=plot.style_area)
+plot(force, "Force", color=rebull_rebear_show_force ? color.orange : na)
+hline(0, "Middle Band", color=color.new(#787B86, 50))
+////////////////////////////////////////////////////////////////////////////////////
+// Rebalancer oscillator
+////////////////////////////////////////////////////////////////////////////////////
+// Calculate the HODL money in the portfolio - this is necessary because the
+// TradingView strategy tester is targeted for single position strategies, which
+// is not the case of this one.
+var float token_start = 0.0
+if window() and token_start == 0.0
+    token_start := close
+var float hold = 0 
+var float window_close = 0.0
+float initial_capital = starting_crypto * token_start + starting_fiat
+if window()
+    window_close := close
+    hold := (initial_capital / token_start)
+float hold_profit = hold * window_close - token_start * hold
+plot(hold_profit, "Hold Profit", color=na)
+// Arrays to keep track of previous orders (the TradingView strategy object
+// works with a single position, this strategy doesn't follow pyramiding or a
+// position - these arrays help to keep track of the orders being issued and
+// get updated when they get matched by an requivalent upper/lower sale/buy)
+var buy_orders_value = array.new_float()
+var buy_orders_amount = array.new_float()
+var buy_orders_fullfillment = array.new_float()
+var sell_orders_value = array.new_float()
+var sell_orders_amount = array.new_float()
+var sell_orders_fullfillment = array.new_float()
+var tmp_fullfillment_indices = array.new_int()
+var tmp_fullfillment_amounts = array.new_float()
+// Returns [ticker value, total amount sold, amount available]
+get_past_unfulfilled_sell(int i) =>
+    if i >= 0 and i < array.size(sell_orders_value) and i < array.size(sell_orders_amount) and i < array.size(sell_orders_fullfillment)
+        fullfillment = array.get(sell_orders_fullfillment, i)
+        if fullfillment < 1.0
+            initial_amount_sold = array.get(sell_orders_amount, i)
+            available_amount = initial_amount_sold * (1.0 - fullfillment)
+            [array.get(sell_orders_value, i), initial_amount_sold, available_amount]
+        else
+            [0.0, 0.0, 0.0]
+    else
+        [0.0, 0.0, 0.0]
+set_fullfillment_amount_in_sell(int i, float amount) =>
+    [_, initial_sell_amount, sell_available_amount] = get_past_unfulfilled_sell(i)
+    fullfilled_amount = initial_sell_amount - sell_available_amount
+    array.set(sell_orders_fullfillment, i, (amount + fullfilled_amount) / initial_sell_amount)
+fullfill_sell_at(float value, float fiat_account_balance, int at) =>
+    amount_to_buy = 0.0
+    [sell_close, initial_sell_amount, sell_available_amount] = get_past_unfulfilled_sell(at)
+    if sell_available_amount * value < fiat_account_balance
+        // Fullfill 100% immediately
+        amount_to_buy += sell_available_amount
+    else
+        // Try to fullfill in parcels
+        amount_fullfilled = 0.0
+        total_parcels = 20
+        for j = 0 to total_parcels-1 
+            current_parcel_amount = j*sell_available_amount/total_parcels
+            // Do we have fiat enough to buy a parcel this big?
+            if fiat_account_balance > current_parcel_amount * value
+                amount_fullfilled := current_parcel_amount
+        // Fullfill this
+        amount_to_buy += amount_fullfilled
+    profit = sell_close * amount_to_buy - value * amount_to_buy
+    [amount_to_buy, sell_close, profit]
+// Tries to buy enough 
+fullfill_sells_gt(float value, float fiat_account_balance) =>
+    array.clear(tmp_fullfillment_indices)
+    array.clear(tmp_fullfillment_amounts)
+    float profit = 0.0
+    float amount_to_buy = 0.0
+    float tmp_fiat_balance = fiat_account_balance
+    int _size = array.size(sell_orders_value)
+    if _size > 0 and fiat_account_balance > 1.0
+        for i = 0 to _size-1
+            cur_order_value = array.get(sell_orders_value, i)
+            if cur_order_value > value
+                [amount_possible, sell_value, order_profit] = fullfill_sell_at(value, tmp_fiat_balance, i)
+                tmp_fiat_balance -= amount_possible * sell_value
+                amount_to_buy += amount_possible
+                profit += order_profit
+                // Mark this to be fullfilled
+                array.push(tmp_fullfillment_indices, i)
+                array.push(tmp_fullfillment_amounts, amount_possible)
+    [amount_to_buy, profit]
+fullfill_oldest_sale(float value, float fiat_account_balance) =>
+    array.clear(tmp_fullfillment_indices)
+    array.clear(tmp_fullfillment_amounts)
+    int _size = array.size(sell_orders_value)
+    float amount_to_buy = MIN_AMOUNT
+    bool _is_done = false
+    if _size > 0
+        for i = 0 to _size-1
+            [amount_possible, sell_close, _] = fullfill_sell_at(value, fiat_account_balance, i)
+            if not _is_done
+                // This is the percentage of the profit to take in float: 1.XXX
+                price_adjustment = (1.0 - (sell_close / value)) + 1.0
+                if amount_possible > 0.0 and amount_possible * price_adjustment < fiat_account_balance
+                    amount_to_buy := amount_possible * price_adjustment
+                    _is_done := true
+                    array.push(tmp_fullfillment_indices, i)
+                    array.push(tmp_fullfillment_amounts, amount_to_buy)
+                    amount_to_buy
+                else
+                    amount_to_buy := 0.03
+    else
+        amount_to_buy
+    
+    
+clear_fullfilled_sells() =>
+    old_sell_orders_value = array.copy(sell_orders_value)
+    old_sell_orders_amount = array.copy(sell_orders_amount)
+    old_sell_orders_fullfillment = array.copy(sell_orders_fullfillment)
+    array.clear(sell_orders_value)
+    array.clear(sell_orders_amount)
+    array.clear(sell_orders_fullfillment)
+    _size = array.size(old_sell_orders_fullfillment)
+    if _size > 0
+        for i = 0 to _size-1
+            if array.get(old_sell_orders_fullfillment, i) < 1.0
+                array.push(sell_orders_fullfillment, array.get(old_sell_orders_fullfillment, i))
+                array.push(sell_orders_value, array.get(old_sell_orders_value, i))
+                array.push(sell_orders_amount, array.get(old_sell_orders_amount, i))
+close_buy() =>
+    _size = array.size(tmp_fullfillment_indices)
+    if _size > 0
+        for i = 0 to _size-1
+            sell_index = array.get(tmp_fullfillment_indices, i)
+            sell_amount = array.get(tmp_fullfillment_amounts, i)
+            set_fullfillment_amount_in_sell(sell_index, sell_amount)
+    clear_fullfilled_sells()
+            
+register_sell(value, amount) =>
+    array.push(sell_orders_value, value)
+    array.push(sell_orders_amount, amount)
+    array.push(sell_orders_fullfillment, 0.0)
+// Returns [ticker value, total amount sold, amount available]
+get_past_unfulfilled_buy(int i) =>
+    if i >= 0 and i < array.size(buy_orders_value) and i < array.size(buy_orders_amount) and i < array.size(buy_orders_fullfillment)
+        fullfillment = array.get(buy_orders_fullfillment, i)
+        if fullfillment < 1.0
+            initial_amount_bought = array.get(buy_orders_amount, i)
+            available_amount = initial_amount_bought * (1.0 - fullfillment)
+            [array.get(buy_orders_value, i), initial_amount_bought, available_amount]
+        else
+            [0.0, 0.0, 0.0]
+    else
+        [0.0, 0.0, 0.0]
+set_fullfillment_amount_in_buy(int i, float amount) =>
+    [_, initial_buy_amount, buy_available_amount] = get_past_unfulfilled_buy(i)
+    fullfilled_amount = initial_buy_amount - buy_available_amount
+    array.set(buy_orders_fullfillment, i, (amount + fullfilled_amount) / initial_buy_amount)
+fullfill_buy_at(float value, float fiat_account_balance, int at) =>
+    amount_to_sell = 0.0
+    [buy_close, initial_buy_amount, buy_available_amount] = get_past_unfulfilled_buy(at)
+    if buy_available_amount * value < fiat_account_balance
+        // Fullfill 100% immediately
+        amount_to_sell += buy_available_amount
+    else
+        // Try to fullfill in parcels
+        amount_fullfilled = 0.0
+        total_parcels = 20
+        for j = 0 to total_parcels-1 
+            current_parcel_amount = j*buy_available_amount/total_parcels
+            // Do we have fiat enough to buy a parcel this big?
+            if fiat_account_balance > current_parcel_amount * value
+                amount_fullfilled := current_parcel_amount
+        // Fullfill this
+        amount_to_sell += amount_fullfilled
+    profit = buy_close * amount_to_sell - value * amount_to_sell
+    [amount_to_sell, buy_close, profit]
+// Tries to buy enough 
+fullfill_buys_lt(float value, float fiat_account_balance) =>
+    array.clear(tmp_fullfillment_indices)
+    array.clear(tmp_fullfillment_amounts)
+    float profit = 0.0
+    float amount_to_sell = 0.0
+    float tmp_fiat_balance = fiat_account_balance
+    int _size = array.size(buy_orders_value)
+    if _size > 0 and fiat_account_balance > 1.0
+        for i = 0 to _size-1
+            cur_order_value = array.get(buy_orders_value, i)
+            if cur_order_value < value
+                [amount_possible, buy_value, order_profit] = fullfill_buy_at(value, tmp_fiat_balance, i)
+                tmp_fiat_balance -= amount_possible * buy_value
+                amount_to_sell += amount_possible
+                profit += order_profit
+                // Mark this to be fullfilled
+                array.push(tmp_fullfillment_indices, i)
+                array.push(tmp_fullfillment_amounts, amount_possible)
+    [amount_to_sell, profit]
+fullfill_oldest_buy(float value, float fiat_account_balance) =>
+    array.clear(tmp_fullfillment_indices)
+    array.clear(tmp_fullfillment_amounts)
+    int _size = array.size(buy_orders_value)
+    float amount_to_sell = 1.0
+    bool _is_done = false
+    if _size > 0
+        for i = 0 to _size-1
+            [amount_possible, buy_close, _] = fullfill_buy_at(value, fiat_account_balance, i)
+            if not _is_done
+                price_adjustment = (1.0 - (buy_close / value)) + 1.0
+                if amount_possible > 0.0 and amount_possible * price_adjustment < fiat_account_balance
+                    amount_to_sell := amount_possible * price_adjustment
+                    _is_done := true
+                    array.push(tmp_fullfillment_indices, i)
+                    array.push(tmp_fullfillment_amounts, amount_to_sell)
+                    amount_to_sell
+                else
+                    amount_to_sell := 0.03
+    else
+        amount_to_sell
+    
+    
+clear_fullfilled_buys() =>
+    old_buy_orders_value = array.copy(buy_orders_value)
+    old_buy_orders_amount = array.copy(buy_orders_amount)
+    old_buy_orders_fullfillment = array.copy(buy_orders_fullfillment)
+    array.clear(buy_orders_value)
+    array.clear(buy_orders_amount)
+    array.clear(buy_orders_fullfillment)
+    _size = array.size(old_buy_orders_fullfillment)
+    if _size > 0
+        for i = 0 to _size-1
+            if array.get(old_buy_orders_fullfillment, i) < 1.0
+                array.push(buy_orders_fullfillment, array.get(old_buy_orders_fullfillment, i))
+                array.push(buy_orders_value, array.get(old_buy_orders_value, i))
+                array.push(buy_orders_amount, array.get(old_buy_orders_amount, i))
+close_sell() =>
+    _size = array.size(tmp_fullfillment_indices)
+    if _size > 0
+        for i = 0 to _size-1
+            buy_index = array.get(tmp_fullfillment_indices, i)
+            buy_amount = array.get(tmp_fullfillment_amounts, i)
+            set_fullfillment_amount_in_buy(buy_index, buy_amount)
+    clear_fullfilled_buys()
+            
+register_buy(value, amount) =>
+    array.push(buy_orders_value, value)
+    array.push(buy_orders_amount, amount)
+    array.push(buy_orders_fullfillment, 0.0)
+// Virtual Portfolio (useful to get the rebalancer buy/sell points without
+// suffering interference from the real buy/sales being done)
+var float[] virtual = portfolio.init()
+// The Real Portfolio
+var float[] balance = portfolio.init()
+buy_order(float amount) =>
+    strategy.order("buy", strategy.long, amount, when = window(), alert_message = str.tostring(amount))
+    
+sell_order(float amount) =>
+    strategy.order("sell", strategy.short, amount, when = window(), alert_message = str.tostring(-amount))
+// Initialization starts by buying MIN_AMOUNT token and selling it right away.
+// this is to ensure proper values in the Strategy Tester that start at the
+// first block. Strategy Tester by default starts at the block of the first
+// order - a buy/sell order is done on the first block so that it starts at it.
+var init1 = true
+var init2 = false
+var init3 = false
+var first_full_amount = MIN_AMOUNT
+var last_rebalance_at = 0
+ratio_of_first_rebalance = 0.5
+float capital = initial_capital
+// Start by selling enough crypto to have this
+// amount of fiat 
+fiat_offset = 2000
+on_the_side = 0
+if window() and init1
+    init1 := false
+    init2 := true
+    strategy.order("buy", strategy.long, first_full_amount, when = window())
+    init1
+else if window() and init2
+    init2 := false
+    init3 := true
+    strategy.order("sell", strategy.short, first_full_amount, when = window())
+    init2
+else if window() and init3
+    init3 := false
+    first_rebalance_amount = rebalancer.rebalance(close, 0.0, capital, ratio_of_first_rebalance)
+    portfolio.set_balance(virtual, first_rebalance_amount, strategy.initial_capital - (first_rebalance_amount * close))
+    portfolio.set_balance(balance, starting_crypto, starting_fiat)
+    init3
+// Adjust the precision to the current token value,
+// This way the amount to rebalance is adjusted to be meaningful in very high
+// value tokens, or very low value tokens
+float token_adjustment = 2000.0 / (initial_capital / close)
+// The virtual portfolio is frequently rebalanced at 60% crypto
+// this allows it to be used to output buy/sales points while the real
+// portfolio gets messed up with the trading action
+// amount = portfolio.get_rebalance_amount(virtual, 0.60, close)
+float virtual_amount = window() ? rebalancer.rebalance(close, portfolio.crypto(virtual), portfolio.fiat(virtual), 0.60) : 0.0
+color virtual_rebalance_color = na
+bool is_rebalance_selling = virtual_amount * token_adjustment < -precision
+bool is_rebalance_buying = virtual_amount * token_adjustment > precision
+if window()
+    if is_rebalance_buying
+        portfolio.buy(virtual, virtual_amount, close)
+        virtual_rebalance_color := color.new(color.teal, 80)
+            
+    if is_rebalance_selling
+        portfolio.sell(virtual, math.abs(virtual_amount), close)
+        virtual_rebalance_color := color.new(color.maroon, 80)
+bgcolor(window() ? virtual_rebalance_color : na, title="Buy/Sell Bar")
+////////////////////////////////////////////////////////////////////////////////
+// MAIN - balance = portfolio.init()
+////////////////////////////////////////////////////////////////////////////////
+bool is_selling_opportunity_finished = (not is_selling_opportunity) and is_selling_opportunity[1]
+bool is_buying_opportunity_finished = (not is_buying_opportunity) and is_buying_opportunity[1]
+bool is_selling_opportunity_starting = (not is_selling_opportunity[1]) and is_selling_opportunity[0]
+bool is_buying_opportunity_starting = (not is_buying_opportunity[1]) and is_buying_opportunity[0]
+buy(portfolio, amount, value) =>
+    [prev_sold_amount, profit_if_bought] = fullfill_sells_gt(value*(1.0 + (accum_profit / 100.0)), portfolio.fiat(balance))
+    if math.abs(amount) > MIN_AMOUNT
+        if portfolio.buy(portfolio, math.abs(amount) + math.abs(prev_sold_amount), value)
+            buy_order(math.abs(amount) + math.abs(prev_sold_amount))
+            register_buy(value, math.abs(amount))
+            close_buy()
+sell(portfolio, amount, value) =>
+    [prev_bought_amount, profit_if_sold] = fullfill_buys_lt(value*(1.0 - (accum_profit / 100.0)), portfolio.fiat(balance))
+    if math.abs(amount) > MIN_AMOUNT
+        if portfolio.sell(portfolio, math.abs(amount) + math.abs(prev_bought_amount), value)
+            sell_order(math.abs(amount) + math.abs(prev_bought_amount))
+            register_sell(value, math.abs(amount))
+            close_sell()
+// Overall performance of this strategy
+float strategy_total = portfolio.fiat(balance) + portfolio.crypto(balance) * window_close
+float vs_hold = (strategy_total + portfolio.retained(balance)) - (hold * window_close)
+float did_profit = (portfolio.retained(balance) + strategy_total) - initial_capital
+//////////////
+// Actions  //
+//////////////
+// These vars try to find the average lenght of a bar, this is useful
+// to detect pumps and dumps
+var int number_of_bars = 0
+var float total_candle_size = 0.0
+var float avg_candle_size = 0.0
+float cur_candle_size = high - low
+if window()
+    number_of_bars += 1 
+    total_candle_size += (high - low)
+    avg_candle_size := total_candle_size / float(number_of_bars)
+    // Avoid trading at pumps and dumps
+    if cur_candle_size < 0.28
+        // Double the amount to trade if the rebalance oscillator is sayin that this is a good
+        // trade opportunity.
+        float amount = is_rebalance_selling or is_rebalance_buying ? base_amount * 2.0 : base_amount
+            
+        // Perform the expected trading actions whenever the current candle is within a
+        // trading window of the bear/bull market indicator.
+        if is_selling_opportunity
+            sell(balance, amount, open)
+        
+        if is_buying_opportunity
+            buy(balance, amount, open)
+    
+//////////////////////////////////////////////////////////////////////////////
+// ANALYSIS - Open the Trading Window in the right menu to see these values //
+//////////////////////////////////////////////////////////////////////////////
+plot(avg_candle_size, "Avg Candle Size")
+plot(cur_candle_size, "Cur Candle Size")
+plot(portfolio.fiat(balance) + portfolio.retained(balance), title = "Fiat in Balance")
+plot(portfolio.crypto(balance), title = "Crypto in Balance")
+// How much profit did this strategy make when compared to the initial investment capital?
+plot( did_profit, title = "Did Profit? (dif. from initial capital)", color = ((portfolio.retained(balance) + strategy_total) - initial_capital) > 0 ? color.green : color.red)
+// How much profit did this strategy make when compared to a 100% buy at the first candle?
+plot(vs_hold, title = "Total profit vs Hold (in Fiat)", color = (vs_hold > 0 ? color.green : color.red))
+Expand (586 lines)

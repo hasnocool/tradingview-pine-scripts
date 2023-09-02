@@ -1,0 +1,178 @@
+Script Name: Zweig Market Breadth Thrust Indicator Strategy
+Author: mohanee
+Description: The Breadth Thrust Indicator is a technical indicator which determines market momentum, signaling the start of a potential new bull market.
+
+The Breadth Thrust Indicator was developed by Martin Zweig, an American stock investor, financial analyst, and investment adviser. According to Zweig, the concept is based on the principle that the sudden change of money in...
+PineScript code:
+
+Pine Script™ strategy
+Zweig Market Breadth Thrust Indicator Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mohanee
+//@version=4
+strategy("Zweig Market Breadth Thrust Indicator Strategy", overlay=false, pyramiding=3 , default_qty_type=strategy.percent_of_equity,  default_qty_value=20,  initial_capital=10000, currency=currency.USD)
+ma_type   = input("EMA", options=["SMA","EMA","WMA"] )
+ma_length = input(defval=65, minval=1, title="MA Length")
+mkt = input ("NYSE" , options=["NYSE","NASDAQ", "AMEX", "COMBINED"] )
+buyEntryAt = input(0.40, minval=0.10, maxval=0.60)
+stopLoss = input(title="Stop Loss%", defval=5, minval=1)
+trailingStop        = input(false, title="Trailing Stop")
+partialCloseIndicator = input("RSI", title="Partial Close using Indicator ", options=["ZWEIG", "RSI"])
+colorOBOS        = input(true, title="Color OB/OS")
+showDecLineThrust= input(false, title="show DecLine Thrust")
+//function
+getMAval(s,l, ma_type) => ma_type== "SMA" ? sma(s,l):  ma_type== "EMA" ? ema(s,l)   : ma_type=="WMA" ?   wma(s,l) : sma(s,l)
+//calculate Zweig Market Breadth Thrust
+/////////////////////////////////////////////////////////////
+res = "D"
+advn="ADVN", decn="DECN" // NYSE
+advnq="ADVQ", decnq="DECQ" // NASDAQ
+advna="ADVA", decna="DECA" // AMEX
+advc="(ADVN+ADVQ+ADVA)/3.0"
+decc="(DECN+DECQ+DECA)/3.0"
+adv= security(mkt=="COMBINED" ? advc:mkt == "NYSE" ? advn: mkt == "NASDAQ" ? advnq : mkt == "AMEX" ? advna:na, res, close)   //res
+dec= security(mkt=="COMBINED" ? decc:mkt == "NYSE" ? decn:mkt == "NASDAQ" ? decnq :  mkt == "AMEX" ? decna:na, res, close)
+zmbti = getMAval(adv/(adv+dec), ma_length, ma_type)
+zmbtr = getMAval(dec/(adv+dec), ma_length, ma_type)
+//calculate Zweig Market Breadth Thrust
+/////////////////////////////////////////////////////////////
+myRsi = rsi(close, 5)
+//Plot
+/////////////////////////////////////////////////////////////
+osl=plot(buyEntryAt, color=color.gray, style=plot.style_linebr, title="OS")
+//osl1=plot(0.45, color=color.blue, style=plot.style_circles, linewidth=2 , title="OS1")
+obl=plot(0.615, color=color.gray, style=plot.style_linebr, title="OB")
+osd=plot(colorOBOS?(zmbti<buyEntryAt?zmbti:buyEntryAt):na, style=plot.style_linebr,linewidth=0, title="DummyOS")
+obd=plot(colorOBOS?(zmbti>0.615?zmbti:0.615):na, style=plot.style_linebr, linewidth=0, title="DummyOB")
+fill(osl,obl,color.purple, title="RegionFill")
+fill(osl, osd, color.green, transp=60, title="OSFill")
+fill(obl, obd, color.red, transp=60, title="OBFill")
+plot(zmbti, color=color.blue, linewidth=2, title="BreadthThrust(advances)")
+plot(showDecLineThrust == true ? zmbtr : na, color=color.red, linewidth=2, title="BreadthThrust(declines)")
+//plot
+/////////////////////////////////////////////////////////////
+//Strategy
+/////////////////////////////////////////////////////////////
+strategy.entry(id="zmbtiLong" , long=true, when=crossover(zmbti, buyEntryAt) )
+////// Calculate trailing SL
+sl_val =  close * stopLoss / 100 
+trailing_sl = 0.0
+trailing_sl :=   strategy.position_size>=1 ?  max(low  - sl_val, nz(trailing_sl[1])) :  na
+stopLossVal = strategy.position_size>=1 ?  strategy.position_avg_price * ( 1 - (stopLoss / 100) )  : 0.00
+//draw initil stop loss
+//plot(strategy.position_size>=1 ? trailing_sl : na, color = color.blue , style=plot.style_linebr,  linewidth = 2, title = "stop loss")
+//exit partial  position when zmbti crossing down OB level
+strategy.close(id="zmbtiLong" , comment="Partial close ZWEIG" ,  qty=strategy.position_size/3 , when=strategy.position_size>=1 and partialCloseIndicator=="ZWEIG" and close>strategy.position_avg_price and crossunder(zmbti, 0.6) )
+strategy.close(id="zmbtiLong" , comment="Partial close RSI" ,  qty=strategy.position_size/3 , when=strategy.position_size>=1 and  partialCloseIndicator=="RSI" and close>strategy.position_avg_price and crossunder(myRsi, 90) )
+//exit whole position when zmbti  turns back to OS Level
+strategy.close(id="zmbtiLong" , comment="close all" ,   when=strategy.position_size>=1 and  close >strategy.position_avg_price and  crossunder(zmbti , buyEntryAt)  )  
+//exit whole position when stop loss hits
+strategy.close(id="zmbtiLong" , comment="TSL", when=strategy.position_size>=1 and trailingStop==true and close < trailing_sl )  //if trailing stop is set
+strategy.close(id="zmbtiLong" , comment="SL", when=strategy.position_size>=1 and close < stopLossVal )  //if trailing stop is NOT set
+Expand (105 lines)

@@ -1,0 +1,65 @@
+Script Name: Wick Reversal
+Author: OHM_INSTITUTIONAL_BROKING
+Description: Hi the given strategy is based on detecting hammer and shooting star patterns to trade early reversals.
+PineScript code:
+
+Pine Script™ strategy
+Wick Reversal
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+//@version=4
+strategy("Wick Reversal", shorttitle="wickreversal",overlay = true, pyramiding = 1) 
+//BUYSELL SIGNALS
+buySignal = ((close/close[15])-1)<-0.05 and (min((close[1]-low[1]),(open[1]-low[1]))>((high[1]-low[1])/2)) and low > low[1] 
+sellSignal = ((close/close[15])-1)>0.05 and (min((high-close),(high-open))>((high-low)/2)) 
+FromMonth = input(defval = 1, title = "From Month", minval = 1, maxval = 12)
+FromDay   = input(defval = 1, title = "From Day", minval = 1, maxval = 31)
+FromYear  = input(defval = 1000, title = "From Year", minval = 999)
+ToMonth   = input(defval = 1, title = "To Month", minval = 1, maxval = 12)
+ToDay     = input(defval = 1, title = "To Day", minval = 1, maxval = 31)
+ToYear    = input(defval = 9999, title = "To Year", minval = 999)
+start     = timestamp(FromYear, FromMonth, FromDay, 00, 00)  
+finish    = timestamp(ToYear, ToMonth, ToDay, 23, 59)       
+window()  => time >= start and time <= finish ? true : false
+//long Short
+longCondition = buySignal
+if (longCondition)
+    strategy.entry("BUY", strategy.long, when = window())
+ExitCondition = sellSignal    
+if (ExitCondition)
+    strategy.close("BUY", when = window())
+Expand (35 lines)

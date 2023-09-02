@@ -1,0 +1,259 @@
+Script Name: SuperB By RafaelZioni
+Author: amit1337
+Description: This strategy is based on an indicator called "SuperB", created by RafaelZioni. All the credits of this script belong to him.
+All I did was converting the indicator to strategy using the buy/sell indicators, so you can back-test it easily.
+PineScript code:
+
+Pine Script™ strategy
+SuperB By RafaelZioni
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+//@version=4
+strategy(shorttitle='SuperB', title='SuperB By RafaelZioni', overlay=true, initial_capital=1000, default_qty_type=strategy.percent_of_equity, default_qty_value=100, commission_type=strategy.commission.percent, commission_value=0.075)
+long_only = input(title="Only Long?", defval=true)
+hilow = ((high - low)*100)
+openclose = ((close - open)*100)
+vol = (volume / hilow)
+spreadvol = (openclose * vol)
+VPT = spreadvol + cum(spreadvol)
+window_len = 28
+v_len = 14
+price_spread = stdev(high-low, window_len)
+vp =  spreadvol + cum(spreadvol)
+smooth = sma(vp, v_len)
+v_spread = stdev(vp - smooth, window_len)
+shadow = (vp - smooth) / v_spread * price_spread
+out = shadow > 0 ? high + shadow : low + shadow
+//
+len = input(10)
+vpt=ema(out,len)
+// INPUTS //
+st_mult   = input(1,   title = ' Multiplier', minval = 0, maxval = 100, step = 0.01)
+st_period = input(10, title = ' Period',     minval = 1)
+// CALCULATIONS //
+up= vpt - (st_mult * atr(st_period))
+dn = vpt + (st_mult * atr(st_period))
+c5=close
+//
+factor = input(title="Factor", defval=0.05, minval=0.01, maxval=5, step=0.01, type=input.float)
+hb = 0.00 ,hb := nz(hb[1])
+hl = 0.000, hl := nz(hl[1])
+lb = 0.00 ,lb := nz(lb[1])
+l1 = 0.000,l1 := nz(l1[1])
+c = 0
+c := nz(c[1]) + 1
+trend = 0,trend := nz(trend[1]),n = dn,x =up
+if barstate.isfirst
+    c := 0
+    lb := n
+    hb := x                      
+    l1 := c5  
+    hl := c5
+    hl
+if c == 1
+    if x >= hb[1]
+        hb := x
+        hl := c5
+        trend := 1  
+        trend
+    else
+        lb := n
+        l1 := c5 
+        trend := -1 
+        trend
+if c > 1
+    if trend[1] > 0  
+        hl := max(hl[1], c5)
+        if x >= hb[1] 
+            hb := x
+            hb
+        else
+            
+            if n < hb[1] - hb[1] * factor 
+                lb := n
+                l1 := c5
+                trend := -1  
+                trend
+    else
+       
+        l1 := min(l1[1], c5 )
+        if n <= lb[1] 
+            lb := n 
+            lb
+        else
+           
+            if x > lb[1] + lb[1] * factor
+                hb := x 
+                hl := c5
+                trend := 1  
+                trend
+v = trend == 1 ? hb : trend == -1 ? lb : na
+plot(v, color=trend == 1 ? color.blue : color.yellow, style=plot.style_circles, linewidth=1, title="trend", transp=0, join=true)
+//
+long = trend == 1 and trend[1] == -1 
+short = trend == -1 and trend[1] == 1 
+//
+last_long = 0.0
+last_short = 0.0
+last_long := long ? time : nz(last_long[1])
+last_short := short ? time : nz(last_short[1])
+buy = crossover(last_long, last_short)
+sell = crossover(last_short, last_long)
+/////////////// Positions ////////////// 
+if long
+    strategy.entry("Buy", long=true)
+    if long_only == false
+        strategy.close("Sell")
+if short
+    if long_only == false
+        strategy.entry("Sell", long=false)
+    strategy.close("Buy")
+/////////////// Plotting /////////////// 
+plotshape(buy, title="buy", text="Buy", color=color.green, style=shape.labelup, location=location.belowbar, size=size.small, textcolor=color.white, transp=0)  //plot for buy icon
+plotshape(sell, title="sell", text="Sell", color=color.red, style=shape.labeldown, location=location.abovebar, size=size.small, textcolor=color.white, transp=0)
+/////////////// Alerts /////////////// 
+alertcondition(buy, title='buy', message='Buy')
+alertcondition(sell, title='sell', message='Sell')
+Expand (143 lines)

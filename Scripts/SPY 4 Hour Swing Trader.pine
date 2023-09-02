@@ -1,0 +1,218 @@
+Script Name: SPY 4 Hour Swing Trader
+Author: fbearman2000
+Description: The purpose of this script is to spot 4 hour pivots that indicate ~30 trading day swings. As VIX starts to drop options trading will get more boring and as we get back on the bull and can benefit from swing trading strategy. Swing trading doesn't make a whole lot of sense when VIX is above 28. Seems to get best results on 4 hour chart for this one. This indicator...
+PineScript code:
+
+Pine Script™ strategy
+SPY 4 Hour Swing Trader
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+//@version=5
+strategy(title="SPY 4 Hour Swing Trader", initial_capital=800000, default_qty_type=strategy.percent_of_equity, default_qty_value=15, pyramiding=0, commission_type=strategy.commission.cash_per_order, commission_value=0, overlay=true, calc_on_every_tick=false, process_orders_on_close=true, max_labels_count=500)
+//The purpose of this script is to spot 4 hour pivots that indicate ~30 trading day swings.
+//As VIX starts to drop options trading will get more boring and as we get back on the bull and can benefit from
+//swing trading strategy. Swing trading doesn't make a whole lot of sense when VIX is above 28
+//Seems to get best results on 4 hour chart for this one.
+//This indicator spots a go long opportunity when the 5 ema crosses the 13 ema on the 4 hour along with the RSI > 50
+//the ADX > 20 and Stoichastic values (smoothed line < 80 or line < 90) and close > last candle close and
+// the True Range < 6. It also spots uses a couple different means to determine when to exit the trade.
+//Sell condition is primarily when the 13 ema crosses the 5 ema and the MACD line crosses below the signal
+//line and the smoothed Stoichastic appears oversold (greater than 60) and slop of RSI < -.2.
+//Stop Losses and Take Profits are configurable in Inputs along with ability to include short trades plus
+//other MACD and Stoichastic settings. If a stop loss is encountered the trade will close.
+//Also once twice the expected move is encountered partial profits will taken and stop losses and take profits
+//will be re-established based on most recent close. Also a VIX above 28 will trigger any open positions to close.
+//If trying to use this for something other than SPXL it is best to update stop losses and take profit
+//percentages and check backtest results to ensure proper levels have been selected and the script gives satisfactory results.
+// Initialize variables
+var float long_entry_price = na
+var float stop_loss = na
+var float take_profit = na
+var float twoxtake_profit = na
+// Inputs
+option_SL_P = input.float(0.10, "Input Stop Loss Percentage (0.1 = 10%)")
+option_TP_P = input.float(0.10, "Input Take Profit Percentage (0.1 = 10%)")
+pp = input.int(75, "Partial Profit Percentage in whole numbers (75 is 75%)")
+ema5 = input.int(5, "Fast EMA Period", minval=1)
+ema13 = input.int(13, "Slow EMA Period", minval=1)
+rsi_length = input.int(14, "RSI Length", minval=1)
+macd_fast_length = input.int(12, "MACD Fast Length", minval=1)
+macd_slow_length = input.int(26, "MACD Slow Length", minval=1)
+macd_signal_length = input.int(9, "MACD Signal Length", minval=1)
+len = input.int(14, title="ADX Length", minval=1)
+length = input.int(14, "Stochastic Length")
+smoothK = input.int(3, "Stoicastic Smooth K")
+src = input(close, "Stoicastic Source")
+// Calculating EMA 
+ema_13 = ta.ema(close, ema13)
+ema_5 = ta.ema(close, ema5)
+// Calculate RSI
+rsi = ta.rsi(close, rsi_length)
+smooth_rsi = ta.ema(rsi, 5)
+// Calculate MACD
+[macd_line, signal_line, _] = ta.macd(close, macd_fast_length, macd_slow_length, macd_signal_length)
+// Calculate the True Range
+tr = ta.tr(true)
+// Calculate slope of MACD line
+rsiSlope = (smooth_rsi - smooth_rsi[3]) / (bar_index - bar_index[3])
+// Calculate the Directional Movement
+up = ta.change(high)
+down = -ta.change(low)
+plusDM = na(up) ? na : (up > down and up > 0 ? up : 0)
+minusDM = na(down) ? na : (down > up and down > 0 ? down : 0)
+// Calculate the Smoothed Directional Movement
+plusDI = 100 * ta.ema(plusDM, len) / ta.ema(tr, len)
+minusDI = 100 * ta.ema(minusDM, len) / ta.ema(tr, len)
+// Calculate the Directional Index (DX)
+DX = 100 * math.abs(plusDI - minusDI) / (plusDI + minusDI)
+// Calculate the ADX
+adx = ta.ema(DX, len)
+//Stochastic Calculation
+highestHigh = ta.highest(src, length)
+lowestLow = ta.lowest(src, length)
+k = 100 * ((src - lowestLow) / (highestHigh - lowestLow))
+d = ta.sma(k, smoothK)
+// Determine current VIX
+vixClose = request.security("VIX", timeframe.period, close[3])
+//plot(vixClose, title="VIX Close", color=color.red)
+// Buy and Sell Conditions
+buy_condition = ta.crossover(ema_5 , ema_13) and rsi > 50 and adx > 20 and (d < 80 or k < 90) and close > close[1] and tr < 6
+sell_condition = ema_13 > ema_5 and macd_line < signal_line and rsiSlope < -.2 and (d > 60)
+// Plotting indicators
+plot(ema_13, color=color.orange, title="Slow EMA Period")
+plot(ema_5, color=color.blue, title="Fast EMA Period")
+// Executing trades
+if buy_condition and strategy.position_size == 0 and barstate.isconfirmed
+    strategy.entry("Pivot Up", strategy.long, alert_message = "Pivoting Up")
+    long_entry_price := close
+    stop_loss := long_entry_price - (option_SL_P * close)
+    take_profit := long_entry_price + (option_TP_P * close)
+    twoxtake_profit := long_entry_price + (2 * option_TP_P * close)
+if vixClose > 28 and strategy.position_size > 0 and barstate.isconfirmed
+    if close < long_entry_price and close < close[1] and barstate.isconfirmed
+        strategy.close("Pivot Up", "Exit Longs High VIX")
+    else
+        stop_loss := long_entry_price
+if strategy.position_size > 0 and barstate.isconfirmed
+    if close < stop_loss and barstate.isconfirmed
+        strategy.close("Pivot Up", "Exit Longs Stopped")
+    else if sell_condition and barstate.isconfirmed
+        strategy.close("Pivot Up", "Exit Longs Sell Condition Met")
+    else if close >= twoxtake_profit and (close < close[2]) and barstate.isconfirmed
+        stop_loss := close - (.5*option_TP_P*close)
+        take_profit := close + (.5*option_TP_P*close)
+        strategy.exit("Exit Partial Longs", "Pivot Up", stop=stop_loss, limit = take_profit, qty_percent = pp)
+Expand (114 lines)

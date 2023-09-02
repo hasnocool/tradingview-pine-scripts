@@ -1,0 +1,55 @@
+Script Name: [TH] Volatility Breakout
+Author: dokang
+Description: Volatility Breakout Strategy for TradingHook.
+This strategy is not for backtesting but for forward-testing starting when added to chart.
+It can make and send a formatted message string for buy and sell order using alert.
+PineScript code:
+
+Pine Script™ strategy
+[TH] Volatility Breakout
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © dokang
+//@version=5
+password = input.string("Your Password", title="Password", confirm = true)
+strategy("[TH] Volatility Breakout", overlay=true, initial_capital = 10000, currency = currency.KRW, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, process_orders_on_close = true, pyramiding = 2)
+import dokang/TradingHook/1 as TH
+if timeframe.period != "D"
+    runtime.error("This strategy is only available in 1-day timeframe.")
+height = high-low
+k = input.float(0.5, minval = 0.0, step = 0.1)
+entry_price = close+height*k
+plot(entry_price, color = color.yellow, linewidth=2, offset = 1)
+var inTrade = false
+if barstate.islastconfirmedhistory
+    inTrade := true
+    
+if inTrade
+    strategy.entry("Buy", strategy.long, stop = entry_price, alert_message = TH.buy_message(password, order_name = "Volatility Breakout Buy"))
+    strategy.close("Buy", comment = "Sell",alert_message = TH.sell_message(password, "100%", order_name = "Volatility Breakout Sell"))
+Expand (25 lines)

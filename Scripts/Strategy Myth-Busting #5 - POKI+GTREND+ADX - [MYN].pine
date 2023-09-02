@@ -1,0 +1,890 @@
+Script Name: Strategy Myth-Busting #5 - POKI+GTREND+ADX - [MYN]
+Author: myncrypto
+Description: This is part of a new series we are calling "Strategy Myth-Busting" where we take open public manual trading strategies and automate them. The goal is to not only validate the authenticity of the claims but to provide an automated version for traders who wish to trade autonomously.
+
+Our fifth one we are automating is one of the strategies from "The Best 3 Buy And...
+PineScript code:
+
+Pine Script™ strategy
+Strategy Myth-Busting #5 - POKI+GTREND+ADX - [MYN]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © myn
+//@version=5
+strategy('Strategy Myth-Busting #5 - POKI+GTREND+ADX - [MYN]', max_bars_back=5000, overlay=true, pyramiding=0, initial_capital=1000, currency='USD', default_qty_type=strategy.percent_of_equity, default_qty_value=1.0, commission_value=0.075, use_bar_magnifier = false)
+/////////////////////////////////////
+//* Put your strategy logic below *//
+/////////////////////////////////////
+// Q0txMfU623Y
+// Trading Rules
+// 15m - 4 hours.  Ideal 1 hour
+// Poki 
+// Remove color plots
+// Change ATR to 30
+// Use Buy/Sell indicators as confirmation
+//  G-TREND
+// Use color to confirm signal with POKI buy/sell indicators
+// To get better results had to:
+// Add an ADX confirmation
+// Changed G-Trend to use OHLC4
+// TP at 2% / SL 15%
+//░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+//@version=5
+//indicator('poki', shorttitle='poki', overlay=true)
+// Parabolic SAR
+startMult = input.int(3, minval=0, maxval=10, title='Start - Default = 2 - Multiplied by .01', group="POKI")
+increment = input.int(3, minval=0, maxval=10, title='Step Setting (Sensitivity) - Default = 2 - Multiplied by .01')
+maximum = input.int(3, minval=1, maxval=10, title='Maximum Step (Sensitivity) - Default = 2 - Multiplied by .10')
+sus = input(true, 'Show Up Trending Parabolic Sar')
+sds = input(true, 'Show Down Trending Parabolic Sar')
+disc = input(false, title='Start and Step settings are *.01 so 2 = .02 etc, Maximum Step is *.10 so 2 = .2')
+startCalc = startMult * .01
+incrementCalc = increment * .01
+maximumCalc = maximum * .10
+sarUp = ta.sar(startCalc, incrementCalc, maximumCalc)
+sarDown = ta.sar(startCalc, incrementCalc, maximumCalc)
+colUp = close >= sarDown ? color.blue : na
+colDown = close <= sarUp ? color.red : na
+//plot(sus and sarUp ? sarUp : na, title='Up Trending SAR', style=plot.style_circles, linewidth=2, color=colUp)
+//plot(sds and sarDown ? sarDown : na, title='Up Trending SAR', style=plot.style_circles, linewidth=2, color=colDown)
+// Input
+close_price = close[0]
+len = input.int(defval=50, minval=1, title='Linear Regression length')
+linear_reg = ta.linreg(close_price, len, 0)
+linear_reg_prev = ta.linreg(close[1], len, 0)
+slope = (linear_reg - linear_reg_prev) / timeframe.multiplier
+length = input.int(title='Bollinger Length', defval=20, minval=1)
+multiplier = input.float(title='Bollinger Deviation', defval=2, minval=1)
+overbought = input.int(title='Overbought', defval=1, minval=1)
+oversold = input.int(title='Oversold', defval=0, minval=0)
+custom_timeframe = input(title='Use another Timeframe?', defval=false)
+highTimeFrame = input.timeframe(title='Select The Timeframe', defval='60')
+res1 = custom_timeframe ? highTimeFrame : timeframe.period
+smabasis = ta.sma(close, length)
+stdev = ta.stdev(close, length)
+cierre = request.security(syminfo.tickerid, res1, close, barmerge.gaps_off)
+alta = request.security(syminfo.tickerid, res1, high, barmerge.gaps_off)
+baja = request.security(syminfo.tickerid, res1, low, barmerge.gaps_off)
+basis1 = request.security(syminfo.tickerid, res1, smabasis, barmerge.gaps_off)
+stdevb = request.security(syminfo.tickerid, res1, stdev, barmerge.gaps_off)
+dev = multiplier * stdevb  // stdev(cierre, length)
+upper = basis1 + dev
+lower = basis1 - dev
+bbr = (cierre - lower) / (upper - lower)
+// plot(bbr)
+// // MARCA LAS RESISTENCIAS
+pintarojo = 0.0
+pintarojo := nz(pintarojo[1])
+pintarojo := bbr[1] > overbought and bbr < overbought ? alta[1] : nz(pintarojo[1])
+//p = plot(pintarojo, color=color.new(color.red, 0), style=plot.style_circles, linewidth=2)
+// // MARCA LOS SOPORTES
+pintaverde = 0.0
+pintaverde := nz(pintaverde[1])
+pintaverde := bbr[1] < oversold and bbr > oversold ? baja[1] : nz(pintaverde[1])
+//g = plot(pintaverde, color=color.new(color.blue, 0), style=plot.style_circles, linewidth=2)
+//
+method = input.string(defval='Traditional', options=['ATR', 'Traditional', 'Part of Price'], title='Renko Assignment Method')
+methodvalue = input.float(defval=29, minval=0, title='Value')
+pricesource = input.string(defval='Close', options=['Close', 'Open / Close', 'High / Low'], title='Price Source')
+useClose = pricesource == 'Close'
+useOpenClose = pricesource == 'Open / Close' or useClose
+useTrueRange = input.string(defval='Auto', options=['Always', 'Auto', 'Never'], title='Use True Range instead of Volume')
+isOscillating = input(defval=true, title='Oscillating')
+normalize = input(defval=false, title='Normalize')
+vol = useTrueRange == 'Always' or useTrueRange == 'Auto' and na(volume) ? ta.tr : volume
+op = useClose ? close : open
+hi = useOpenClose ? close >= op ? close : op : high
+lo = useOpenClose ? close <= op ? close : op : low
+if method == 'ATR'
+    methodvalue := ta.atr(math.round(methodvalue))
+    methodvalue
+if method == 'Part of Price'
+    methodvalue := close / methodvalue
+    methodvalue
+currclose = float(na)
+prevclose = nz(currclose[1])
+prevhigh = prevclose + methodvalue
+prevlow = prevclose - methodvalue
+currclose := hi > prevhigh ? hi : lo < prevlow ? lo : prevclose
+direction = int(na)
+direction := currclose > prevclose ? 1 : currclose < prevclose ? -1 : nz(direction[1])
+directionHasChanged = ta.change(direction) != 0
+directionIsUp = direction > 0
+directionIsDown = direction < 0
+barcount = 1
+barcount := not directionHasChanged and normalize ? barcount[1] + barcount : barcount
+vol := not directionHasChanged ? vol[1] + vol : vol
+res = barcount > 1 ? vol / barcount : vol
+x = isOscillating and directionIsDown ? -res : res
+//
+z = input(title='period', defval=32)
+n2ma = 2 * ta.wma(close, math.round(z / 2))
+nma = ta.wma(close, z)
+diff = n2ma - nma
+sqn = math.round(math.sqrt(z))
+n2ma1 = 2 * ta.wma(close[1], math.round(z / 2))
+nma1 = ta.wma(close[1], z)
+diff1 = n2ma1 - nma1
+sqn1 = math.round(math.sqrt(z))
+n1 = ta.wma(diff, sqn)
+n2 = ta.wma(diff1, sqn)
+c = n1 > n2 ? color.green : color.red
+// Conditions
+longCondPOKI = bool(na)
+shortCondPOKI = bool(na)
+longCondPOKI := ta.crossover(x, 0)
+shortCondPOKI := ta.crossunder(x, 0)
+// Count your long short conditions for more control with Pyramiding
+// sectionLongs = 0
+// sectionLongs := nz(sectionLongs[1])
+// sectionShorts = 0
+// sectionShorts := nz(sectionShorts[1])
+// if longCond
+//     sectionLongs += 1
+//     sectionShorts := 0
+//     sectionShorts
+// if shortCond
+//     sectionLongs := 0
+//     sectionShorts += 1
+//     sectionShorts
+// Pyramiding
+// pyrl = 1
+// These check to see your signal and cross references it against the pyramiding settings above
+// longCondition = longCond and sectionLongs <= pyrl
+// shortCondition = shortCond and sectionShorts <= pyrl
+// Get the price of the last opened long or short
+// last_open_longCondition = float(na)
+// last_open_shortCondition = float(na)
+// last_open_longCondition := longCondition ? open : nz(last_open_longCondition[1])
+// last_open_shortCondition := shortCondition ? open : nz(last_open_shortCondition[1])
+// // Check if your last postion was a long or a short
+// last_longCondition = float(na)
+// last_shortCondition = float(na)
+// last_longCondition := longCondition ? time : nz(last_longCondition[1])
+// last_shortCondition := shortCondition ? time : nz(last_shortCondition[1])
+// in_longCondition = last_longCondition > last_shortCondition
+// in_shortCondition = last_shortCondition > last_longCondition
+// // Take profit
+// isTPl = input(false, 'Take Profit Long')
+// isTPs = input(false, 'Take Profit Short')
+// tp = input.float(2, 'Take Profit %')
+// long_tp = isTPl and ta.crossover(high, (1 + tp / 100) * last_open_longCondition) and longCondition == 0 and in_longCondition == 1
+// short_tp = isTPs and ta.crossunder(low, (1 - tp / 100) * last_open_shortCondition) and shortCondition == 0 and in_shortCondition == 1
+// // Stop Loss
+// isSLl = input(false, 'Stop Loss Long')
+// isSLs = input(false, 'Stop Loss Short')
+// sl = 0.0
+// sl := input.float(3, 'Stop Loss %')
+// long_sl = isSLl and ta.crossunder(low, (1 - sl / 100) * last_open_longCondition) and longCondition == 0 and in_longCondition == 1
+// short_sl = isSLs and ta.crossover(high, (1 + sl / 100) * last_open_shortCondition) and shortCondition == 0 and in_shortCondition == 1
+// // Create a single close for all the different closing conditions.
+// long_close = long_tp or long_sl ? 1 : 0
+// short_close = short_tp or short_sl ? 1 : 0
+// // Get the time of the last close
+// last_long_close = float(na)
+// last_short_close = float(na)
+// last_long_close := long_close ? time : nz(last_long_close[1])
+// last_short_close := short_close ? time : nz(last_short_close[1])
+//
+showZones = input(true, title='Show Bullish/Bearish Zones')
+// bullish signal rule: 
+bullishRule = n1 > linear_reg
+// bearish signal rule: 
+bearishRule = n1 <= linear_reg
+// current trading State
+ruleState = 0
+ruleState := bullishRule ? 1 : bearishRule ? -1 : nz(ruleState[1])
+//bgcolor(showZones ? ruleState == 1 ? color.blue : ruleState == -1 ? color.red : color.gray : na, title=' Bullish/Bearish Zones', transp=90)
+// Alerts & Signals
+// bton(b) =>
+//     b ? 1 : 0
+plotshape(longCondPOKI, title='Buy Signal', text='B', style=shape.triangleup, location=location.belowbar, color=color.new(color.green, 0), editable=false)
+plotshape(shortCondPOKI, title='Sell Signal', text='S', style=shape.triangledown, location=location.abovebar, color=color.new(color.red, 0), editable=false)
+//plotshape(long_tp and last_longCondition > nz(last_long_close[1]), text='TP', title='Take Profit Long', style=shape.triangledown, location=location.abovebar, color=color.new(color.red, 0), editable=false)
+//plotshape(short_tp and last_shortCondition > nz(last_short_close[1]), text='TP', title='Take Profit Short', style=shape.triangleup, location=location.belowbar, color=color.new(color.lime, 0), editable=false)
+//ltp = long_tp and last_longCondition > nz(last_long_close[1]) ? (1 + tp / 100) * last_open_longCondition : na
+//plot(ltp, style=plot.style_cross, linewidth=3, color=color.new(color.white, 0), editable=false)
+//stp = short_tp and last_shortCondition > nz(last_short_close[1]) ? (1 - tp / 100) * last_open_shortCondition : na
+//plot(stp, style=plot.style_cross, linewidth=3, color=color.new(color.white, 0), editable=false)
+//plotshape(long_sl and last_longCondition > nz(last_long_close[1]), text='SL', title='Stop Loss Long', style=shape.triangledown, location=location.abovebar, color=color.new(color.red, 0), editable=false)
+//plotshape(short_sl and last_shortCondition > nz(last_short_close[1]), text='SL', title='Stop Loss Short', style=shape.triangleup, location=location.belowbar, color=color.new(color.lime, 0), editable=false)
+//lsl = long_sl and last_longCondition > nz(last_long_close[1]) ? (1 - sl / 100) * last_open_longCondition : na
+//plot(lsl, style=plot.style_cross, linewidth=3, color=color.new(color.white, 0), editable=false)
+//ssl = short_sl and last_shortCondition > nz(last_short_close[1]) ? (1 + sl / 100) * last_open_shortCondition : na
+//plot(ssl, style=plot.style_cross, linewidth=3, color=color.new(color.white, 0), editable=false)
+// alertcondition(bton(longCondition), title='Buy Alert')
+// alertcondition(bton(shortCondition), title='Sell Alert')
+// alertcondition(bton(long_tp and last_longCondition > nz(last_long_close[1])), title='Take Profit Long')
+// alertcondition(bton(short_tp and last_shortCondition > nz(last_short_close[1])), title='Take Profit Short')
+// alertcondition(bton(long_sl and last_longCondition > nz(last_long_close[1])), title='Stop Loss Long')
+// alertcondition(bton(short_sl and last_shortCondition > nz(last_short_close[1])), title='Stop Loss Short')
+/// G-Channel Trend Detection
+//░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+//@version=5
+//Full credit to AlexGrover: https://www.tradingview.com/script/fIvlS64B-G-Channels-Efficient-Calculation-Of-Upper-Lower-Extremities/
+//indicator('G-Channel Trend Detection', shorttitle='G-Trend', overlay=true)
+lengthG = input(100, group="G-Channel Trend Detection")
+src = input(ohlc4)
+//----
+a = 0.
+b = 0.
+a := math.max(src, nz(a[1])) - nz(a[1] - b[1]) / lengthG
+b := math.min(src, nz(b[1])) + nz(a[1] - b[1]) / lengthG
+avg = math.avg(a, b)
+//----
+crossup = b[1] < close[1] and b > close
+crossdn = a[1] < close[1] and a > close
+bullish = ta.barssince(crossdn) <= ta.barssince(crossup)
+cG = bullish ? color.lime : color.red
+//plot(a,"Upper",color=color.blue,linewidth=2,transp=100)
+//plot(b,"Lower",color=color.blue,linewidth=2,transp=100)
+p1 = plot(avg, 'Average', color=cG, linewidth=1, transp=100)
+p2 = plot(close, 'Close price', color=cG, linewidth=1, transp=100)
+fill(p1, p2, color=cG, transp=90)
+//showcross = input(true)
+//plotshape(showcross and not bullish and bullish[1] ? avg : na, location=location.absolute, style=shape.labeldown, color=color.new(color.red, 0), size=size.tiny, text='Sell', textcolor=color.new(#ffffff, 0), offset=-1)
+//plotshape(showcross and bullish and not bullish[1] ? avg : na, location=location.absolute, style=shape.labelup, color=color.new(color.lime, 0), size=size.tiny, text='Buy', textcolor=color.new(#ffffff, 0), offset=-1)
+longCondGTrend = bullish
+shortCondGTrend = not bullish
+//////////////////////////////////////
+//* Put your strategy rules below *//
+/////////////////////////////////////
+longCondition = longCondPOKI and longCondGTrend
+shortCondition = shortCondPOKI and shortCondGTrend
+//define as 0 if do not want to use
+closeLongCondition = 0
+closeShortCondition = 0
+// ADX
+//░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+adxEnabled = input.bool(defval = true , title = "Average Directional Index (ADX)", tooltip = "", group ="ADX" ) 
+adxlen = input(14, title="ADX Smoothing", group="ADX")
+adxdilen = input(14, title="DI Length", group="ADX")
+adxabove = input(25, title="ADX Threshold", group="ADX")
+adxdirmov(len) =>
+    adxup = ta.change(high)
+    adxdown = -ta.change(low)
+    adxplusDM = na(adxup) ? na : (adxup > adxdown and adxup > 0 ? adxup : 0)
+    adxminusDM = na(adxdown) ? na : (adxdown > adxup and adxdown > 0 ? adxdown : 0)
+    adxtruerange = ta.rma(ta.tr, len)
+    adxplus = fixnan(100 * ta.rma(adxplusDM, len) / adxtruerange)
+    adxminus = fixnan(100 * ta.rma(adxminusDM, len) / adxtruerange)
+    [adxplus, adxminus]
+adx(adxdilen, adxlen) =>
+    [adxplus, adxminus] = adxdirmov(adxdilen)
+    adxsum = adxplus + adxminus
+    adx = 100 * ta.rma(math.abs(adxplus - adxminus) / (adxsum == 0 ? 1 : adxsum), adxlen)
+adxsig = adxEnabled ? adx(adxdilen, adxlen) : na
+isADXEnabledAndAboveThreshold = adxEnabled ? (adxsig > adxabove) : true
+//Backtesting Time Period (Input.time not working as expected as of 03/30/2021.  Giving odd start/end dates
+//░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+useStartPeriodTime = input.bool(true, 'Start', group='Date Range', inline='Start Period')
+startPeriodTime = input.time(timestamp('1 Jan 2019'), '', group='Date Range', inline='Start Period')
+useEndPeriodTime = input.bool(true, 'End', group='Date Range', inline='End Period')
+endPeriodTime = input.time(timestamp('31 Dec 2030'), '', group='Date Range', inline='End Period')
+start = useStartPeriodTime ? startPeriodTime >= time : false
+end = useEndPeriodTime ? endPeriodTime <= time : false
+calcPeriod = not start and not end
+// Trade Direction 
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+tradeDirection = input.string('Long and Short', title='Trade Direction', options=['Long and Short', 'Long Only', 'Short Only'], group='Trade Direction')
+// Percent as Points
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+per(pcnt) =>
+    strategy.position_size != 0 ? math.round(pcnt / 100 * strategy.position_avg_price / syminfo.mintick) : float(na)
+// Take profit 1
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+tp1 = input.float(title='Take Profit 1 - Target %', defval=2, minval=0.0, step=0.5, group='Take Profit', inline='Take Profit 1')
+q1 = input.int(title='% Of Position', defval=100, minval=0, group='Take Profit', inline='Take Profit 1')
+// Take profit 2
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+tp2 = input.float(title='Take Profit 2 - Target %', defval=100, minval=0.0, step=0.5, group='Take Profit', inline='Take Profit 2')
+q2 = input.int(title='% Of Position', defval=100, minval=0, group='Take Profit', inline='Take Profit 2')
+// Take profit 3
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+tp3 = input.float(title='Take Profit 3 - Target %', defval=100, minval=0.0, step=0.5, group='Take Profit', inline='Take Profit 3')
+q3 = input.int(title='% Of Position', defval=100, minval=0, group='Take Profit', inline='Take Profit 3')
+// Take profit 4
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+tp4 = input.float(title='Take Profit 4 - Target %', defval=100, minval=0.0, step=0.5, group='Take Profit')
+/// Stop Loss
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+stoplossPercent = input.float(title='Stop Loss (%)', defval=9, minval=0.01, group='Stop Loss') * 0.01
+slLongClose = close < strategy.position_avg_price * (1 - stoplossPercent)
+slShortClose = close > strategy.position_avg_price * (1 + stoplossPercent)
+/// Leverage
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+leverage = input.float(1, 'Leverage', step=.5, group='Leverage')
+contracts = math.min(math.max(.000001, strategy.equity / close * leverage), 1000000000)
+/// Trade State Management
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+isInLongPosition = strategy.position_size > 0
+isInShortPosition = strategy.position_size < 0
+/// ProfitView Alert Syntax String Generation
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+alertSyntaxPrefix = input.string(defval='CRYPTANEX_99FTX_Strategy-Name-Here', title='Alert Syntax Prefix', group='ProfitView Alert Syntax')
+alertSyntaxBase = alertSyntaxPrefix + '\n#' + str.tostring(open) + ',' + str.tostring(high) + ',' + str.tostring(low) + ',' + str.tostring(close) + ',' + str.tostring(volume) + ','
+/// Trade Execution
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+longConditionCalc = (longCondition and isADXEnabledAndAboveThreshold)
+shortConditionCalc = (shortCondition and isADXEnabledAndAboveThreshold)
+if calcPeriod
+    if longConditionCalc and tradeDirection != 'Short Only' and isInLongPosition == false
+        strategy.entry('Long', strategy.long, qty=contracts)
+        alert(message=alertSyntaxBase + 'side:long', freq=alert.freq_once_per_bar_close)
+    if shortConditionCalc and tradeDirection != 'Long Only' and isInShortPosition == false
+        strategy.entry('Short', strategy.short, qty=contracts)
+        alert(message=alertSyntaxBase + 'side:short', freq=alert.freq_once_per_bar_close)
+    
+    //Inspired from Multiple %% profit exits example by adolgo https://www.tradingview.com/script/kHhCik9f-Multiple-profit-exits-example/
+    strategy.exit('TP1', qty_percent=q1, profit=per(tp1))
+    strategy.exit('TP2', qty_percent=q2, profit=per(tp2))
+    strategy.exit('TP3', qty_percent=q3, profit=per(tp3))
+    strategy.exit('TP4', profit=per(tp4))
+    strategy.close('Long', qty_percent=100, comment='SL Long', when=slLongClose)
+    strategy.close('Short', qty_percent=100, comment='SL Short', when=slShortClose)
+    strategy.close_all(when=closeLongCondition or closeShortCondition, comment='Close Postion')
+/// Dashboard
+// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+// Inspired by https://www.tradingview.com/script/uWqKX6A2/ - Thanks VertMT
+showDashboard = input.bool(group="Dashboard", title="Show Dashboard", defval=true)
+f_fillCell(_table, _column, _row, _title, _value, _bgcolor, _txtcolor) =>
+    _cellText = _title + "\n" + _value
+    table.cell(_table, _column, _row, _cellText, bgcolor=_bgcolor, text_color=_txtcolor, text_size=size.auto)
+// Draw dashboard table
+if showDashboard
+    var bgcolor = color.new(color.black,0)
+    
+    // Keep track of Wins/Losses streaks
+    newWin  = (strategy.wintrades  > strategy.wintrades[1]) and (strategy.losstrades == strategy.losstrades[1]) and (strategy.eventrades == strategy.eventrades[1])
+    newLoss = (strategy.wintrades == strategy.wintrades[1]) and (strategy.losstrades  > strategy.losstrades[1]) and (strategy.eventrades == strategy.eventrades[1])
+    varip int winRow     = 0
+    varip int lossRow    = 0
+    varip int maxWinRow  = 0
+    varip int maxLossRow = 0
+    if newWin
+        lossRow := 0
+        winRow := winRow + 1
+    if winRow > maxWinRow
+        maxWinRow := winRow
+        
+    if newLoss
+        winRow := 0
+        lossRow := lossRow + 1
+    if lossRow > maxLossRow
+        maxLossRow := lossRow
+    // Prepare stats table
+    var table dashTable = table.new(position.bottom_right, 1, 15, border_width=1)
+    
+   
+    if barstate.islastconfirmedhistory
+        // Update table
+        dollarReturn = strategy.netprofit
+        f_fillCell(dashTable, 0, 0, "Start:", str.format("{0,date,long}", strategy.closedtrades.entry_time(0)) , bgcolor, color.white) // + str.format(" {0,time,HH:mm}", strategy.closedtrades.entry_time(0)) 
+        f_fillCell(dashTable, 0, 1, "End:", str.format("{0,date,long}", strategy.opentrades.entry_time(0)) , bgcolor, color.white) // + str.format(" {0,time,HH:mm}", strategy.opentrades.entry_time(0))
+        _profit = (strategy.netprofit / strategy.initial_capital) * 100
+        f_fillCell(dashTable, 0, 2, "Net Profit:", str.tostring(_profit, '##.##') + "%", _profit > 0 ? color.green : color.red, color.white)
+        _numOfDaysInStrategy = (strategy.opentrades.entry_time(0) - strategy.closedtrades.entry_time(0)) / (1000 * 3600 * 24)
+        f_fillCell(dashTable, 0, 3, "Percent Per Day", str.tostring(_profit / _numOfDaysInStrategy, '#########################.#####')+"%", _profit > 0 ? color.green : color.red, color.white)
+        _winRate = ( strategy.wintrades / strategy.closedtrades ) * 100
+        f_fillCell(dashTable, 0, 4, "Percent Profitable:", str.tostring(_winRate, '##.##') + "%", _winRate < 50 ? color.red : _winRate < 75 ? #999900 : color.green, color.white)
+        f_fillCell(dashTable, 0, 5, "Profit Factor:", str.tostring(strategy.grossprofit / strategy.grossloss,  '##.###'), strategy.grossprofit > strategy.grossloss ? color.green : color.red, color.white)
+        f_fillCell(dashTable, 0, 6, "Total Trades:", str.tostring(strategy.closedtrades), bgcolor, color.white)
+        f_fillCell(dashTable, 0, 8, "Max Wins In A Row:", str.tostring(maxWinRow, '######') , bgcolor, color.white)
+        f_fillCell(dashTable, 0, 9, "Max Losses In A Row:", str.tostring(maxLossRow, '######') , bgcolor, color.white)
+Expand (496 lines)

@@ -1,0 +1,145 @@
+Script Name: Combo 2-20 EMA & 3 Day Pattern
+Author: HPotter
+Description: This is combo strategies for get a cumulative signal. 
+
+ First strategy
+ This indicator plots 2/20 exponential moving average. For the Mov 
+ Avg X 2/20 Indicator, the EMA bar will be painted when the Alert criteria is met.
+
+ Second strategy
+ This startegy based on 3-day pattern reversal described in "Are Three-Bar 
+ Patterns Reliable For Stocks" article by Thomas...
+PineScript code:
+
+Pine Script™ strategy
+Combo 2/20 EMA & 3 Day Pattern
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+//@version=4
+////////////////////////////////////////////////////////////
+//  Copyright by HPotter v1.0 25/12/2021
+// This is combo strategies for get a cumulative signal. 
+//
+// First strategy
+// This indicator plots 2/20 exponential moving average. For the Mov 
+// Avg X 2/20 Indicator, the EMA bar will be painted when the Alert criteria is met.
+//
+// Second strategy
+// This startegy based on 3-day pattern reversal described in "Are Three-Bar 
+// Patterns Reliable For Stocks" article by Thomas Bulkowski, presented in 
+// January,2000 issue of Stocks&Commodities magazine.
+// That pattern conforms to the following rules:
+// - It uses daily prices, not intraday or weekly prices;
+// - The middle day of the three-day pattern has the lowest low of the three days, with no ties allowed;
+// - The last day must have a close above the prior day's high, with no ties allowed;
+// - Each day must have a nonzero trading range. 
+//
+// WARNING:
+// - For purpose educate only
+// - This script to change bars colors.
+////////////////////////////////////////////////////////////
+EMA20(Length ) =>
+    pos = 0.0
+    xPrice = close
+    xXA = ema(xPrice, Length)
+    nHH = max(high, high[1])
+    nLL = min(low, low[1])
+    nXS = iff((nLL > xXA)or(nHH < xXA), nLL, nHH)
+    pos := iff(nXS > close[1] , -1, iff(nXS < close[1] , 1, nz(pos[1], 0))) 
+    pos
+BarR()=>
+    pos = 0.0
+    pos :=  iff(open[2] > close[2] and high[1] < high[2] and low[1] < low[2] and low[0] > low[1] and high[0] > high[1], 1,
+             iff(open[2] < close[2] and high[1] > high[2] and low[1] > low[2] and high[0] < high[1] and low[0] < low[1], -1, nz(pos[1], 0))) 
+    pos
+strategy(title="Combo 2/20 EMA & 3 Day Pattern", shorttitle="Combo", overlay = true)
+var I1  = "●═════ 2/20 EMA ═════●"
+Length = input(14, minval=1, group = I1)
+//var I2  = "●═════ 3-Bar-Reversal-Pattern ═════●"
+var misc  = "●═════ MISC ═════●"
+reverse = input(false, title="Trade reverse", group = misc)
+var timePeriodHeader  = "●═════ Time Start ═════●"
+d = input(1, title="From Day", minval=1, maxval=31, group=timePeriodHeader)
+m = input(1, title="From Month", minval=1, maxval=12, group=timePeriodHeader)
+y = input(2005, title="From Year", minval=0, group=timePeriodHeader)
+StartTrade = time > timestamp(y, m, d, 00, 00) ? true : false
+prePos3Bar = BarR()
+posEMA20 = EMA20(Length)
+pos3BarR = security(syminfo.tickerid, "D", prePos3Bar[1], barmerge.gaps_off, barmerge.lookahead_on)
+pos = iff(posEMA20 == 1 and pos3BarR == 1 and StartTrade , 1,
+       iff(posEMA20 == -1 and pos3BarR == -1 and StartTrade, -1, 0)) 
+possig = iff(reverse and pos == 1, -1,
+          iff(reverse and pos == -1 , 1, pos))     
+if (possig == 1 ) 
+    strategy.entry("Long", strategy.long)
+if (possig == -1 )
+    strategy.entry("Short", strategy.short)  
+if (possig == 0) 
+    strategy.close_all()
+barcolor(possig == -1 ? #b50404: possig == 1 ? #079605 : #0536b3 )
+Expand (66 lines)

@@ -1,0 +1,175 @@
+Script Name: [Maclen] Money Flow Strategy
+Author: MaclenMtz
+Description: This is a strategy based on a smoothed overbought and oversold indicator of money flow. 
+
+It was design on BTCUSDT Perpetual Futures of Binance with a timeframe of 1D. 
+
+Feel free to comment and publish any idea to improve this strategy.
+PineScript code:
+
+Pine Script™ strategy
+[Maclen] Money Flow Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+//@version=4
+//For Binance BTCUSDT Futures timeframe 1D
+palanca = input(defval = 5, title = "Leverage")
+porc_cap = input(defval = 80, title = "% Capital for Operation")/100
+strategy("Money Flow Strategy", shorttitle="MoneyFlow", overlay=false, slippage=5,initial_capital=100,currency=currency.USD, default_qty_type=strategy.fixed, default_qty_value=0.1, pyramiding=0, commission_type=strategy.commission.percent, 
+     commission_value=0.08)
+//----------------------------Backtest window-----------------------------
+//Input Backtesting Range
+fromMonth = input(defval = 1,    title = "From Month"      , minval = 1, maxval = 12)
+fromDay   = input(defval = 1,    title = "From Day"        , minval = 1, maxval = 31)
+fromYear  = input(defval = 2020, title = "From Year"       , minval = 1970)
+thruMonth = input(defval = 1,    title = "Thru Month"      , minval = 1, maxval = 12)
+thruDay   = input(defval = 1,    title = "Thru Day"        , minval = 1, maxval = 31)
+thruYear  = input(defval = 2021, title = "Thru Year"       , minval = 1970)
+//Funtion 
+start     = timestamp(fromYear, fromMonth, fromDay, 00, 00)        // backtest start window
+finish    = timestamp(thruYear, thruMonth, thruDay, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false       // create function "within window of time"
+//______________________________Logica____________________________________________
+length = input(title="Length", type=input.integer, defval=40, minval=1, maxval=2000)
+src = hlc3
+upper = sum(volume * (change(src) <= 0 ? 0 : src), length)
+lower = sum(volume * (change(src) >= 0 ? 0 : src), length)
+mf = rsi(upper, lower)
+smooth = input(30, "Smooth Period")
+mf_S = ema(mf, smooth)
+plot(mf_S, "MF_S", color=#459915)
+sobrecompra = input(defval=61, title="Overbought")
+sobreventa = input(defval=42, title="Oversold")
+overbought=hline(sobrecompra, title="Overbought", color=#c0c0c0)
+oversold=hline(sobreventa, title="Oversold", color=#c0c0c0)
+fill(overbought, oversold, color=#9915ff, transp=90, title="Background")
+lLong = input(59, "limit_exitLong")
+lShort = input(44, "limit_exitShort")
+Cierre1=hline(lLong, title="c_Long", color=#c0c0c0)
+Cierre2=hline(lShort, title="c_Short", color=#c0c0c0)
+fill(Cierre1, Cierre2, color=#D500FF, transp=90, title="Background")
+//----------------Long/Short----------------------
+long = crossunder(mf_S, sobreventa)
+short = crossover(mf_S, sobrecompra)
+cLong = mf [1] > lLong and mf > lLong
+cShort = mf [1] < lShort and mf < lShort
+//-------------Operation-------------------------
+contrato = ((strategy.equity)*palanca*porc_cap)/close
+strategy.entry("BUY", strategy.long, qty=contrato, when = long and window())
+strategy.entry("SELL", strategy.short, qty=contrato, when = short and window())
+cl = input(false,       "Close with Limit of OB o OS 💹")
+if( cl == true)
+    strategy.close("BUY", when = cLong)
+    strategy.close("SELL", when = cShort)
+// ------- Trailing and SL-----------
+sl_inp = input(12.0, title='Stop Loss %')/100
+tp_inp = input(25.0, title='Take Profit %')/100
+toff = input(2, title="trail offset")/100
+sl_buy = strategy.position_avg_price/(1 + sl_inp)
+trail_buy = strategy.position_avg_price*(1 + tp_inp)
+trail_offset_buy= (strategy.position_avg_price- (strategy.position_avg_price/(1 + toff)))/syminfo.mintick
+sl_sell = strategy.position_avg_price*(1 + sl_inp)
+trail_sell = strategy.position_avg_price/(1 + tp_inp)
+trail_offset_sell= ((strategy.position_avg_price*(1 + toff))-strategy.position_avg_price)/syminfo.mintick
+tts = input(true,       "TTP and SL 💹")
+if(tts == true)
+    strategy.exit("exitBuy","BUY", trail_price= trail_buy, trail_offset = trail_offset_buy, stop= sl_buy)
+    strategy.exit("exitSell","SELL", trail_price= trail_sell, trail_offset = trail_offset_sell, stop= sl_sell)
+Expand (98 lines)

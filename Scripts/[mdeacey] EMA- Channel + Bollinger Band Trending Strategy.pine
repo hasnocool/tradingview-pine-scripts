@@ -1,0 +1,146 @@
+Script Name: [mdeacey] EMA- Channel + Bollinger Band Trending Strategy
+Author: mdeacey
+Description: This strategy is based off the users selection of an EMA and percentage defined middle, upper and lower channels. The strategy longs if the price crosses the middle to upper channel until such time that a "reversal candle" (that exceeds the averages of 3 and 9 above the EMA 3) is found – and then shorts that reversal candle in the hope the price will change state...
+PineScript code:
+
+Pine Script™ strategy
+[mdeacey] EMA% Channel + Bollinger Band Trending Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+//@version=4
+strategy(title="[mdeacey] EMA Percentage Channel + Bollinger Band Trending Strategy", shorttitle="[mdeacey] EMA% Channel + BB Trend Strategy", overlay=true)
+//EMA 200
+len = input(title="EMA Length", type=input.integer, defval=100)
+srce = input(title="EMA Source", type=input.source, defval=close)
+ema1= ema(srce,len)
+percent = input(title="Inside Channel (%)", type=input.float, defval= 1) 
+valuee = (percent*ema1)/100
+upperbande = ema1 + valuee
+lowerbande = ema1 - valuee
+///2
+percent2 = input(title="Outside Channel (%)", type=input.float, defval= 2) 
+valuee2 = (percent2*ema1)/100
+upperbande2 = ema1 + valuee2
+lowerbande2 = ema1 - valuee2
+plot(upperbande, title='Inside Channel Upperband', color=color.black, linewidth=1, style=plot.style_line )
+plot(lowerbande, title='Inside Channel Lowerband', color=color.black, linewidth=1, style=plot.style_line )
+plot(upperbande2, title='Outside Channel Upperband', color=color.black, linewidth=1, style=plot.style_line )
+plot(lowerbande2, title='Outside Channel Lowerband', color=color.black, linewidth=1, style=plot.style_line )
+length = input(20, minval=2)
+src = input(close, title="Close price")
+mult = input(2.0, title="Multiplier", minval=0.001, maxval=50)
+MA2 = sma(src, length)
+dev = mult * stdev(src, length)
+upper = MA2 + dev
+lower = MA2 - dev
+signalColor = crossunder(close, upper) ? color.red : crossover(close, lower) ? color.green : color.white
+barcolor(color=signalColor)
+nopo= strategy.position_size==0
+upperBand = plot(upper, title='Upper Bollinger Band', color=color.gray, linewidth=1)
+lowerBand = plot(lower, title='Lower Bollinger Band', color=color.gray, linewidth=1)
+fill(upperBand, lowerBand, title='Bollinger Band', color=color.black)
+strategy.entry("Long",true,when = crossover(close,lower)  and close <lowerbande and close>lowerbande2)
+strategy.close("Long",when = crossunder(close,lowerbande2))//crossunder(close,lowerbande) or crossunder(close,lowerbande2))
+strategy.entry("Short",false,when = crossunder(close,upper)  and close >upperbande and close<upperbande2)
+strategy.close("Short",when = crossover(close,upperbande2) )//crossover(close,upperbande) or crossover(close,upperbande2) )
+//Inputs
+atrPeriod = input(defval=14, title="ATR Period",group='ATR Stoploss', type=input.integer) // Adjust this to change the ATR calculation length
+multiplierPeriod = input(defval=1.75, title="ATR Multiplier",group='ATR Stoploss',  type=input.float)// Adjust this to change the distance between your candles and the line
+//ATR Calculation
+pine_rma(x, y) =>
+    alpha = y
+    sum = 0.0
+    sum := (x + (alpha - 1) * nz(sum[1])) / alpha
+true_range() =>
+    max(high - low, max(abs(high - close[1]), abs(low - close[1])))
+//Long SL
+plot(low - pine_rma(true_range() * multiplierPeriod, atrPeriod), "Long Stop", color=color.red, offset = 1)
+// Short SL
+plot(high +pine_rma(true_range() * multiplierPeriod, atrPeriod), "Short Stop", color=color.red, offset = 1)
+strategy.exit("Exit","Long",limit=upper ,stop = low - pine_rma(true_range() * multiplierPeriod, atrPeriod)  )
+strategy.exit("Exit","Short",limit=lower ,stop =high +pine_rma(true_range() * multiplierPeriod, atrPeriod)  )
+/////////////////////new strategy
+strategy.entry("Long",true,stop =upperbande  ,when = close <upperbande and  close[1] <upperbande and nopo )
+strategy.close("Long",when = crossunder(close,upper) )//  and close <upperbande and close>lowerbande)
+strategy.entry("Short",false,stop =lowerbande  ,when = close >lowerbande and close[1] >lowerbande and nopo )
+strategy.close("Short",when = crossover(close, lower) )
+strategy.exit("Exit","Long",stop = low - pine_rma(true_range() * multiplierPeriod, atrPeriod)  )
+strategy.exit("Exit","Short",stop =high +pine_rma(true_range() * multiplierPeriod, atrPeriod)  )
+Expand (78 lines)

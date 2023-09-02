@@ -1,0 +1,116 @@
+Script Name: Straight Trend V1
+Author: Oracle_Systems
+Description: Hello everyone,
+We are proud to present you our "Straight Trend" Strategy.
+Strategy is use a specified timeline's opening price as reference and draw a line between the current price and trend line.
+Trend line is smoothed with last X times of highest and lowest values ( Donchian Methodology) in order to create less noise and fake alerts , therefore creates a...
+PineScript code:
+
+Pine Script™ strategy
+Straight Trend V1
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+//@version=5
+//
+strategy(title="STR-TREND", overlay=true,default_qty_type = strategy.percent_of_equity,default_qty_value=100,initial_capital=1000,pyramiding=0,commission_value=0.01)
+emax = ta.ema(close,1)
+plot(emax,title="X-EMA",color=color.black,linewidth=2)
+XDX = input.string(title="TIMELINE", defval="M")
+xdaily = request.security(syminfo.tickerid, XDX, open,barmerge.gaps_off, barmerge.lookahead_on)
+length = input.int(21, minval=1)
+lower = ta.lowest(xdaily,length)
+upper = ta.highest(xdaily,length)
+XXX = close>upper?lower:upper
+plot(XXX,title="STR-X",color=color.red,linewidth=4)
+TAKEPROFIT1 = input.int(15,title="Take Profit 1%", minval=1)
+SELLTAKEPROFIT1 = XXX * (1-(TAKEPROFIT1/100))
+BUYTAKEPROFIT1 = XXX * (1+(TAKEPROFIT1/100))
+TAKEPROFITX1 = close<XXX?SELLTAKEPROFIT1:BUYTAKEPROFIT1
+plot(TAKEPROFITX1,title="TAKE PROFIT-1",color=color.black,linewidth=1)
+TAKEPROFIT2 = input.int(20,title="Take Profit 2%", minval=1)
+SELLTAKEPROFIT2 = XXX * (1-(TAKEPROFIT2/100))
+BUYTAKEPROFIT2 = XXX * (1+(TAKEPROFIT2/100))
+TAKEPROFITX2 = close<XXX?SELLTAKEPROFIT2:BUYTAKEPROFIT2
+plot(TAKEPROFITX2,title="TAKE PROFIT-2",color=color.black,linewidth=1)
+TAKEPROFIT3 = input.int(25,title="Take Profit 3%", minval=1)
+SELLTAKEPROFIT3 = XXX * (1-(TAKEPROFIT3/100))
+BUYTAKEPROFIT3 = XXX * (1+(TAKEPROFIT3/100))
+TAKEPROFITX3 = close<XXX?SELLTAKEPROFIT3:BUYTAKEPROFIT3
+plot(TAKEPROFITX3,title="TAKE PROFIT-3",color=color.black,linewidth=1)
+//////////////STRATEGY ///////////////////
+buystat= ta.crossover(close,XXX) 
+sellstat = ta.crossunder(close,XXX) 
+plotshape(buystat==true, title='long', text='BUY', textcolor=color.new(color.white, 0), style=shape.labelup, location=location.belowbar, color=color.new(color.green, 0), size=size.tiny) 
+plotshape(sellstat==true, title='short', text='SELL', textcolor=color.new(color.white, 0), style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 0), size=size.tiny) 
+//////////////STRATEGY ///////////////////
+strategy.entry("LONG", strategy.long, when = buystat==true, comment="")
+strategy.exit("BUY TP-1", "LONG", qty_percent = 25 ,limit = BUYTAKEPROFIT1)
+strategy.exit("BUY TP-2", "LONG", qty_percent = 25 ,limit = BUYTAKEPROFIT2)
+strategy.exit("BUY TP-3", "LONG", qty_percent = 25 ,limit = BUYTAKEPROFIT3)
+strategy.close("LONG", when = sellstat==true, comment="")
+strategy.entry("SHORT", strategy.short, when = sellstat==true, comment="")
+strategy.exit("SELL TP-1", "SHORT", qty_percent = 25 ,limit = SELLTAKEPROFIT1)
+strategy.exit("SELL TP-2", "SHORT", qty_percent = 25 ,limit = SELLTAKEPROFIT2)
+strategy.exit("SELL TP-3", "SHORT", qty_percent = 25 ,limit = SELLTAKEPROFIT3)
+strategy.close("SHORT", when = buystat==true , comment="")
+Expand (61 lines)

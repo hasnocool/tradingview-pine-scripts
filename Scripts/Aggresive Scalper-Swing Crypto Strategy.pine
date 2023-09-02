@@ -1,0 +1,87 @@
+Script Name: Aggresive Scalper-Swing Crypto Strategy
+Author: exlux99
+Description: This is a simple yet very efficient scalper long strategy adapted for low timeframes for crypto. Can also be used with bigger timeframes as a swinger.
+
+Its main components are:
+
+Price oscillator swing
+Vortex
+Risk management for TP/SL
+
+
+Rules for entry
+We calculate the difference between the oscillator from the lowest low and the highest high. If the difference is...
+PineScript code:
+
+Pine Script™ strategy
+Aggresive Scalper/Swing Crypto Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © exlux99
+//@version=4
+strategy(title="Crypto Price Scalper", shorttitle="Scalper Crypto", overlay=true)
+inputcc = input(60, title="Number of candles")
+low9=lowest(low,inputcc)
+high9=highest(high,inputcc)
+plotlow = ((close - low9) / low9) * 100
+plothigh = ((close - high9) / high9) * 100
+plotg = (plotlow +plothigh)/2
+center=0.0
+period_ = input(14, title="Length VORTEX", minval=2)
+VMP = sum( abs( high - low[1]), period_ )
+VMM = sum( abs( low - high[1]), period_ )
+STR = sum( atr(1), period_ )
+VIP = VMP / STR
+VIM = VMM / STR
+long= crossover(plotg,center) and close > high[2] and crossover(VIP,VIM)
+short= crossunder(plotg,center) and crossunder(VIP,VIM)
+tplong=input(0.1, title="TP Long", step=0.01)
+sllong=input(0.1, title="SL Long", step=0.01)
+strategy.entry("long",1,when=long)
+strategy.exit("closelong", "long" , profit = close * tplong / syminfo.mintick, loss = close * sllong / syminfo.mintick, alert_message = "closelong")
+strategy.close("long",when=short)
+Expand (44 lines)

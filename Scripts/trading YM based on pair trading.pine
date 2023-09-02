@@ -1,0 +1,82 @@
+Script Name: trading YM based on pair trading
+Author: hkorange2007
+Description: This is inspired by some online free webinars. Didn't pay for the strategy/ course. I just figured it out myself. So there might be problem with this strategy. 
+
+Theory: It is based on something called cointegrated. Cointegration means the difference between 2 securities are stable in long term. When the difference is bigger / smaller than normal, then there is...
+PineScript code:
+
+Pine Script™ strategy
+trading YM based on pair trading
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © hkorange2007
+//@version=5
+strategy("pair trading")
+symbol1 = input.symbol("YM1!")
+symbol2 = input.symbol("NQ1!")
+security1Close = request.security(symbol1, timeframe.period, close)
+security2Open = request.security(symbol2, timeframe.period, open)
+security2High = request.security(symbol2, timeframe.period, high)
+security2Low = request.security(symbol2, timeframe.period, low)
+security2Close = request.security(symbol2, timeframe.period, close)
+ratio = security1Close / security2Close
+ratioSma = ta.sma(ratio, 200)
+diff = security1Close - security2Close * ratioSma
+[middle, upper, lower] = ta.bb(diff, 20, 2)
+plot(diff)
+plot(middle, color = color.orange)
+plot(upper, color = color.orange)
+plot(lower, color = color.orange)
+long = ta.crossunder(diff, lower)
+exitLong = ta.crossover(diff, middle)
+short = ta.crossover(diff, upper)
+exitShort = ta.crossunder(diff, middle)
+if long and strategy.position_size == 0
+    strategy.entry("enter long", strategy.long, 1) 
+if short and strategy.position_size == 0
+    strategy.entry("enter short", strategy.short, 1)     
+if (exitLong and strategy.position_size > 0) or (exitShort and strategy.position_size < 0)
+    strategy.close_all()
+Expand (42 lines)

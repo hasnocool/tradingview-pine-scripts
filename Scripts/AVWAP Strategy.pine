@@ -1,0 +1,679 @@
+Script Name: AVWAP Strategy
+Author: asfbhero
+Description: Mashed together some of my fav indicators. Has some bugs. don't use.
+PineScript code:
+
+Pine Script™ strategy
+AVWAP Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © loxx
+//@version=5
+strategy("AVWAP Stragey",
+     shorttitle = "AVWAP Strategy", 
+     overlay = true)
+import loxx/loxxexpandedsourcetypes/4 as loxxexpandedsourcetypes
+greencolor = #2DD204
+redcolor = #D2042D 
+fdRange(int size)=>
+    out = math.max(nz(close[size]), ta.highest(high, size)) - math.min(nz(close[size]), ta.lowest(low, size))
+    out 
+jurikFractalDimension(int size, int count)=>
+    int window1 = size * (count - 1)
+    int window2 = size * count
+    float smlRange = 0
+    float smlSumm = 0
+    smlRange := fdRange(size)
+    smlSumm := nz(smlSumm[1]) + smlRange
+    smlSumm -= nz(smlRange[window1])
+    out = 2.0 - math.log(fdRange(window2) / (smlSumm / window1)) / math.log(count)
+    out
+kama(float src, int period, float fast, float slow, float power, bool JurikFD)=>
+    float fastend = (2.0 / (fast + 1))
+    float slowend = (2.0 / (slow + 1))
+    float efratio = 0
+    float diff = 0
+    float signal = 0
+    float noise = 0
+    float fract = jurikFractalDimension(period, 2)
+    if (JurikFD) 
+        efratio := math.min(2.0 - fract, 1.0)
+    else 
+        signal := math.abs(src - nz(src[period]))
+        diff := math.abs(src - nz(src[1]))
+        for k = 0 to period - 1 
+            noise += nz(diff[k])
+        if (noise != 0)
+            efratio := signal / noise
+        else 
+            efratio := 1
+    float smooth = math.pow(efratio * (fastend - slowend) + slowend, power)
+    float kama = src
+    kama := nz(kama[1]) + smooth * (src - nz(kama[1]))
+    kama
+gkyzvol(int per)=>
+    float gzkylog = math.log(open / nz(close[1]))
+    float pklog = math.log(high / low)
+    float gklog = math.log(close / open)
+    float garmult = (2 * math.log(2) - 1)
+    
+    float gkyzsum = 1 / per * math.sum(math.pow(gzkylog, 2), per)
+    float parkinsonsum = 1 / (2 * per) * math.sum(math.pow(pklog, 2), per)
+    float garmansum = garmult / per * math.sum(math.pow(gklog, 2), per)
+    
+    float sum = gkyzsum + parkinsonsum - garmansum
+    float devpercent = math.sqrt(sum)  
+    devpercent
+gkyzFilter(float src, int len, float filter)=>
+    float price = src
+    float filtdev = filter * gkyzvol(len) * src
+    price := math.abs(price - nz(price[1])) < filtdev ? nz(price[1]) : price
+    price
+smthtype = input.string("Kaufman", "Heikin-Ashi Better Caculation Type", options = ["AMA", "T3", "Kaufman"], group = "Source Settings")
+srcin = input.string("Close", "Source", group= "Source Settings", 
+     options = 
+     ["Close", "Open", "High", "Low", "Median", "Typical", "Weighted", "Average", "Average Median Body", "Trend Biased", "Trend Biased (Extreme)", 
+     "HA Close", "HA Open", "HA High", "HA Low", "HA Median", "HA Typical", "HA Weighted", "HA Average", "HA Average Median Body", "HA Trend Biased", "HA Trend Biased (Extreme)",
+     "HAB Close", "HAB Open", "HAB High", "HAB Low", "HAB Median", "HAB Typical", "HAB Weighted", "HAB Average", "HAB Average Median Body", "HAB Trend Biased", "HAB Trend Biased (Extreme)"])
+AmaPeriod = input.int(10, "AMA Period", group = "Basic Settings")
+FastEnd = input.int(2, "Fast-End", group = "Basic Settings")
+SlowEnd = input.int(20, "Slow-End", group = "Basic Settings")
+SmoothPower = input.int(2, "Smooth Power", group = "Basic Settings")
+JurikFDAdaptive = input.bool(false, "Jurik Fractal Dimension Adaptive?", group = "Basic Settings")
+filterop = input.string("Both", "Filter Options", options = ["Price", "JFDAGKYZFKAMA", "Both", "None"], group=  "Filter Settings")
+filter = input.float(0.5, "Filter Multiple", minval = 0, group= "Filter Settings")
+filterperiod = input.int(15, "Filter Period", minval = 0, group= "Filter Settings")
+colorbars = input.bool(true, "Color bars?", group= "UI Options")
+showSigs = input.bool(true, "Show Signals?", group = "UI Options")
+kfl=input.float(0.666, title="* Kaufman's Adaptive MA (KAMA) Only - Fast End", group = "Moving Average Inputs")
+ksl=input.float(0.0645, title="* Kaufman's Adaptive MA (KAMA) Only - Slow End", group = "Moving Average Inputs")
+amafl = input.int(2, title="* Adaptive Moving Average (AMA) Only - Fast", group = "Moving Average Inputs")
+amasl = input.int(30, title="* Adaptive Moving Average (AMA) Only - Slow", group = "Moving Average Inputs")
+haclose = request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, close)
+haopen = request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, open)
+hahigh = request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, high)
+halow = request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, low)
+hamedian = request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, hl2)
+hatypical = request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, hlc3)
+haweighted = request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, hlcc4)
+haaverage = request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, ohlc4)
+float src = switch srcin
+    "Close" => loxxexpandedsourcetypes.rclose()
+    "Open" => loxxexpandedsourcetypes.ropen()
+    "High" => loxxexpandedsourcetypes.rhigh()
+    "Low" => loxxexpandedsourcetypes.rlow()
+    "Median" => loxxexpandedsourcetypes.rmedian()
+    "Typical" => loxxexpandedsourcetypes.rtypical()
+    "Weighted" => loxxexpandedsourcetypes.rweighted()
+    "Average" => loxxexpandedsourcetypes.raverage()
+    "Average Median Body" => loxxexpandedsourcetypes.ravemedbody()
+    "Trend Biased" => loxxexpandedsourcetypes.rtrendb()
+    "Trend Biased (Extreme)" => loxxexpandedsourcetypes.rtrendbext()
+    "HA Close" => loxxexpandedsourcetypes.haclose(haclose)
+    "HA Open" => loxxexpandedsourcetypes.haopen(haopen)
+    "HA High" => loxxexpandedsourcetypes.hahigh(hahigh)
+    "HA Low" => loxxexpandedsourcetypes.halow(halow)
+    "HA Median" => loxxexpandedsourcetypes.hamedian(hamedian)
+    "HA Typical" => loxxexpandedsourcetypes.hatypical(hatypical)
+    "HA Weighted" => loxxexpandedsourcetypes.haweighted(haweighted)
+    "HA Average" => loxxexpandedsourcetypes.haaverage(haaverage)
+    "HA Average Median Body" => loxxexpandedsourcetypes.haavemedbody(haclose, haopen)
+    "HA Trend Biased" => loxxexpandedsourcetypes.hatrendb(haclose, haopen, hahigh, halow)
+    "HA Trend Biased (Extreme)" => loxxexpandedsourcetypes.hatrendb(haclose, haopen, hahigh, halow)
+    "HAB Close" => loxxexpandedsourcetypes.habclose(smthtype, amafl, amasl, kfl, ksl)
+    "HAB Open" => loxxexpandedsourcetypes.habopen(smthtype, amafl, amasl, kfl, ksl)
+    "HAB High" => loxxexpandedsourcetypes.habhigh(smthtype, amafl, amasl, kfl, ksl)
+    "HAB Low" => loxxexpandedsourcetypes.hablow(smthtype, amafl, amasl, kfl, ksl)
+    "HAB Median" => loxxexpandedsourcetypes.habmedian(smthtype, amafl, amasl, kfl, ksl)
+    "HAB Typical" => loxxexpandedsourcetypes.habtypical(smthtype, amafl, amasl, kfl, ksl)
+    "HAB Weighted" => loxxexpandedsourcetypes.habweighted(smthtype, amafl, amasl, kfl, ksl)
+    "HAB Average" => loxxexpandedsourcetypes.habaverage(smthtype, amafl, amasl, kfl, ksl)
+    "HAB Average Median Body" => loxxexpandedsourcetypes.habavemedbody(smthtype, amafl, amasl, kfl, ksl)
+    "HAB Trend Biased" => loxxexpandedsourcetypes.habtrendb(smthtype, amafl, amasl, kfl, ksl)
+    "HAB Trend Biased (Extreme)" => loxxexpandedsourcetypes.habtrendbext(smthtype, amafl, amasl, kfl, ksl)
+    => haclose
+    
+src := filterop == "Both" or filterop == "Price" and filter > 0 ? gkyzFilter(src, filterperiod, filter) : src
+out = kama(src, AmaPeriod, FastEnd, SlowEnd, SmoothPower, JurikFDAdaptive)
+out := filterop == "Both" or filterop == "JFDAGKYZFKAMA" and filter > 0 ? gkyzFilter(out, filterperiod, filter) : out
+sig = out[1]
+goLong_pre = ta.crossover(out, sig)
+goShort_pre = ta.crossunder(out, sig)
+contSwitch = 0
+contSwitch := nz(contSwitch[1])
+contSwitch := goLong_pre ? 1 : goShort_pre ? -1 : contSwitch
+goLong = goLong_pre and ta.change(contSwitch)
+goShort = goShort_pre and ta.change(contSwitch)
+colorout = contSwitch == 1  ? greencolor : redcolor
+barcolor(colorbars ? colorout : na)
+plot(out, "JFDAGKYZFKAMA", color = colorout, linewidth = 3)
+plotshape(showSigs and goLong, title = "Long", color = color.yellow, textcolor = color.yellow, text = "L", style = shape.triangleup, location = location.belowbar, size = size.tiny)
+plotshape(showSigs and goShort, title = "Short", color = color.fuchsia, textcolor = color.fuchsia, text = "S", style = shape.triangledown, location = location.abovebar, size = size.tiny)
+alertcondition(goLong, title="Long", message="JFD-Adaptive, GKYZ-Filtered KAMA [Loxx]: Long\nSymbol: {{ticker}}\nPrice: {{close}}")
+alertcondition(goShort, title="Short", message="JFD-Adaptive, GKYZ-Filtered KAMA [Loxx]: Short\nSymbol: {{ticker}}\nPrice: {{close}}")
+//@version=5
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Electrified (electrifiedtrading)
+kcolor = #0094FF
+dcolor = #FF6A00
+WMA = 'WMA'
+EMA = 'EMA'
+SMA = 'SMA'
+VWMA = 'VWMA'
+VAWMA = 'VAWMA'
+///////////////////////////////////////////////////
+// Input
+clrBars = input.bool(true, title='Colour Candles to Trade Order state', group='Coloring')
+useHiLow = input.bool(true, 'Use High/Low instead of HLC3', group='Anchored VWAP', tooltip='When true, high and low values are used to caclulate the value of each AVWAP instead of HLC3.')
+useOpen = input.bool(true, 'Use open instead of close for alerts.', group='Anchored VWAP', tooltip='Using the open instead of the close is more confirmative of a breakout as live values are based upon the close value and could be transient.')
+k_mode = input.string(WMA, 'K Mode', group='Stochastic RSI', inline='Source', options=[SMA, EMA, WMA, VWMA, VAWMA])
+src1 = input.source(hlc3, 'Source', group='Stochastic RSI', inline='Source')
+smoothK = input.int(4, 'K', group='Stochastic RSI', inline='Values', minval=1)
+smoothD = input.int(4, 'D', group='Stochastic RSI', inline='Values', minval=1)
+stdevfilter = input.int(5, "stdev filter", inline='Values')
+lengthRSI = input.int(64, 'RSI', group='Lengths', inline='Lengths', minval=1)
+lengthStoch = input.int(48, 'Stochastic', group='Lengths', inline='Lengths', minval=1)
+lowerBand = input.int(20, 'Lower', group='Band', inline='Band', maxval=50, minval=0)
+upperBand = input.int(80, 'Upper', group='Band', inline='Band', minval=50, maxval=100)
+lowerReversal = input.int(20, 'Lower', group='Reversal', inline='Reversal', maxval=100, minval=0, tooltip='The level that if broken (down) signfies a reversal has begun/occured.\nDefault represents the lower band.')
+upperReversal = input.int(80, 'Upper', group='Reversal', inline='Reversal', minval=0, maxval=100, tooltip='The level that if broken (up) signfies a reversal has begun/occured.\nDefault represents the upper band.')
+///////////////////////////////////////////////////
+// Functions
+vawma(src1, len) =>
+    sum = 0.0
+    vol = 0.0
+    for m = 1 to len by 1  // m = triangular multiple
+        i = len - m
+        v = volume[i] * m
+        vol += v
+        sum += src1[i] * v
+        sum
+    sum / vol
+////
+getMA(series, mode, len) =>
+    mode == WMA ? ta.wma(series, len) : mode == EMA ? ta.ema(series, len) : mode == VWMA ? ta.vwma(series, len) : mode == VAWMA ? vawma(series, len) : ta.sma(series, len)
+////
+///////////////////////////////////////////////////
+// Calculation
+rsi1 = ta.rsi(src1, lengthRSI)
+stoch = ta.stoch(rsi1, rsi1, rsi1, lengthStoch)
+k = getMA(stoch, k_mode, smoothK)
+d = ta.sma(k, smoothD)
+k_c = ta.change(k)
+d_c = ta.change(d)
+kd = k - d
+var hi = high
+var lo = low
+var phi = high
+var plo = low
+var state = 0
+var float hiAVWAP_s = 0
+var float loAVWAP_s = 0
+var float hiAVWAP_v = 0
+var float loAVWAP_v = 0
+var float hiAVWAP_s_next = 0
+var float loAVWAP_s_next = 0
+var float hiAVWAP_v_next = 0
+var float loAVWAP_v_next = 0
+if d < lowerBand or high > phi
+    phi := high
+    hiAVWAP_s_next := 0
+    hiAVWAP_v_next := 0
+    hiAVWAP_v_next
+if d > upperBand or low < plo
+    plo := low
+    loAVWAP_s_next := 0
+    loAVWAP_v_next := 0
+    loAVWAP_v_next
+if high > hi
+    hi := high
+    hiAVWAP_s := 0
+    hiAVWAP_v := 0
+    hiAVWAP_v
+if low < lo
+    lo := low
+    loAVWAP_s := 0
+    loAVWAP_v := 0
+    loAVWAP_v
+vwapHi = useHiLow ? high : hlc3
+vwapLo = useHiLow ? low : hlc3
+hiAVWAP_s += vwapHi * volume
+loAVWAP_s += vwapLo * volume
+hiAVWAP_v += volume
+loAVWAP_v += volume
+hiAVWAP_s_next += vwapHi * volume
+loAVWAP_s_next += vwapLo * volume
+hiAVWAP_v_next += volume
+loAVWAP_v_next += volume
+if state != -1 and d < lowerBand
+    state := -1
+    state
+else if state != +1 and d > upperBand
+    state := +1
+    state
+if hi > phi and state == +1 and k < d and k < lowerReversal
+    hi := phi
+    hiAVWAP_s := hiAVWAP_s_next
+    hiAVWAP_v := hiAVWAP_v_next
+    hiAVWAP_v
+if lo < plo and state == -1 and k > d and k > upperReversal
+    lo := plo
+    loAVWAP_s := loAVWAP_s_next
+    loAVWAP_v := loAVWAP_v_next
+    loAVWAP_v
+hiAVWAP = hiAVWAP_s / hiAVWAP_v
+loAVWAP = loAVWAP_s / loAVWAP_v
+hiAVWAP_next = hiAVWAP_s_next / hiAVWAP_v_next
+loAVWAP_next = loAVWAP_s_next / loAVWAP_v_next
+plot(hiAVWAP_next, 'High Next', color.new(color.red, 75), 1, style=plot.style_circles)
+plot(loAVWAP_next, 'Low Next', color.new(color.green, 75), 1, style=plot.style_circles)
+plot(hiAVWAP, 'High', color.new(color.red, 50), 2, style=plot.style_circles)
+plot(loAVWAP, 'Low', color.new(color.green, 50), 2, style=plot.style_circles)
+bbwidth = ta.stdev(close, 50)
+alertValue = useOpen ? open : close
+resistance = alertValue - hiAVWAP
+support = alertValue - loAVWAP
+buy = low < loAVWAP and close > loAVWAP and bbwidth >= stdevfilter and colorout == greencolor and colorout[1] == colorout
+sell = high > hiAVWAP and close < hiAVWAP and bbwidth >= stdevfilter and colorout == redcolor and colorout[1] == colorout
+buytoexit = low < loAVWAP and close > loAVWAP and colorout == greencolor
+selltoexit = high > hiAVWAP and close < hiAVWAP and colorout == redcolor
+alertcondition(resistance > 0 or support < 0, title='Breakout (▲▼)', message='Breakout ({{ticker}} {{interval}})')
+alertcondition(resistance > 0, title='Resistance Broken ▲', message='Resistance Broken ▲ ({{ticker}} {{interval}})')
+alertcondition(support < 0, title='Support Broken ▼', message='Support Broken ▼ ({{ticker}} {{interval}})')
+plotarrow(low < loAVWAP and close > loAVWAP and bbwidth >= stdevfilter and colorout == greencolor and colorout[1] == colorout ? 1 : na, title='Low Below loAVWAP Arrow', colorup=color.new(color.green, 35), offset=-1)
+plotarrow(high > hiAVWAP and close < hiAVWAP and bbwidth >= stdevfilter and colorout == redcolor and colorout[1] == colorout ? 1 : na, title='Low Below loAVWAP Arrow', colorup=color.new(color.red, 35), offset=-1)
+// Input options for stop loss and take profit
+usePercentSL = input.bool(true, "Use Percentage for Stop Loss")
+usePercentTP = input.bool(true, "Use Percentage for Take Profit")
+stopLossPercent = input.float(0.15, "Stop Loss (%)", step = 0.1)
+takeProfitPercent = input.float(0.5, "Take Profit (%)", step = 0.1)
+stopLossPoints = input.float(10, "Stop Loss (Points)", step = 1)
+takeProfitPoints = input.float(15, "Take Profit (Points)", step = 1)
+// Calculate stop loss and take profit levels
+stopLossPricebuy = usePercentSL ? strategy.position_avg_price * (1 - stopLossPercent / 100) : strategy.position_avg_price - stopLossPoints
+takeProfitPricebuy = usePercentTP ? strategy.position_avg_price * (1 + takeProfitPercent / 100) : strategy.position_avg_price + takeProfitPoints
+stopLossPricesell = usePercentSL ? strategy.position_avg_price * (1 + stopLossPercent / 100) : strategy.position_avg_price + stopLossPoints
+takeProfitPricesell = usePercentTP ? strategy.position_avg_price * (1 - takeProfitPercent / 100) : strategy.position_avg_price - takeProfitPoints
+// Strategy logic
+if buy
+    strategy.entry("Buy", strategy.long,alert_message="buy SPX500 q=0.5")
+    strategy.exit("Take Profit/Stop Loss", from_entry = "Buy", limit = takeProfitPricebuy, stop = stopLossPricebuy, alert_message="close SPX500 long t=1")
+if sell
+    strategy.entry("Sell", strategy.short,alert_message="sell SPX500 q=0.5")
+    strategy.exit("Take Profit/Stop Loss", from_entry = "Sell", limit = takeProfitPricesell, stop = stopLossPricesell, alert_message="close SPX500 short t=1")
+    
+if strategy.position_size > 0 and selltoexit
+    strategy.close("SellToExit", alert_message="close SPX500 long t=2")
+if strategy.position_size < 0 and buytoexit
+    strategy.close("BuyToExit", alert_message="close SPX500 short t=2")
+// Plot the bars with trade highlighting
+bclr = not clrBars ? na : strategy.position_size == 0 ? color.gray : buy ? color.lime : sell ? color.red : color.gray
+Expand (368 lines)

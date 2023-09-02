@@ -1,0 +1,119 @@
+Script Name: Double Exponential Moving Average 8-20-63 Strategy
+Author: Noldo
+Description: Hello, this script was made upon the request of aliergin63, one of my followers.
+I do not know exactly from whom it is quoted. (It may be author HighProfit.)
+
+Long position when  8 dema is over 20 dema and 63 dema,
+it opens a short position for the vice versa.
+Alarms have been added.
+%0.1 comission added.
+Regards.
+
+Note : DEMA = Double Exponential Moving Average
+PineScript code:
+
+Pine Script™ strategy
+Double Exponential Moving Average 8-20-63 Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Noldo
+//@version=4
+//Quoted by Author HighProfit
+//Lead-In
+strategy("Double Exponential Moving Average 8-20-63 Strategy", 
+         shorttitle="DEMA-8-20-63", 
+         overlay=true,
+         max_bars_back = 5000,
+         initial_capital=100000, 
+         max_bars_back = 5000,
+         default_qty_type=strategy.percent_of_equity, 
+         default_qty_value=100, 
+         commission_type=strategy.commission.percent, 
+         commission_value=0.1,
+         pyramiding = 0)
+short = input(8, minval=1)
+srcShort = input(ohlc4, title="Source Dema 1")
+long = input(20, minval=1)
+srcLong = input(low, title="Source Dema 2")
+long2 = input(63, minval=1)
+srcLong2 = input(close, title="Source Dema 3")
+e1 = ema(srcShort, short)
+e2 = ema(e1, short)
+dema1 = 2 * e1 - e2
+plot(dema1, color=color.green, linewidth=2)
+e3 = ema(srcLong, long)
+e4 = ema(e3, long)
+dema2 = 2 * e3 - e4
+plot(dema2, color=color.blue, linewidth=2)
+e5 = ema(srcLong2, long2)
+e6 = ema(e5, long2)
+dema3 = 2 * e5 - e6
+plot(dema3, color=color.black, linewidth=2)
+longC  = dema1 > dema2 and dema1 > dema3
+shortC = dema1 < dema2 and dema1 < dema3 
+alertlong  = longC and  not longC[1]
+alertshort = shortC and not shortC[1]
+strategy.entry("Long" , strategy.long , when = longC ,comment="Long")
+strategy.entry("Short", strategy.short, when = shortC,comment="Short")
+// Alerts 
+alertcondition(longC  , title='Long' , message=' Buy  Signal ')
+alertcondition(shortC , title='Short', message=' Sell Signal ')
+Expand (58 lines)

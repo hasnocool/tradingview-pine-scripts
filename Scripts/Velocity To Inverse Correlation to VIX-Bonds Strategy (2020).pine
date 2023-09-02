@@ -1,0 +1,144 @@
+Script Name: Velocity To Inverse Correlation to VIX-Bonds Strategy (2020)
+Author: givingdesk
+Description: This strategy measures and creates a signal when an asset is moving out of a correlation with high yield bonds or the CBOE VIX into an inverse correlation, as well as when an asset is losing correlation with a top corporate bonds ETF. When this signal is triggered, the simulation has the portfolio asset go long. 
+
+Additionally, exits are based on a 2% stop loss...
+PineScript code:
+
+Pine Script™ strategy
+Velocity To Inverse Correlation to VIX/Bonds Strategy (2020)
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+//@version=2
+//This is created with an accompanying tutorial video on Youtube "DeFi Lesson 12"
+//Extra variables and references are included to play around with
+strategy(title='CorrelationToVixAndHighYieldBondsStrategy', currency='USD', default_qty_value=100000,default_qty_type= strategy.cash, commission_type =strategy.commission.percent, commission_value=0)
+//take profit and stop loss params
+sl_inp = input(2, title='Stop Loss %', type=float)/100
+stop_level = strategy.position_avg_price * (1 - sl_inp)
+tp_inp = input(2, title='Take Profit %', type=float)/100
+take_level = strategy.position_avg_price * (1 + tp_inp)
+//comparisons
+bitcoin  = security('COINBASE:BTCUSD', period, close)
+ethbtc = security('COINBASE:ETHBTC', period, close)
+xrp  = security('COINBASE:BTCUSD', period, close)
+eth  = security('COINBASE:ETHUSD', period, close)
+link = security('LINKUSD', period, close)
+dai = security('DAIUSD', period, close)
+comp = security('COINBASE:COMPUSD', period, close)
+mkr = security("COINBASE:MKRUSD", period, close)
+eor = security("COINBASE:EOSUSD", period, close)
+snxeth = security('UNISWAP:SNXWETH', period, close)
+grayscaleETH  = security("OTC:ETHE", period, close)
+//benchmarks
+spBenchmark = security('TVC:SPX', period, close)
+vix = security('CBOE:VIX', period, close)
+highGrowthEquities =  security('BATS:QQQ', period, close)
+corpBonds = security('BATS:SPBO', period, close)
+highYieldBonds = security('BATS:HYT', period, close)
+usdcny = security('FX_IDC:USDCNY', period, close)
+oil = security('TVC:UKOIL', period, close)
+mom = mom(close,10)
+btcrsi = rsi(bitcoin, 14)
+ethbtcRSI = rsi(ethbtc, 14)
+//correlations coefficients
+corBench = correlation(spBenchmark,close,20)
+corVix= correlation(vix,close,20)
+corHighGrowthEquities = correlation(highGrowthEquities,close,20)
+corCorpBonds = correlation(corpBonds,close,20)
+corHighYield = correlation(highYieldBonds,close,20)
+corUsdCny = correlation(usdcny,close,20)
+corOil= correlation(oil,close,20)
+signal1 = input(title="signa", type=integer, defval=0, minval=-300, maxval=300)
+start     = timestamp(2020, 1, 1, 00, 00)  // backtest start window
+finish    = timestamp(2030, 1, 1, 23, 59)        // backtest finish window
+window()  => time >= start and time <= finish ? true : false // create function "within window of time"
+//When the asset has had and then begins an inverse correlation with the CBOE VIX or High yield bonds, or is beginning to lose correlation with corporate bonds
+if crossunder(corVix, -.1) or crossunder(corHighYield, -.1)  or crossunder(corCorpBonds, .2)
+    signal1 :=-100
+    strategy.entry('buy', strategy.long, when = window())
+//If you want to close using something other than stop losses and take profits, use this:
+// if crossover(corHighYield, .60)
+    //signal1 :=100
+    //strategy.close('buy')
+plot(signal1)
+strategy.exit('Stop Loss/TP',from_entry = 'buy', stop=stop_level, trail_price=take_level)
+Expand (79 lines)

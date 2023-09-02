@@ -1,0 +1,95 @@
+Script Name: Astor SMA20-60
+Author: Astorhsu
+Description: 我看網路上都是用英文打的
+所以我就用中文來打一個吧
+不然對很多人來說英文真的很難看得懂
+1. 可以設定回測開始時間
+2. 簡單利用均線的策略
+PineScript code:
+
+Pine Script™ strategy
+Astor SMA20/60
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Astorhsu
+//@version=5
+strategy("Astor SMA20/60", overlay=true, margin_long=100, margin_short=100)
+backtest_year = input(2018, title='backtest_year') //回測開始年分
+backtest_month = input.int(01, title='backtest_month', minval=1, maxval=12) //回測開始月份
+backtest_day = input.int(01, title='backtest_day', minval=1, maxval=31)  //回測開始日期
+start_time = timestamp(backtest_year, backtest_month, backtest_day, 00, 00)  //回測開始的時間函數
+//Indicators
+sma10 = ta.sma(close,10)
+sma20 = ta.sma(close,20)
+sma60 = ta.sma(close,60)
+plot(sma20, color=color.green, title="sma(20)")
+plot(sma60, color=color.red, title="sma(60)")
+//進場條件
+// trend1 = sma60 > sma20 //假設目前趨勢為60>20
+longCondition = ta.crossover(close, ta.sma(close, 20))
+if (longCondition) and time >=start_time
+    strategy.entry("open long20", strategy.long, qty=0.1, comment="站上m20做多")
+shortCondition = ta.crossunder(close, ta.sma(close, 20))
+if (shortCondition) and time >=start_time
+    strategy.close("open long20",comment="跌破m20平倉", qty=0.1)     
+    
+longCondition1 = ta.crossover(close, ta.sma(close, 60))
+if (longCondition1) and time >=start_time
+    strategy.entry("open long60", strategy.long, qty=0.1, comment="站上m60做多")
+shortCondition1 = ta.crossunder(close, ta.sma(close, 60))
+if (shortCondition1) and time >=start_time
+    strategy.close("open long60",comment="跌破m60平倉", qty=0.1)     
+    
+// longCondition2 = ta.crossover(close, ta.sma(close, 10))
+// if (longCondition2) 
+//     strategy.entry("open long10", strategy.long, qty=0.1, comment="站上m10做多")
+// shortCondition2 = ta.crossunder(close, ta.sma(close, 10))
+// if (shortCondition2)
+//     strategy.close("open long10",comment="跌破m10平倉", qty=0.1)   
+Expand (46 lines)

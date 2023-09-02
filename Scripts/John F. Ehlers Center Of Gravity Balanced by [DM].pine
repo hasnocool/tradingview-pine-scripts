@@ -1,0 +1,349 @@
+Script Name: John F. Ehlers Center Of Gravity Balanced by [DM]
+Author: dgmoon
+Description: Greetings to all colleagues.
+I share this indicator turned into a strategy, (this is one of my first strategies so some inputs are missing and others are somewhat archaic)
+this cog is formed by three signals which can be reduced by dividing by phi
+
+ 
+ Available settings:
+ Length setting for signal
+ Trigger parameter setting for strategy
+ stoploss settings
+...
+PineScript code:
+
+Pine Script™ strategy
+John F. Ehlers Center Of Gravity Balanced by [DM]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+//@version=5
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  Log   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+// This indicator is modified or developed by [DM] D.Martinez
+// Original Autor     : John F. Ehlers  Date: 2002 Publication: # 
+// Copyright          : © D.Martinez 2020 to present
+// Title              : 000. b1  John F. Ehlers Center Of Gravity Balanced by [DM] 
+// Release            : NOV/04/2021 : First release 
+// Update             : MMM/DD/YYYY : na 
+// Script may be freely distributed under the MIT license
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Header ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+strategy(title="John F. Ehlers Center Of Gravity Balanced by [DM]", overlay=false, format=format.price, scale=scale.right, 
+      calc_on_order_fills=false, calc_on_every_tick=false, default_qty_type=strategy.percent_of_equity, default_qty_value=100, 
+      initial_capital=10000, currency=currency.USD, commission_type=strategy.commission.percent, commission_value=0.01, 
+      process_orders_on_close=true, margin_long=0, margin_short=0)
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Brain  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+//~~~~~~~~~~~~~~~~~~~~~~~~~ Length Correction ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+fx_lenght_correction(inp_src)=>
+    user_input = input.int(defval=0,minval=0,maxval=3)
+    lencal = (user_input == 0) ? (  inp_src                               ) :
+             (user_input == 1) ? (  inp_src /                     math.phi) :
+             (user_input == 2) ? (( inp_src /           math.phi)/math.phi) :
+             (user_input == 3) ? (((inp_src / math.phi)/math.phi)/math.phi) :
+             0 //
+    output = lencal
+//~~~~~~~~~~~~~~~~~~~~~~~~ Center Of Gravity ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+fx_centerofgravitydm()=>
+    cog_01  = ta.cog(close, math.round(fx_lenght_correction(021)))
+    cog_02  = ta.cog(close, math.round(fx_lenght_correction(055)))
+    cog_03  = ta.cog(close, math.round(fx_lenght_correction(144)))
+    cog_04  = ta.cog(close, math.round(fx_lenght_correction(233)))
+    mav_01  = ta.sma(cog_01,math.round(fx_lenght_correction(089)))
+    mav_02  = ta.sma(cog_02,math.round(fx_lenght_correction(233)))
+    mav_03  = ta.sma(cog_03,math.round(fx_lenght_correction(610)))
+    mav_04  = ta.sma(cog_04,math.round(fx_lenght_correction(987)))
+    out_01  = cog_01 - mav_01
+    out_02  = cog_02 - mav_02
+    out_03  = cog_03 - mav_03
+    out_04  = cog_04 - mav_04
+    avg_sig = math.avg(out_01,out_02,out_03,out_04)
+    [avg_sig]
+[out_avg] = request.security(symbol=syminfo.tickerid, timeframe="", expression=fx_centerofgravitydm(),
+                              gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on,ignore_invalid_symbol=true)
+sig_avg = ta.sma(out_avg, 08)
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Colors ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+col_cog      = out_avg > sig_avg ? color.new(color.lime     , 000) : color.new(color.green     , 000)
+col_sig      = out_avg > sig_avg ? color.new(color.blue     , 000) : color.new(color.red       , 000)
+col_axis     = out_avg > 0       ? color.new(color.olive    , 050) : color.new(color.maroon    , 050)
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Plots  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+plot   (series=out_avg, title="COG   ", style=plot.style_line    , color=col_cog , linewidth=1, editable=true, display=display.all)
+plot   (series=sig_avg, title="Signal", style=plot.style_line    , color=col_sig , linewidth=1, editable=true, display=display.all)
+plot   (series=0      , title="Axis  ", style=plot.style_stepline, color=col_axis, linewidth=2, editable=true, display=display.all)
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Strategy Brain ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+strategy_direction      = input.string(defval="LONG", options=["BOTH","LONG","SHORT"]            , title="Strategy Direction"              ,group="Global Strategy Settings")
+strategy_configuration  = input.string(defval="CROSS_AXIS", options=["CROSS_AXIS","CROSS_SIGNAL"], title="Strategy Configuration"          ,group="Global Strategy Settings")
+backtest_year           = input.int   (defval=2019,step=0001,minval=0001,maxval=3000             , title="backtest_year"                   ,group="Global Strategy Settings")
+backtest_month          = input.int   (defval=0001,step=0001,minval=0001,maxval=0012             , title="backtest_month"                  ,group="Global Strategy Settings")
+backtest_day            = input.int   (defval=0001,step=0001,minval=0001,maxval=0031             , title="backtest_day"                    ,group="Global Strategy Settings")
+start_time              = timestamp   (backtest_year, backtest_month, backtest_day, 00, 00                                                                                  )
+stop_loss_and_tp        = input.bool  (defval=true                                               , title="Enable Stop Loss and Take Profit",group="Global Strategy Settings")
+trail_stop              = input.bool  (defval=true                                               , title="Enable Trail Stop"               ,group="Global Strategy Settings")
+buy_stop_loss           = input.int   (defval=10  , minval=0  , step=1                           , title="buy_stop_loss"                   ,group="Long Strategy Settings"  )
+buy_tp                  = input.int   (defval=1000, minval=0  , step=1                           , title="buy_tp"                          ,group="Long Strategy Settings"  )
+trail_stop_long         = input.float (defval=03.0, minval=0.0, step=0.1                         , title="trail_stop_long"                 ,group="Long Strategy Settings"  )
+trail_stop_long_offset  = input.float (defval=0.00, minval=0.0, step=0.1                         , title="trail_stop_long_offset"          ,group="Long Strategy Settings"  )
+short_stop_loss         = input.float (defval=10  , minval=0  , step=1                           , title="short_stop_loss"                 ,group="Short Strategy Settings" )
+short_tp                = input.float (defval=1000, minval=0  , step=1                           , title="short_tp"                        ,group="Short Strategy Settings" )
+trail_stop_short        = input.float (defval=02.0, minval=0.0, step=0.1                         , title="trail_stop_short"                ,group="Short Strategy Settings" )
+trail_stop_short_offset = input.float (defval=0.00, minval=0.0, step=0.01                        , title="trail_stop_short_offset"         ,group="Short Strategy Settings" )
+long_cal_src_limit      = stop_loss_and_tp ? ( strategy.position_avg_price * (1 +        (buy_tp / 100))) : na
+long_cal_src_stopl      = stop_loss_and_tp ? ( strategy.position_avg_price * (1 - (buy_stop_loss / 100))) : na
+long_cal_src_trailp     = trail_stop       ? ( strategy.position_avg_price * trail_stop_long            ) : na
+long_cal_src_trail_ofs  = trail_stop       ? (-strategy.position_avg_price * trail_stop_long_offset     ) : na
+short_cal_src_limit     = stop_loss_and_tp ? (strategy.position_avg_price  * (1 -        short_tp / 100)) : na
+short_cal_src_stopl     = stop_loss_and_tp ? (strategy.position_avg_price  * (1 + short_stop_loss / 100)) : na
+short_cal_src_trailp    = trail_stop       ? (strategy.position_avg_price  * trail_stop_short           ) : na
+short_cal_src_trail_ofs = trail_stop       ? (strategy.position_avg_price  * trail_stop_short_offset    ) : na
+// you can set your own logic here
+ft_long_trade(strategy_configuration)=>
+    result = strategy_configuration == "CROSS_SIGNAL"? ta.crossover (out_avg, sig_avg) : 
+             strategy_configuration == "CROSS_AXIS"  ? ta.crossover(out_avg, 0.0)     :
+             0.0//
+        
+ft_short_trade(strategy_configuration)=> 
+    result = strategy_configuration == "CROSS_SIGNAL" ? ta.crossunder(out_avg, sig_avg) :
+             strategy_configuration == "CROSS_AXIS"   ? ta.crossunder(out_avg, 0.0)     :
+             0.0//
+lon_direction   = (strategy_direction == "BOTH") or (strategy_direction == "LONG" ) ? true : na
+sort_direction  = (strategy_direction == "BOTH") or (strategy_direction == "SHORT") ? true : na
+long_condition  = ft_long_trade(strategy_configuration)
+short_condition = ft_short_trade(strategy_configuration)
+if lon_direction == true 
+    strategy.entry("Buy", strategy.long, when=long_condition and time >= start_time )
+    strategy.close("Buy", when=short_condition)
+    strategy.exit ("Close Buy","Buy", 
+                      limit       = long_cal_src_limit, 
+                      stop        = long_cal_src_stopl,
+                      trail_price = long_cal_src_trailp, 
+                      trail_offset= long_cal_src_trail_ofs)
+if sort_direction == true
+    strategy.entry("Sell", strategy.short, when=short_condition and time >= start_time)
+    strategy.close("Sell", when=long_condition)
+    strategy.exit("Close Sell","Sell", 
+                      limit=short_cal_src_limit , 
+                      stop =short_cal_src_stopl ,
+                      trail_price=short_cal_src_trailp,
+                      trail_offset=short_cal_src_trail_ofs)
+cal_net_profit = strategy.netprofit + strategy.openprofit
+col_net_profit = cal_net_profit >= 0 ? color.new(color.green,075) : color.new(color.red,075)
+plot(series=cal_net_profit, color=col_net_profit , linewidth=1, style=plot.style_area, title="Net Profit" ,display=display.none)
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ End Of The Code ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+//  NOTES:
+//      6. pi =         2 * asin(1)  
+//      7. gauss=       (34.13+34.13) + (13.59+13.59) + (2.14+2.14) + (0.13+0.13)
+//      8. time frames= ((365/7)*5)/12
+//
+////////////////////////////////////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------0005UR1-DUD3LL40000---//
+//-----------------------------------------------------------------------00000000000000000----//
+//--------------'Y888888bo..-------:-----:-------..od888888Y'-------------012131815131210-----//
+//---8UTT3RFLY-----88JH0N8888b..----:----:----.d880LL1N63R8---------------012131815131210-----//
+//------5H4RK------88888Y'```Y8b.----'-'´---.d8Y'´´`Y888888---------------012131815131210-----//
+//-----CR48-------Y88888``.db.__.Yb.-¡'¡.'--.dY.´´.db.´8888Y--------------012131815131210-----//
+//---84T----------`888``Y88Y````8bd__(d)__bd88Y´´888´--8888---------------012131815131210-----//
+//--H4RM0N1C5-------888b``_' ````````(.)_´´´´´´'´´.d8888------------------012133815131210-----//
+//------------------Y88888bd8g.'`````(.)´´´´´.´´'.g8bd888Y----------------812131815131210-----//
+//---------------------'Y'88_.8.'JH0N-3LH3R5''8._.8._88'Y'----------------812131815131210-----//
+//--------------------.!__.8'_.db_.(.)':'..b.´8b8_'8.__!.-----------------812131815131210-----//
+//------------------------d88``'``.8_(.)_8.´´'´´88b__---------------------812131815131210-----//
+//----------------------d888b``.g8._.()._.8g.´´d888b_---------------------812131815131210-----//
+//---------------------:888888888Y'------'Y888888888:---------------------812131815131210-----//
+//---------------------'!_8888888´--------`8888888_!'---------------------812131815131210-----//
+//-----------------------'8Y--`'Y----------Y'´--Y8'-----------------------812131815131210-----//
+//----------------------'Y-----------------------Y'-----------------------812131815131210-----//
+//-----------------------------------------------------------------------00000000000000000----//
+//----------------------------------------------------------------------00000F180N4CC100000---//
+////////////////////////////////////////////////////////////////////////////////////////////////
+////8888888888----8888888------8888888--------\\1.618====\\\|///=============I=I====I=I=II==////
+////88888888888---88888888----88888888--------//1.272====6=0=0=9============I===I==I=I=I=I==////
+////8888----8888--8888-8888--8888-8888-------//1.000========!========I=====I=====II======I==////
+////8888-----8888-8888--88888888--8888------//0.786========~~~======I=I===I==============II=////
+////8888-----8888-8888---888888---8888-----//0.618=I====I==========I===I=I================I=////
+////8888----8888--8888------------8888----//0.500===I==I=I=II=I===I=====I====3LL10T=W4V3==II////
+////88888888888---8888------------8888---//0.382=====II===I==I=I=I==========================////
+////8888888888----8888------------8888--//0.236=================I===========================////
+////////////////////////////////////////////////////////////////////////////////////////////////
+//
+/// MIT License Terms https://opensource.org/licenses/mit-license.php ///
+//Permission is hereby granted, free of charge, to any person obtaining a copy of 
+//this software and associated documentation files (the "Software"), to deal in 
+//the Software without restriction, including without limitation the rights to 
+//use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
+//of the Software, and to permit persons to whom the Software is furnished to do 
+//so, subject to the following conditions:
+//
+//The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+//
+//THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+//IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+//FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR 
+//COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER 
+//IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
+//CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+Expand (168 lines)

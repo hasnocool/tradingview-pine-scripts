@@ -1,0 +1,117 @@
+Script Name: 3 x EMA + Stochastic RSI + ATR
+Author: tomimarson
+Description: 8,20,40 EMAs + RSI crossover. Stop Loss at ATR x3. Profit Target at ATRx2
+PineScript code:
+
+Pine Script™ strategy
+3 x EMA + Stochastic RSI + ATR
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © FreddieChopin
+ 
+//@version=4
+strategy("3 x EMA + Stochastic RSI + ATR", overlay = true, default_qty_type = strategy.percent_of_equity, default_qty_value = 100)
+ 
+// 3x EMA
+ema1Length = input(8, "EMA1 Length", minval = 1)
+ema2Length = input(14, "EMA2 Length", minval = 1)
+ema3Length = input(50, "EMA3 Length", minval = 1)
+ema1 = ema(close, ema1Length)
+ema2 = ema(close, ema2Length)
+ema3 = ema(close, ema3Length)
+ 
+plot(ema1, color = color.green)
+plot(ema2, color = color.orange)
+plot(ema3, color = color.red)
+ 
+// Stochastic RSI
+smoothK = input(3, "K", minval=1)
+smoothD = input(3, "D", minval=1)
+lengthRSI = input(14, "RSI Length", minval=1)
+lengthStoch = input(14, "Stochastic Length", minval=1)
+src = input(close, title="RSI Source")
+rsi1 = rsi(src, lengthRSI)
+k = sma(stoch(rsi1, rsi1, rsi1, lengthStoch), smoothK)
+d = sma(k, smoothD)
+ 
+// ATR
+atrPeriod = input(14, "ATR Period")
+takeProfitMultiplier= input(2.0, "Take-profit Multiplier")
+stopLossMultiplier= input(3.0, "Stop-loss Multiplier")
+atrSeries = atr(atrPeriod)[1]
+ 
+longCondition = ema1 > ema2 and ema2 > ema3 and crossover(k, d)
+strategy.entry("long", strategy.long, when = longCondition)
+ 
+float stopLoss = na
+float takeProfit = na
+ 
+if (strategy.position_size > 0)
+    if (na(stopLoss[1]))
+        stopLoss := strategy.position_avg_price - atrSeries * stopLossMultiplier
+    else
+        stopLoss := stopLoss[1]
+    if (na(takeProfit[1]))
+        takeProfit := strategy.position_avg_price + atrSeries * takeProfitMultiplier
+    else
+        takeProfit := takeProfit[1]
+ 
+    strategy.exit("take profit / stop loss", limit = takeProfit, stop = stopLoss)
+ 
+plot(stopLoss, color = color.red, linewidth = 2, style = plot.style_linebr)
+plot(takeProfit, color = color.green, linewidth = 2, style = plot.style_linebr)
+Expand (54 lines)

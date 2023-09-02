@@ -1,0 +1,158 @@
+Script Name: Mathias & Christer Timeframe RSI
+Author: mattehalen
+Description: This strategy is based on High and low RSI.
+
+If RSI is => 80 and RSI drops enter Sell position
+If RSI is =< 20 anr RSI goes up enter Buy position.
+
+as exit I use MA crosses
+MA short (30)
+MA Long (50)
+PineScript code:
+
+Pine Script™ strategy
+Mathias & Christer Timeframe RSI
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © mattehalen
+// INPUT per TIMEFRAME
+// 5min     = Legnth = 9, Source = ohlc4,MaxLoss = 1000 TrendMA = 200, ShortMA = 4, LongMA = 10
+// 30min    = Legnth = 7, Source = ohlc4,MaxLoss = 1000 TrendMA = 200, ShortMA = 10, LongMA = 20
+strategy("Mathias & Christer Timeframe RSI", shorttitle="M&C_RSI",overlay=true, process_orders_on_close = true, default_qty_type =  strategy.percent_of_equity, default_qty_value = 100)
+len = input(9, title="Length", type=input.integer)
+src = input(ohlc4, title="Source", type=input.source)
+//show4h = input(true, title="show 4h", type=input.bool)
+maxLoss = input(3000)
+rsiCurrent = rsi(src, len)
+//rsi4h = security(syminfo.ticker, "240", rsi(src, len))
+rsi4h   = rsi(src, len)
+//--------------------------------------------------
+//MA
+trendMAInput = input(200, title="trendMA", type=input.integer)
+shortMAInput = input(30, title="shortMA", type=input.integer)
+longMAInput = input(50, title="longMA", type=input.integer)
+trendMA = ema(close,trendMAInput)
+shortMA = ema(close,shortMAInput)
+longMA  = ema(close,longMAInput)
+plot(trendMA, color=color.black, linewidth=5)
+plot(shortMA, color=color.red, linewidth=2)
+plot(longMA, color=color.green, linewidth=2)
+bgcolor(crossunder(shortMA,longMA) ? color.black : na, transp=10)
+//--------------------------------------------------
+//RSI
+BuySignalBarssince = barssince(rsi4h[1]<rsi4h[0] and rsi4h[1]<20)
+BuySignal       = (rsi4h[1]<rsi4h[0] and rsi4h[1]<20 and BuySignalBarssince[1]>10)
+BuySignalOut   = crossunder(longMA[1],shortMA[1])
+bgcolor(BuySignal ? color.green : na, transp=70)
+bgcolor(BuySignalOut ? color.green : na, transp=10)
+SellSignalBarssince = barssince(rsi4h[1]>rsi4h[0] and rsi4h[1]>80)
+SellSignal      = (rsi4h[1]>rsi4h[0] and rsi4h[1]>80 and SellSignalBarssince[1]>10)
+SellSignalOut   = crossunder(shortMA[1],longMA[1])
+bgcolor(SellSignal ? color.red : na, transp=70)
+bgcolor(SellSignalOut ? color.red : na, transp=10)
+if BuySignal
+    strategy.close("short", comment = "Exit short")
+    strategy.entry("long", true)
+    strategy.exit("Max Loss", "long", loss = maxLoss)
+if BuySignalOut
+    strategy.close("long", comment = "Exit Long")
+if SellSignal
+    // Enter trade and issue exit order on max loss.
+    strategy.close("long", comment = "Exit Long")
+    strategy.entry("short", false)
+    strategy.exit("Max Loss", "short", loss = maxLoss)
+if SellSignalOut
+    // Force trade exit.
+    strategy.close("short", comment = "Exit short")
+    
+//--------------------------------------------------
+//ATR
+MyAtr = atr(10)
+AtrFactor = 10
+mySLBuy  = close[BuySignalBarssince]
+mySLSell = close[SellSignalBarssince]
+plotchar(BuySignal, "BuySignal", "⬆", location.belowbar, color.lime,size =size.huge )
+plotchar(BuySignalOut, "BuySignalOut", "█", location.belowbar, color.lime,size =size.small)
+plotchar(SellSignal, "SellSignal", "⬇", location.abovebar ,color.red,size =size.huge)
+plotchar(SellSignalOut, "SellSignalOut", "█", location.abovebar, color.red,size =size.small)
+Expand (79 lines)

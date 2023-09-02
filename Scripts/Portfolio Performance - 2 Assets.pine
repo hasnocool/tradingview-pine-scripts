@@ -1,0 +1,224 @@
+Script Name: Portfolio Performance - 2 Assets
+Author: Skywalking2874
+Description: Function:
+- Can be used to evaluate the performance of portfolios containing 2 assets over a set time interval
+- Created to evaluate of the performance of portfolios containing different weightings of stocks and bonds over time
+- Shows the % return of each portfolio over the time interval defined by the user 
+- Capable of showing the risk adjusted % return of each...
+PineScript code:
+
+Pine Script™ strategy
+Portfolio Performance - 2 Assets
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Skywalking2874
+//@version=5
+strategy("Portfolio Performance - 2 Assets", overlay=false, margin_long=100, margin_short=100, process_orders_on_close=true, max_bars_back=5000)
+//****************************************************************** Define the time interval ******************************************************************//
+entrytime = input.time(defval=timestamp("2021-12-16"), title="Entry Time", tooltip="Enter the starting date", confirm=true, group="Time Interval")
+exittime = input.time(defval=timestamp("2021-12-17"), title="Exit Time", tooltip="Enter the ending date", confirm=true, group="Time Interval")
+entrycondition = time >= entrytime and time < exittime
+exitcondition = time >= exittime
+strategy.entry("Buy", strategy.long, qty=10000/close, when=entrycondition)
+strategy.close_all(when = exitcondition)
+//****************************************************************** Define the second asset ******************************************************************//
+second_asset_prefix = input.string(defval = "NASDAQ", title = "Prefix", group="Second Asset", inline="Asset2")
+second_asset_ticker = input.string(defval = "BND", title="Ticker", group="Second Asset", inline="Asset2")
+second_ticker = ticker.new(prefix = second_asset_prefix, ticker = second_asset_ticker, session = session.regular, adjustment = adjustment.dividends)
+second_symbol = request.security(second_ticker, "D", close)
+//****************************************************************** Define the portfolio weights ******************************************************************//
+portfolio1_weight1 = input.float(defval=100.00, title="First Weight (%)", minval=0, maxval=100, step=0.1, tooltip="Input the weight of this asset relative to your portfolio", inline="Asset1", group="First Portfolio")
+portfolio1_weight2 = input.float(defval=0.00, title="Second Weight (%)", minval=0, maxval=100, step=0.1, tooltip="Input the weight of this asset relative to your portfolio", inline="Asset1", group="First Portfolio")
+portfolio2_weight1 = input.float(defval=80.00, title="First Weight (%)", minval=0, maxval=100, step=0.1, tooltip="Input the weight of this asset relative to your portfolio", inline="Asset2", group="Second Portfolio")
+portfolio2_weight2 = input.float(defval=20.00, title="Second Weight (%)", minval=0, maxval=100, step=0.1, tooltip="Input the weight of this asset relative to your portfolio", inline="Asset2", group="Second Portfolio")
+portfolio3_weight1 = input.float(defval=60.00, title="First Weight (%)", minval=0, maxval=100, step=0.1, tooltip="Input the weight of this asset relative to your portfolio", inline="Asset3", group="Third Portfolio")
+portfolio3_weight2 = input.float(defval=40.00, title="Second Weight (%)", minval=0, maxval=100, step=0.1, tooltip="Input the weight of this asset relative to your portfolio", inline="Asset3", group="Third Portfolio")
+portfolio4_weight1 = input.float(defval=40.00, title="First Weight (%)", minval=0, maxval=100, step=0.1, tooltip="Input the weight of this asset relative to your portfolio", inline="Asset4", group="Fourth Portfolio")
+portfolio4_weight2 = input.float(defval=60.00, title="Second Weight (%)", minval=0, maxval=100, step=0.1, tooltip="Input the weight of this asset relative to your portfolio", inline="Asset4", group="Fourth Portfolio")
+portfolio5_weight1 = input.float(defval=20.00, title="First Weight (%)", minval=0, maxval=100, step=0.1, tooltip="Input the weight of this asset relative to your portfolio", inline="Asset5", group="Fifth Portfolio")
+portfolio5_weight2 = input.float(defval=80.00, title="Second Weight (%)", minval=0, maxval=100, step=0.1, tooltip="Input the weight of this asset relative to your portfolio", inline="Asset5", group="Fifth Portfolio")
+portfolio6_weight1 = input.float(defval=0.00, title="First Weight (%)", minval=0, maxval=100, step=0.1, tooltip="Input the weight of this asset relative to your portfolio", inline="Asset6", group="Sixth Portfolio")
+portfolio6_weight2 = input.float(defval=100.00, title="Second Weight (%)", minval=0, maxval=100, step=0.1, tooltip="Input the weight of this asset relative to your portfolio", inline="Asset6", group="Sixth Portfolio")
+//****************************************************************** Calculate %Return and %Risk Adjusted Return ******************************************************************//
+trade_open_time = time >= strategy.opentrades.entry_time(strategy.opentrades-1) ? strategy.opentrades.entry_time(strategy.opentrades-1) : 2524608000000
+bar_count = ta.barssince(time <= trade_open_time)
+percent_return_first_asset = ((close - close[bar_count])/close[bar_count])*100
+risk_adjusted_return_first_asset = percent_return_first_asset/ta.stdev(percent_return_first_asset, bar_count+1)
+percent_return_second_asset = ((second_symbol - second_symbol[bar_count])/second_symbol[bar_count])*100
+risk_adjusted_return_second_asset = percent_return_second_asset/ta.stdev(percent_return_second_asset, bar_count+1)
+onehundred_zero_weighted_return = (portfolio1_weight1/100.00)*percent_return_first_asset + (portfolio1_weight2/100.00)*percent_return_second_asset
+onehundred_zero_risk_adjusted_weighted_return = (portfolio1_weight1/100.00)*risk_adjusted_return_first_asset + (portfolio1_weight2/100.00)*risk_adjusted_return_second_asset
+eighty_twenty_weighted_return = (portfolio2_weight1/100.00)*percent_return_first_asset + (portfolio2_weight2/100.00)*percent_return_second_asset
+eighty_twenty_risk_adjusted_weighted_return = (portfolio2_weight1/100.00)*risk_adjusted_return_first_asset + (portfolio2_weight2/100.00)*risk_adjusted_return_second_asset
+sixty_fourty_weighted_return = (portfolio3_weight1/100.00)*percent_return_first_asset + (portfolio3_weight2/100.00)*percent_return_second_asset
+sixty_fourty_risk_adjusted_weighted_return = (portfolio3_weight1/100.00)*risk_adjusted_return_first_asset + (portfolio3_weight2/100.00)*risk_adjusted_return_second_asset
+fourty_sixty_weighted_return = (portfolio4_weight1/100.00)*percent_return_first_asset + (portfolio4_weight2/100.00)*percent_return_second_asset
+fourty_sixty_risk_adjusted_weighted_return = (portfolio4_weight1/100.00)*risk_adjusted_return_first_asset + (portfolio4_weight2/100.00)*risk_adjusted_return_second_asset
+twenty_eighty_weighted_return = (portfolio5_weight1/100.00)*percent_return_first_asset + (portfolio5_weight2/100.00)*percent_return_second_asset
+twenty_eighty_risk_adjusted_weighted_return = (portfolio5_weight1/100.00)*risk_adjusted_return_first_asset + (portfolio5_weight2/100.00)*risk_adjusted_return_second_asset
+zero_onehundred_weighted_return = (portfolio6_weight1/100.00)*percent_return_first_asset + (portfolio6_weight2/100.00)*percent_return_second_asset
+zero_onehundred_adjusted_weighted_return = (portfolio6_weight1/100.00)*risk_adjusted_return_first_asset + (portfolio6_weight2/100.00)*risk_adjusted_return_second_asset
+//****************************************************************** Plot ******************************************************************//
+portfolio1_return = input.bool(defval=true, title="Plot Weighted Return", inline="Asset11", group="First Portfolio")
+portfolio2_return = input.bool(defval=true, title="Plot Weighted Return", inline="Asset22", group="Second Portfolio")
+portfolio3_return = input.bool(defval=true, title="Plot Weighted Return", inline="Asset33", group="Third Portfolio")
+portfolio4_return = input.bool(defval=true, title="Plot Weighted Return", inline="Asset44", group="Fourth Portfolio")
+portfolio5_return = input.bool(defval=true, title="Plot Weighted Return", inline="Asset55", group="Fifth Portfolio")
+portfolio6_return = input.bool(defval=true, title="Plot Weighted Return", inline="Asset66", group="Sixth Portfolio")
+portfolio1_risk_adjusted_return = input.bool(defval=false, title="Plot Risk Adjusted Weighted Return", inline="Asset11", group="First Portfolio")
+portfolio2_risk_adjusted_return = input.bool(defval=false, title="Plot Risk Adjusted Weighted Return", inline="Asset22", group="Second Portfolio")
+portfolio3_risk_adjusted_return = input.bool(defval=false, title="Plot Risk Adjusted Weighted Return", inline="Asset33", group="Third Portfolio")
+portfolio4_risk_adjusted_return = input.bool(defval=false, title="Plot Risk Adjusted Weighted Return", inline="Asset44", group="Fourth Portfolio")
+portfolio5_risk_adjusted_return = input.bool(defval=false, title="Plot Risk Adjusted Weighted Return", inline="Asset55", group="Fifth Portfolio")
+portfolio6_risk_adjusted_return = input.bool(defval=false, title="Plot Risk Adjusted Weighted Return", inline="Asset66", group="Sixth Portfolio")
+trade_close_time = time >= strategy.closedtrades.entry_time(strategy.closedtrades-1) ? strategy.closedtrades.entry_time(strategy.closedtrades-1) : 2524608000000
+transparant = color.rgb(0, 0, 0, 100)
+//Fixed Weight Palette 
+fixed_color1 = time >= trade_open_time ? color.new(#10B22D, 0) : transparant
+fixed_color2 = time >= trade_open_time ? color.new(#00FF1E, 0) : transparant
+fixed_color3 = time >= trade_open_time ? color.new(#FFFB00, 0) : transparant
+fixed_color4 = time >= trade_open_time ?color.new(#FF6600, 0) : transparant
+fixed_color5 = time >= trade_open_time ? color.new(#FF0000, 0) : transparant
+fixed_color6 = time >= trade_open_time ? color.new(#9C0000, 0) : transparant
+//Fixed Weight Risk Adjusted Palette
+fixed_risk_color1 = time >= trade_open_time ? color.new(#72A97C, 0) : transparant
+fixed_risk_color2 = time >= trade_open_time ? color.new(#8AF897, 0) : transparant
+fixed_risk_color3 = time >= trade_open_time ? color.new(#FFFD78, 0) : transparant
+fixed_risk_color4 = time >= trade_open_time ?color.new(#FFAD77, 0) : transparant
+fixed_risk_color5 = time >= trade_open_time ? color.new(#FF7D7D, 0) : transparant
+fixed_risk_color6 = time >= trade_open_time ? color.new(#904747, 0) : transparant
+plot(onehundred_zero_weighted_return, title="100/0 Weighted Return", color= portfolio1_return == true ? fixed_color1 : transparant)
+plot(eighty_twenty_weighted_return, title="80/20 Weighted Return", color= portfolio2_return == true ? fixed_color2 : transparant)
+plot(sixty_fourty_weighted_return, title="60/40 Weighted Return", color= portfolio3_return == true ? fixed_color3: transparant)
+plot(fourty_sixty_weighted_return, title="40/60 Weighted Return", color= portfolio4_return == true ? fixed_color4: transparant)
+plot(twenty_eighty_weighted_return, title="20/80 Weighted Return", color= portfolio5_return == true ? fixed_color5: transparant)
+plot(zero_onehundred_weighted_return, title="0/100 Weighted Return", color= portfolio6_return == true ? fixed_color6: transparant)
+plot(onehundred_zero_risk_adjusted_weighted_return, title="100/0 Risk Adjusted Weighted Return", color= portfolio1_risk_adjusted_return == true ? fixed_risk_color1 : transparant)
+plot(eighty_twenty_risk_adjusted_weighted_return, title="80/20 Risk Adjusted Weighted Return", color= portfolio2_risk_adjusted_return == true ? fixed_risk_color2 : transparant)
+plot(sixty_fourty_risk_adjusted_weighted_return, title="60/40 Risk Adjusted Weighted Return", color= portfolio3_risk_adjusted_return == true ? fixed_risk_color3: transparant)
+plot(fourty_sixty_risk_adjusted_weighted_return, title="40/60 Risk Adjusted Weighted Return", color= portfolio4_risk_adjusted_return == true ? fixed_risk_color4: transparant)
+plot(twenty_eighty_risk_adjusted_weighted_return, title="20/80 Risk Adjusted Weighted Return", color= portfolio5_risk_adjusted_return == true ? fixed_risk_color5: transparant)
+plot(zero_onehundred_adjusted_weighted_return, title="0/100 Risk Adjusted Weighted Return", color= portfolio6_risk_adjusted_return == true ? fixed_risk_color6: transparant)
+Expand (122 lines)

@@ -1,0 +1,286 @@
+Script Name: Donchian Trendline - Support Resistance Slope [UhoKang]
+Author: zard96
+Description: // This is a strategy that draws a trend line in the form of a slope whenever the high point and low point are updated.
+// The upper slope serves as a resistance line, and the lower slope serves as a support line.
+// Buy when the   of the candle crosses the slope
+PineScript code:
+
+Pine Script™ strategy
+Donchian Trendline - Support Resistance Slope [UhoKang]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+// This is a strategy that draws a trend line in the form of a slope whenever the high point and low point are updated.
+// The upper slope serves as a resistance line, and the lower slope serves as a support line.
+// Buy when the [close] of the candle crosses the slope
+//@version=5
+strategy("Donchian Trendline - Support Resistance Slope [UhoKang]", shorttitle="Donchian Trendline", overlay=true, initial_capital=1000000,default_qty_type=strategy.percent_of_equity,default_qty_value=100,commission_value=0.075, slippage=3, process_orders_on_close=true)
+///////////////////////////////////// Time ///////////////////////////////////////////////////////////////////////////////
+startYear   = input.int(2019, 'Start-Year', confirm=false, inline='1')
+startMonth  = input.int(1,    'Month',      confirm=false, inline='1')
+startDay    = input.int(1,    'Day',      confirm=false, inline='1')
+finishYear  = input.int(2099, 'End-Year', confirm=false, inline='2')
+finishMonth = input.int(1,    'Month',      confirm=false, inline='2')
+finishDay   = input.int(1,    'Day',      confirm=false, inline='2')
+startTime = timestamp(startYear, startMonth, startDay)
+finishTime = timestamp(finishYear, finishMonth, finishDay)
+testPeriod = time >= startTime and time <= finishTime
+//////////////////////// ATR BAND ///////////////////////////////////////////////////////////////////////////////////////////
+// Inputs
+atrPeriod = input.int(title = "ATR Period", defval = 14, minval = 1)
+atrBandUpper = input(title = "Source Upper", defval = close)
+atrBandLower = input(title = "Source Lower", defval = close)
+atrMultiplierUpper = input.int(title = "ATR Multiplier Upper", defval = 1)
+atrMultiplierLower = input.int(title = "ATR Multiplier Lower", defval = 1)
+// ATR ///////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------------
+atr = ta.atr(atrPeriod)
+atrBBUpper = atrBandUpper + (atr * atrMultiplierUpper)
+atrBBLower = atrBandLower - (atr * atrMultiplierLower)
+/////////////////////////// Big Candle ///////////////////////////////////////////////
+//------------------------------------------------------------------------------------
+candle_size = close>=open ? close-open :  open-close
+candle_grade_guide = atrBBUpper - atrBBLower
+candle_grade = candle_size > candle_grade_guide ? 3 : candle_size > candle_grade_guide/2 ? 2 : 1
+candle_grade_color = candle_grade == 3 ? color.new(color.black, 0) : candle_grade == 2 ? color.new(color.purple, 0) : na
+barcolor(candle_grade_color, title = "Long candle")
+///////////////////////////////////// Donchian ///////////////////////////////////////
+//------------------------------------------------------------------------------------
+donchian_length = input(60)
+donchian_top = ta.highest(high, donchian_length)
+donchian_bot = ta.lowest(low, donchian_length)
+donchian_mid = (donchian_top + donchian_bot) / 2
+plot_donchian_top = plot(donchian_top,  color=color.new(color.green, 90), title = "Donchian Top")
+plot_donchian_bot = plot(donchian_bot,  color=color.new(color.red, 90), title = "Donchian Bottom")
+plot_donchian_mid = plot(donchian_mid,  color=color.new(color.orange, 0), title = "Donchian Middle")
+fill(plot_donchian_top, plot_donchian_mid, color=color.new(color.green, 95), title = "Donchian Upper")
+fill(plot_donchian_bot, plot_donchian_mid, color=color.new(color.red, 95), title = "Donchian Lower")
+///////////////////////////// Trendline //////////////////////////////////////////////////
+//------------------------------------------------------------------------------------
+donchian_longTr = false
+donchian_shortTr = false 
+var atrLongHeight = 0.0 
+var atrShortHeight = 0.0 
+if high > donchian_top[1] 
+    donchian_longTr := true 
+    atrLongHeight := atrBBUpper[1] - atrBBLower[1]
+if low < donchian_bot[1] 
+    donchian_shortTr := true
+    atrShortHeight := atrBBUpper[1] - atrBBLower[1]
+donchian_Tr_color = donchian_longTr ? color.new(color.green,70) : donchian_shortTr ? color.new(color.red, 70) : na 
+//////////////////////// Set var //////////////////////////////////////////////
+//------------------------------------------------------------------------------------
+slope_mult = input.float(0.03, step=0.01,  title = "Slope x")
+var ph_M_Avg = 0.0 //slope avg high
+var pl_M_Avg = 0.0 //slope avg low 
+var ph_M_Line = 0.0 //slope high
+var pl_M_Line = 0.0 //slope low
+ph_M = donchian_longTr[1]==true and high<donchian_top[1] ? high[1] : na
+pl_M = donchian_shortTr[1]==true and low>donchian_bot[1] ? low[1] : na
+plot(ph_M,color=color.blue, style = plot.style_linebr, linewidth = 3, offset = -1, title = "Pivot High")
+plot(pl_M,color=color.blue, style = plot.style_linebr, linewidth = 3, offset = -1, title = "Pivot Low")
+       
+/////////////////////////////////////////  Calc trendline /////////////////////////////
+//------------------------------------------------------------------------------------
+mirror_mode = input.bool(false , title = "Mirror Line")
+ph_M_Avg := atrLongHeight * slope_mult
+pl_M_Avg := atrShortHeight * slope_mult
+// Calc slope
+if mirror_mode 
+    if ph_M
+        ph_M_Line := ph_M
+        pl_M_Line := donchian_mid[1]
+    else if pl_M
+        pl_M_Line := pl_M
+        ph_M_Line := donchian_mid[1]
+    else if ph_M_Line  
+        ph_M_Line := ph_M_Line[1] - ph_M_Avg
+        pl_M_Line := pl_M_Line[1] + pl_M_Avg
+else 
+    if ph_M
+        ph_M_Line := ph_M
+    else if ph_M_Line  
+        ph_M_Line := ph_M_Line[1] - ph_M_Avg
+    if pl_M
+        pl_M_Line := pl_M
+    else if pl_M_Line
+        pl_M_Line := pl_M_Line[1] + pl_M_Avg
+// Delete trendline
+if donchian_bot[1] > ph_M_Line
+    ph_M_Line := na
+if donchian_top[1] < pl_M_Line
+    pl_M_Line := na
+// Draw trendline
+plot(ph_M_Line, color=color.new(color.green,20), style = plot.style_circles, linewidth = 1, title = "Trendline Top")
+plot(pl_M_Line, color=color.new(color.maroon,20), style = plot.style_circles, linewidth = 1, title = "Trendline Bottom")
+// Trade 
+ph_longTr = false
+ph_longExitTr = false
+ph_shortTr = false
+ph_shortExitTr = false 
+//-----------------------------------------------------------------------------}
+check_short_mode = input.bool(true, title= "Short Mode On")
+if ta.crossover(close, ph_M_Line) 
+    ph_longTr := true
+else if ta.crossunder(close,pl_M_Line) or ta.crossunder(close, donchian_mid[1]) 
+    ph_longExitTr := true 
+if ta.crossunder(close, pl_M_Line)
+    ph_shortTr := true
+else if ta.crossover(close,ph_M_Line) or ta.crossover(close, donchian_mid[1])
+    ph_shortExitTr := true
+ph_Tr_color = ph_longTr ? color.new(color.green,80) : ph_shortTr ? color.new(color.red,80) : na
+bgcolor(ph_Tr_color, title = "Break Slope")
+if ph_longTr and testPeriod
+    strategy.entry("L", strategy.long)
+else if ph_longExitTr 
+    strategy.close("L")
+if ph_shortTr and testPeriod and check_short_mode
+    strategy.entry("S", strategy.short)
+else if ph_shortExitTr 
+    strategy.close("S")
+Expand (147 lines)

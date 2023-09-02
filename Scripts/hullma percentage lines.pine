@@ -1,0 +1,115 @@
+Script Name: hullma percentage lines
+Author: tucomprend
+Description: What you see is a hullMA  (user defined length) with 4 percentage bands attached to it. 
+The bands percentage and hullMA length can be adjusted  to see how the trading strategy performs.
+I implemented only long trades with a crossover from  one of the lower bands, when it crosses over a high band
+it exits the trade. 
+
+Improvement coulde be:
+-more percentage...
+PineScript code:
+
+Pine Script™ strategy
+hullma percentage lines
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+//@version=3
+strategy("hullma percentage lines", overlay=true)
+length = input(9, minval=1)
+src = input(close, title="Source")
+hullma = wma(2*wma(src, length/2)-wma(src, length), round(sqrt(length)))
+plot(hullma)
+Uband1 = input(3, minval=1, step = .5)
+Lband1 = input(3, minval=1, step = .5)
+Uband2 = input(6, minval=1, step = .5)
+Lband2 = input(6, minval=1, step = .5)
+v1 = Uband1+100
+v2 = 100 - Lband1
+v3 = Uband2+100
+v4 = 100 - Lband2
+xL1 = (hullma / 100) * v1
+xL2 = (hullma / 100) * v2 
+xL3 = (hullma / 100) * v3
+xL4 = (hullma / 100) * v4 
+plot(xL1, color=yellow, title="H1")
+plot(xL2, color=yellow, title="L1")
+plot(xL3, color=yellow, title="H2")
+plot(xL4, color=yellow, title="L2")
+longCondition1 =  crossover(close, xL4) 
+if (longCondition1)  
+    strategy.entry("l1", strategy.long)
+longCondition2 =  crossover(close, xL2) 
+if (longCondition2)  
+    strategy.entry("l1", strategy.long)
+shortCondition1 = crossover(close, xL1)
+if (shortCondition1) 
+    strategy.close("l1", strategy.long)
+    
+shortCondition2 = crossover(close, xL2)
+if (shortCondition2) 
+    strategy.close("l1", strategy.long)
+    
+shortCondition3 = crossover(close, xL3)
+if (shortCondition3) 
+    strategy.close("l1", strategy.long)
+    
+Expand (60 lines)

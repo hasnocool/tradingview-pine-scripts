@@ -1,0 +1,555 @@
+Script Name: X48 - Strategy - ADAPTIVE CONSECUTIVE + TP-SL - V.1
+Author: X4815162342
+Description: Thanks For Tradingview Built-in Script :: << Original From Consecutive Strategy Built-in Script >> 
+
+ ================== Read This First Before Use This Strategy ============== 
+ 
+  Please be aware that this strategy is not a guarantee of success and may lead to losses.
+  Trading involves risk and you should always do your own research before making any...
+PineScript code:
+
+Pine Script™ strategy
+X48 - Strategy | ADAPTIVE CONSECUTIVE + TP/SL | V.1
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+//Thanks For Tradingview Built-in Script :: << Original From Consecutive Strategy Built-in Script >>
+//This Strategy Mod by ME : X4815162342
+//================== Read This First Before Use This Strategy ==============
+// *********** Please be aware that this strategy is not a guarantee of success and may lead to losses.
+// *********** Trading involves risk and you should always do your own research before making any decisions.
+// *********** This Strategy Just an Idea For Help Your Decision For OpenPosition.
+// *********** You Must Be Search and Make Your Self Understand What You Doing In This Strategy.
+// *********** Example :: This Strategy and Indicator Find The Consecutive Bars And You, You Are Reading Must Be Decision Up to You !!
+// *********** For Backtest Show It's That For a Newbie 100$ Portfolio and 16.333$ Per Order Size
+//>>>> Read Me First !! <<<<< 
+//========== Detailed and meaningful description =========
+// - How It's Work : This Strategy are Following [Length]Green or [Length]Red Candle :: example 3 Green Candle To OpenLong Position
+// - Can Set TP/SL if you want :: Just Fine The Best Value of Asset as you want
+// - Fast Trend = MA FAST LINE [Blue Line]
+// - SLOW Trend = MA SLOW LINE [Red Line]
+// - MID-TERM TREND = MA MID-TERM [Yellow Line]
+// - LONG-TERM TREND = MA LONG-TERM [White Line]
+//=========== Condition And Statement ===========
+// Long Condition Statement :: [Length] Candles Consecutive Bars Up and close > golden_line and fast_line > golden_line
+// Short Condition Statement :: [Length] Candles Consecutive Bars Down and close < golden_line and fast_line < golden_line
+// AutoCloseLong Condition :: [Length] Candles ConsecutiveBarsDownStop and close > golden_line and close[2] < death_line and close[1] < death_line and close < death_line or fastUpdeath
+// AutoCloseShort Condition :: [Length] Candles ConsecutiveBarsUpStop and close < golden_line and close[2] > death_line and close[1] > death_line and close > death_line or fastUpdeath
+// ====== For ADAPTIVE you can customize your ALL MA [FAST, SLOW, MID-TERM, LONG-TERM] For Your Statement
+///////////For Example Hook Alert Command ////////////
+// Just Easy Command >> :: {{strategy.order.alert_message}}
+// Or Other Json You Should Edit Command Like This Example
+// {"ex":"'bnfuture'","side": "AutoLong", "$16.333", "symbol": "{{ticker}}", "passphrase": "1234","leverage":"10", "tp" : "5", "sl" : "2", "tl" : "2", "callback" : "1"} //
+// {"ex":"'bnfuture'","side": "AutoShort", "$16.333", "symbol": "{{ticker}}", "passphrase": "1234","leverage":"10", "tp" : "5", "sl" : "2", "tl" : "2", "callback" : "1"} //
+//////////////////////////////////////////////////////
+//@version=5
+strategy("X48 - Strategy | ADAPTIVE CONSECUTIVE + TP/SL | V.1", overlay=true, default_qty_type = strategy.cash, default_qty_value = 16.333, currency = currency.USD, initial_capital = 100, commission_type = strategy.commission.percent, commission_value = 0.1)
+//================ SPOT MODE ==============
+GRSPT = "=== 🍀🍀🍀 SPOT MODE 🍀🍀🍀 ==="
+Spot_MODE = input.bool(defval = false, title = "🍀 SPOT MODE", group = GRSPT)
+Auto_Stop = input.bool(defval = true, title = "🍵 AUTO TP/SL", group = "CONSECUTIVE-SETTING")
+consecutiveBarsUp = input(defval = 3, title = "BarsUp-Length", group = "CONSECUTIVE-SETTING")
+consecutiveBarsDown = input(defval = 3, title = "BarsDown-Length", group = "CONSECUTIVE-SETTING")
+consecutiveBarsUpStop = input(defval = 2, title = "BarsStopUp-Length", group = "CONSECUTIVE-STOP")
+consecutiveBarsDownStop = input(defval = 2, title = "BarsStopDown-Length", group = "CONSECUTIVE-STOP")
+////////////////////////////////////////////////////////////////////////////////////
+GRMAC = '===💯💯💯4️⃣ Multi MA SETTING 4️⃣💯💯💯==='
+/////////// Normal Setting ////////////////
+srcstrategy = input(close, title='💯4️⃣ Source Multi MA', group = GRMAC, tooltip = 'Normal Line = Close \nSmooth Line = ohlc4')
+///////////// EMA/SMA SETTING /////////////
+pricestrategy = request.security(syminfo.tickerid, timeframe.period, srcstrategy)
+ma1strategy = input(8, title='💯4️⃣ Fast MA Length', group = GRMAC, inline = '12')
+type1strategy = input.string('EMA', 'Fast MA Type', options=['SMA', 'EMA', 'WMA', 'HMA', 'RMA', 'VWMA'], group = GRMAC, tooltip = 'SMA / EMA / WMA / HMA / RMA / VWMA', inline = '12')
+ma3strategy = input(32, title='💯4️⃣ Slow MA Length', group = GRMAC, inline = '13')
+type3strategy = input.string('EMA', 'Slow MA Type', options=['SMA', 'EMA', 'WMA', 'HMA', 'RMA', 'VWMA'], group = GRMAC, tooltip = 'SMA / EMA / WMA / HMA / RMA / VWMA', inline = '13')
+ma4strategy = input(50, title='💯4️⃣ Mid MA Length', group = GRMAC, inline = '14')
+type4strategy = input.string('EMA', 'Mid MA Type', options=['SMA', 'EMA', 'WMA', 'HMA', 'RMA', 'VWMA'], group = GRMAC, tooltip = 'SMA / EMA / WMA / HMA / RMA / VWMA', inline = '14')
+ma5strategy = input(200, title='💯4️⃣ Long MA Length', group = GRMAC, inline = '15')
+type5strategy = input.string('EMA', 'Long MA Type', options=['SMA', 'EMA', 'WMA', 'HMA', 'RMA', 'VWMA'], group = GRMAC, tooltip = 'SMA / EMA / WMA / HMA / RMA / VWMA', inline = '15')
+price1strategy = switch type1strategy
+    "EMA" => ta.ema(pricestrategy, ma1strategy)
+    "SMA" => ta.sma(pricestrategy, ma1strategy)
+    "WMA" => ta.wma(pricestrategy, ma1strategy)
+    "HMA" => ta.hma(pricestrategy, ma1strategy)
+    "RMA" => ta.rma(pricestrategy, ma1strategy)
+    "VWMA" => ta.vwma(pricestrategy, ma1strategy)
+        
+price3strategy = switch type3strategy
+    "EMA" => ta.ema(pricestrategy, ma3strategy)
+    "SMA" => ta.sma(pricestrategy, ma3strategy)
+    "WMA" => ta.wma(pricestrategy, ma3strategy)
+    "HMA" => ta.hma(pricestrategy, ma3strategy)
+    "RMA" => ta.rma(pricestrategy, ma3strategy)
+    "VWMA" => ta.vwma(pricestrategy, ma3strategy)
+price4strategy = switch type4strategy
+    "EMA" => ta.ema(pricestrategy, ma4strategy)
+    "SMA" => ta.sma(pricestrategy, ma4strategy)
+    "WMA" => ta.wma(pricestrategy, ma4strategy)
+    "HMA" => ta.hma(pricestrategy, ma4strategy)
+    "RMA" => ta.rma(pricestrategy, ma4strategy)
+    "VWMA" => ta.vwma(pricestrategy, ma4strategy)
+price5strategy = switch type5strategy
+    "EMA" => ta.ema(pricestrategy, ma5strategy)
+    "SMA" => ta.sma(pricestrategy, ma5strategy)
+    "WMA" => ta.wma(pricestrategy, ma5strategy)
+    "HMA" => ta.hma(pricestrategy, ma5strategy)
+    "RMA" => ta.rma(pricestrategy, ma5strategy)
+    "VWMA" => ta.vwma(pricestrategy, ma5strategy)
+fast_plot = input.bool(defval = true, title = "MA FAST", group = "PLOT", inline = "P1")
+slow_plot = input.bool(defval = true, title = "MA SLOW", group = "PLOT", inline = "P1")
+death_plot = input.bool(defval = true, title = "MID MA", group = "PLOT", inline = "P2")
+golden_plot = input.bool(defval = true, title = "LONG MA", group = "PLOT", inline = "P2")
+price = close
+ups = 0.0
+ups := price > price[1] ? nz(ups[1]) + 1 : 0
+dns = 0.0
+dns := price < price[1] ? nz(dns[1]) + 1 : 0
+golden_line = price5strategy
+death_line = price4strategy
+fast_line = price1strategy
+slow_line = price3strategy
+plot(golden_plot ? golden_line : na, title = "Golden Line", color = color.white, linewidth = 2)
+plot(death_plot ? death_line : na, "Death Line", color = color.yellow, linewidth = 2)
+plot(fast_plot ? fast_line : na, "Death Line", color = color.blue, linewidth = 1)
+plot(slow_plot ? slow_line : na, "Death Line", color = color.red, linewidth = 1)
+fastUpdeath = ta.crossunder(fast_line, death_line)
+fastDowndeath = ta.crossover(fast_line, death_line)
+//=============== TAKE PROFIT and STOP LOSS by % =================
+tpsl(percent) =>
+    strategy.position_avg_price * percent / 100 / syminfo.mintick
+GR4 = "=====🆘🆘🆘 TAKE PROFIT & STOP LOSS BY [%] 🆘🆘🆘====="
+GRH = "🎯🎯🎯 TakeProfit & StopLoss MODE 🎯🎯🎯"
+mode= input.bool(title="🆘 Take Profit & Stop Loss By Percent (%)", defval=true, group=GRH, tooltip = "Take Profit & Stop Loss by % Change")
+lengthBO = input.int(title="1️⃣ Length BreakOut", minval=1, maxval=1000, defval=5, group = GR4)
+BOTrail_MODE = input.bool(defval = false, title = "🅾️ CALLBACK Trailing Stop [Low Profit But More TP]", group = GRH, tooltip = "BreakOut Length For Who's Want Fast Trailing But This Low Profit But More Time For TP\nIt's Can Combo With Breakout and 15m")
+triling_BO = input.float(title = "🅾️ BreakOut Trailing CALLBACK [%]", defval = 25, minval = 0.01, maxval = 999.99, group = GR4, tooltip = "Binance Callback = 5%, Now You Can Customize Your Callback ><")
+plotcolor = input.bool(defval = false, title = '🆑 ATR Trailing Stop', group = GRH)
+upBound = ta.highest(high, lengthBO)
+downBound = ta.lowest(low, lengthBO)
+SL_LongBO = (close < (upBound-((upBound*triling_BO)/100)))
+SL_ShortBO = (close > (downBound+((downBound*triling_BO)/100)))
+tp_l = tpsl(input.float(99999, title='🆘 TP [LONG] %', group=GR4))
+tp_s = tpsl(input.float(20, title='🆘 TP [SHORT] %', group=GR4))
+sl = tpsl(input.float(5, title='🆘 Stop Loss %', group=GR4))
+GRT = "=====🆑🆑🆑 ATR TRAILING STOP 🆑🆑🆑====="
+/////////notes////////////////////////////////////////
+// This is based on the ATR trailing stop indicator //
+// width addition of two levels of stops and        //
+// different interpretation.                        //
+// This is a fast-reacting system and is better     //
+// suited for higher volatility markets             //
+//////////////////////////////////////////////////////
+ 
+// Fast Trail //
+AP1 = input.int(5, '🆑 Fast ATR period', group = GRT)  // ATR Period
+AF1 = input.float(0.5, '🆑 Fast ATR multiplier', group = GRT)  // ATR Factor
+SL1 = AF1 * ta.atr(AP1)  // Stop Loss
+Trail1 = 0.0
+iff_1 = close > nz(Trail1[1], 0) ? close - SL1 : close + SL1
+iff_2 = close < nz(Trail1[1], 0) and close[1] < nz(Trail1[1], 0) ? math.min(nz(Trail1[1], 0), close + SL1) : iff_1
+Trail1 := close > nz(Trail1[1], 0) and close[1] > nz(Trail1[1], 0) ? math.max(nz(Trail1[1], 0), close - SL1) : iff_2
+// Slow Trail //
+AP2 = input.int(10, '🆑 Slow ATR period', group = GRT)  // ATR Period
+AF2 = input.float(2, '🆑 Slow ATR multiplier', group = GRT)  // ATR Factor
+SL2 = AF2 * ta.atr(AP2)  // Stop Loss
+Trail2 = 0.0
+iff_3 = close > nz(Trail2[1], 0) ? close - SL2 : close + SL2
+iff_4 = close < nz(Trail2[1], 0) and close[1] < nz(Trail2[1], 0) ? math.min(nz(Trail2[1], 0), close + SL2) : iff_3
+Trail2 := close > nz(Trail2[1], 0) and close[1] > nz(Trail2[1], 0) ? math.max(nz(Trail2[1], 0), close - SL2) : iff_4
+BuyLong = ta.crossover(Trail1, Trail2)
+SellShort = ta.crossunder(Trail1, Trail2)
+TS1 = plot(plotcolor ? Trail1 : na, 'Fast Trail', style=plot.style_line, color=Trail1 > Trail2 ? color.blue : color.yellow, linewidth=3, display=display.none)
+TS2 = plot(plotcolor ? Trail2 : na, 'Slow Trail', style=plot.style_line, color=Trail1 > Trail2 ? color.lime : color.blue, linewidth=3)
+if plotcolor == true
+    if BuyLong and strategy.position_size < 0
+        strategy.close('Short', qty_percent = 100, comment = "🚨ATR TL🚨")
+    if SellShort and strategy.position_size > 0
+        strategy.close('Long', qty_percent = 100, comment = "🚨ATR TL🚨")
+calcStopLossPrice(OffsetPts) =>
+    if strategy.position_size > 0
+        strategy.position_avg_price - OffsetPts * syminfo.mintick
+    else if strategy.position_size < 0
+        strategy.position_avg_price + OffsetPts * syminfo.mintick
+    else
+        na
+var stoploss = 0.
+var takeprofit = 0.
+if mode == true
+    if (strategy.position_size > 0)
+        stoploss := calcStopLossPrice(sl)
+        takeprofit := tp_l
+    if (strategy.position_size < 0)
+        stoploss := calcStopLossPrice(sl)
+        takeprofit := tp_s
+    else if strategy.position_size == 0
+        stoploss := na
+        takeprofit := na
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+Text_Alert_Future = '{{strategy.order.alert_message}}'
+copy_Fu = input( defval= Text_Alert_Future ,    title="Alert Message for BOT", inline = '00'  ,group = '═ Bot Setting ═ \n >> If You Dont Use Bot Just Pass It' ,tooltip = 'Alert For X48-BOT > Copy and Paste To Alert Function')
+passphrase = input.string(defval='1234', title ='Bot Pass',group='═ Bot Setting ═ \n >> If You Dont Use Bot Just Pass It', tooltip = 'Passphrase Must Be Same as X48-BOT')
+leveragex  = input.int(125,title='leverage',group='═ Bot Setting ═ \n >> If You Dont Use Bot Just Pass It',tooltip='"NOTHING" to do with Position size For Command To X48-BOT Only',minval=1)
+longcommand = input.string(defval='AutoLong', title = 'Bot Long Command',group='═ Bot Setting ═ \n >> If You Dont Use Bot Just Pass It', tooltip = '1.OpenLong\n2.AutoLong\n***If AutoLong = Close(100%) First > Open Long Position Auto')
+shortcommand = input.string(defval='AutoShort', title = 'Bot Short Command',group='═ Bot Setting ═ \n >> If You Dont Use Bot Just Pass It', tooltip = '1.OpenShort\n2.AutoShort\n***If AutoShort = Close(100%) First > Open Short Position Auto')
+markettype = input.string(defval='bnfuture', title = 'Future/Spot Command',group='═ Bot Setting ═ \n >> If You Dont Use Bot Just Pass It', tooltip = '1. bnfuture = FUTURE MODE\n2. bnspot = SPOT MODE\n 3.bncombo = EZ 2in1 Order')
+//////////////// Strategy Alert //////////////////////
+//////// For Use Bot Can Change This Command By Your Self /////////////////////
+string Alert_OpenLong       = '{"ex":"'+markettype+'","side": "'+longcommand+'", "@{{strategy.order.contracts}}", "symbol": "{{ticker}}", "passphrase": "'+passphrase+'","leverage":"'+str.tostring(leveragex)+'", "tp" : "25", "sl" : "0", "tl" : "0", "callback" : "0"}'
+string Alert_OpenShort      = '{"ex":"'+markettype+'","side": "'+shortcommand+'", "@{{strategy.order.contracts}}", "symbol": "{{ticker}}", "passphrase": "'+passphrase+'","leverage":"'+str.tostring(leveragex)+'", "tp" : "25", "sl" : "0", "tl" : "0", "callback" : "0"}'
+//string Alert_LongTP         = '{"ex":"bnfuture","side": "CloseLong", "amount": "@{{strategy.order.contracts}}", "symbol": "{{ticker}}", "passphrase": "'+passphrase+'","leverage":"'+str.tostring(leveragex)+'"}'
+//string Alert_ShortTP        = '{"ex":"bnfuture","side": "CloseShort", "amount": "@{{strategy.order.contracts}}", "symbol": "{{ticker}}", "passphrase": "'+passphrase+'","leverage":"'+str.tostring(leveragex)+'"}'
+//var message_closelong       = '{"ex":"bnfuture","side": "CloseLong", "amount": "%100", "symbol": "{{ticker}}", "passphrase": "'+passphrase+'","leverage":"'+str.tostring(leveragex)+'"}'
+//var message_closeshort      = '{"ex":"bnfuture","side": "CloseShort", "amount": "%100", "symbol": "{{ticker}}", "passphrase": "'+passphrase+'","leverage":"'+str.tostring(leveragex)+'"}'
+string Alert_StopLosslong   = '{"ex":"'+markettype+'","side": "CloseLong", "amount": "%100", "symbol": "{{ticker}}", "passphrase": "'+passphrase+'","leverage":"'+str.tostring(leveragex)+'", "tp" : "0", "sl" : "0", "tl" : "0", "callback" : "0"}'
+string Alert_StopLossshort  = '{"ex":"'+markettype+'","side": "CloseShort", "amount": "%100", "symbol": "{{ticker}}", "passphrase": "'+passphrase+'","leverage":"'+str.tostring(leveragex)+'", "tp" : "0", "sl" : "0", "tl" : "0", "callback" : "0"}'
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////// INPUT BACKTEST RANGE ////////////////////////////////////////////////////
+var string BTR1         = '════════ INPUT BACKTEST TIME RANGE ════════'
+i_startTime             = input.time(defval = timestamp("01 Jan 1945 00:00 +0000"), title = "Start", inline="timestart", group=BTR1, tooltip = 'Start Backtest YYYY/MM/DD')
+i_endTime               = input.time(defval = timestamp("01 Jan 2074 23:59 +0000"), title = "End", inline="timeend", group=BTR1, tooltip = 'End Backtest YYYY/MM/DD')
+if time >= i_startTime and time <= i_endTime
+    if Spot_MODE == false
+        if (ups >= consecutiveBarsUp) and close > golden_line and fast_line > golden_line
+            strategy.entry("Long", strategy.long, comment="🌙", alert_message = Alert_OpenLong)
+        if (dns >= consecutiveBarsDown) and close < golden_line and fast_line < golden_line
+            strategy.entry("Short", strategy.short, comment="👻", alert_message = Alert_OpenShort)
+        if Auto_Stop == true
+            if (dns >= consecutiveBarsDownStop) and close > golden_line and close[2] < death_line and close[1] < death_line and close < death_line or fastUpdeath
+                strategy.close("Long", qty_percent = 100, comment = "🔔AUTO🔔", alert_message = Alert_StopLosslong)
+            if (ups >= consecutiveBarsUp) and close < golden_line and close[2] > death_line and close[1] > death_line and close > death_line or fastDowndeath
+                strategy.close("Short", qty_percent = 100, comment = "🔔AUTO🔔", alert_message = Alert_StopLossshort)
+    if Spot_MODE == true
+        if (ups >= consecutiveBarsUp) and close > golden_line and fast_line > golden_line
+            strategy.entry("Long", strategy.long, comment="🌙", alert_message = Alert_OpenLong)
+        
+        if Auto_Stop == true
+            if (dns >= consecutiveBarsDownStop) and close > golden_line and close[2] < death_line and close[1] < death_line and close < death_line or fastUpdeath
+                strategy.close("Long", qty_percent = 100, comment = "🔔AUTO🔔", alert_message = Alert_StopLosslong)
+if mode == true
+    if Spot_MODE == false
+        if tp_l > 0 and sl > 0 and strategy.position_size > 0
+            strategy.exit("Exit",'Long', qty_percent = 100 , profit = takeprofit, stop = stoploss, comment_profit = "TP💚L", comment_loss = "SL💚L", alert_message = Alert_StopLosslong)
+        if tp_l > 0 and sl <= 0 and strategy.position_size > 0
+            strategy.exit("Exit",'Long', qty_percent = 100 , profit = takeprofit, comment_profit = "TP💚L", alert_message = Alert_StopLosslong)
+        if tp_l <= 0 and sl > 0 and strategy.position_size > 0
+            strategy.exit("Exit",'Long', qty_percent = 100 , stop = stoploss, comment_loss = "SL💚L", alert_message = Alert_StopLosslong)
+        if tp_s > 0 and sl > 0 and strategy.position_size < 0
+            strategy.exit("Exit",'Short', qty_percent = 100, profit = takeprofit, stop = stoploss, comment_profit = "TP❤️️S", comment_loss = "SL❤️️S", alert_message = Alert_StopLossshort)
+        if tp_s > 0 and sl <= 0 and strategy.position_size < 0
+            strategy.exit("Exit",'Short', qty_percent = 100, profit = takeprofit, comment_profit = "TP❤️️S", alert_message = Alert_StopLossshort)
+        if tp_s <= 0 and sl > 0 and strategy.position_size < 0
+            strategy.exit("Exit",'Short', qty_percent = 100, stop = stoploss, comment_loss = "SL❤️️S", alert_message = Alert_StopLossshort)
+    if Spot_MODE == true
+        if tp_l > 0 and sl > 0 and strategy.position_size > 0
+            strategy.exit("Exit",'Long', qty_percent = 100 , profit = takeprofit, loss = stoploss, comment_profit = "TP💚L", comment_loss = "SL💚L", alert_message = Alert_StopLosslong)
+        if tp_l > 0 and sl <= 0 and strategy.position_size > 0
+            strategy.exit("Exit",'Long', qty_percent = 100 , profit = takeprofit, comment_profit = "TP💚L", alert_message = Alert_StopLosslong)
+        if tp_l <= 0 and sl > 0 and strategy.position_size > 0
+            strategy.exit("Exit",'Long', qty_percent = 100 , loss = stoploss, comment_loss = "SL💚L", alert_message = Alert_StopLosslong)
+if BOTrail_MODE == true
+    if Spot_MODE == false
+        if SL_LongBO and strategy.position_size > 0
+            strategy.close("Long", qty_percent = 100, comment = "❇️CALLBACK❇️", alert_message = Alert_StopLosslong)
+        if SL_ShortBO and strategy.position_size < 0
+            strategy.close("Short", qty_percent = 100, comment = "❇️CALLBACK❇️", alert_message = Alert_StopLossshort)
+    if Spot_MODE == true
+        if SL_LongBO and strategy.position_size > 0
+            strategy.close("Long", qty_percent = 100, comment = "❇️CALLBACK❇️", alert_message = Alert_StopLosslong)
+//===================== เรียกใช้  library =========================
+import X4815162342/X48_LibaryStrategyStatus/2 as fuLi 
+//แสดงผล Backtest
+show_Net = input.bool(true,'Monitor Profit&Loss', inline = 'Lnet', group = '= PNL MONITOR SETTING =')
+position_ = input.string('bottom_center','Position', options = ['top_right','middle_right','bottom_right','top_center','middle_center','bottom_center','middle_left','bottom_left'] , inline = 'Lnet')
+size_i = input.string('auto','size', options = ['auto','tiny','small','normal'] , inline = 'Lnet') 
+color_Net = input.color(color.blue,"" , inline = 'Lnet')
+fuLi.NetProfit_Show(show_Net , position_ , size_i,  color_Net )
+Expand (291 lines)

@@ -1,0 +1,559 @@
+Script Name: supertrend advance
+Author: Aakashparikh787
+Description: HELLO FRIENDS ...............THIS IS SUPERTREND ADVANCE WITH HENKIASHI CANDLE ...I got  so many request on supertrend with henkiashi. This  is for all of them ..I am making it open  for all so you can change its coding according to your need
+SOME IMPONTENT UPDATE IN THIS SUPERTRNED
+1)  You Can Use It for option trading ...you can do algo option trading using this...
+PineScript code:
+
+Pine Script™ strategy
+supertrend advance
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// AAKASHPARIKH787
+//@version=4
+////////
+strategy("supertrend advance", "supertrend Advance", overlay=true, max_labels_count=51, max_lines_count=50)
+ 
+ 
+ 
+SYNTAX_Output = input("{{strategy.order.alert_message}}",   title= "OutPut_Syntax")
+syntax_broker = input("Fyers", title=   "Broker", options=["Fyers", "Zerodha"])
+tooltip_1_algo = "In Algo Syntax Type  '{0}'  in place of Quantity\n&& remove '{' & '}' the Bracket from the Syntax"
+group_buy_syntax_2= "🟩🟩🟩🟩 Algo-Syntax-2 🟩🟩🟩🟩"
+Want_PaperTrading = input(true,    title=   "Want Custom Syntax",         group=group_buy_syntax_2, tooltip=tooltip_1_algo       )
+ZX_buy_s_entry_msg_i = input("",    title=   "Buy Entry Syntax",  group=group_buy_syntax_2, tooltip=tooltip_1_algo)
+ZX_sell_s_entry_msg_i = input("",    title=   "Sell Entry Syntax", group=group_buy_syntax_2, tooltip=tooltip_1_algo)
+ZX_buy_s_exit_msg = input("",    title=   "Buy Exit Syntax",   group=group_buy_syntax_2, tooltip=tooltip_1_algo)
+ZX_sell_s_exit_msg = input("",    title=   "Sell Exit Syntax",  group=group_buy_syntax_2, tooltip=tooltip_1_algo)
+group_algo_syntax = "🟥 🟥 🟥Options Algo-Syntax 🟥 🟥 🟥"
+tt = input("BUY", "CALL & PUT", options=["BUY", "SELL"], group=group_algo_syntax)
+ts = input("BANKNIFTY21MAY", "CALL Symbol", input.string, group=group_algo_syntax)
+ts_1 = input("BANKNIFTY21MAY", "PUT Symbol", input.string, group=group_algo_syntax)
+nearby = input("100", "Both side Nearby", input.string, group=group_algo_syntax)
+cal = input("+0", "CALL Side Calculation", input.string, group=group_algo_syntax)
+cal_1 = input("+0", "PUT Side Calculation", input.string, group=group_algo_syntax)
+product = input("INTRADAY", "Product", options=["INTRADAY","NRML"], group=group_algo_syntax)
+DL_Time = input(3000, "Delay Time", group=group_algo_syntax)
+functions_algo_syntax(qty_ALGOX, result)=>
+    qty = tostring(qty_ALGOX)
+    Buy_Call_f = '[{"AS":"' + ts + '","P":"' + product           +'","AT":"FYERSV2"},{"TT":"'      + "BUY"            + '","TS":"' + ts   +'{' +tostring(close) +'}CE","Q":"'+ qty +'","OT":"MARKET","P":"'+ product +'","VL":"DAY","NEAR":"'+ nearby +'","CAL":"'+ cal   +'","AT":"FYERSV2"' + ',"DL":"'+ tostring(DL_Time) +'"}]'
+    Buy_Call_z = '[{"AS":"' + ts + '","P":"' + product +'","E":"NFO","AT":"ZERODHA"},' + '{"TT":"' + "BUY"  + '","E":"NFO","TS":"' + ts   +'{' +tostring(close) +'}CE","Q":"'+ qty +'","OT":"MARKET","P":"'+ product +'","VL":"DAY","NEAR":"'+ nearby +'","CAL":"'+ cal   +'","AT":"ZERODHA"' + ',"DL":"'+ tostring(DL_Time) +'"}]'
+    Buy_Call = syntax_broker== "Fyers" ? Buy_Call_f   : Buy_Call_z
+    
+    Buy_Put_f = '[{"AS":"' + ts_1+'","P":"' + product           +'","AT":"FYERSV2"},{"TT":"'      + "BUY"            + '","TS":"' + ts_1 +'{' +tostring(close) +'}PE","Q":"'+ qty +'","OT":"MARKET","P":"'+ product +'","VL":"DAY","NEAR":"'+ nearby +'","CAL":"'+ cal_1 +'","AT":"FYERSV2"'  + ',"DL":"'+ tostring(DL_Time) +'"}]'
+    Buy_Put_z = '[{"AS":"' + ts_1+'","P":"' + product +'","E":"NFO","AT":"ZERODHA"},' + '{"TT":"' + "BUY"  + '","E":"NFO","TS":"' + ts_1 +'{' +tostring(close) +'}PE","Q":"'+ qty +'","OT":"MARKET","P":"'+ product +'","VL":"DAY","NEAR":"'+ nearby +'","CAL":"'+ cal_1 +'","AT":"ZERODHA"'  + ',"DL":"'+ tostring(DL_Time) +'"}]'
+    Buy_Put = syntax_broker== "Fyers" ? Buy_Put_f   : Buy_Put_z
+    
+    
+    Sell_Call_f = '[{"AS":"' + ts + '","P":"' + product                +'","AT":"FYERSV2"},{"TT":"' + "SELL" +           '","TS":"' + ts   +'{' +tostring(close) +'}PE","Q":"'+ qty +'","OT":"MARKET","P":"'+ product +'","VL":"DAY","NEAR":"'+ nearby +'","CAL":"'+ cal   +'","AT":"FYERSV2"' + ',"DL":"'+ tostring(DL_Time) +'"}]'
+    Sell_Call_z = '[{"AS":"' + ts + '","P":"' + product +'","E":"NFO","AT":"ZERODHA"},' + '{"TT":"' + "SELL" + '","E":"NFO","TS":"' + ts   +'{' +tostring(close) +'}PE","Q":"'+ qty +'","OT":"MARKET","P":"'+ product +'","VL":"DAY","NEAR":"'+ nearby +'","CAL":"'+ cal   +'","AT":"ZERODHA"' + ',"DL":"'+ tostring(DL_Time) +'"}]'
+    Sell_Call = syntax_broker== "Fyers" ? Sell_Call_f   : Sell_Call_z
+    
+    Sell_Put_f = '[{"AS":"' + ts_1+'","P":"' + product +'","E":"NFO","AT":"ZERODHA"},' + '{"TT":"' + "SELL" + '","E":"NFO","TS":"' + ts_1 +'{' +tostring(close) +'}CE","Q":"'+ qty +'","OT":"MARKET","P":"'+ product +'","VL":"DAY","NEAR":"'+ nearby +'","CAL":"'+ cal_1 +'","AT":"ZERODHA"'  + ',"DL":"'+ tostring(DL_Time) +'"}]'
+    Sell_Put_z = '[{"AS":"' + ts_1+'","P":"' + product +'","E":"NFO","AT":"ZERODHA"},' + '{"TT":"' + "SELL" + '","E":"NFO","TS":"' + ts_1 +'{' +tostring(close) +'}CE","Q":"'+ qty +'","OT":"MARKET","P":"'+ product +'","VL":"DAY","NEAR":"'+ nearby +'","CAL":"'+ cal_1 +'","AT":"ZERODHA"' + ',"DL":"'+ tostring(DL_Time) +'"}]'
+    Sell_Put = syntax_broker== "Fyers" ? Sell_Put_f   : Sell_Put_z
+    
+    
+    Exit_Call_f = '[{"AS":"' + ts  +'","P":"' + product +          '","AT":"FYERSV2"}]'
+    Exit_Call_z = '[{"AS":"' + ts + '","P":"' + product +'","E":"NFO","AT":"ZERODHA"}]'
+    Exit_Call = syntax_broker== "Fyers" ? Exit_Call_f   : Exit_Call_z
+    
+    Exit_Put_f = '[{"AS":"' + ts_1+'","P":"' + product +          '","AT":"FYERSV2"}]'
+    Exit_Put_z = '[{"AS":"' + ts_1+'","P":"' + product +'","E":"NFO","AT":"ZERODHA"}]'
+    Exit_Put = syntax_broker== "Fyers" ? Exit_Put_f   : Exit_Put_z
+    
+    Buy_Entry_msg =  tt=="BUY"  ? Buy_Call  : Sell_Call         
+    Sell_Entry_msg =  tt=="BUY"  ? Buy_Put   : Sell_Put  
+    
+    
+    buy_s_entry_msg_i = str.format(ZX_buy_s_entry_msg_i  ,  qty, tostring(close)  )
+    sell_s_entry_msg_i = str.format(ZX_sell_s_entry_msg_i ,  qty, tostring(close)  )
+    buy_s_exit_msg = str.format(ZX_buy_s_exit_msg     ,  qty, tostring(close)  )
+    sell_s_exit_msg = str.format(ZX_sell_s_exit_msg    ,  qty, tostring(close)  )
+    Buy_Entry_msg      := Want_PaperTrading   ? buy_s_entry_msg_i   : Buy_Entry_msg    
+    Sell_Entry_msg     := Want_PaperTrading   ? sell_s_entry_msg_i  : Sell_Entry_msg   
+    Exit_Call          := Want_PaperTrading   ? buy_s_exit_msg      : Exit_Call        
+    Exit_Put           := Want_PaperTrading   ? sell_s_exit_msg     : Exit_Put         
+    return_ =     result==1 ? Buy_Entry_msg 
+                         : result==2 ? Sell_Entry_msg
+                         : result==3 ? Exit_Call
+                         : result==4 ? Exit_Put : "Error"
+    return_
+    
+    
+ 
+group_indicator_1 = "🟥 🟥 🟥 🟥 Indicator Settings 🟥 🟥 🟥 🟥 "
+Periods_spt = input(title="ATR Period",     type=input.integer,               defval=10,     group=group_indicator_1)
+src_spt = input(title="Source",                                           defval=hl2,    group=group_indicator_1)
+Multiplier_spt = input(title="ATR Multiplier", type=input.float, step=0.1,       defval=3.0,    group=group_indicator_1)
+changeATR_spt = input(title="Change ATR Calculation Method ?", type=input.bool, defval=true,   group=group_indicator_1)
+showsignals_spt = input(title="Show Buy/Sell Signals ?",         type=input.bool, defval=true,   group=group_indicator_1)
+highlighting_spt = input(title="Highlighter On/Off ?",            type=input.bool, defval=true,   group=group_indicator_1)
+candle_type_ssl = input(defval="HeikenAshi", title="Candle_Type_Filter", options = ["HeikenAshi", "CandleStick", "Same as Chart"],    group=group_indicator_1)
+f_spt()=>    
+    atr2_spt = sma(tr, Periods_spt)
+    atr_spt = changeATR_spt ? atr(Periods_spt) : atr2_spt
+    up_spt =    src_spt  -  (Multiplier_spt*atr_spt)
+    up1_spt =    nz(up_spt[1],up_spt)
+    up_spt     :=   close[1] > up1_spt ? max(up_spt,up1_spt) : up_spt
+    dn_spt =    src_spt+(Multiplier_spt*atr_spt)
+    dn1_spt =    nz(dn_spt[1], dn_spt)
+    dn_spt     :=   close[1] < dn1_spt ? min(dn_spt, dn1_spt) : dn_spt
+    trend_spt =    1
+    trend_spt  :=   nz(trend_spt[1], trend_spt)
+    trend_spt  :=   trend_spt == -1 and close > dn1_spt ? 1 : trend_spt == 1 and close < up1_spt ? -1 : trend_spt
+    
+    [trend_spt, up_spt, dn_spt]
+[trend_spt_1, up_spt_1, dn_spt_1] = f_spt()
+[trend_spt_2, up_spt_2, dn_spt_2] = security(heikinashi(tickerid(syminfo.prefix,syminfo.ticker)), timeframe.period, f_spt())    
+[trend_spt_3, up_spt_3, dn_spt_3] = security(syminfo.tickerid, timeframe.period, f_spt())    
+trend_spt =  candle_type_ssl=="HeikenAshi" ?  trend_spt_2    : candle_type_ssl=="CandleStick" ? trend_spt_2   : trend_spt_1  
+up_spt =  candle_type_ssl=="HeikenAshi" ?  up_spt_2       : candle_type_ssl=="CandleStick" ? up_spt_2      : up_spt_1     
+dn_spt =  candle_type_ssl=="HeikenAshi" ?  dn_spt_2       : candle_type_ssl=="CandleStick" ? dn_spt_2      : dn_spt_1     
+buySignal_spt = trend_spt == 1  and trend_spt[1] == -1
+sellSignal_spt = trend_spt == -1 and trend_spt[1] == 1
+plotshape(buySignal_spt  ? up_spt : na, title="UpTrend Begins",   location=location.absolute, style=shape.circle, size=size.tiny, color=color.green )
+plotshape(sellSignal_spt ? dn_spt : na, title="DownTrend Begins", location=location.absolute, style=shape.circle, size=size.tiny, color=color.red   )
+plotshape(buySignal_spt  and showsignals_spt ? up_spt : na, title="Buy",  text="Buy",  location=location.absolute, style=shape.labelup,   size=size.tiny, color=color.green, textcolor=color.white)
+plotshape(sellSignal_spt and showsignals_spt ? dn_spt : na, title="Sell", text="Sell", location=location.absolute, style=shape.labeldown, size=size.tiny, color=color.red,   textcolor=color.white)
+longFillColor_spt = highlighting_spt ? (trend_spt == 1 ? color.green : color.white) : color.white
+shortFillColor_spt = highlighting_spt ? (trend_spt == -1 ? color.red : color.white) : color.white
+mPlot_spt = plot(ohlc4, title="", style=plot.style_circles, linewidth=0)
+upPlot_spt = plot(trend_spt == 1 ? up_spt : na, title="Up Trend", style=plot.style_linebr, linewidth=2, color=color.green)
+dnPlot_spt = plot(trend_spt == 1 ? na : dn_spt, title="Down Trend", style=plot.style_linebr, linewidth=2, color=color.red)
+fill(mPlot_spt, upPlot_spt, title="UpTrend Highligter", color=longFillColor_spt)
+fill(mPlot_spt, dnPlot_spt, title="DownTrend Highligter", color=shortFillColor_spt)
+want_intraday = input(defval=false, type=input.bool,    title="Want_Intraday",                                      group=" ════╣ Entry Time ↓╠════")
+start_hours = input(defval=9 ,    type=input.integer, title="Hours",   minval=0, maxval=23, inline="Entry_Time",  group=" ════╣ Entry Time ↓╠════")
+start_minutes = input(defval=0 ,    type=input.integer, title="Minutes", minval=0, maxval=59, inline="Entry_Time",  group=" ════╣ Entry Time ↓╠════")
+draw_entry_area = input(defval=false, type=input.bool,    title="Highlight",                    inline="Entry_Time",  group=" ════╣ Entry Time ↓╠════")
+time_entry()   =>  want_intraday ? ((hour > start_hours   ) ? true   :  (hour < start_hours   ) ? false   :  (hour == start_hours   )  ?  minute >= start_minutes   : false) : true
+bgcolor(time_entry()   and draw_entry_area                               ? color.red  : na, title="Entry_Time Area")
+end_hours = input(defval=14,    type=input.integer, title="Hours",   minval=0, maxval=23, inline="Exit_Time",  group=" ════╣ Exit Time ↓╠════")
+end_minutes = input(defval=55,    type=input.integer, title="Minutes", minval=0, maxval=59, inline="Exit_Time",  group=" ════╣ Exit Time ↓╠════")
+draw_exit_area = input(defval=false, type=input.bool,    title="Highlight",                    inline="Exit_Time",  group=" ════╣ Exit Time ↓╠════")
+time_exit()  =>  want_intraday ? ((hour > end_hours   ) ? true   :  (hour < end_hours   ) ? false   :  (hour == end_hours   )  ?  minute >= end_minutes   : false) : false
+bgcolor(time_exit()   and draw_exit_area                               ? color.red  : na, title="Exit_Time Area")
+group_date = "🟥 🟥 🟥 🟥 Date- Filter 🟥 🟥 🟥 🟥 "
+fromDay = input(defval = 1,    inline="xx_x", title = "From Day",     minval = 1, maxval = 31, group=group_date)
+fromMonth = input(defval = 1,    inline="xx_x", title = "     Month",   minval = 1, maxval = 12, group=group_date)
+fromYear = input(defval = 2015, inline="xx_x", title = "     Year",    minval = 1970,           group=group_date)
+ 
+toDay = input(defval = 1,     inline="xx_y", title = "To Day",   minval = 1, maxval = 31, group=group_date)
+toMonth = input(defval = 1,     inline="xx_y", title = "   Month", minval = 1, maxval = 12, group=group_date)
+toYear = input(defval = 2023,  inline="xx_y", title = "   Year",  minval = 1970          , group=group_date)
+ 
+startDate = timestamp(fromYear, fromMonth, fromDay, 00, 00)
+finishDate = timestamp(toYear,   toMonth,   toDay,   00, 00)
+time_cond()  => time >= startDate and time <= finishDate
+group_strategy_qty_1 = "======== Quantity-Settings ↓========"
+want_qty_feature = input(defval=true,   title="Want_Quantity Feature",      group=group_strategy_qty_1)
+want_qty_feature_refresh = input(defval=true,   title="Want_Quantity Feature Refresh Daily",      group=group_strategy_qty_1)
+qty_1_x_max = input(defval=100.0,  title="Max_Qty",                    group=group_strategy_qty_1)
+qty_1_x = input(defval=25.0,   title="Entry Quanity",              group=group_strategy_qty_1)
+f_martangle_qty_1()=>
+    var qty_1 =     0.0
+    var loss_trade =     false 
+    
+    if dayofmonth!=dayofmonth[1] and want_qty_feature_refresh
+        loss_trade    := false
+        qty_1         := qty_1_x
+        
+    
+    
+        
+    if change(strategy.losstrades) and (strategy.losstrades+strategy.wintrades)>1
+        loss_trade    := true
+    if change(strategy.wintrades)  and (strategy.losstrades+strategy.wintrades)>1
+        loss_trade    := false
+    
+    
+    if  loss_trade  and change(strategy.losstrades) and  qty_1_x_max > qty_1
+        qty_1         := qty_1 * 2
+        
+        
+        
+    if  loss_trade==false //and strategy.position_size==0 
+        qty_1         := qty_1_x 
+        
+        
+        
+    if want_qty_feature==false
+        qty_1         := qty_1_x 
+        
+        
+    qty_1
+        
+    
+buy_time = buySignal_spt  and strategy.position_size<=0 and time_cond()  and  time_entry()  and  time_exit()==false 
+sell_time = sellSignal_spt and strategy.position_size>=0 and time_cond()  and  time_entry()  and  time_exit()==false 
+exit_alert_msg_1 = functions_algo_syntax(f_martangle_qty_1(), 3 )
+exit_alert_msg_2 = functions_algo_syntax(f_martangle_qty_1(), 4 )
+if strategy.position_size > 0 
+    strategy.close( 'Buy',  when=time_exit() and want_intraday, alert_message=exit_alert_msg_1,    comment="EoD_Exit")
+if strategy.position_size < 0 
+    strategy.close( 'Sell', when=time_exit() and want_intraday, alert_message=exit_alert_msg_2,    comment="EoD_Exit")
+strategy.close("Buy",  when= sell_time,    comment="Buy_Exit",  alert_message=functions_algo_syntax(f_martangle_qty_1(), 3 ))
+strategy.close("Sell", when= buy_time,     comment="Sell_Exit", alert_message=functions_algo_syntax(f_martangle_qty_1(), 4 ))
+group_strategy_tp_sl_1 = "======== TP-SL-Main & Reverse ↓========"
+tp_sl_type = input(defval="Percent",title="TP-SL Type",             options=["Points","Percent"],  group=group_strategy_tp_sl_1)
+target_points_1_00 = input(defval=20,       title="Target     ",            type=input.float, minval=0 ,   group=group_strategy_tp_sl_1)
+sl_points_1_00 = input(defval=30,       title="Stop-Loss ",             type=input.float, minval=0 ,   group=group_strategy_tp_sl_1 )
+want_spt_tp = input(defval=true,     title="Want Supertrend TP ",    type=input.bool,   inline="aabjbdkjbsk",  group=group_strategy_tp_sl_1 )
+spt_tp_factor = input(defval=1,        title="X-times ",               type=input.float,  inline="aabjbdkjbsk",  group=group_strategy_tp_sl_1 )
+SPT_value = buySignal_spt  ? up_spt : sellSignal_spt ? dn_spt : na
+spt_sl_x = round(   (  abs(close -  SPT_value) *spt_tp_factor ) /syminfo.mintick  )
+spt_sl = 0
+spt_sl              := buy_time or sell_time ? spt_sl_x :    spt_sl[1]
+target_points_1_01 = round(  ( close* (target_points_1_00*0.01) )/syminfo.mintick)
+target_points_1_02 = round(target_points_1_00/syminfo.mintick)
+target_points_1 = tp_sl_type=="Points" ? target_points_1_02 : target_points_1_01
+target_points_1     := want_spt_tp  ? min(target_points_1, spt_sl ) : target_points_1
+sl_points_1_01 = round(  ( close* (sl_points_1_00*0.01) )/syminfo.mintick)
+sl_points_1_02 = round(sl_points_1_00/syminfo.mintick)
+sl_points_1 = tp_sl_type=="Points" ? sl_points_1_02 : sl_points_1_01
+group_strategy_1 = "🟧 🟧 🟧  Strategy   - Settings 🟧 🟧 🟧 "
+group_strategy_2 = "🟧 🟧 🟧  SL-Trailing- Settings 🟧 🟧 🟧 "
+want_buy = input(title="Want_Buy_Side",     defval=true,     type=input.bool, group=group_strategy_1)
+want_sell = input(title="Want_Sell_Side",    defval=true,     type=input.bool, group=group_strategy_1)
+strategy.entry("Buy",  true,  when= buy_time    and  want_buy ,     qty = f_martangle_qty_1() , alert_message=functions_algo_syntax(f_martangle_qty_1(), 1 ))
+strategy.entry("Sell", false, when= sell_time   and  want_sell,     qty = f_martangle_qty_1() , alert_message=functions_algo_syntax(f_martangle_qty_1(), 2 ))
+strategy.exit('Buy_Exit' ,  'Buy',   loss=sl_points_1,  profit=target_points_1 , alert_message=functions_algo_syntax(f_martangle_qty_1(), 3 ) )
+strategy.exit('Sell_Exit',  'Sell',  loss=sl_points_1,  profit=target_points_1 , alert_message=functions_algo_syntax(f_martangle_qty_1(), 4 ) )
+Expand (336 lines)

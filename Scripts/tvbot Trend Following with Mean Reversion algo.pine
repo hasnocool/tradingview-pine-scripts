@@ -1,0 +1,416 @@
+Script Name: tvbot Trend Following with Mean Reversion algo
+Author: tvbot-
+Description: Default settings are for the ETHUSDT 5 min Binance Chart regular candles.
+Back test Default settings are 10,000 usd to start, Commission 0.075%, capital deployment per position is 10%, slippage value of 1.
+
+This algo uses the EMA to set the trend line . You are also able to turn the trend line into a range instead of just a static line. The algo uses the VWMA to...
+PineScript code:
+
+Pine Script™ strategy
+tvbot Trend Following with Mean Reversion algo
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © tvbot
+//@version=5
+strategy("tvbot Trend Following Algo", overlay=true, precision=2, commission_value=0.075, commission_type=strategy.commission.percent, initial_capital=10000, currency=currency.USD, default_qty_type=strategy.percent_of_equity, default_qty_value=10, slippage=1, pyramiding=0)
+////////////////////////////////////////////// USER INPUT ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//Code below this line is the start of the Automated Trading Platform(ATP) code.  It sets the parameters to send the webhook message to the Automated Trading Platform(ATP) to execute the trade///   
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+enableLong = input.bool(true, "Enable Long", group = "Enable / Disable") 
+enableShort = input.bool(true, "Enable Short", group = "Enable / Disable") 
+ 
+//////////////////// SERVER DATA INPUT 
+ 
+exchange = input.string(title="Exchange", defval="Coinex", options=["Coinex"], group = "SERVER SIDE") 
+ordertype = input.string(title="Ordertype", defval="Market", options=["Market", "Limit"], group = "SERVER SIDE") 
+ 
+cash = input.float(title="Cash per Trade", defval=10, minval=-100, group = "SERVER SIDE") 
+leverage = input.int(title="Leverage", defval=0, minval=0, group = "SERVER SIDE") 
+ 
+i_time = input.time(defval = timestamp("01 Jan 2021 13:30 +0000"), title = "Start Time",  group = "SERVER SIDE") 
+afterStartDate = (time >= i_time) 
+ 
+passphrase = input.string(title="Passphrase", defval='', group = "SERVER SIDE") 
+ 
+key = input.string(title="key", defval='', group = "SERVER SIDE")  
+secret = input.string(title="Secret", defval='', group = "SERVER SIDE") 
+ 
+////////////////// FILTER SERVER DATA 
+ 
+message = '' 
+var pair = "" 
+var ordervolume = 0.0 
+ 
+if leverage == 0 
+    pair := syminfo.basecurrency + "/" + syminfo.currency 
+ 
+else if exchange == "Coinex" and leverage > 0 
+    pair := syminfo.basecurrency + "/" + syminfo.currency + ":" + syminfo.currency 
+     
+if cash > 0 
+    ordervolume := math.round(cash / close, 5) 
+else if cash < 0 
+    ordervolume := cash 
+ 
+/////////////////////////////////////////////// ALERT MESSAGE 
+ 
+LEmessage = exchange + " long/buy " + pair + " " + ordertype + " " + str.tostring(ordervolume) + " " + str.tostring(close) + " " + str.tostring(leverage) + " " + passphrase + " " + key + " " + secret 
+LCmessage = exchange + " long/sell " + pair + " " + ordertype + " " + str.tostring(ordervolume) + " " + str.tostring(close) + " " + str.tostring(leverage) + " " + passphrase + " " + key + " " + secret 
+ 
+SEmessage = exchange + " short/buy " + pair + " " + ordertype + " " + str.tostring(ordervolume) + " " + str.tostring(close) + " " + str.tostring(leverage) + " " + passphrase + " " + key + " " + secret 
+SCmessage = exchange + " short/sell " + pair + " " + ordertype + " " + str.tostring(ordervolume) + " " + str.tostring(close) + " " + str.tostring(leverage) + " " + passphrase + " " + key + " " + secret 
+ 
+/////////////////////////////////////////////////////////////////
+//The code for the Automated Trading Platform(ATP) ends here/////
+/////////////////////////////////////////////////////////////////
+ 
+// Inputs 
+averageData = input.source(close, title="Source", group = "TrendLine") 
+length = input.int(94, minval=1, title="Entry", group = "TrendLine") 
+length3 = input.int(420, minval=1, title="ma", group = "TrendLine") 
+ 
+ma = ta.ema(averageData, length3) //ema is used as the trendline
+hull = ta.vwma(averageData, length) //Base entry parameters use the vwma
+//section of code below turns the trendline into a range instead of a static line.////////////////////////////////////
+Perc = input.float(title="SMA Touch Difference (%)", minval=0.0, step=0.1, defval=0.2, group = "SMA Touch") / 100/////
+                                                                                                                 /////
+longExitPrice  = ma * (1 + Perc)                                                                                 /////
+shortExitPrice = ma * (1 - Perc)                                                                                 /////
+                                                                                                                 /////
+plot(longExitPrice,  color = color.red, display = display.none)                                                  /////
+plot(shortExitPrice, color = color.red, display = display.none)                                                  /////
+                                                                                                                 /////
+//section of code above turns the trendline into a range instead of a static line.////////////////////////////////////
+//Code below this line is what sets the base entry condition.  When a candle closes above or below the vwma, the algorithm records the close price of that candle.
+//then it waits for the vwma to meet that closed price.  When vwma and the closed beaching candle meet then the condition is satisfied.
+//if the candle breaks back below or above the line it resets the condition.
+var isbuy = true 
+var isfirstBuyCdnMeet = false 
+var lastbuyClosePrice = 0.0 
+ 
+var isfirstSellCdnMeet = false 
+var lastsellClosePrice = 0.0 
+ 
+buyhullcross = ta.crossover(close , hull) 
+sellhullcross = ta.crossunder(close , hull) 
+ 
+buycdn = isfirstBuyCdnMeet and ta.crossover(hull,lastbuyClosePrice) and isbuy 
+sellcdn = isfirstSellCdnMeet and ta.crossunder(hull,lastsellClosePrice) and not isbuy 
+ 
+if buyhullcross and barstate.isconfirmed 
+    isfirstBuyCdnMeet := true 
+    lastbuyClosePrice := close 
+    isfirstSellCdnMeet := false 
+ 
+if sellhullcross and barstate.isconfirmed 
+    isfirstSellCdnMeet := true 
+    lastsellClosePrice := close 
+    isfirstBuyCdnMeet := false 
+ 
+if sellcdn 
+    isfirstSellCdnMeet := false 
+    isbuy := true 
+ 
+if buycdn 
+    isfirstBuyCdnMeet := false 
+    isbuy := false 
+/////end of base entry condition/////////////////////////////
+//this section of code checks to see if the trend line has been tested.  If the trend line has been tested then the condition also checks to see if your already in a position or not
+//a base entry signal from the code above is triggered will reset the trend line test condition.
+var is_sma_touch = false 
+is_new_pos = ((strategy.position_size[1] == 0) and (strategy.position_size != 0)) or ((strategy.position_size[1] * strategy.position_size) == -1)   // New position: Either we were not in a position before, or direction changed (short -> long or long -> short) 
+sma_touch = (high > longExitPrice) and (low < longExitPrice) or (high > shortExitPrice) and (low < shortExitPrice) or (close < longExitPrice) and (close > shortExitPrice) or (high > ma ) and (low < ma) // SMA should be between high and low for a touch 
+is_sma_touch := is_new_pos ? false : sma_touch ? true : is_sma_touch                                                                                // Reset flag when it is a new position. Then check if there is a touch, keep its old value otherwise 
+is_sma_touch := (isbuy and sellcdn) ? false : (not isbuy and buycdn) ? false : is_sma_touch                                                         // Reset when an opposite signal takes place 
+//////////end of trend line test condition///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////// REVERSION INDICATOR////////////////////
+length2 = input.int(277, minval=1, title="Entry", group = "Reversion") 
+length33 = input.int(1100, minval=1, title="ma", group = "Reversion") 
+ 
+hull1 = ta.wma(2*ta.wma(averageData, length2/2)-ta.wma(averageData, length2), math.floor(math.sqrt(length2))) 
+ma1 = ta.ema(averageData, length33) 
+ 
+///Code below is the entry condition for the mean reversion trade, its similar to the trend following entry condition but it uses the HMA instead of the VWMA
+var isbuy1 = true 
+var isfirstBuyCdnMeet1 = false 
+var lastbuyClosePrice1 = 0.0 
+ 
+var isfirstSellCdnMeet1 = false 
+var lastsellClosePrice1 = 0.0 
+     
+buyhullcross1 = ta.crossover(close , hull1)     
+sellhullcross1 = ta.crossunder(close , hull1)     
+ 
+buycdn1 = isfirstBuyCdnMeet1 and ta.crossover(hull1,lastbuyClosePrice1) and isbuy1 
+sellcdn1 = isfirstSellCdnMeet1 and ta.crossunder(hull1,lastsellClosePrice1) and not isbuy1 
+ 
+if buyhullcross1 and barstate.isconfirmed 
+    isfirstBuyCdnMeet1 := true 
+    lastbuyClosePrice1 := close 
+    isfirstSellCdnMeet1 := false 
+ 
+if sellhullcross1 and barstate.isconfirmed 
+    isfirstSellCdnMeet1 := true 
+    lastsellClosePrice1 := close 
+    isfirstBuyCdnMeet1 := false 
+ 
+if sellcdn1 
+    isfirstSellCdnMeet1 := false 
+    isbuy1 := true 
+     
+if buycdn1 
+    isfirstBuyCdnMeet1 := false   
+    isbuy1 := false 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//this code is how far the price needs to move away from the trend line/mean before a mean reversion entry is considered.
+triggerup = 1.01 * ma1
+triggerdown = 0.99 * ma1
+ 
+////////////////////////////////////////// ENTRY AND EXIT code////////////////////////////////////////////////////////////////////////////
+//"alert_message = LCmessage" is the code to tell the algo to send a LONG CLOSE message to the Automated Trading Platform(ATP)///
+//"alert_message = SCmessage" is the code to tell the algo to send a SHORT CLOSE message to the Automated Trading Platform(ATP)//
+//"alert_message = LEmessage" is the code to tell the algo to send a LONG ENTRY message to the Automated Trading Platform(ATP)///
+//"alert_message = SEmessage" is the code to tell the algo to send a SHORT ENTRY message to the Automated Trading Platform(ATP)//
+//"enableLong and afterStartDate" is required for your long entry parameters                                                            //
+//"enableShort and afterStartDate" is required for your short entry parameters                                                          //
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//takeprofit conditions////////////////////
+strategy.close('Buy Trend', when = sellcdn or sellcdn1 and averageData > triggerup, alert_message = LCmessage)  // this is the take profit condition, when the base entry is triggered it will take profit or an entry condtion from the mean reversion system
+strategy.close('Sell Trend', when = buycdn or buycdn1 and averageData < triggerdown, alert_message = SCmessage)  // this is the take profit condition, when the base entry is triggered it will take profit or an entry condtion from the mean reversion system
+strategy.close('Buy Reversion', when = sellcdn1 or sellcdn and (averageData < ma) and is_sma_touch[1], alert_message = LCmessage) // this is the take profit condition, when the base entry is triggered it will take profit or an entry condition from the trend following system 
+strategy.close('Sell Reversion', when = buycdn1 or buycdn and (averageData > ma) and is_sma_touch[1], alert_message = SCmessage)  // this is the take profit condition, when the base entry is triggered it will take profit or an entry condtion from the trend following system
+/////////////////////////////////
+//trend following entry conditions/// 
+if buycdn and (averageData > ma) and is_sma_touch[1] and enableLong and afterStartDate //this is the entry condition, base entry condition, price > trendline and trendline test, long enabled and after date set need to be true before a position is taken
+    strategy.entry('Buy Trend', direction=strategy.long, alert_message = LEmessage) 
+ 
+if sellcdn and (averageData < ma) and is_sma_touch[1] and enableShort and afterStartDate //this is the entry condition, base entry condition, price < trendline, trendline test, short enabled and after specified date need to be true before a short positon is taken
+    strategy.entry('Sell Trend', direction=strategy.short, alert_message = SEmessage) 
+ 
+///////////////////// REVERSION entry
+ 
+if buycdn1 and averageData < triggerdown and enableLong and afterStartDate
+    strategy.entry('Buy Reversion', direction=strategy.long, alert_message = LEmessage) 
+ 
+if sellcdn1 and averageData > triggerup and enableShort and afterStartDate 
+    strategy.entry('Sell Reversion', direction=strategy.short, alert_message = SEmessage) 
+    
+////////////////////////////////////////// PLOT DATA ON THE CHART
+plot(ma, color=color.blue, title = "trend mean") 
+plot(hull, color=color.white, title="trend following")
+plot(hull1, color=color.black, title ="Reversion")
+ 
+//plotshape(buycdn, title='Buy Label for Trend Indicator', text='Buy', location=location.belowbar, style=shape.labelup, size=size.small, color=color.new(#0000FF, 0), textcolor=color.new(#FFFFFF, 0)) 
+//plotshape(sellcdn, title='Sell Label for Trend Indicator', text='Sell', location=location.abovebar, style=shape.labeldown, size=size.small, color=color.new(#FF0000, 0), textcolor=color.new(#FFFFFF, 0))  
+ 
+//plotshape(buycdn1, title='Buy Label for Reversion Indicator', text='Buy', location=location.belowbar, style=shape.labelup, size=size.small, color=color.new(#0000FF, 0), textcolor=color.new(#FFFFFF, 0)) 
+//plotshape(sellcdn1, title='Sell Label for Reversion Indicator', text='Sell', location=location.abovebar, style=shape.labeldown, size=size.small, color=color.new(#FF0000, 0), textcolor=color.new(#FFFFFF, 0)) 
+Expand (208 lines)

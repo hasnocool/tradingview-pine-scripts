@@ -1,0 +1,387 @@
+Script Name: Strategy- Combo Z Score
+Author: jroche1973
+Description: Strategy version of Combo Z Score
+
+Objective:
+Can we use both VIX and MOVE relationships to indicate movement in the SPY? VIX (forward contract on SPY options) correlations are quite common as forward indicators however MOVE (forward contract on bonds) also provides a slightly different level of insight
+Using the Z-Score of VIX vs VVIX and MOVE vs inverted VIX...
+PineScript code:
+
+Pine Script™ strategy
+Strategy: Combo Z Score
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © jroche1973
+//@version=4
+strategy("Strategy: Combo Z Score", precision=6, overlay=false, pyramiding=100, calc_on_order_fills=true)
+Length      = input(266) //252
+v_StdDevs   = input(defval = 2.0, title="VIX Z Std Dev")
+m_StdDevs   = input(defval = 2.0, title="MOVE Z Std Dev")
+show_m      = input(type=input.bool, title="Show MOVE", defval=true)
+show_v      = input(type=input.bool, title="Show VIX", defval=true)
+show_o      = input(type=input.bool, title="Show Oil/Oil Vol", defval=true)
+show_ema    = input(type=input.bool, title="Apply EMA", defval=true)
+l_ema       = input( title="EMA Length", defval=100)
+//strat_all   = input(type=input.bool, title="Start both M and V", defval=true)
+//strat_v     = input(type=input.bool, title="Start both Vix only", defval=false)
+//strat_m     = input(type=input.bool, title="Start both Move only", defval=false)
+_bb_mult    = input(title="BB mult", type=input.float, defval=2)
+_bb_range   = input(title="BB mean range", type=input.integer, defval=20)
+//src = input(close)
+MOVE        = security("TVC:MOVE", timeframe.period, close)
+VIX         = security("VIX", timeframe.period, close)
+VVIX        = security("VVIX", timeframe.period, close)
+OILVIX      = security("CBOE:OVX", timeframe.period, close)
+USO         = security("TVC:USOIL", timeframe.period, close)
+//USO         = security("WTI", timeframe.period, close)
+startDateTime = input(type=input.time, defval=timestamp("1 Jan 2007 09:30"), 
+     title="Start Date", group="Strategy Date Range", 
+     tooltip="Specifies the start date and time from which " + 
+     "the strategy simulates buy and sell trades.")    
+[_bb_mid, _bb_hig, _bb_low] = bb(close, _bb_range, _bb_mult)
+_bb_percent = (close - _bb_low) / (_bb_hig - _bb_low)
+s_ema = ema(close, l_ema)
+//Proxy of M of Move ie alt VVIX
+iVIX = 1/VIX
+//MOVE calcs
+divM = MOVE/iVIX
+m_basis = sma(divM, Length)
+m_zscore = (divM - m_basis) / stdev(divM, Length)
+iOILVIX = 1/OILVIX
+divO = USO/iOILVIX
+o_basis = sma(divO, Length)
+o_zscore = (divO - o_basis) / stdev(divO, Length)
+plot(show_m? m_zscore: na, color=color.new(#55FF55, 0))
+plot(show_o? o_zscore: na, color=color.new(#ebbd14, 0))
+//plot( _bb_percent , color = color.new(color.yellow,0))
+hline(m_StdDevs, color=color.white, linestyle=hline.style_dotted)
+hline(-1 * m_StdDevs, color=color.white, linestyle=hline.style_dotted)
+color o_color = o_zscore < 0 ? color.new(color.white, 70): color.new(color.yellow, 70) //we want white if not active
+color ob_color = o_zscore < 0 and _bb_percent > 0.5 ? color.new(color.white, 70): color.new(color.yellow, 70) //we want white if not active
+color m_color = m_zscore < 0 ? color.new(color.white, 70): color.new(color.blue, 70) //we want white if not active
+color mb_color = m_zscore < 0 and _bb_percent > 0.5 ? color.new(color.white, 70): color.new(color.blue, 70) //we want white if not active
+use_b = _bb_percent < 0.5 ? true: false
+bgcolor(show_o and use_b ? color.new(o_color,70) : color.new(color.white, 70)) // we want whatever color our status stipulates if 'on' or white if 'off'
+bgcolor(show_m and use_b ? color.new(m_color,70) : color.new(color.white, 70)) // we want whatever color our status stipulates if 'on' or white if 'off'
+//VIX Calcs
+divV = VIX/VVIX
+v_basis = sma(divV, Length)
+v_zscore = (divV - v_basis) / stdev(divV, Length)
+plot(show_v? v_zscore: na, color=color.new(#7d070c, 0))
+hline(v_StdDevs, color=color.white, linestyle=hline.style_dotted)
+hline(-1 * v_StdDevs, color=color.white, linestyle=hline.style_dotted)
+color v_color = v_zscore < 0 ? color.new(color.white, 70): color.new(color.red, 70) //we want white if not active
+bgcolor(show_v and use_b? color.new(v_color,70) : color.new(color.white, 70)) // we want whatever color our status stipulates if 'on' or white if 'off'
+//Strategy Testing
+long_all =      m_zscore < 0    and     v_zscore < 0    and     o_zscore < 0      and   _bb_percent > 0.5 ? true : false
+long_vix =      v_zscore < 0    and     _bb_percent > 0.5
+long_move =     m_zscore < 0    and     _bb_percent > 0.5
+long_oil =      o_zscore < 0    and     _bb_percent > 0.5
+short_all =     m_zscore > 0    and     v_zscore > 0    and     o_zscore > 0     and    _bb_percent < 0.5 ? true : false
+short_vix =     v_zscore > 0    and     _bb_percent < 0.5
+short_move =    m_zscore > 0    and     _bb_percent < 0.5
+short_oil =     o_zscore > 0    and     _bb_percent < 0.5
+if show_ema
+    if time >= startDateTime and time <= timenow
+    //if m_zscore and v_zscore > 0 and %b <.05 then enter short
+        if show_v and show_m and show_o
+            if m_zscore > 0 and v_zscore > 0 and o_zscore > 0 and _bb_percent < 0.5 and close < s_ema //short
+                strategy.entry("sell", strategy.short, 100,  when=strategy.position_size > 0)   //open short position
+                strategy.close("close long", when=long_all)                                     //close all long positions
+            else  //long   
+                strategy.entry("buy", strategy.long, 100, when=strategy.position_size <= 0)     //open long position
+                strategy.close("close short", when=short_all)                                   //close all short positions
+        else if show_m and show_v == false and show_o == false
+            if m_zscore > 0 and _bb_percent < 0.5  and close < s_ema //short
+                strategy.entry("sell", strategy.short, 100,  when=strategy.position_size > 0)
+                strategy.close("close long", when=long_move)
+            else //long  
+                strategy.entry("buy", strategy.long, 100, when=strategy.position_size <= 0)
+                strategy.close("close short", when=short_move)
+        else if show_v and show_m == false and show_o == false
+            if v_zscore > 0 and _bb_percent < 0.5 and close < s_ema //short
+                strategy.entry("sell", strategy.short, 100,  when=strategy.position_size > 0)
+                strategy.close("close long", when=long_vix)
+            else   //long  
+                strategy.entry("buy", strategy.long, 100, when=strategy.position_size <= 0)
+                strategy.close("close short", when=short_vix)
+        else if show_o and show_v == false and show_m == false
+            if o_zscore > 0 and _bb_percent < 0.5  and close < s_ema //short
+                strategy.entry("sell", strategy.short, 100,  when=strategy.position_size > 0)
+                strategy.close("close long", when=long_move)
+            else //long  
+                strategy.entry("buy", strategy.long, 100, when=strategy.position_size <= 0)
+                strategy.close("close short", when=short_move)
+        else if show_v and show_m and show_o == false
+            if v_zscore > 0 and m_zscore > 0 and _bb_percent < 0.5 and close < s_ema //short
+                strategy.entry("sell", strategy.short, 100,  when=strategy.position_size > 0)
+                strategy.close("close long", when=long_vix)
+            else   //long  
+                strategy.entry("buy", strategy.long, 100, when=strategy.position_size <= 0)
+                strategy.close("close short", when=short_vix)
+        else if show_v and show_o and show_m == false
+            if v_zscore > 0 and o_zscore > 0 and _bb_percent < 0.5 and close < s_ema //short
+                strategy.entry("sell", strategy.short, 100,  when=strategy.position_size > 0)
+                strategy.close("close long", when=long_vix)
+            else   //long  
+                strategy.entry("buy", strategy.long, 100, when=strategy.position_size <= 0)
+                strategy.close("close short", when=short_vix)
+        else if show_o and show_m and show_v == false
+            if o_zscore > 0 and m_zscore > 0 and _bb_percent < 0.5 and close < s_ema //short
+                strategy.entry("sell", strategy.short, 100,  when=strategy.position_size > 0)
+                strategy.close("close long", when=long_vix)
+            else   //long  
+                strategy.entry("buy", strategy.long, 100, when=strategy.position_size <= 0)
+                strategy.close("close short", when=short_vix)
+else
+    if time >= startDateTime and time <= timenow
+    //if m_zscore and v_zscore > 0 and %b <.05 then enter short
+        if show_v and show_m and show_o
+            if m_zscore > 0 and v_zscore > 0 and o_zscore > 0 and _bb_percent < 0.5  //short
+                strategy.entry("sell", strategy.short, 100,  when=strategy.position_size > 0)   //open short position
+                strategy.close("close long", when=long_all)                                     //close all long positions
+            else  //long   
+                strategy.entry("buy", strategy.long, 100, when=strategy.position_size <= 0)     //open long position
+                strategy.close("close short", when=short_all)                                   //close all short positions
+        else if show_m and show_v == false and show_o == false
+            if m_zscore > 0 and _bb_percent < 0.5   //short
+                strategy.entry("sell", strategy.short, 100,  when=strategy.position_size > 0)
+                strategy.close("close long", when=long_move)
+            else //long  
+                strategy.entry("buy", strategy.long, 100, when=strategy.position_size <= 0)
+                strategy.close("close short", when=short_move)
+        else if show_v and show_m == false and show_o == false
+            if v_zscore > 0 and _bb_percent < 0.5  //short
+                strategy.entry("sell", strategy.short, 100,  when=strategy.position_size > 0)
+                strategy.close("close long", when=long_vix)
+            else   //long  
+                strategy.entry("buy", strategy.long, 100, when=strategy.position_size <= 0)
+                strategy.close("close short", when=short_vix)
+        else if show_o and show_v == false and show_m == false
+            if o_zscore > 0 and _bb_percent < 0.5   //short
+                strategy.entry("sell", strategy.short, 100,  when=strategy.position_size > 0)
+                strategy.close("close long", when=long_move)
+            else //long  
+                strategy.entry("buy", strategy.long, 100, when=strategy.position_size <= 0)
+                strategy.close("close short", when=short_move)
+        else if show_v and show_m and show_o == false
+            if v_zscore > 0 and m_zscore > 0 and _bb_percent < 0.5  //short
+                strategy.entry("sell", strategy.short, 100,  when=strategy.position_size > 0)
+                strategy.close("close long", when=long_vix)
+            else   //long  
+                strategy.entry("buy", strategy.long, 100, when=strategy.position_size <= 0)
+                strategy.close("close short", when=short_vix)
+        else if show_v and show_o and show_m == false
+            if v_zscore > 0 and o_zscore > 0 and _bb_percent < 0.5  //short
+                strategy.entry("sell", strategy.short, 100,  when=strategy.position_size > 0)
+                strategy.close("close long", when=long_vix)
+            else   //long  
+                strategy.entry("buy", strategy.long, 100, when=strategy.position_size <= 0)
+                strategy.close("close short", when=short_vix)
+        else if show_o and show_m and show_v == false
+            if o_zscore > 0 and m_zscore > 0 and _bb_percent < 0.5  //short
+                strategy.entry("sell", strategy.short, 100,  when=strategy.position_size > 0)
+                strategy.close("close long", when=long_vix)
+            else   //long  
+                strategy.entry("buy", strategy.long, 100, when=strategy.position_size <= 0)
+                strategy.close("close short", when=short_vix)
+Expand (199 lines)

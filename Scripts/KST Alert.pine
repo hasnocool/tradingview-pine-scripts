@@ -1,0 +1,70 @@
+Script Name: KST Alert
+Author: luffynaruto77
+Description: Just added Alert condition to the default indicator
+
+Default timeframe is set to 15m
+
+Buy signal initiates when kst line crosses over signal line
+
+Sell Signal initiates when kst line crosses under signal line
+PineScript code:
+
+Pine Script™ strategy
+KST Alert
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+//@version=5
+strategy(title="KST Alert", shorttitle="KST Alert", format=format.price, precision=4)
+roclen1 = input.int(10, minval=1, title = "ROC Length #1")
+roclen2 = input.int(15, minval=1, title = "ROC Length #2")
+roclen3 = input.int(20, minval=1, title = "ROC Length #3")
+roclen4 = input.int(30, minval=1, title = "ROC Length #4")
+smalen1 = input.int(10, minval=1, title = "SMA Length #1")
+smalen2 = input.int(10, minval=1, title = "SMA Length #2")
+smalen3 = input.int(10, minval=1, title = "SMA Length #3")
+smalen4 = input.int(15, minval=1, title = "SMA Length #4")
+siglen = input.int(9, minval=1, title = "Signal Line Length")
+smaroc(roclen, smalen) => ta.sma(ta.roc(close, roclen), smalen)
+kst = smaroc(roclen1, smalen1) + 2 * smaroc(roclen2, smalen2) + 3 * smaroc(roclen3, smalen3) + 4 * smaroc(roclen4, smalen4)
+sig = ta.sma(kst, siglen)
+plot(kst, color=#009688, title="KST")
+plot(sig, color=#F44336, title="Signal")
+hline(0, title="Zero", color = #787B86)
+eL1=ta.crossover(kst,sig)
+eS1=ta.crossunder(kst,sig)
+ch = 0
+t = year(time('D'))
+ch := ta.change(t) != 0 ? 1 : 0
+T1 = time(timeframe.period, "0915-1520")
+session_open = na(t) ? false : true
+newDay = ta.change(time("15m")) != 0
+strategy.entry("Long1", strategy.long,25, when = eL1)
+strategy.entry("Short1", strategy.short,25, when = eS1)
+Expand (28 lines)

@@ -1,0 +1,194 @@
+Script Name: STRATEGY TESTER ENGINE - ON CHART DISPLAY - PLUG & PLAY
+Author: FiatDropout
+Description: So i had this idea while ago when  @alexgrover  published a script and dropped a nugget in between which replicates the result of strategy tester on chart as an indicator.
+
+So it seemed fair to use one of his strategy to display the results.
+
+This strategy tester can now be used in replay mode like an indicator and you can see what happen at a particular section...
+PineScript code:
+
+Pine Script™ strategy
+STRATEGY TESTER ENGINE - ON CHART DISPLAY - PLUG & PLAY
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+// This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License https://creativecommons.org/licenses/by-sa/4.0/
+// © alexgrover
+//@version=4
+strategy("Grid System With Fake Martingale",process_orders_on_close=true, initial_capital=100)
+point = input(1.)
+os    = input(1,"Order Size")
+mf    = input(2.,"Martingale Multiplier")
+anti  = input(false,"Anti Martingale")
+//------------------------------------------------------------------------------
+baseline = 0.
+baseline := nz(close > baseline[1] + point or close < baseline[1] - point ? 
+  close : baseline[1],close)
+//------------------------------------------------------------------------------
+size = 0.
+lossnew = change(strategy.losstrades)
+win = change(strategy.wintrades)
+if anti
+    size := win ? size[1]*mf : lossnew ? 1 : nz(size[1],os)
+else
+    size := lossnew ? size[1]*mf : win ? 1 : nz(size[1],os)
+upper = baseline + point*size
+lower = baseline - point*size
+//------------------------------------------------------------------------------
+if baseline > baseline[1] and strategy.opentrades == 0
+    strategy.entry("Buy",strategy.long,qty=os)
+    strategy.exit("buy/tp/sl","Buy",stop=lower,limit=upper)
+if baseline < baseline[1] and strategy.opentrades == 0
+    strategy.entry("Sell",strategy.short,qty=os)
+    strategy.exit("sell/tp/sl","Sell",stop=upper,limit=lower)
+    
+    
+//------------------------------------------------------------------------------
+// STRATEGY TESTER ENGINE - ON CHART DISPLAY - PLUG & PLAY
+//@FiatDropout   
+eq = strategy.equity //+ strategy.openprofit //USE THIS IF YOU NEED TO CHECK MAX GAINED BASED ON UNREALISED PnL and CANDLE MOVEMENT. THIS WILL CHANGE DD CALCCULATION AS WELL // CURRENT EQUITY
+loss = strategy.grossloss //GROSS LOSS SINCE START 
+gain = strategy.grossprofit //GROSS LOSS SINCE START
+in = strategy.initial_capital-100 //STARTING CAPITAL IN PERCENT
+total = strategy.closedtrades
+winners = strategy.wintrades
+losers = strategy.losstrades
+rmax = 0.
+rmax := max(eq,nz(rmax[1]))
+lmax = 0.
+lmax := max(loss,nz(loss[1]))
+gmax = 0.
+gmax := max(gain,nz(gain[1]))
+inmax = 0.
+inmax := max(in,nz(in[1]))
+tmax = 0.
+tmax := max(total,nz(total[1]))
+dd = -((rmax-eq)/rmax*100) //CURRENT DRAWDOWN
+ddm = lowest(dd,200) //MAX DRAWDOWN
+pfactor = gmax/lmax //PROFIT FACTOR
+ppercent = winners/total*100 //PROFIT PERCENTAGE
+//----
+css = eq > in ? #0cb51a : #e65100
+css2 = eq > loss ? color.blue : color.blue
+css3 = dd > 0 ? color.red : color.red
+css4 = dd > ddm ? color.orange : na
+a = plot(eq,"Current Profit(%)",#2196f3,2,transp=0)
+b = plot(rmax,"Maximum Gained(%)",css,2,transp=0)
+c = plot(inmax, "Starting Cap(%)", color.white,2,transp=0)
+d = plot(dd, "Current Drawdown(%)", color.fuchsia,2,transp=0)
+e = plot(ddm, "Max Drawdown(%)", color.red,2,transp=0)
+plot(lmax, "Gross Loss(%)", color.red,2,transp=0)
+plot(gmax, "Gross Gain(%)", color.green,2,transp=0)
+plot(pfactor, "Profit Factor", color.orange,2,transp=0)
+plot(tmax,"Total CLosed Trades", color.aqua,2,transp=0)
+plot(winners,"Trades Won", color.green,2,transp=0)
+plot(losers, "Trades Lost", color.red,2,transp=0)
+plot(ppercent,"Profit Percentage(%)", color.lime,2,transp=0)
+bgcolor(eq <= 0 and dd <= -100 ? color.red : na,title= "LIQUIDATION",transp=55)
+fill(a,b,css,80)
+fill(a,c,css2,60)
+fill(c,d,css3,35)
+fill(d,e,css4,30)
+Expand (104 lines)

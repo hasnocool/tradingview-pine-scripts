@@ -1,0 +1,72 @@
+Script Name: Williams -R Strategy
+Author: Julien_Eche
+Description: The Williams %R Strategy is a trading approach that is based on the Williams Percent Range indicator, available on the TradingView platform. 
+
+This strategy aims to identify potential overbought and oversold conditions in the market, providing clear buy and sell signals for entry and exit.
+
+The strategy utilizes the Williams %R indicator, which measures the...
+PineScript code:
+
+Pine Script™ strategy
+Williams %R Strategy
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+// © Julien_Eche
+//@version=5
+strategy("Williams %R Strategy", overlay=true, initial_capital=100000, shorttitle="W%R Strategy")
+// Parameters
+length = input(14, "Length")
+overboughtLevel = input(-20, "Overbought Level")
+oversoldLevel = input(-80, "Oversold Level")
+enableShort = input(false, "Enable Short Positions")
+// Calculation of Williams %R
+williamsR = -100 * (ta.highest(high, length) - close) / (ta.highest(high, length) - ta.lowest(low, length))
+// Buy and sell conditions
+buySignal = ta.crossover(williamsR, oversoldLevel)
+sellSignal = ta.crossunder(williamsR, overboughtLevel)
+// Enter long position
+if buySignal
+    strategy.entry("Buy", strategy.long)
+// Exit long position
+if sellSignal
+    strategy.close("Buy")
+// Enter short position if enabled
+if enableShort and sellSignal
+    strategy.entry("Sell", strategy.short)
+// Exit short position if enabled
+if enableShort and buySignal
+    strategy.close("Sell")
+Expand (34 lines)

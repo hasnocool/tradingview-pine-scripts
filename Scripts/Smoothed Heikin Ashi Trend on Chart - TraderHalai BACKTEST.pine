@@ -1,0 +1,300 @@
+Script Name: Smoothed Heikin Ashi Trend on Chart - TraderHalai BACKTEST
+Author: TraderHalai
+Description: Smoothed Heikin Ashi Trend on chart - Backtest 
+
+This is a backtest of the Smoothed Heikin Ashi Trend indicator, which computes the reverse candle close price required to flip a Heikin Ashi trend from red to green and vice versa. The original indicator can be found in the scripts section of my profile.
+
+This particular back test uses this indicator with a Trend...
+PineScript code:
+
+Pine Script™ strategy
+Smoothed Heikin Ashi Trend on Chart - TraderHalai BACKTEST
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © TraderHalai
+// This is a backtest of the Smoothed Heikin Ashi Trend indicator, which computes the reverse candle close price required to flip a heikin ashi trend from red to green and vice versa. Original indicator can be found on the scripts section of my profile.
+// Default testing parameters are 10% of equity position size, with a 1% stop loss on short and long strategy.opentrades.commission
+// This particular back test uses this indicator as a Trend trading tool with a tight stop loss. The equity curve as tested seems promising but requires further work to refine. Note in an actual trading setup, you may wish to use this with volatilty filters as most of the losses are in sideways, low volatility markets.
+//@version=5
+strategy("Smoothed Heikin Ashi Trend on Chart - TraderHalai BACKTEST", " SHA Trend - BACKTEST", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=10)
+//Inputs
+i_useSmooth =       input ( true, "Use smoothing Heikin Ashi")
+i_smoothingMethod = input.string("SMA", "Method", options=["SMA", "EMA", "HMA", "VWMA", "RMA"])
+i_smoothingPeriod = input ( 10, "Smoothing period")
+i_infoBox   =       input ( true, "Show Info Box"        )
+i_decimalP  =       input ( 2,    "Prices Decimal Places") 
+i_boxOffSet =       input ( 5,    "Info Box Offset"      )
+i_repaint   =       input (false,  "Repaint -  Keep on for live / Off for backtest")
+i_longLossPerc = input.float(title="Long Stop Loss (%)",minval=0.0, step=0.1, defval=1) * 0.01
+i_shortLossPerc = input.float(title="Short Stop Loss (%)", minval=0.0, step=0.1, defval=1) * 0.01
+timeperiod = timeframe.period
+//Security functions to avoid repaint, as per PineCoders
+f_secureSecurity(_symbol, _res, _src) => request.security(_symbol, _res, _src[1], lookahead = barmerge.lookahead_on)
+f_security(_symbol, _res, _src, _repaint) => request.security(_symbol, _res, _src[_repaint ? 0 : barstate.isrealtime ? 1 : 0])[_repaint ? 0 : barstate.isrealtime ? 0 : 1]
+f_secSecurity2(_symbol, _res, _src) => request.security(_symbol, _res, _src[1])
+candleClose = f_security(syminfo.tickerid, timeperiod, close, i_repaint)
+candleOpen = f_security(syminfo.tickerid, timeperiod, open, i_repaint)
+candleLow = f_security(syminfo.tickerid, timeperiod, low, i_repaint)
+candleHigh = f_security(syminfo.tickerid, timeperiod, high, i_repaint)
+haTicker = ticker.heikinashi(syminfo.tickerid)
+haClose = f_security(haTicker, timeperiod, close, i_repaint)
+haOpen = f_security(haTicker, timeperiod, open, i_repaint)
+haLow = f_security(haTicker, timeperiod, low, i_repaint)
+haHigh= f_security(haTicker, timeperiod, high, i_repaint)
+reverseClose = (2 * (haOpen[1] + haClose[1])) - candleHigh - candleLow - candleOpen
+if(reverseClose < candleLow)
+    reverseClose := (candleLow + reverseClose) / 2
+if(reverseClose > candleHigh)
+    reverseClose := (candleHigh + reverseClose) / 2
+    
+//Smoothing
+    
+smaSmoothed = ta.sma(reverseClose, i_smoothingPeriod)
+emaSmoothed = ta.ema(reverseClose, i_smoothingPeriod)
+hmaSmoothed = ta.hma(reverseClose, i_smoothingPeriod)
+vwmaSmoothed = ta.vwma(reverseClose, i_smoothingPeriod)
+rmaSmoothed = ta.rma(reverseClose, i_smoothingPeriod)
+shouldApplySmoothing = i_useSmooth and i_smoothingPeriod > 1 
+smoothedReverseClose = reverseClose
+if(shouldApplySmoothing)
+    if(i_smoothingMethod == "SMA")
+        smoothedReverseClose := smaSmoothed
+    else if(i_smoothingMethod == "EMA")
+        smoothedReverseClose := emaSmoothed
+    else if(i_smoothingMethod == "HMA")
+        smoothedReverseClose := hmaSmoothed
+    else if(i_smoothingMethod == "VWMA")
+        smoothedReverseClose := vwmaSmoothed
+    else if(i_smoothingMethod == "RMA")
+        smoothedReverseClose := rmaSmoothed
+    else 
+        smoothedReverseClose := reverseClose // Default to non-smoothed for invalid smoothing type
+    
+haBull = candleClose >= smoothedReverseClose
+haCol = haBull ? color.green : color.red
+//Overall trading strategy
+if(ta.crossover(candleClose, smoothedReverseClose))
+    strategy.entry("LONG", strategy.long)
+else
+    strategy.cancel("LONG")
+if(ta.crossunder(candleClose, smoothedReverseClose))
+    strategy.entry("SHORT", strategy.short)
+else
+    strategy.cancel("SHORT")
+    
+longStopPrice  = strategy.position_avg_price * (1 - i_longLossPerc)
+shortStopPrice = strategy.position_avg_price * (1 + i_shortLossPerc)
+plot(series=(strategy.position_size > 0) ? longStopPrice : na,
+     color=color.red, style=plot.style_cross,
+     linewidth=2, title="Long Stop Loss")
+plot(series=(strategy.position_size < 0) ? shortStopPrice : na,
+     color=color.red, style=plot.style_cross,
+     linewidth=2, title="Short Stop Loss")
+     
+plot(smoothedReverseClose, color=haCol)
+if (strategy.position_size > 0)
+    strategy.exit(id="XL STP", stop=longStopPrice)
+if (strategy.position_size < 0)
+    strategy.exit(id="XS STP", stop=shortStopPrice)
+    
+///////////////////////////// --- BEGIN TESTER CODE --- ////////////////////////
+// COPY below into your strategy to enable display
+////////////////////////////////////////////////////////////////////////////////
+// Declare performance tracking variables
+drawTester = input.bool(true, "Draw Tester")
+var balance = strategy.initial_capital
+var drawdown = 0.0
+var maxDrawdown = 0.0
+var maxBalance = 0.0
+var totalWins = 0
+var totalLoss = 0
+// Prepare stats table
+var table testTable = table.new(position.top_right, 5, 2, border_width=1)
+f_fillCell(_table, _column, _row, _title, _value, _bgcolor, _txtcolor) =>
+    _cellText = _title + "\n" + _value
+    table.cell(_table, _column, _row, _cellText, bgcolor=_bgcolor, text_color=_txtcolor)
+    
+// Custom function to truncate (cut) excess decimal places
+truncate(_number, _decimalPlaces) =>
+    _factor = math.pow(10, _decimalPlaces)
+    int(_number * _factor) / _factor
+    
+// Draw stats table
+var bgcolor = color.new(color.black,0)
+if drawTester
+    if barstate.islastconfirmedhistory
+        // Update table
+        dollarReturn = strategy.netprofit
+        f_fillCell(testTable, 0, 0, "Total Trades:", str.tostring(strategy.closedtrades), bgcolor, color.white)
+        f_fillCell(testTable, 0, 1, "Win Rate:", str.tostring(truncate((strategy.wintrades/strategy.closedtrades)*100,2)) + "%", bgcolor, color.white)
+        f_fillCell(testTable, 1, 0, "Starting:", "$" + str.tostring(strategy.initial_capital), bgcolor, color.white)
+        f_fillCell(testTable, 1, 1, "Ending:", "$" + str.tostring(truncate(strategy.initial_capital + strategy.netprofit,2)), bgcolor, color.white)
+        f_fillCell(testTable, 2, 0, "Avg Win:", "$"+ str.tostring(truncate(strategy.grossprofit / strategy.wintrades, 2)), bgcolor, color.white)
+        f_fillCell(testTable, 2, 1, "Avg Loss:", "$"+ str.tostring(truncate(strategy.grossloss / strategy.losstrades, 2)), bgcolor, color.white)
+        f_fillCell(testTable, 3, 0, "Profit Factor:", str.tostring(truncate(strategy.grossprofit / strategy.grossloss,2)), strategy.grossprofit > strategy.grossloss ? color.green : color.red, color.white)
+        f_fillCell(testTable, 3, 1, "Max Runup:",  str.tostring(truncate(strategy.max_runup, 2 )), bgcolor, color.white)
+        f_fillCell(testTable, 4, 0, "Return:", (dollarReturn > 0 ? "+" : "") + str.tostring(truncate((dollarReturn / strategy.initial_capital)*100,2)) + "%", dollarReturn > 0 ? color.green : color.red, color.white)
+        f_fillCell(testTable, 4, 1, "Max DD:", str.tostring(truncate((strategy.max_drawdown / strategy.equity) * 100 ,2)) + "%", color.red, color.white)
+// --- END TESTER CODE --- ///////////////
+Expand (161 lines)
