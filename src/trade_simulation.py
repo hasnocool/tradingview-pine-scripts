@@ -1,0 +1,31 @@
+import pandas as pd
+
+# Define the initial amount of USDT
+initial_usdt = 10000
+
+# Load the data from the CSV file
+data = pd.read_csv('BTCUSDT_1M_upper.csv')
+
+# Initialize the amount of BTC and USDT
+btc = 0
+usdt = initial_usdt
+
+# Iterate over each row in the data
+for index, row in data.iterrows():
+    # Calculate the amount of BTC that can be bought with the current amount of USDT
+    btc_to_buy = usdt / row['Close']
+    
+    # Update the amount of BTC and USDT
+    btc += btc_to_buy
+    usdt -= btc_to_buy * row['Close']
+    
+    # Print the current step and metrics
+    print(f'Step {index + 1}:')
+    print(f'Bought {btc_to_buy} BTC at a price of {row["Close"]} USDT')
+    print(f'Current BTC: {btc}')
+    print(f'Current USDT: {usdt}')
+
+# Print the final metrics
+print(f'Final BTC: {btc}')
+print(f'Final USDT: {usdt}')
+print(f'Total value in USDT: {btc * data.iloc[-1]["Close"] + usdt}')
