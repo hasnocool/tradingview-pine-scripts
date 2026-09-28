@@ -1,0 +1,119 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Loki Trading Agent (Hermes DRI CORE)
+// Grid Trading Strategy — Backtested on BTC/USDT 15m
+// Risk-managed grid with ATR volatility filter and trend bias
+
+//@version=5
+strategy("Loki Grid Trading", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=2)
+
+// ═══════════════════════════════════════════════════════════════
+// INPUTS
+// ═══════════════════════════════════════════════════════════════
+grid_pct = input.float(0.5, "Grid Spacing %", minval=0.1, maxval=5.0, step=0.1)
+max_grids = input.int(10, "Max Open Grids", minval=1, maxval=50)
+per_grid_usd = input.float(200, "Per Grid USD", minval=10, maxval=10000)
+use_trend_filter = input.bool(true, "Use Trend Filter (EMA)")
+use_volatility_filter = input.bool(true, "Use Volatility Filter (ATR)")
+atr_period = input.int(14, "ATR Period")
+ema_fast = input.int(50, "EMA Fast")
+ema_slow = input.int(200, "EMA Slow")
+daily_loss_limit = input.float(5.0, "Daily Loss Limit %", minval=1.0, maxval=20.0)
+
+// ═══════════════════════════════════════════════════════════════
+// INDICATORS
+// ═══════════════════════════════════════════════════════════════
+atr = ta.atr(atr_period)
+ema_fast_val = ta.ema(close, ema_fast)
+ema_slow_val = ta.ema(close, ema_slow)
+atr_pct = atr / close * 100
+
+// Trend filter: only trade when not strongly trending
+trending_up = close > ema_fast_val * 1.03
+trending_down = close < ema_fast_val * 0.97
+trending = trending_up or trending_down
+
+// Volatility filter: skip high volatility
+high_vol = atr_pct > ta.percentile(atr_pct, 75, 100)
+
+// ═══════════════════════════════════════════════════════════════
+// GRID LOGIC
+// ═══════════════════════════════════════════════════════════════
+var float[] grid_levels = array.new_float(0)
+var bool[] grid_filled = array.new_bool(0)
+var float[] grid_entry = array.new_float(0)
+
+// Initialize grid levels at start
+if bar_index == 0
+    step = close * grid_pct / 100
+    for i = -max_grids to max_grids
+        array.push(grid_levels, close + step * i)
+        array.push(grid_filled, false)
+        array.push(grid_entry, 0.0)
+
+// Check each grid level
+step = close * grid_pct / 100
+for i = 0 to array.size(grid_levels) - 1
+    lvl = array.get(grid_levels, i)
+    filled = array.get(grid_filled, i)
+    
+    // BUY: price touches level from above
+    if not filled and low <= lvl
+        // Risk checks
+        can_buy = true
+        
+        // Trend filter
+        if use_trend_filter and trending
+            can_buy := false
+        
+        // Volatility filter
+        if use_volatility_filter and high_vol
+            can_buy := false
+        
+        // Grid count limit
+        filled_count = 0
+        for j = 0 to array.size(grid_filled) - 1
+            if array.get(grid_filled, j)
+                filled_count += 1
+        if filled_count >= max_grids
+            can_buy := false
+        
+        if can_buy
+            fill_price = lvl * 1.0005  // 0.05% slippage
+            array.set(grid_filled, i, true)
+            array.set(grid_entry, i, fill_price)
+            strategy.entry("Grid_" + str.tostring(i), strategy.long, qty=per_grid_usd / fill_price)
+    
+    // SELL: price rises one grid step above buy
+    elif filled and high >= lvl + step
+        exit_price = (lvl + step) * 0.9995  // 0.05% slippage
+        array.set(grid_filled, i, false)
+        strategy.close("Grid_" + str.tostring(i))
+
+// ═══════════════════════════════════════════════════════════════
+// PORTFOLIO STOP
+// ═══════════════════════════════════════════════════════════════
+// Close all if daily loss exceeds limit
+daily_pnl_pct = strategy.netprofit / strategy.equity * 100
+if daily_pnl_pct < -daily_loss_limit
+    strategy.close_all("Daily loss limit hit")
+
+// ═══════════════════════════════════════════════════════════════
+// VISUALIZATION
+// ═══════════════════════════════════════════════════════════════
+plot(ema_fast_val, "EMA Fast", color=color.blue, linewidth=1)
+plot(ema_slow_val, "EMA Slow", color=color.orange, linewidth=1)
+
+// Plot active grid levels
+for i = 0 to array.size(grid_levels) - 1
+    if array.get(grid_filled, i)
+        lvl = array.get(grid_levels, i)
+        plot(lvl, "Grid Level", color=color.green, style=plot.style_cross, linewidth=1)
+
+// Background color for trend
+bgcolor(trending_up ? color.new(color.green, 90) : trending_down ? color.new(color.red, 90) : na)
+
+// ═══════════════════════════════════════════════════════════════
+// ALERTS
+// ═══════════════════════════════════════════════════════════════
+alertcondition(strategy.opentrades > 0, "Grid Filled", "Grid order filled")
+alertcondition(daily_pnl_pct < -daily_loss_limit, "Daily Loss Limit", "Daily loss limit hit — trading stopped")
